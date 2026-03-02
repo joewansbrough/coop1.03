@@ -12,19 +12,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [debugCount, setDebugCount] = useState(0);
   const [debugInfo, setDebugInfo] = useState<any>(null);
 
+  const [isVerifying, setIsVerifying] = useState(false);
+
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       console.log('Received message from origin:', event.origin, 'Data:', event.data);
       const origin = event.origin;
-      if (!origin.endsWith('.run.app') && !origin.includes('localhost')) {
+      if (!origin.endsWith('.run.app') && !origin.includes('localhost') && !origin.includes('vercel.app')) {
         console.warn('Message origin rejected:', origin);
         return;
       }
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-        console.log('OAuth success message received, triggering callback with delay');
+        console.log('OAuth success message received, triggering callback');
+        setIsVerifying(true);
+        // Small delay to ensure cookie is synced
         setTimeout(() => {
           onLoginSuccess();
-        }, 800);
+        }, 1000);
       }
     };
     window.addEventListener('message', handleMessage);
@@ -161,12 +165,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
             <button 
               onClick={handleGoogleLogin}
-              disabled={isLoading}
+              disabled={isLoading || isVerifying}
               className="w-full flex items-center justify-center gap-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-white/5 py-4 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 hover:border-emerald-500 dark:hover:border-emerald-500 transition-all group active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
             >
               <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" />
               <span className="text-sm font-black text-slate-700 dark:text-white uppercase tracking-widest">
-                {isLoading ? 'Connecting...' : 'Continue with Google'}
+                {isVerifying ? 'Verifying Session...' : (isLoading ? 'Connecting...' : 'Continue with Google')}
               </span>
             </button>
 

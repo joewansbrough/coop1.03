@@ -91,9 +91,18 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, user, coopName }) =>
   }
 
   const handleLogout = async () => {
-    if(confirm("Are you sure you want to terminate your session in CoopConnect BC?")) {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.reload();
+    if(confirm("Are you sure you want to log out of CoopConnect BC?")) {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        // Clear all local storage and session data
+        localStorage.clear();
+        sessionStorage.clear();
+        // Force a full page reload to clear React state and trigger Auth check
+        window.location.href = '/';
+      } catch (error) {
+        console.error('Logout failed:', error);
+        window.location.reload();
+      }
     }
   };
 
@@ -238,7 +247,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, user, coopName }) =>
                   </button>
                   <div className="border-t border-slate-100 dark:border-white/5 mt-1">
                     <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-xs font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-3 transition-colors uppercase tracking-widest">
-                      <i className="fa-solid fa-power-off"></i> Terminate Session
+                      <i className="fa-solid fa-power-off"></i> Log Out
                     </button>
                   </div>
                 </div>
