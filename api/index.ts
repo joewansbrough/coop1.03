@@ -57,7 +57,9 @@ app.use('/api', (req, res, next) => {
 });
 
 // Auth Routes
-app.get('/api/auth/url', (req, res) => {
+const authRouter = express.Router();
+
+authRouter.get('/url', (req, res) => {
   const baseUrl = getBaseUrl(req);
   const redirectUri = `${baseUrl}/auth/callback`;
   
@@ -77,6 +79,9 @@ app.get('/api/auth/url', (req, res) => {
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   res.json({ url: authUrl });
 });
+
+app.use('/api/auth', authRouter);
+app.use('/auth', authRouter); // Handle cases where /api might be stripped
 
 app.get('/auth/callback', async (req, res) => {
   const { code } = req.query;
@@ -140,16 +145,16 @@ app.get('/auth/callback', async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', (req, res) => {
+app.get(['/api/auth/me', '/auth/me'], (req, res) => {
   res.json({ user: (req as any).session?.user || null });
 });
 
-app.post('/api/auth/logout', (req, res) => {
+app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
   (req as any).session = null;
   res.json({ success: true });
 });
 
-app.get('/api/debug/config', (req, res) => {
+app.get(['/api/debug/config', '/debug/config'], (req, res) => {
   res.json({
     hasClientId: !!process.env.GOOGLE_CLIENT_ID,
     hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
@@ -158,6 +163,8 @@ app.get('/api/debug/config', (req, res) => {
     isSecure: req.secure,
     protocol: req.protocol,
     headers: req.headers,
+    url: req.url,
+    originalUrl: req.originalUrl,
   });
 });
 

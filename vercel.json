@@ -1,13 +1,25 @@
 {
   "version": 2,
+  "functions": {
+    "api/index.ts": {
+      "runtime": "@vercel/node"
+    },
+    "api/hello.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
   "rewrites": [
     {
+      "source": "/api/hello",
+      "destination": "/api/hello"
+    },
+    {
       "source": "/api/(.*)",
-      "destination": "/api/index.ts"
+      "destination": "/api/index"
     },
     {
       "source": "/auth/(.*)",
-      "destination": "/api/index.ts"
+      "destination": "/api/index"
     },
     {
       "source": "/(.*)",
