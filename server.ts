@@ -80,6 +80,12 @@ async function startServer() {
     return url;
   };
 
+  // API Request Logger
+  app.use('/api', (req, res, next) => {
+    console.log(`API Request: ${req.method} ${req.originalUrl}`);
+    next();
+  });
+
   // Auth Routes
   app.get('/api/auth/url', (req, res) => {
     const baseUrl = getBaseUrl(req);
