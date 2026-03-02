@@ -24,15 +24,15 @@ async function startServer() {
   // Trust proxy for secure cookies behind nginx
   app.set('trust proxy', true);
 
-  // Force req.secure to true if we're behind an HTTPS proxy
+  // Aggressively force req.secure to true for the preview environment
   app.use((req, res, next) => {
+    const host = req.get('x-forwarded-host') || req.get('host') || '';
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
     const proto = req.get('x-forwarded-proto');
-    if (proto === 'https' || req.get('x-forwarded-port') === '443') {
-      Object.defineProperty(req, 'secure', {
-        get: () => true,
-        configurable: true
-      });
-      (req as any).protocol = 'https';
+    
+    if (!isLocal || proto === 'https' || req.get('x-forwarded-port') === '443') {
+      Object.defineProperty(req, 'secure', { get: () => true, configurable: true });
+      Object.defineProperty(req, 'protocol', { get: () => 'https', configurable: true });
     }
     next();
   });
@@ -201,6 +201,8 @@ async function startServer() {
   });
 
   app.get('/api/debug/config', (req, res) => {
+    const host = req.get('x-forwarded-host') || req.get('host') || '';
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
     res.json({
       hasClientId: !!process.env.GOOGLE_CLIENT_ID,
       hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
@@ -209,13 +211,12 @@ async function startServer() {
       baseUrl: getBaseUrl(req),
       nodeEnv: process.env.NODE_ENV,
       isSecure: req.secure,
+      protocol: req.protocol,
+      host,
+      isLocal,
       hasSession: !!(req as any).session,
       hasUser: !!(req as any).session?.user,
-      headers: {
-        'x-forwarded-proto': req.get('x-forwarded-proto'),
-        'x-forwarded-host': req.get('x-forwarded-host'),
-        'cookie': !!req.get('cookie'),
-      }
+      headers: req.headers,
     });
   });
 
@@ -237,6 +238,12 @@ async function startServer() {
       res.sendFile(path.join(__dirname, 'dist', 'index.html'));
     });
   }
+
+  // Global error handler
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Unhandled Error:', err);
+    res.status(500).json({ error: err.message || 'Internal Server Error' });
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://localhost:${PORT}`);

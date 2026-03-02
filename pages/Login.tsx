@@ -36,8 +36,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     try {
       const response = await fetch('/api/auth/url');
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to get auth URL');
+        let errorMsg = `Server Error (${response.status})`;
+        try {
+          const errData = await response.json();
+          errorMsg = errData.error || errorMsg;
+        } catch (e) {
+          // Not JSON
+        }
+        throw new Error(errorMsg);
       }
       const { url } = await response.json();
       
@@ -163,6 +169,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 {isLoading ? 'Connecting...' : 'Continue with Google'}
               </span>
             </button>
+
+            {!debugInfo?.hasClientId && debugCount >= 5 && (
+              <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                <p className="text-[10px] text-red-600 dark:text-red-400 font-bold">
+                  ⚠️ GOOGLE_CLIENT_ID is not configured in environment variables.
+                </p>
+              </div>
+            )}
 
             {debugInfo && (
               <div className="mt-8 p-4 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-auto max-h-60">
