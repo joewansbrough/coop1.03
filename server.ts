@@ -22,26 +22,45 @@ async function startServer() {
   const app = express();
   
   // Trust proxy for secure cookies behind nginx
-  app.set('trust proxy', 1);
+  app.set('trust proxy', true);
+
+  // Force req.secure to true if we're behind an HTTPS proxy
+  app.use((req, res, next) => {
+    const proto = req.get('x-forwarded-proto');
+    if (proto === 'https' || req.get('x-forwarded-port') === '443') {
+      Object.defineProperty(req, 'secure', {
+        get: () => true,
+        configurable: true
+      });
+      (req as any).protocol = 'https';
+    }
+    next();
+  });
 
   // Middleware
   app.use(express.json());
-  app.use(cookieSession({
-    name: 'session',
-    keys: [process.env.SESSION_SECRET || 'default_secret'],
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    secure: true,
-    sameSite: 'none',
-    httpOnly: true,
-    signed: true,
-    overwrite: true,
-  }));
+  app.use((req, res, next) => {
+    cookieSession({
+      name: 'session',
+      keys: [process.env.SESSION_SECRET || 'default_secret'],
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: req.secure,
+      sameSite: 'none',
+      httpOnly: true,
+      signed: true,
+      overwrite: true,
+      proxy: true,
+    })(req, res, next);
+  });
 
   // Helper to get base URL
   const getBaseUrl = (req: express.Request) => {
-    // Force HTTPS because the external preview URL is always HTTPS
-    const protocol = 'https';
-    const host = req.get('x-forwarded-host') || req.get('host');
+    const host = req.get('x-forwarded-host') || req.get('host') || '';
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+    const proto = req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http');
+    
+    // Always use https for the external preview URL
+    const protocol = isLocal ? proto : 'https';
     
     let url = `${protocol}://${host}`;
     
@@ -53,8 +72,8 @@ async function startServer() {
     // Ensure no trailing slash
     url = url.replace(/\/+$/, "");
     
-    // Final safety check: if it somehow started with http://, force it to https://
-    if (url.startsWith('http://')) {
+    // Final safety check: if it's not local, force it to https://
+    if (!isLocal && url.startsWith('http://')) {
       url = 'https://' + url.substring(7);
     }
     
@@ -190,9 +209,12 @@ async function startServer() {
       baseUrl: getBaseUrl(req),
       nodeEnv: process.env.NODE_ENV,
       isSecure: req.secure,
+      hasSession: !!(req as any).session,
+      hasUser: !!(req as any).session?.user,
       headers: {
         'x-forwarded-proto': req.get('x-forwarded-proto'),
         'x-forwarded-host': req.get('x-forwarded-host'),
+        'cookie': !!req.get('cookie'),
       }
     });
   });
