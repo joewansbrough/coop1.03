@@ -190,11 +190,15 @@ app.get('/api/tenants/:id/history', async (req, res) => {
 });
 
 app.get('/api/maintenance', async (req, res) => {
-  const requests = await prisma.maintenanceRequest.findMany({
-    include: { unit: true },
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(requests);
+  try {
+    const requests = await prisma.maintenanceRequest.findMany({
+      include: { unit: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    // UI expects category as an array
+    const mapped = requests.map(r => ({ ...r, category: [r.category] }));
+    res.json(mapped);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/announcements', async (req, res) => {
@@ -212,10 +216,17 @@ app.get('/api/documents', async (req, res) => {
 });
 
 app.get('/api/committees', async (req, res) => {
-  const committees = await prisma.committee.findMany({
-    include: { members: true }
-  });
-  res.json(committees);
+  try {
+    const committees = await prisma.committee.findMany({
+      include: { members: true }
+    });
+    // UI expects members as an array of name strings
+    const mapped = committees.map(c => ({
+      ...c,
+      members: c.members.map((m: any) => `${m.firstName} ${m.lastName}`)
+    }));
+    res.json(mapped);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 // --- AI Routes ---
