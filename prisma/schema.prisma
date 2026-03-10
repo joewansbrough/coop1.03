@@ -1,0 +1,103 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Unit {
+  id                String               @id @default(uuid())
+  number            String               @unique
+  type              String               // e.g., "1BR", "2BR", "3BR"
+  floor             Int                  @default(1)
+  status            String               // e.g., "Occupied", "Vacant", "Maintenance"
+  currentTenantId   String?              @unique
+  currentTenant     Tenant?              @relation("CurrentResident", fields: [currentTenantId], references: [id])
+  maintenanceHistory MaintenanceRequest[]
+  occupancyHistory   TenantHistory[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+}
+
+model Tenant {
+  id            String          @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String          @unique
+  phone         String?
+  startDate     String          // Renamed from moveInDate to match UI
+  status        String          @default("Current") // e.g., "Current", "Past", "Waitlist"
+  unitId        String?
+  unit          Unit?           @relation("CurrentResident")
+  committees    Committee[]     @relation("CommitteeMembers")
+  history       TenantHistory[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model TenantHistory {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  unitId      String
+  unit        Unit     @relation(fields: [unitId], references: [id])
+  startDate   DateTime
+  endDate     DateTime?
+  moveReason  String?
+  createdAt   DateTime @default(now())
+}
+
+model MaintenanceRequest {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  status      String   // "Pending", "In Progress", "Completed"
+  priority    String   // "Low", "Medium", "High", "Urgent"
+  category    String   @default("General")
+  unitId      String
+  unit        Unit     @relation(fields: [unitId], references: [id])
+  tenantId    String?  // Added to match UI
+  requestedBy String?  // Email of the tenant who requested
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  type      String   // "General", "Urgent", "Maintenance"
+  priority  String   @default("Normal")
+  author    String   // Email of the admin
+  date      String   // Added to match UI
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  title     String
+  category  String   // "Bylaws", "Minutes", "Policies", "Financials"
+  url       String
+  fileType  String   // "pdf", "doc", "xls"
+  author    String   @default("Admin")
+  date      String   // Added to match UI
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Committee {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  chair       String   @default("")
+  icon        String   @default("fa-users")
+  members     Tenant[] @relation("CommitteeMembers")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

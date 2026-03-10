@@ -58,6 +58,43 @@ const App: React.FC = () => {
     }
   };
 
+  const fetchAllData = async () => {
+    try {
+      const [unitsRes, tenantsRes, requestsRes, announcementsRes, docsRes, committeesRes] = await Promise.all([
+        fetch('/api/units'),
+        fetch('/api/tenants'),
+        fetch('/api/maintenance'),
+        fetch('/api/announcements'),
+        fetch('/api/documents'),
+        fetch('/api/committees')
+      ]);
+
+      const [unitsData, tenantsData, requestsData, announcementsData, docsData, committeesData] = await Promise.all([
+        unitsRes.json(),
+        tenantsRes.json(),
+        requestsRes.json(),
+        announcementsRes.json(),
+        docsRes.json(),
+        committeesRes.json()
+      ]);
+
+      setUnits(unitsData);
+      setTenants(tenantsData);
+      setRequests(requestsData);
+      setAnnouncements(announcementsData);
+      setDocuments(docsData);
+      setCommittees(committeesData);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchAllData();
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchUser();
   }, []);

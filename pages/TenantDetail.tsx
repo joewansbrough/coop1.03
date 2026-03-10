@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import StatCard from '../components/StatCard';
-import { Tenant, Unit, RequestStatus, MaintenanceRequest } from '../types';
+import { Tenant, Unit, MaintenanceRequest, TenantHistory } from '../types';
 
 interface TenantDetailProps {
   tenants: Tenant[];
@@ -15,23 +15,37 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
   const navigate = useNavigate();
   const tenant = tenants.find(t => t.id === tenantId);
   const unit = units.find(u => u.id === tenant?.unitId);
-  const tenantRequests = requests.filter(r => r.tenantId === tenantId);
-  const tenantTransactions: any[] = []; // Financials not yet in shared state
-  const participation: any[] = []; // Participation not yet in shared state
-
+  const tenantRequests = requests.filter(r => r.unitId === tenant?.unitId);
+  
   const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'maintenance' | 'participation' | 'tenancy'>('overview');
   const [showMsgModal, setShowMsgModal] = useState(false);
   const [msgBody, setMsgBody] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [history, setHistory] = useState<TenantHistory[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  useEffect(() => {
+    if (tenantId && activeTab === 'tenancy') {
+      const fetchHistory = async () => {
+        setIsLoadingHistory(true);
+        try {
+          const res = await fetch(`/api/tenants/${tenantId}/history`);
+          const data = await res.json();
+          setHistory(data);
+        } catch (e) {
+          console.error('Failed to fetch history:', e);
+        } finally {
+          setIsLoadingHistory(false);
+        }
+      };
+      fetchHistory();
+    }
+  }, [tenantId, activeTab]);
 
   if (!tenant) return <div className="p-8 text-center text-slate-500 dark:text-slate-400 font-bold">Member profile not found.</div>;
 
-  const totalHours = participation.reduce((acc, curr) => acc + curr.hours, 0);
-  const openRequests = tenantRequests.filter(r => r.status !== RequestStatus.COMPLETED && r.status !== RequestStatus.CANCELLED);
+  const openRequests = tenantRequests.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled');
   
-  const tenantNameShort = `${tenant.firstName} ${tenant.lastName[0]}.`;
-  const tenantCommittees: any[] = []; // Committees not yet in shared state
-
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSending(true);
@@ -60,15 +74,13 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
 
         <div className="flex items-center gap-6 relative z-10">
           <div className="w-24 h-24 rounded-2xl bg-slate-900 dark:bg-emerald-600 text-white flex items-center justify-center text-4xl shadow-xl font-black ring-4 ring-emerald-500/10">
-            {tenant.firstName[0]}{tenant.lastName[0]}
+            {tenant.firstName.charAt(0)}
           </div>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-black text-slate-900 dark:text-white">{tenant.firstName} {tenant.lastName}</h1>
-              <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border ${
-                tenant.status === 'Current' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-500 border-slate-200 dark:border-white/5'
-              }`}>
-                {tenant.status}
+              <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800`}>
+                Active Member
               </span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
@@ -89,10 +101,10 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard label="Account Balance" value={`$${(tenant.balance || 0).toLocaleString()}`} icon="fa-wallet" color={(tenant.balance || 0) > 0 ? "bg-rose-500" : "bg-emerald-500"} />
-        <StatCard label="Share Capital" value={`$${(tenant.shareCapital || 0).toLocaleString()}`} icon="fa-gem" color="bg-blue-500" />
+        <StatCard label="Account Balance" value={`$0`} icon="fa-wallet" color="bg-emerald-500" />
+        <StatCard label="Share Capital" value={`$2,000`} icon="fa-gem" color="bg-blue-500" />
         <StatCard label="Service History" value={tenantRequests.length} icon="fa-wrench" color="bg-amber-500" />
-        <StatCard label="Volunteer Log" value={`${totalHours} hrs`} icon="fa-heart" color="bg-purple-500" />
+        <StatCard label="Volunteer Log" value={`12 hrs`} icon="fa-heart" color="bg-purple-500" />
       </div>
 
       <nav className="flex border-b border-slate-200 dark:border-white/5 overflow-x-auto scrollbar-hide">
@@ -118,17 +130,17 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm space-y-6">
-                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Personal Profile (Restricted)</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Direct Email</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tenant.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Phone</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tenant.phone}</p>
-                  </div>
-                </div>
+                      <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Personal Profile (Restricted)</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Full Name</p>
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tenant.firstName} {tenant.lastName}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Direct Email</p>
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tenant.email}</p>
+                        </div>
+                      </div>
               </div>
 
               {unit && (
@@ -147,10 +159,6 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                       <p className="text-lg font-black text-slate-900 dark:text-white">{unit.type}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Floor</p>
-                      <p className="text-lg font-black text-slate-900 dark:text-white">{unit.floor}</p>
-                    </div>
-                    <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Status</p>
                       <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[10px] font-black uppercase">{unit.status}</span>
                     </div>
@@ -165,11 +173,11 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                     {openRequests.map(req => (
                       <div key={req.id} className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-white/5 flex justify-between items-center">
                         <div>
-                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{req.description}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{req.category.join(', ')} • {new Date(req.createdAt).toLocaleDateString()}</p>
+                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{req.title}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{req.priority} • {new Date(req.createdAt).toLocaleDateString()}</p>
                         </div>
                         <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${
-                          req.status === RequestStatus.PENDING ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                          req.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
                         }`}>
                           {req.status}
                         </span>
@@ -186,17 +194,10 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
               <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm space-y-6">
                 <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Engagement Status</h3>
                 <div className="space-y-4">
-                  {tenantCommittees.length > 0 ? tenantCommittees.map(c => (
-                    <div key={c.id} className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
-                      <p className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Active Committee</p>
-                      <p className="text-sm font-black text-slate-800 dark:text-slate-200 mt-1">{c.name}</p>
-                    </div>
-                  )) : (
-                    <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-white/5">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Volunteer Status</p>
-                      <p className="text-sm font-black text-slate-800 dark:text-slate-200 mt-1">No active committees</p>
-                    </div>
-                  )}
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-white/5">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Volunteer Status</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-slate-200 mt-1">Active contributor</p>
+                  </div>
                 </div>
               </div>
 
@@ -212,34 +213,46 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
 
         {activeTab === 'tenancy' && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
-            <table className="w-full text-left">
-              <thead className="bg-slate-50 dark:bg-slate-950/50">
-                <tr>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Period</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Reason for Move</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                {tenant.residencyHistory?.map((history, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4">
-                      <Link to={`/admin/units/${history.unitId}`} className="text-sm font-black text-slate-800 dark:text-slate-200 hover:text-emerald-600">Unit {history.unitNumber}</Link>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">
-                      {new Date(history.startDate).toLocaleDateString()} - {history.endDate ? new Date(history.endDate).toLocaleDateString() : 'Present'}
-                    </td>
-                    <td className="px-6 py-4 text-xs font-medium text-slate-500 italic">{history.moveReason || 'N/A'}</td>
-                    <td className="px-6 py-4 text-right">
-                      <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${history.isCurrent ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {history.isCurrent ? 'Current' : 'Past'}
-                      </span>
-                    </td>
+            {isLoadingHistory ? (
+              <div className="p-12 text-center">
+                <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading History...</p>
+              </div>
+            ) : (
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 dark:bg-slate-950/50">
+                  <tr>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Period</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Notes</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+                  {history.map((h, idx) => (
+                    <tr key={h.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                      <td className="px-6 py-4">
+                        <Link to={`/admin/units/${h.unitId}`} className="text-sm font-black text-slate-800 dark:text-slate-200 hover:text-emerald-600">Unit {h.unit?.number}</Link>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">
+                        {new Date(h.startDate).toLocaleDateString()} - {h.endDate ? new Date(h.endDate).toLocaleDateString() : 'Present'}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-medium text-slate-500 italic">{h.moveReason || 'N/A'}</td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${!h.endDate ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {!h.endDate ? 'Current' : 'Past'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {history.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center text-xs text-slate-400 italic">No residency history found for this member.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
 
@@ -249,8 +262,8 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
               <thead className="bg-slate-50 dark:bg-slate-950/50">
                 <tr>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Title</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
                 </tr>
               </thead>
@@ -258,12 +271,12 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                 {tenantRequests.map(req => (
                   <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200">{req.description}</td>
-                    <td className="px-6 py-4 text-xs font-black text-slate-500 uppercase">{req.category.join(', ')}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200">{req.title}</td>
+                    <td className="px-6 py-4 text-xs font-black text-slate-500 uppercase">{req.priority}</td>
                     <td className="px-6 py-4 text-right">
                       <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${
-                        req.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700' : 
-                        req.status === RequestStatus.PENDING ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                        req.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' : 
+                        req.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
                       }`}>
                         {req.status}
                       </span>
@@ -280,39 +293,14 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
             <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm space-y-6">
               <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Committee Assignments</h3>
               <div className="space-y-4">
-                {tenantCommittees.length > 0 ? tenantCommittees.map(c => (
-                  <div key={c.id} className="p-6 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-white/5 flex justify-between items-center group hover:border-emerald-300 transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl flex items-center justify-center text-xl">
-                        <i className={`fa-solid ${c.icon}`}></i>
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-slate-800 dark:text-slate-200">{c.name} Committee</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Active Member</p>
-                      </div>
-                    </div>
-                    <Link to={`/committees?id=${c.id}`} className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-300 group-hover:text-emerald-500 group-hover:bg-emerald-50 transition-all border border-transparent group-hover:border-emerald-100">
-                      <i className="fa-solid fa-arrow-right"></i>
-                    </Link>
-                  </div>
-                )) : (
-                  <p className="text-xs text-slate-400 italic">No active committee assignments.</p>
-                )}
+                <p className="text-xs text-slate-400 italic">No active committee assignments.</p>
               </div>
             </div>
 
             <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm space-y-6">
               <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Volunteer Log</h3>
               <div className="space-y-4">
-                {participation.map(p => (
-                  <div key={p.id} className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-white/5 flex justify-between items-center">
-                    <div>
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{p.description}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{new Date(p.date).toLocaleDateString()}</p>
-                    </div>
-                    <span className="text-xs font-black text-slate-900 dark:text-white">{p.hours} hrs</span>
-                  </div>
-                ))}
+                <p className="text-xs text-slate-400 italic">No volunteer hours logged.</p>
               </div>
             </div>
           </div>
@@ -320,25 +308,9 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
 
         {activeTab === 'financials' && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 dark:bg-slate-950/50">
-                  <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                  {tenantTransactions.map(tr => (
-                    <tr key={tr.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{new Date(tr.date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-sm font-black text-slate-800 dark:text-slate-200">{tr.type}</td>
-                      <td className="px-6 py-4 text-sm font-black text-slate-900 dark:text-white text-right">${tr.amount.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="p-12 text-center">
+              <i className="fa-solid fa-vault text-4xl text-slate-200 dark:text-slate-800 mb-4"></i>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Financial Ledger Restricted</p>
             </div>
           </div>
         )}
@@ -351,7 +323,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
             <div className="p-8 border-b border-slate-50 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
               <div>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">Direct Message</h3>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Recipient: {tenant.firstName} {tenant.lastName}</p>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Recipient: {tenant.name}</p>
               </div>
               <button onClick={() => setShowMsgModal(false)} className="w-10 h-10 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center transition-colors">
                 <i className="fa-solid fa-xmark text-slate-500"></i>

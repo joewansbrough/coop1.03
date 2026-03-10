@@ -2,10 +2,12 @@ import express from 'express';
 import cookieSession from 'cookie-session';
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { PrismaClient } from '@prisma/client';
 
 dotenv.config();
 
 const app = express();
+const prisma = new PrismaClient();
 
 // Trust proxy for secure cookies on Vercel
 app.set('trust proxy', true);
@@ -105,20 +107,29 @@ app.get('/auth/callback', async (req, res) => {
     });
 
     const userData = userResponse.data;
-    const email = userData.email;
+    const email = userData.email.toLowerCase();
 
+    // Find or create user in database
+    let user = await prisma.tenant.findUnique({
+      where: { email },
+      include: { unit: true }
+    });
+
+    // For now, let's assume if they are in ADMIN_EMAILS, they are admins
     const isAdmin = ADMIN_EMAILS.includes(email);
-    const isTenant = TENANT_EMAILS.includes(email) || isAdmin;
-
-    if (!isTenant) {
-      return res.send(`<html><body><script>alert("Access denied for ${email}");window.close();</script></body></html>`);
+    
+    // If not in DB but is admin, we might want to allow them anyway
+    if (!user && !isAdmin) {
+      return res.send(`<html><body><script>alert("Access denied for ${email}. You are not registered in the co-op database.");window.close();</script></body></html>`);
     }
 
     (req as any).session.user = {
-      email: email.toLowerCase(),
+      email,
       name: userData.name,
       picture: userData.picture,
       isAdmin,
+      tenantId: user?.id || null,
+      unitNumber: user?.unit?.number || null
     };
 
     res.send(`
@@ -152,6 +163,60 @@ app.get(['/api/auth/me', '/auth/me'], (req, res) => {
 app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
   (req as any).session = null;
   res.json({ success: true });
+});
+
+// --- Database API Routes ---
+
+app.get('/api/units', async (req, res) => {
+  const units = await prisma.unit.findMany({
+    include: { currentTenant: true }
+  });
+  res.json(units);
+});
+
+app.get('/api/tenants', async (req, res) => {
+  const tenants = await prisma.tenant.findMany({
+    include: { unit: true }
+  });
+  res.json(tenants);
+});
+
+app.get('/api/tenants/:id/history', async (req, res) => {
+  const history = await prisma.tenantHistory.findMany({
+    where: { tenantId: req.params.id },
+    include: { unit: true },
+    orderBy: { startDate: 'desc' }
+  });
+  res.json(history);
+});
+
+app.get('/api/maintenance', async (req, res) => {
+  const requests = await prisma.maintenanceRequest.findMany({
+    include: { unit: true },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(requests);
+});
+
+app.get('/api/announcements', async (req, res) => {
+  const announcements = await prisma.announcement.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(announcements);
+});
+
+app.get('/api/documents', async (req, res) => {
+  const documents = await prisma.document.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(documents);
+});
+
+app.get('/api/committees', async (req, res) => {
+  const committees = await prisma.committee.findMany({
+    include: { members: true }
+  });
+  res.json(committees);
 });
 
 app.get(['/api/debug/config', '/debug/config'], (req, res) => {
