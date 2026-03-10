@@ -8,7 +8,10 @@
     "build": "prisma generate && vite build",
     "postinstall": "prisma generate",
     "lint": "tsc --noEmit",
-    "preview": "vite preview"
+    "seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@google/genai": "^1.38.0",
