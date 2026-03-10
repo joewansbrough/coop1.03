@@ -38,18 +38,18 @@ const Finances: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Association Ledger</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">Secure financial tracking for {isAdmin ? 'the co-operative' : 'your residence'}.</p>
         </div>
-        <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl shadow-inner">
+        <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
           {isAdmin && (
             <button 
               onClick={() => setActiveTab('overview')}
-              className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'overview' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-600 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
+              className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'overview' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
             >
               Executive Summary
             </button>
           )}
           <button 
             onClick={() => setActiveTab('ledger')}
-            className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'ledger' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-600 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
+            className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'ledger' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
           >
             Personal Ledger
           </button>
@@ -99,10 +99,10 @@ const Finances: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
         </div>
       ) : (
         <div className="space-y-6 animate-in fade-in duration-500">
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden transition-colors">
+          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden transition-colors">
             <div className="absolute top-0 right-0 p-4 opacity-[0.03] text-[10rem] pointer-events-none dark:text-white"><i className="fa-solid fa-piggy-bank"></i></div>
             <div className="flex items-center gap-6 relative z-10">
-              <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-3xl shadow-inner border border-emerald-50 dark:border-emerald-900">
+              <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-3xl border border-emerald-50 dark:border-emerald-900">
                 <i className="fa-solid fa-receipt"></i>
               </div>
               <div>
@@ -113,15 +113,15 @@ const Finances: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
             <button 
               onClick={handlePayment}
               disabled={isPaying}
-              className={`w-full md:w-auto px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95 ${
-                isPaying ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white shadow-emerald-200/40 hover:bg-emerald-700'
+              className={`w-full md:w-auto px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
+                isPaying ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'
               }`}
             >
               {isPaying ? 'Processing...' : 'Submit Payment'}
             </button>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden">
             <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col sm:flex-row justify-between items-center gap-4">
               <h4 className="font-black text-slate-800 dark:text-white text-xs uppercase tracking-widest">Historical Settlements</h4>
               <button className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900 px-4 py-2 rounded-xl transition-all uppercase tracking-widest">Download PDF Summary</button>

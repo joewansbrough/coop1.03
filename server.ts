@@ -6,6 +6,7 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { PrismaClient } from '@prisma/client';
 
 dotenv.config();
 
@@ -13,16 +14,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
+const prisma = new PrismaClient();
 
-// Mock Data (In a real app, this would be in a database)
-const ADMIN_EMAILS = ['joewcoupons@gmail.com'];
+// Mock Data (In a real app, these would be in a database)
+const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'joewansbrough@gmail.com'];
 const TENANT_EMAILS = ['tenant1@example.com', 'tenant2@example.com'];
 
 async function startServer() {
   const app = express();
   
   // Trust proxy for secure cookies behind nginx
-  app.set('trust proxy', 1);
+  app.set('trust proxy', true);
 
   // Aggressively force req.secure to true for the preview environment
   app.use((req, res, next) => {
@@ -39,18 +41,17 @@ async function startServer() {
 
   // Middleware
   app.use(express.json());
-  app.use((req, res, next) => {
-    cookieSession({
-      name: 'session',
-      keys: [process.env.SESSION_SECRET || 'default_secret'],
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      secure: req.secure,
-      sameSite: 'none',
-      httpOnly: true,
-      signed: true,
-      overwrite: true,
-    })(req, res, next);
-  });
+  
+  app.use(cookieSession({
+    name: 'session',
+    keys: [process.env.SESSION_SECRET || 'default_secret'],
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    secure: true, // Always true because we force https in the previous middleware
+    sameSite: 'none',
+    httpOnly: true,
+    signed: true,
+    overwrite: true,
+  }));
 
   // Helper to get base URL
   const getBaseUrl = (req: express.Request) => {
@@ -83,6 +84,11 @@ async function startServer() {
   app.use('/api', (req, res, next) => {
     console.log(`API Request: ${req.method} ${req.originalUrl}`);
     next();
+  });
+
+  // Health check
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
   // Auth Routes
@@ -133,12 +139,17 @@ async function startServer() {
       });
 
       const userData = userResponse.data;
-      const email = userData.email;
+      const email = userData.email.toLowerCase();
       console.log('Google user email:', email);
 
       // Check permissions
+      let userInDb = await prisma.tenant.findUnique({
+        where: { email },
+        include: { unit: true }
+      });
+
       const isAdmin = ADMIN_EMAILS.includes(email);
-      const isTenant = TENANT_EMAILS.includes(email) || isAdmin;
+      const isTenant = TENANT_EMAILS.includes(email) || !!userInDb || isAdmin;
 
       if (!isTenant) {
         return res.send(`
@@ -153,33 +164,30 @@ async function startServer() {
         `);
       }
 
-      // Set session - Keep it small to avoid cookie size limits
+      // Set session
       (req as any).session.user = {
-        email: email.toLowerCase(),
+        email,
         name: userData.name,
         picture: userData.picture,
         isAdmin,
+        tenantId: userInDb?.id || null,
+        unitNumber: userInDb?.unit?.number || null
       };
-
-      console.log(`Session set for ${email}. Cookie size approx: ${JSON.stringify((req as any).session.user).length} bytes`);
 
       res.send(`
         <html>
           <body>
             <script>
-              console.log("Sending OAUTH_AUTH_SUCCESS message to opener");
               if (window.opener) {
                 window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
                 setTimeout(() => window.close(), 100);
               } else {
-                console.log("No opener found, redirecting to /");
                 window.location.href = '/';
               }
             </script>
             <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
               <h2>Authentication successful</h2>
-              <p>This window should close automatically. If not, you can close it manually.</p>
-              <button onclick="window.close()">Close Window</button>
+              <p>This window should close automatically.</p>
             </div>
           </body>
         </html>
@@ -191,13 +199,7 @@ async function startServer() {
   });
 
   app.get('/api/auth/me', (req, res) => {
-    const user = (req as any).session?.user || null;
-    const hasCookie = !!req.headers.cookie;
-    console.log('Fetching /api/auth/me. Has cookies:', hasCookie, 'User found:', !!user);
-    if (hasCookie && !user) {
-      console.log('Cookies present but session user is missing. Raw cookies:', req.headers.cookie);
-    }
-    res.json({ user });
+    res.json({ user: (req as any).session?.user || null });
   });
 
   app.post('/api/auth/logout', (req, res) => {
@@ -205,9 +207,95 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // Development Bypass Login
+  app.post('/api/auth/bypass', (req, res) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Bypass not allowed in production' });
+    }
+
+    (req as any).session.user = {
+      email: 'joewansbrough@gmail.com',
+      name: 'Dev User',
+      picture: 'https://picsum.photos/seed/dev/200',
+      isAdmin: true,
+      tenantId: null,
+      unitNumber: 'DEV-101'
+    };
+
+    res.json({ success: true, user: (req as any).session.user });
+  });
+
+  // --- Database API Routes ---
+
+  app.get('/api/units', async (req, res) => {
+    try {
+      const units = await prisma.unit.findMany({
+        include: { currentTenant: true }
+      });
+      res.json(units);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch units' });
+    }
+  });
+
+  app.get('/api/tenants', async (req, res) => {
+    try {
+      const tenants = await prisma.tenant.findMany({
+        include: { unit: true }
+      });
+      res.json(tenants);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch tenants' });
+    }
+  });
+
+  app.get('/api/maintenance', async (req, res) => {
+    try {
+      const requests = await prisma.maintenanceRequest.findMany({
+        include: { unit: true },
+        orderBy: { createdAt: 'desc' }
+      });
+      res.json(requests);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch maintenance requests' });
+    }
+  });
+
+  app.get('/api/announcements', async (req, res) => {
+    try {
+      const announcements = await prisma.announcement.findMany({
+        orderBy: { createdAt: 'desc' }
+      });
+      res.json(announcements);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch announcements' });
+    }
+  });
+
+  app.get('/api/documents', async (req, res) => {
+    try {
+      const documents = await prisma.document.findMany({
+        orderBy: { createdAt: 'desc' }
+      });
+      res.json(documents);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch documents' });
+    }
+  });
+
+  app.get('/api/committees', async (req, res) => {
+    try {
+      const committees = await prisma.committee.findMany({
+        include: { members: true }
+      });
+      res.json(committees);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch committees' });
+    }
+  });
+
   app.get('/api/debug/config', (req, res) => {
     const host = req.get('x-forwarded-host') || req.get('host') || '';
-    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
     res.json({
       hasClientId: !!process.env.GOOGLE_CLIENT_ID,
       hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
@@ -218,10 +306,8 @@ async function startServer() {
       isSecure: req.secure,
       protocol: req.protocol,
       host,
-      isLocal,
       hasSession: !!(req as any).session,
       hasUser: !!(req as any).session?.user,
-      headers: req.headers,
     });
   });
 
@@ -255,4 +341,8 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});
+

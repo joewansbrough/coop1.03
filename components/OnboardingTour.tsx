@@ -90,8 +90,14 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleSkip = () => {
+    localStorage.setItem('onboarding_hidden', 'true');
+    onClose();
+  };
+
   const handleComplete = () => {
     localStorage.setItem('onboarding_completed', 'true');
+    localStorage.removeItem('onboarding_hidden'); // Clear hidden if completed
     onClose();
   };
 
@@ -104,7 +110,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[3rem] shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden relative"
+        className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[3rem] border border-slate-200 dark:border-white/10 overflow-hidden relative"
       >
         {/* Close Button */}
         <button 
@@ -131,7 +137,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
                 transition={{ type: "spring", damping: 12 }}
                 className="relative z-10"
               >
-                <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center shadow-2xl ring-4 ring-white/30">
+                <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center ring-4 ring-white/30">
                   {step.icon}
                 </div>
               </motion.div>
@@ -185,14 +191,14 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
 
               <div className="flex gap-3">
                 <button 
-                  onClick={onClose}
+                  onClick={handleSkip}
                   className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
                   Skip
                 </button>
                 <button 
                   onClick={handleNext}
-                  className="px-8 py-4 bg-slate-900 dark:bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all shadow-xl shadow-slate-900/10 dark:shadow-emerald-900/20 flex items-center gap-2 group active:scale-95"
+                  className="px-8 py-4 bg-slate-900 dark:bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all flex items-center gap-2 group active:scale-95"
                 >
                   {currentStep === STEPS.length - 1 ? 'Get Started' : 'Next Step'}
                   <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />

@@ -12,7 +12,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, onRestartTour })
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-white/5 overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-8 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
           <div>
             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Help & Support</h3>
@@ -57,7 +57,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, onRestartTour })
             <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 leading-relaxed font-medium">
               Need help with co-op policies or maintenance? Use our AI assistant to get instant answers from your association's bylaws.
             </p>
-            <button className="mt-4 w-full py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 shadow-lg shadow-emerald-500/20">
+            <button className="mt-4 w-full py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95">
               Launch Assistant
             </button>
           </div>

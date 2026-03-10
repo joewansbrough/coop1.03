@@ -106,6 +106,8 @@ export interface Document {
   fileType: string;
   author: string;
   date: string;
+  content?: string;
+  tags?: string[];
   isPrivate?: boolean;
   createdAt?: string;
   updatedAt?: string;

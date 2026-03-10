@@ -44,7 +44,7 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/10 dark:shadow-none hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
           <i className="fa-solid fa-plus"></i> Add New Application
         </button>
@@ -52,7 +52,7 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
 
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 animate-in zoom-in-95">
             <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">New Waitlist Application</h3>
             <form onSubmit={handleAddApplication} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -86,7 +86,7 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase shadow-lg hover:bg-emerald-700 flex items-center justify-center gap-2">
+                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 flex items-center justify-center gap-2">
                   <i className="fa-solid fa-plus"></i> Add New Application
                 </button>
               </div>
@@ -95,10 +95,10 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
-            <button className="px-4 py-1.5 text-[10px] font-black uppercase rounded-lg bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm">All</button>
+            <button className="px-4 py-1.5 text-[10px] font-black uppercase rounded-lg bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400">All</button>
             <button className="px-4 py-1.5 text-[10px] font-black uppercase rounded-lg text-slate-500 dark:text-slate-400">1BR</button>
             <button className="px-4 py-1.5 text-[10px] font-black uppercase rounded-lg text-slate-500 dark:text-slate-400">2BR</button>
             <button className="px-4 py-1.5 text-[10px] font-black uppercase rounded-lg text-slate-500 dark:text-slate-400">3BR+</button>

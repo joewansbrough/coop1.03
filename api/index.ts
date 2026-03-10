@@ -10,7 +10,7 @@ const app = express();
 const prisma = new PrismaClient();
 
 // Trust proxy for secure cookies on Vercel
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 
 // Aggressively force req.secure to true for the Vercel environment
 app.use((req, res, next) => {
@@ -23,16 +23,18 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
-app.use(cookieSession({
-  name: 'session',
-  keys: [process.env.SESSION_SECRET || 'default_secret'],
-  maxAge: 24 * 60 * 60 * 1000,
-  secure: true,
-  sameSite: 'none',
-  httpOnly: true,
-  signed: true,
-  overwrite: true,
-}));
+app.use((req, res, next) => {
+  cookieSession({
+    name: 'session',
+    keys: [process.env.SESSION_SECRET || 'default_secret'],
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    secure: true, // Always true on Vercel (HTTPS)
+    sameSite: 'none',
+    httpOnly: true,
+    signed: true,
+    overwrite: true,
+  } as any)(req, res, next);
+});
 
 // Mock Data
 const ADMIN_EMAILS = ['joewcoupons@gmail.com'];
@@ -165,62 +167,130 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
 // --- Database API Routes ---
 
 app.get('/api/units', async (req, res) => {
-  try {
-    const units = await prisma.unit.findMany({ include: { currentTenant: true } });
-    res.json(units);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  const units = await prisma.unit.findMany({
+    include: { currentTenant: true }
+  });
+  res.json(units);
 });
 
 app.get('/api/tenants', async (req, res) => {
-  try {
-    const tenants = await prisma.tenant.findMany({ include: { unit: true } });
-    res.json(tenants);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  const tenants = await prisma.tenant.findMany({
+    include: { unit: true }
+  });
+  res.json(tenants);
 });
 
 app.get('/api/tenants/:id/history', async (req, res) => {
-  try {
-    const history = await prisma.tenantHistory.findMany({
-      where: { tenantId: req.params.id },
-      include: { unit: true },
-      orderBy: { startDate: 'desc' }
-    });
-    res.json(history);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  const history = await prisma.tenantHistory.findMany({
+    where: { tenantId: req.params.id },
+    include: { unit: true },
+    orderBy: { startDate: 'desc' }
+  });
+  res.json(history);
 });
 
 app.get('/api/maintenance', async (req, res) => {
-  try {
-    const requests = await prisma.maintenanceRequest.findMany({
-      include: { unit: true },
-      orderBy: { createdAt: 'desc' }
-    });
-    res.json(requests);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  const requests = await prisma.maintenanceRequest.findMany({
+    include: { unit: true },
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(requests);
 });
 
 app.get('/api/announcements', async (req, res) => {
-  try {
-    const announcements = await prisma.announcement.findMany({ orderBy: { createdAt: 'desc' } });
-    res.json(announcements);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  const announcements = await prisma.announcement.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(announcements);
 });
 
 app.get('/api/documents', async (req, res) => {
-  try {
-    const documents = await prisma.document.findMany({ orderBy: { createdAt: 'desc' } });
-    res.json(documents);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  const documents = await prisma.document.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
+  res.json(documents);
 });
 
 app.get('/api/committees', async (req, res) => {
-  try {
-    const committees = await prisma.committee.findMany({ include: { members: true } });
-    res.json(committees);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  const committees = await prisma.committee.findMany({
+    include: { members: true }
+  });
+  res.json(committees);
 });
 
-app.get(['/api/debug/config', '/debug/config'], (req, res) => {
+// --- AI Routes ---
+const getAI = () => {
+  const { GoogleGenAI, Type } = require('@google/genai');
+  return { ai: new GoogleGenAI({ apiKey: process.env.API_KEY }), Type };
+};
+
+app.post('/api/ai/triage', async (req, res) => {
+  try {
+    const { ai, Type } = getAI();
+    const { description } = req.body;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: `Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            urgency: { type: Type.STRING },
+            category: { type: Type.STRING },
+            reasoning: { type: Type.STRING }
+          },
+          required: ['urgency', 'category']
+        }
+      }
+    });
+    res.json(JSON.parse(response.text || '{}'));
+  } catch (e: any) {
+    res.status(500).json({ urgency: 'Medium', category: 'Other', error: e.message });
+  }
+});
+
+app.post('/api/ai/policy', async (req, res) => {
+  try {
+    const { ai } = getAI();
+    const { question, context } = req.body;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based strictly on the provided policy snippets. If the answer isn't in the context, say you don't know and advise them to contact the board.\n\nContext: ${context}\nQuestion: ${question}`,
+      config: { temperature: 0.2 }
+    });
+    res.json({ answer: response.text });
+  } catch (e: any) {
+    res.status(500).json({ answer: 'Unable to answer at this time.', error: e.message });
+  }
+});
+
+app.post('/api/ai/summarize', async (req, res) => {
+  try {
+    const { ai, Type } = getAI();
+    const { content } = req.body;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant tags.\n\nContent: ${content.substring(0, 5000)}`,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            summary: { type: Type.STRING },
+            tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+          },
+          required: ['summary', 'tags']
+        }
+      }
+    });
+    res.json(JSON.parse(response.text || '{}'));
+  } catch (e: any) {
+    res.status(500).json({ summary: '', tags: [], error: e.message });
+  }
+});
+
+
   res.json({
     hasClientId: !!process.env.GOOGLE_CLIENT_ID,
     hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,

@@ -18,6 +18,7 @@ import Reports from './pages/Reports';
 import Tenants from './pages/Tenants';
 import TenantDetail from './pages/TenantDetail';
 import Waitlist from './pages/Waitlist';
+import PolicyAssistant from './pages/PolicyAssistant';
 import Login from './pages/Login';
 import { MOCK_ANNOUNCEMENTS, MOCK_DOCS, MOCK_UNITS, MOCK_TENANTS, MOCK_REQUESTS, MOCK_EVENTS, MOCK_COMMITTEES } from './constants';
 import { Announcement, Document, Unit, Tenant, MaintenanceRequest, CoopEvent, Committee } from './types';
@@ -36,6 +37,7 @@ const App: React.FC = () => {
   
   // Shared state
   const [announcements, setAnnouncements] = useState<Announcement[]>(MOCK_ANNOUNCEMENTS);
+  const [isAdminOverride, setIsAdminOverride] = useState(false);
   const [documents, setDocuments] = useState<Document[]>(MOCK_DOCS);
   const [units, setUnits] = useState<Unit[]>(MOCK_UNITS);
   const [tenants, setTenants] = useState<Tenant[]>(MOCK_TENANTS);
@@ -78,12 +80,12 @@ const App: React.FC = () => {
         committeesRes.json()
       ]);
 
-      if (Array.isArray(unitsData)) setUnits(unitsData);
-      if (Array.isArray(tenantsData)) setTenants(tenantsData);
-      if (Array.isArray(requestsData)) setRequests(requestsData);
-      if (Array.isArray(announcementsData)) setAnnouncements(announcementsData);
-      if (Array.isArray(docsData)) setDocuments(docsData);
-      if (Array.isArray(committeesData)) setCommittees(committeesData);
+      setUnits(Array.isArray(unitsData) ? unitsData : []);
+      setTenants(Array.isArray(tenantsData) ? tenantsData : []);
+      setRequests(Array.isArray(requestsData) ? requestsData : []);
+      setAnnouncements(Array.isArray(announcementsData) ? announcementsData : []);
+      setDocuments(Array.isArray(docsData) ? docsData : []);
+      setCommittees(Array.isArray(committeesData) ? committeesData : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
@@ -114,33 +116,41 @@ const App: React.FC = () => {
     return <Login onLoginSuccess={fetchUser} />;
   }
 
-  const isAdmin = user.isAdmin;
+  const effectiveIsAdmin = user.isAdmin && !isAdminOverride;
 
   return (
     <HashRouter>
-      <Layout isAdmin={isAdmin} user={user} coopName={coopName}>
+      <Layout 
+        isAdmin={effectiveIsAdmin} 
+        isActualAdmin={user.isAdmin}
+        onToggleAdminView={() => setIsAdminOverride(!isAdminOverride)}
+        user={user} 
+        coopName={coopName}
+      >
         <Routes>
-          <Route path="/" element={<Dashboard isAdmin={isAdmin} announcements={announcements} units={units} tenants={tenants} requests={requests} events={events} />} />
-          <Route path="/calendar" element={<Calendar isAdmin={isAdmin} events={events} setEvents={setEvents} />} />
-          <Route path="/calendar/:eventId" element={<EventDetail isAdmin={isAdmin} />} />
+          <Route path="/" element={<Dashboard isAdmin={effectiveIsAdmin} announcements={announcements} units={units} tenants={tenants} requests={requests} events={events} />} />
+          <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} events={events} setEvents={setEvents} />} />
+          <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} events={events} setEvents={setEvents} />} />
           <Route path="/announcements/:annId" element={<AnnouncementDetail announcements={announcements} />} />
-          <Route path="/committees" element={<Committees isAdmin={isAdmin} committees={committees} setCommittees={setCommittees} tenants={tenants} />} />
-          <Route path="/maintenance" element={<Maintenance isAdmin={isAdmin} requests={requests} setRequests={setRequests} units={units} />} />
-          <Route path="/documents" element={<Documents isAdmin={isAdmin} documents={documents} setDocuments={setDocuments} />} />
-          <Route path="/finances" element={<Finances isAdmin={isAdmin} />} />
-          <Route path="/communications" element={<Communications isAdmin={isAdmin} announcements={announcements} setAnnouncements={setAnnouncements} />} />
-          <Route path="/directory" element={<Tenants isAdmin={isAdmin} tenants={tenants} setTenants={setTenants} units={units} />} />
+          <Route path="/committees" element={<Committees isAdmin={effectiveIsAdmin} committees={committees} setCommittees={setCommittees} tenants={tenants} />} />
+          <Route path="/maintenance" element={<Maintenance isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} />} />
+          <Route path="/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
+          <Route path="/documents" element={<Documents isAdmin={effectiveIsAdmin} documents={documents} setDocuments={setDocuments} />} />
+          <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} />} />
+          <Route path="/finances" element={<Finances isAdmin={effectiveIsAdmin} />} />
+          <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} announcements={announcements} setAnnouncements={setAnnouncements} />} />
+          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} tenants={tenants} setTenants={setTenants} units={units} />} />
           
           {/* Admin Routes */}
-          {isAdmin && (
+          {effectiveIsAdmin && (
             <>
               <Route path="/admin/units" element={<AdminUnits units={units} setUnits={setUnits} tenants={tenants} />} />
               <Route path="/admin/units/:unitId" element={<UnitDetail units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} />} />
-              <Route path="/admin/tenants" element={<Tenants isAdmin={isAdmin} tenants={tenants} setTenants={setTenants} units={units} />} />
+              <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} tenants={tenants} setTenants={setTenants} units={units} />} />
               <Route path="/admin/tenants/:tenantId" element={<TenantDetail tenants={tenants} units={units} requests={requests} />} />
               <Route path="/admin/waitlist" element={<Waitlist tenants={tenants} setTenants={setTenants} />} />
               <Route path="/admin/reports" element={<Reports />} />
-              <Route path="/admin/maintenance/:requestId" element={<MaintenanceDetail isAdmin={isAdmin} />} />
+              <Route path="/admin/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
             </>
           )}
 

@@ -67,13 +67,13 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         <span className="font-semibold text-slate-800 dark:text-slate-200">{tenant.firstName} {tenant.lastName}</span>
       </div>
 
-      <header className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
+      <header className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-[0.03] text-[12rem] pointer-events-none dark:text-white">
           <i className="fa-solid fa-id-badge"></i>
         </div>
 
         <div className="flex items-center gap-6 relative z-10">
-          <div className="w-24 h-24 rounded-2xl bg-slate-900 dark:bg-emerald-600 text-white flex items-center justify-center text-4xl shadow-xl font-black ring-4 ring-emerald-500/10">
+          <div className="w-24 h-24 rounded-2xl bg-slate-900 dark:bg-emerald-600 text-white flex items-center justify-center text-4xl font-black ring-4 ring-emerald-500/10">
             {tenant.firstName.charAt(0)}
           </div>
           <div>
@@ -93,7 +93,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         <div className="flex gap-3 relative z-10">
           <button 
             onClick={() => setShowMsgModal(true)}
-            className="bg-slate-900 dark:bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center gap-2"
+            className="bg-slate-900 dark:bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center gap-2"
           >
             <i className="fa-solid fa-paper-plane"></i> Message
           </button>
@@ -129,7 +129,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
-              <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm space-y-6">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6">
                       <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Personal Profile (Restricted)</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
@@ -144,7 +144,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
               </div>
 
               {unit && (
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm space-y-6">
+                <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6">
                   <div className="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-4">
                     <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px]">Current Unit Assignment</h3>
                     <Link to={`/admin/units/${unit.id}`} className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline">View Unit Detail</Link>
@@ -166,7 +166,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                 </div>
               )}
 
-              <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm space-y-6">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6">
                 <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Active Service Requests</h3>
                 {openRequests.length > 0 ? (
                   <div className="space-y-4">
@@ -191,7 +191,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
             </div>
             
             <div className="space-y-8">
-              <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm space-y-6">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6">
                 <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Engagement Status</h3>
                 <div className="space-y-4">
                   <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-white/5">
@@ -201,7 +201,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                 </div>
               </div>
 
-              <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl">
+              <div className="bg-slate-900 text-white p-8 rounded-3xl">
                 <h3 className="font-black uppercase text-[10px] tracking-widest text-emerald-400 mb-4">Board Notes</h3>
                 <p className="text-xs font-medium leading-relaxed opacity-70 italic border-l-2 border-emerald-500 pl-4">
                   "Member in good standing. Active contributor to community initiatives. No reported infractions."
@@ -212,7 +212,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         )}
 
         {activeTab === 'tenancy' && (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
             {isLoadingHistory ? (
               <div className="p-12 text-center">
                 <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -257,7 +257,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         )}
 
         {activeTab === 'maintenance' && (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
             <table className="w-full text-left">
               <thead className="bg-slate-50 dark:bg-slate-950/50">
                 <tr>
@@ -269,9 +269,13 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-white/5">
                 {tenantRequests.map(req => (
-                  <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                  <tr 
+                    key={req.id} 
+                    onClick={() => navigate(`/admin/maintenance/${req.id}`)}
+                    className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
+                  >
                     <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200">{req.title}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">{req.title}</td>
                     <td className="px-6 py-4 text-xs font-black text-slate-500 uppercase">{req.priority}</td>
                     <td className="px-6 py-4 text-right">
                       <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${
@@ -290,14 +294,14 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
 
         {activeTab === 'participation' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm space-y-6">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6">
               <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Committee Assignments</h3>
               <div className="space-y-4">
                 <p className="text-xs text-slate-400 italic">No active committee assignments.</p>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm space-y-6">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6">
               <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Volunteer Log</h3>
               <div className="space-y-4">
                 <p className="text-xs text-slate-400 italic">No volunteer hours logged.</p>
@@ -307,7 +311,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         )}
 
         {activeTab === 'financials' && (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
             <div className="p-12 text-center">
               <i className="fa-solid fa-vault text-4xl text-slate-200 dark:text-slate-800 mb-4"></i>
               <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Financial Ledger Restricted</p>
@@ -319,7 +323,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
       {/* Message Modal */}
       {showMsgModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-white/5">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-white/5">
             <div className="p-8 border-b border-slate-50 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
               <div>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">Direct Message</h3>
@@ -351,7 +355,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                 <button 
                   type="submit"
                   disabled={isSending || !msgBody.trim()}
-                  className="flex-1 py-4 bg-slate-900 dark:bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-black dark:hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50"
+                  className="flex-1 py-4 bg-slate-900 dark:bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50"
                 >
                   {isSending ? <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> : <i className="fa-solid fa-paper-plane mr-2"></i>}
                   {isSending ? 'Sending...' : 'Dispatch Message'}

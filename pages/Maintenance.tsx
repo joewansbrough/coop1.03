@@ -24,8 +24,8 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   
   // Filter requests based on user role
   const displayedRequests = isAdmin 
-    ? requests 
-    : requests.filter(r => r.unitId === userUnitId);
+    ? (Array.isArray(requests) ? requests : []) 
+    : (Array.isArray(requests) ? requests.filter(r => r.unitId === userUnitId) : []);
   
   // Form State
   const [description, setDescription] = useState('');
@@ -51,13 +51,12 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     e.preventDefault();
     const newRequest: MaintenanceRequest = {
       id: `r${Date.now()}`,
-      title: description.slice(0, 30) + (description.length > 30 ? '...' : ''),
-      priority: urgency,
+      title: description.substring(0, 30) + '...',
       unitId,
       tenantId: 't1', 
       category: category,
       description,
-      urgency: urgency as any,
+      priority: urgency,
       status: RequestStatus.PENDING,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -96,16 +95,16 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           {isAdmin && (
-            <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl flex-1 sm:flex-none shadow-inner">
+            <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl flex-1 sm:flex-none">
               <button 
                 onClick={() => { setActiveView('requests'); setSelectedRequestIdForQuotes(null); }}
-                className={`flex-1 sm:px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${activeView === 'requests' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}
+                className={`flex-1 sm:px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${activeView === 'requests' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}
               >
                 Requests
               </button>
               <button 
                 onClick={() => setActiveView('quotes')}
-                className={`flex-1 sm:px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${activeView === 'quotes' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}
+                className={`flex-1 sm:px-4 py-2 text-[10px] font-black uppercase rounded-lg transition-all ${activeView === 'quotes' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}
               >
                 Quotes {quotes.length > 0 && `(${quotes.length})`}
               </button>
@@ -113,7 +112,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
           )}
           <button 
             onClick={() => setShowForm(!showForm)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg shadow-emerald-500/10 dark:shadow-none flex items-center justify-center gap-2 active:scale-95 transition-all"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"
           >
             <i className="fa-solid fa-plus"></i> Submit New Request
           </button>
@@ -121,7 +120,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       </div>
 
       {showForm && (
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 shadow-xl animate-in fade-in slide-in-from-top-4">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 animate-in fade-in slide-in-from-top-4">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-3">
                <i className="fa-solid fa-clipboard-list text-emerald-500"></i> {isAdmin ? 'Report Building Defect' : 'Request Maintenance'}
@@ -134,7 +133,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
             <div className="md:col-span-2">
               <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Detailed Problem Description</label>
               <textarea
-                className="w-full border border-slate-200 dark:border-white/5 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 dark:bg-slate-950/50 min-h-[120px] shadow-inner text-slate-800 dark:text-slate-200"
+                className="w-full border border-slate-200 dark:border-white/5 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50 dark:bg-slate-950/50 min-h-[120px] text-slate-800 dark:text-slate-200"
                 placeholder="Where is it? What happened? When did it start?"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -185,7 +184,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
 
             <div className="md:col-span-2 flex flex-col-reverse sm:flex-row justify-end gap-3 mt-4 border-t border-slate-50 dark:border-white/5 pt-6">
               <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors">Dismiss</button>
-              <button type="submit" className="px-10 py-3 bg-slate-900 dark:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-black dark:hover:bg-emerald-700 shadow-lg shadow-slate-200 dark:shadow-none active:scale-95 transition-all flex items-center justify-center gap-2">
+              <button type="submit" className="px-10 py-3 bg-slate-900 dark:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-black dark:hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2">
                 <i className="fa-solid fa-plus"></i> Submit New Request
               </button>
             </div>
@@ -194,7 +193,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       )}
 
       {activeView === 'requests' ? (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left min-w-[700px]">
               <thead className="bg-slate-50 dark:bg-slate-950/50 border-b border-slate-200 dark:border-white/5">
@@ -208,7 +207,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {displayedRequests.length > 0 ? displayedRequests.map(req => (
-                  <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance`)}>
+                  <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance/${req.id}`)}>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase">Unit {units.find(u => u.id === req.unitId)?.number || 'N/A'}</span>
@@ -248,7 +247,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                           </button>
                         )}
                         <button 
-                          onClick={(e) => { e.stopPropagation(); navigate(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance`); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance/${req.id}`); }}
                           className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
                         >
                           <i className="fa-solid fa-arrow-right"></i>
@@ -271,7 +270,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredQuotes.map(quote => (
-              <div key={quote.id} className={`bg-white dark:bg-slate-900 p-6 rounded-3xl border shadow-sm flex flex-col hover:shadow-md transition-all group ${quote.status === 'Approved' ? 'border-emerald-500' : 'border-slate-200 dark:border-white/5'}`}>
+              <div key={quote.id} className={`bg-white dark:bg-slate-900 p-6 rounded-3xl border flex flex-col transition-all group ${quote.status === 'Approved' ? 'border-emerald-500' : 'border-slate-200 dark:border-white/5'}`}>
                 <div className="flex justify-between items-start mb-4">
                   <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20 group-hover:text-emerald-600 transition-colors">
                     <i className="fa-solid fa-file-invoice-dollar text-xl"></i>
@@ -293,7 +292,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                     {quote.status !== 'Approved' && (
                       <button 
                         onClick={() => approveQuote(quote.id)}
-                        className="bg-slate-900 dark:bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all shadow-md dark:shadow-none active:scale-95"
+                        className="bg-slate-900 dark:bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all active:scale-95"
                       >
                         Approve
                       </button>

@@ -1,19 +1,41 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MOCK_EVENTS } from '../constants';
 import { CoopEvent } from '../types';
 
-const EventDetail: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
+interface EventDetailProps {
+  isAdmin: boolean;
+  events: CoopEvent[];
+  setEvents: React.Dispatch<React.SetStateAction<CoopEvent[]>>;
+}
+
+const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, events, setEvents }) => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  const [event, setEvent] = useState(MOCK_EVENTS.find(e => e.id === eventId));
+  const [event, setEvent] = useState(events.find(e => e.id === eventId));
   const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    setEvent(events.find(e => e.id === eventId));
+  }, [eventId, events]);
 
   if (!event) return <div className="p-8 text-center text-slate-500">Event not found.</div>;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const updatedEvent: CoopEvent = {
+      ...event,
+      title: (form.elements.namedItem('title') as HTMLInputElement).value,
+      category: (form.elements.namedItem('category') as HTMLSelectElement).value as any,
+      date: (form.elements.namedItem('date') as HTMLInputElement).value,
+      time: (form.elements.namedItem('time') as HTMLInputElement).value,
+      location: (form.elements.namedItem('location') as HTMLInputElement).value,
+      description: (form.elements.namedItem('description') as HTMLTextAreaElement).value,
+    };
+    
+    setEvents(events.map(ev => ev.id === event.id ? updatedEvent : ev));
     setIsEditing(false);
     alert("Event details updated successfully!");
   };
@@ -28,7 +50,7 @@ const EventDetail: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
         <span className="font-semibold text-slate-800 dark:text-slate-200">{event.title}</span>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 shadow-xl overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden">
         <div className="h-48 bg-slate-900 relative overflow-hidden">
           <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=1200')] bg-cover bg-center"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
@@ -51,36 +73,37 @@ const EventDetail: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Title</label>
                   <input 
+                    name="title"
                     className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold"
                     defaultValue={event.title}
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</label>
-                  <select className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold">
+                  <select name="category" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold" defaultValue={event.category}>
                     <option>Meeting</option><option>Social</option><option>Maintenance</option><option>Board</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</label>
-                  <input type="date" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold" defaultValue={event.date} />
+                  <input name="date" type="date" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold" defaultValue={event.date} />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time</label>
-                  <input type="time" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold" defaultValue={event.time} />
+                  <input name="time" type="time" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold" defaultValue={event.time} />
                 </div>
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</label>
-                <input className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold" defaultValue={event.location} />
+                <input name="location" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold" defaultValue={event.location} />
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Description</label>
-                <textarea className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-medium h-32" defaultValue={event.description}></textarea>
+                <textarea name="description" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-medium h-32" defaultValue={event.description}></textarea>
               </div>
               <div className="flex gap-4 pt-4">
                 <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-500 bg-slate-100 dark:bg-slate-800 rounded-2xl">Cancel</button>
-                <button type="submit" className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase shadow-xl hover:bg-emerald-700">Save Changes</button>
+                <button type="submit" className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-emerald-700">Save Changes</button>
               </div>
             </form>
           ) : (
@@ -122,7 +145,7 @@ const EventDetail: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
                 {isAdmin && (
                   <button 
                     onClick={() => setIsEditing(true)}
-                    className="w-full bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-xl active:scale-95"
+                    className="w-full bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95"
                   >
                     <i className="fa-solid fa-pen-to-square mr-2"></i> Edit Event
                   </button>
