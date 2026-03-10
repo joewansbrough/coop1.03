@@ -23,18 +23,16 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
-app.use((req, res, next) => {
-  cookieSession({
-    name: 'session',
-    keys: [process.env.SESSION_SECRET || 'default_secret'],
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    secure: true, // Always true on Vercel (HTTPS)
-    sameSite: 'none',
-    httpOnly: true,
-    signed: true,
-    overwrite: true,
-  })(req, res, next);
-});
+app.use(cookieSession({
+  name: 'session',
+  keys: [process.env.SESSION_SECRET || 'default_secret'],
+  maxAge: 24 * 60 * 60 * 1000,
+  secure: true,
+  sameSite: 'none',
+  httpOnly: true,
+  signed: true,
+  overwrite: true,
+}));
 
 // Mock Data
 const ADMIN_EMAILS = ['joewcoupons@gmail.com'];
@@ -167,55 +165,59 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
 // --- Database API Routes ---
 
 app.get('/api/units', async (req, res) => {
-  const units = await prisma.unit.findMany({
-    include: { currentTenant: true }
-  });
-  res.json(units);
+  try {
+    const units = await prisma.unit.findMany({ include: { currentTenant: true } });
+    res.json(units);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/tenants', async (req, res) => {
-  const tenants = await prisma.tenant.findMany({
-    include: { unit: true }
-  });
-  res.json(tenants);
+  try {
+    const tenants = await prisma.tenant.findMany({ include: { unit: true } });
+    res.json(tenants);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/tenants/:id/history', async (req, res) => {
-  const history = await prisma.tenantHistory.findMany({
-    where: { tenantId: req.params.id },
-    include: { unit: true },
-    orderBy: { startDate: 'desc' }
-  });
-  res.json(history);
+  try {
+    const history = await prisma.tenantHistory.findMany({
+      where: { tenantId: req.params.id },
+      include: { unit: true },
+      orderBy: { startDate: 'desc' }
+    });
+    res.json(history);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/maintenance', async (req, res) => {
-  const requests = await prisma.maintenanceRequest.findMany({
-    include: { unit: true },
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(requests);
+  try {
+    const requests = await prisma.maintenanceRequest.findMany({
+      include: { unit: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(requests);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/announcements', async (req, res) => {
-  const announcements = await prisma.announcement.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(announcements);
+  try {
+    const announcements = await prisma.announcement.findMany({ orderBy: { createdAt: 'desc' } });
+    res.json(announcements);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/documents', async (req, res) => {
-  const documents = await prisma.document.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(documents);
+  try {
+    const documents = await prisma.document.findMany({ orderBy: { createdAt: 'desc' } });
+    res.json(documents);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/committees', async (req, res) => {
-  const committees = await prisma.committee.findMany({
-    include: { members: true }
-  });
-  res.json(committees);
+  try {
+    const committees = await prisma.committee.findMany({ include: { members: true } });
+    res.json(committees);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get(['/api/debug/config', '/debug/config'], (req, res) => {
