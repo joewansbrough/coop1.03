@@ -78,12 +78,12 @@ const App: React.FC = () => {
         committeesRes.json()
       ]);
 
-      setUnits(unitsData);
-      setTenants(tenantsData);
-      setRequests(requestsData);
-      setAnnouncements(announcementsData);
-      setDocuments(docsData);
-      setCommittees(committeesData);
+      if (Array.isArray(unitsData)) setUnits(unitsData);
+      if (Array.isArray(tenantsData)) setTenants(tenantsData);
+      if (Array.isArray(requestsData)) setRequests(requestsData);
+      if (Array.isArray(announcementsData)) setAnnouncements(announcementsData);
+      if (Array.isArray(docsData)) setDocuments(docsData);
+      if (Array.isArray(committeesData)) setCommittees(committeesData);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
