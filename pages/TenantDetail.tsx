@@ -323,7 +323,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
             <div className="p-8 border-b border-slate-50 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
               <div>
                 <h3 className="text-xl font-black text-slate-900 dark:text-white">Direct Message</h3>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Recipient: {tenant.name}</p>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Recipient: {tenant.firstName} {tenant.lastName}</p>
               </div>
               <button onClick={() => setShowMsgModal(false)} className="w-10 h-10 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center transition-colors">
                 <i className="fa-solid fa-xmark text-slate-500"></i>

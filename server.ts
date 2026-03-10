@@ -22,7 +22,7 @@ async function startServer() {
   const app = express();
   
   // Trust proxy for secure cookies behind nginx
-  app.set('trust proxy', true);
+  app.set('trust proxy', 1);
 
   // Aggressively force req.secure to true for the preview environment
   app.use((req, res, next) => {
@@ -49,7 +49,6 @@ async function startServer() {
       httpOnly: true,
       signed: true,
       overwrite: true,
-      proxy: true,
     })(req, res, next);
   });
 

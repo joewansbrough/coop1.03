@@ -62,6 +62,8 @@ const Documents: React.FC<{
             category: newDocCategory,
             date: new Date().toISOString().split('T')[0],
             author: isAdmin ? 'Administrator' : 'Member',
+            url: '#',
+            fileType: 'pdf',
             isPrivate: newDocIsPrivate
           };
           

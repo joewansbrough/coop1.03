@@ -51,6 +51,8 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     e.preventDefault();
     const newRequest: MaintenanceRequest = {
       id: `r${Date.now()}`,
+      title: description.slice(0, 30) + (description.length > 30 ? '...' : ''),
+      priority: urgency,
       unitId,
       tenantId: 't1', 
       category: category,

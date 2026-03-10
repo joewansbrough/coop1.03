@@ -28,6 +28,7 @@ const Communications: React.FC<{
       content: newAnnContent,
       author: 'Management',
       date: new Date().toISOString().split('T')[0],
+      type: 'General',
       priority: newAnnPriority
     };
 

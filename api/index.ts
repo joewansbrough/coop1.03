@@ -10,7 +10,7 @@ const app = express();
 const prisma = new PrismaClient();
 
 // Trust proxy for secure cookies on Vercel
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 // Aggressively force req.secure to true for the Vercel environment
 app.use((req, res, next) => {
@@ -33,7 +33,6 @@ app.use((req, res, next) => {
     httpOnly: true,
     signed: true,
     overwrite: true,
-    proxy: true,
   })(req, res, next);
 });
 
