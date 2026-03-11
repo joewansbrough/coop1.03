@@ -64,7 +64,7 @@ const authRouter = express.Router();
 authRouter.get('/url', (req, res) => {
   const baseUrl = getBaseUrl(req);
   const redirectUri = `${baseUrl}/auth/callback`;
-
+  
   if (!process.env.GOOGLE_CLIENT_ID) {
     return res.status(500).json({ error: 'GOOGLE_CLIENT_ID is not configured in Vercel environment variables' });
   }
@@ -92,7 +92,7 @@ app.get('/auth/callback', async (req, res) => {
   try {
     const baseUrl = getBaseUrl(req);
     const redirectUri = `${baseUrl}/auth/callback`;
-
+    
     const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -117,7 +117,7 @@ app.get('/auth/callback', async (req, res) => {
 
     // For now, let's assume if they are in ADMIN_EMAILS, they are admins
     const isAdmin = ADMIN_EMAILS.includes(email);
-
+    
     // If not in DB but is admin, we might want to allow them anyway
     if (!user && !isAdmin) {
       return res.send(`<html><body><script>alert("Access denied for ${email}. You are not registered in the co-op database.");window.close();</script></body></html>`);
@@ -238,7 +238,7 @@ app.post('/api/ai/triage', async (req, res) => {
     const ai = getAI();
     const { description } = req.body;
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.0-flash-lite',
       contents: `Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`,
       config: {
         responseMimeType: 'application/json',
@@ -264,7 +264,7 @@ app.post('/api/ai/policy', async (req, res) => {
     const ai = getAI();
     const { question, context } = req.body;
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.0-flash-lite',
       contents: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}`,
       config: { temperature: 0.2 }
     });
@@ -279,7 +279,7 @@ app.post('/api/ai/summarize', async (req, res) => {
     const ai = getAI();
     const { content } = req.body;
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.0-flash-lite',
       contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant tags.\n\nContent: ${content.substring(0, 5000)}`,
       config: {
         responseMimeType: 'application/json',
