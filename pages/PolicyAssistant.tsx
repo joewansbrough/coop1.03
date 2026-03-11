@@ -7,9 +7,9 @@ import { Document } from '../types';
 
 const PolicyAssistant: React.FC<{ documents: Document[] }> = ({ documents }) => {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
-    { 
-      role: 'assistant', 
-      content: "Hello! I'm your Co-op Policy Assistant. I can help you understand our bylaws, occupancy agreements, and house rules. What would you like to know today?" 
+    {
+      role: 'assistant',
+      content: "Hello! I'm your Co-op Policy Assistant. I can help you understand our bylaws, occupancy agreements, and house rules. What would you like to know today?"
     }
   ]);
   const [input, setInput] = useState('');
@@ -34,29 +34,28 @@ const PolicyAssistant: React.FC<{ documents: Document[] }> = ({ documents }) => 
     setIsLoading(true);
 
     // Prepare context from policy documents - match both 'Policy' and 'Policies' categories
-    const policyDocs = documents.filter(d => 
+    const policyDocs = documents.filter(d =>
       d.category === 'Policy' || d.category === 'Policies' || d.category === 'Bylaws'
     );
-    const docContext = policyDocs.length > 0 
-      ? policyDocs.map(d => `Document: ${d.title}
-Content: ${d.content || '(Full text not available)'}`).join('
-
-')
+    const docContext = policyDocs.length > 0
+      ? policyDocs.map(d => 'Document: ' + d.title + '\nContent: ' + (d.content || '(Full text not available)')).join('\n\n')
       : 'No local policy documents currently have extracted text content.';
-    
-    const generalContext = `BC Co-op Housing Context:
-- BC housing co-ops operate under the Cooperative Association Act (RSBC 1996)
-- Members have occupancy rights, not tenancy - the Residential Tenancy Act does not apply
-- Members must participate through committee work (typically 8-12 hours/year)
-- Housing charges are set annually by the board based on operating costs, not market rents
-- Members can be evicted for non-payment or conduct violations with proper notice and a hearing
-- Subletting is generally prohibited or requires board approval
-- Board elections occur at the AGM; typically 5-7 directors serve staggered 2-year terms
-- Special general meetings require written notice (typically 14-21 days) and a quorum
-- Major capital expenditures above a threshold require member approval
-- The reserve fund must be maintained per a professional reserve fund study`;
-    
-    const fullContext = docContext + generalContext;
+
+    const generalContext = [
+      'BC Co-op Housing Context:',
+      '- BC housing co-ops operate under the Cooperative Association Act (RSBC 1996)',
+      '- Members have occupancy rights, not tenancy - the Residential Tenancy Act does not apply',
+      '- Members must participate through committee work (typically 8-12 hours/year)',
+      '- Housing charges are set annually by the board based on operating costs, not market rents',
+      '- Members can be evicted for non-payment or conduct violations with proper notice and a hearing',
+      '- Subletting is generally prohibited or requires board approval',
+      '- Board elections occur at the AGM; typically 5-7 directors serve staggered 2-year terms',
+      '- Special general meetings require written notice (typically 14-21 days) and a quorum',
+      '- Major capital expenditures above a threshold require member approval',
+      '- The reserve fund must be maintained per a professional reserve fund study',
+    ].join('\n');
+
+    const fullContext = docContext + '\n\n' + generalContext;
 
     try {
       const response = await geminiService.askPolicyQuestion(userMessage, fullContext);
@@ -90,7 +89,7 @@ Content: ${d.content || '(Full text not available)'}`).join('
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-0">
-        {/* Sidebar - Info & Suggestions */}
+        {/* Sidebar */}
         <div className="hidden lg:flex flex-col gap-6 lg:col-span-1">
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 space-y-4">
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
@@ -107,7 +106,7 @@ Content: ${d.content || '(Full text not available)'}`).join('
               </div>
               <div className="space-y-2">
                 {suggestedQuestions.map((q, i) => (
-                  <button 
+                  <button
                     key={i}
                     onClick={() => setInput(q)}
                     className="w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800"
@@ -143,18 +142,16 @@ Content: ${d.content || '(Full text not available)'}`).join('
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                      msg.role === 'user' 
-                        ? 'bg-emerald-600 text-white' 
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${msg.role === 'user'
+                        ? 'bg-emerald-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                    }`}>
+                      }`}>
                       {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                     </div>
-                    <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
-                      msg.role === 'user'
+                    <div className={`p-4 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
                         ? 'bg-emerald-600 text-white rounded-tr-none'
                         : 'bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-white/5'
-                    }`}>
+                      }`}>
                       {msg.content}
                     </div>
                   </div>
@@ -169,21 +166,9 @@ Content: ${d.content || '(Full text not available)'}`).join('
                   </div>
                   <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl rounded-tl-none border border-slate-100 dark:border-white/5">
                     <div className="flex gap-1">
-                      <motion.div 
-                        animate={{ scale: [1, 1.2, 1] }} 
-                        transition={{ repeat: Infinity, duration: 1 }}
-                        className="w-1.5 h-1.5 bg-emerald-500 rounded-full" 
-                      />
-                      <motion.div 
-                        animate={{ scale: [1, 1.2, 1] }} 
-                        transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
-                        className="w-1.5 h-1.5 bg-emerald-500 rounded-full" 
-                      />
-                      <motion.div 
-                        animate={{ scale: [1, 1.2, 1] }} 
-                        transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
-                        className="w-1.5 h-1.5 bg-emerald-500 rounded-full" 
-                      />
+                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                     </div>
                   </div>
                 </div>
