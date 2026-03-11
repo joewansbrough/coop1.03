@@ -3,6 +3,7 @@ import cookieSession from 'cookie-session';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
 
@@ -63,7 +64,7 @@ const authRouter = express.Router();
 authRouter.get('/url', (req, res) => {
   const baseUrl = getBaseUrl(req);
   const redirectUri = `${baseUrl}/auth/callback`;
-
+  
   if (!process.env.GOOGLE_CLIENT_ID) {
     return res.status(500).json({ error: 'GOOGLE_CLIENT_ID is not configured in Vercel environment variables' });
   }
@@ -91,7 +92,7 @@ app.get('/auth/callback', async (req, res) => {
   try {
     const baseUrl = getBaseUrl(req);
     const redirectUri = `${baseUrl}/auth/callback`;
-
+    
     const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -116,7 +117,7 @@ app.get('/auth/callback', async (req, res) => {
 
     // For now, let's assume if they are in ADMIN_EMAILS, they are admins
     const isAdmin = ADMIN_EMAILS.includes(email);
-
+    
     // If not in DB but is admin, we might want to allow them anyway
     if (!user && !isAdmin) {
       return res.send(`<html><body><script>alert("Access denied for ${email}. You are not registered in the co-op database.");window.close();</script></body></html>`);
@@ -230,14 +231,11 @@ app.get('/api/committees', async (req, res) => {
 });
 
 // --- AI Routes ---
-const getAI = () => {
-  const { GoogleGenAI, Type } = require('@google/genai');
-  return { ai: new GoogleGenAI({ apiKey: process.env.API_KEY }), Type };
-};
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 app.post('/api/ai/triage', async (req, res) => {
   try {
-    const { ai, Type } = getAI();
+    const ai = getAI();
     const { description } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
@@ -263,22 +261,22 @@ app.post('/api/ai/triage', async (req, res) => {
 
 app.post('/api/ai/policy', async (req, res) => {
   try {
-    const { ai } = getAI();
+    const ai = getAI();
     const { question, context } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
-      contents: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based strictly on the provided policy snippets. If the answer isn't in the context, say you don't know and advise them to contact the board.\n\nContext: ${context}\nQuestion: ${question}`,
+      contents: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}`,
       config: { temperature: 0.2 }
     });
     res.json({ answer: response.text });
   } catch (e: any) {
-    res.status(500).json({ answer: 'Unable to answer at this time.', error: e.message });
+    res.status(500).json({ answer: 'Unable to answer at this time. Please contact the board.', error: e.message });
   }
 });
 
 app.post('/api/ai/summarize', async (req, res) => {
   try {
-    const { ai, Type } = getAI();
+    const ai = getAI();
     const { content } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',

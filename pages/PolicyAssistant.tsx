@@ -33,16 +33,30 @@ const PolicyAssistant: React.FC<{ documents: Document[] }> = ({ documents }) => 
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
-    // Prepare context from policy documents
-    const policyDocs = documents.filter(d => d.category === 'Policy' || d.category === 'Bylaws');
-    const context = policyDocs.length > 0 
-      ? policyDocs.map(d => `Document: ${d.title}\nContent: ${d.content || 'No content extracted.'}`).join('\n\n')
-      : "No specific local policy documents found in the library. ";
+    // Prepare context from policy documents - match both 'Policy' and 'Policies' categories
+    const policyDocs = documents.filter(d => 
+      d.category === 'Policy' || d.category === 'Policies' || d.category === 'Bylaws'
+    );
+    const docContext = policyDocs.length > 0 
+      ? policyDocs.map(d => `Document: ${d.title}
+Content: ${d.content || '(Full text not available)'}`).join('
+
+')
+      : 'No local policy documents currently have extracted text content.';
     
-    // Add some general BC Co-op context
-    const generalContext = "General BC Co-op principles apply: democratic control, member participation, and adherence to the Co-operative Association Act of BC.";
+    const generalContext = `BC Co-op Housing Context:
+- BC housing co-ops operate under the Cooperative Association Act (RSBC 1996)
+- Members have occupancy rights, not tenancy - the Residential Tenancy Act does not apply
+- Members must participate through committee work (typically 8-12 hours/year)
+- Housing charges are set annually by the board based on operating costs, not market rents
+- Members can be evicted for non-payment or conduct violations with proper notice and a hearing
+- Subletting is generally prohibited or requires board approval
+- Board elections occur at the AGM; typically 5-7 directors serve staggered 2-year terms
+- Special general meetings require written notice (typically 14-21 days) and a quorum
+- Major capital expenditures above a threshold require member approval
+- The reserve fund must be maintained per a professional reserve fund study`;
     
-    const fullContext = context + generalContext;
+    const fullContext = docContext + generalContext;
 
     try {
       const response = await geminiService.askPolicyQuestion(userMessage, fullContext);
