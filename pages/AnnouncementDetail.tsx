@@ -19,11 +19,11 @@ const AnnouncementDetail: React.FC<{ announcements: Announcement[] }> = ({ annou
         <span className="font-semibold text-slate-800 dark:text-slate-200">Broadcast Archive</span>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-2xl overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden">
         <div className={`p-8 lg:p-12 border-b border-slate-50 dark:border-white/5 ${announcement.priority === 'Urgent' ? 'bg-rose-50/30 dark:bg-rose-950/20' : 'bg-slate-50/50 dark:bg-slate-950/30'}`}>
           <div className="flex items-center gap-3 mb-6">
             <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
-              announcement.priority === 'Urgent' ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/20' : 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+              announcement.priority === 'Urgent' ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'
             }`}>
               {announcement.priority} Update
             </span>

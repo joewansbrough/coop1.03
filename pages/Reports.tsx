@@ -81,7 +81,7 @@ const Reports: React.FC = () => {
               document.body.removeChild(link);
             }, 1500);
           }} 
-          className="bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/10 flex items-center gap-2 active:scale-95"
+          className="bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95"
         >
           <i className="fa-solid fa-file-export"></i> Generate PDF Export
         </button>
@@ -95,7 +95,7 @@ const Reports: React.FC = () => {
       </div>
 
       {/* NEW: Maintenance Financial Audit Panel */}
-      <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
+      <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden">
         <div className="p-8 border-b border-slate-50 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
@@ -149,7 +149,7 @@ const Reports: React.FC = () => {
               </div>
            </div>
 
-           <div className="overflow-x-auto rounded-2xl border border-slate-100 dark:border-white/5 shadow-inner">
+           <div className="overflow-x-auto rounded-2xl border border-slate-100 dark:border-white/5">
              <table className="w-full text-left">
                <thead className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-100 dark:border-white/5">
                  <tr>

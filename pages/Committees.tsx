@@ -29,13 +29,15 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const id = params.get('id');
-    if (id && committees.some(c => c.id === id)) {
+    if (id && Array.isArray(committees) && committees.some(c => c.id === id)) {
       setSelectedId(id);
     }
   }, [location.search, committees]);
 
-  const selectedCommittee = committees.find(c => c.id === selectedId);
-  const committeeDocs = documents.filter(d => d.category === 'Committee' || (selectedCommittee && d.title.toLowerCase().includes(selectedCommittee.name.toLowerCase())));
+  const selectedCommittee = Array.isArray(committees) ? committees.find(c => c.id === selectedId) : null;
+  const committeeDocs = Array.isArray(documents) 
+    ? documents.filter(d => d.category === 'Committee' || (selectedCommittee && d.title.toLowerCase().includes(selectedCommittee.name.toLowerCase())))
+    : [];
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +105,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
         {isAdmin && !selectedId && (
           <button 
             onClick={() => setShowAddCommittee(true)}
-            className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/10 dark:shadow-none hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+            className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
           >
             <i className="fa-solid fa-plus"></i> Add New Committee
           </button>
@@ -112,7 +114,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
 
       {showAddCommittee && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 animate-in zoom-in-95">
             <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">Create New Committee</h3>
             <form onSubmit={handleAddCommittee} className="space-y-4">
               <div>
@@ -134,7 +136,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowAddCommittee(false)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase shadow-lg hover:bg-emerald-700 flex items-center justify-center gap-2">
+                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 flex items-center justify-center gap-2">
                   <i className="fa-solid fa-plus"></i> Add New Committee
                 </button>
               </div>
@@ -145,7 +147,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
 
       {showAssignMember && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 animate-in zoom-in-95">
             <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">Assign Member to Committee</h3>
             <div className="space-y-4">
               <div>
@@ -159,7 +161,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowAssignMember(null)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">Cancel</button>
-                <button onClick={() => handleAssignMember(showAssignMember)} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase shadow-lg hover:bg-emerald-700 flex items-center justify-center gap-2">
+                <button onClick={() => handleAssignMember(showAssignMember)} className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 flex items-center justify-center gap-2">
                   <i className="fa-solid fa-plus"></i> Assign Member
                 </button>
               </div>
@@ -173,13 +175,13 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
           {committees.map(committee => (
             <div
               key={committee.id}
-              className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm hover:shadow-xl hover:border-emerald-400 dark:hover:border-emerald-500/50 hover:-translate-y-1 transition-all text-left group overflow-hidden relative"
+              className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-emerald-400 dark:hover:border-emerald-500/50 hover:-translate-y-1 transition-all text-left group overflow-hidden relative"
             >
               <div className="absolute -right-8 -bottom-8 opacity-[0.03] text-9xl group-hover:opacity-[0.08] transition-opacity">
                 <i className={`fa-solid ${committee.icon}`}></i>
               </div>
               <div className="flex justify-between items-start mb-6 relative z-10">
-                <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-3xl group-hover:scale-110 transition-transform shadow-sm">
+                <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-3xl group-hover:scale-110 transition-transform">
                   <i className={`fa-solid ${committee.icon}`}></i>
                 </div>
                 <div className="flex gap-2">
@@ -234,7 +236,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm relative overflow-hidden">
+              <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-white/5 relative overflow-hidden">
                 <div className="absolute -top-10 -right-10 opacity-5 text-[15rem] text-emerald-900 pointer-events-none">
                   <i className={`fa-solid ${selectedCommittee?.icon}`}></i>
                 </div>
@@ -247,7 +249,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
                     <div className="flex gap-2">
                        <button 
                          onClick={() => setShowUpload(true)}
-                         className="px-4 py-2 bg-slate-900 dark:bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-black dark:hover:bg-emerald-700 transition-all"
+                         className="px-4 py-2 bg-slate-900 dark:bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all"
                        >
                          Upload Minutes
                        </button>
@@ -261,14 +263,14 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 dark:border-white/5 pb-2">Active Members</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedCommittee?.members.map(member => (
-                          <span key={member} className="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold border border-slate-200 dark:border-white/5 shadow-sm hover:border-emerald-300 transition-colors cursor-default">{member}</span>
+                          <span key={member} className="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold border border-slate-200 dark:border-white/5 hover:border-emerald-300 transition-colors cursor-default">{member}</span>
                         ))}
                       </div>
                     </div>
                     <div>
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 dark:border-white/5 pb-2">Contact Point</h4>
                       <div className="flex items-center gap-4 group">
-                        <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center font-black text-lg shadow-lg group-hover:scale-105 transition-transform">
+                        <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl flex items-center justify-center font-black text-lg group-hover:scale-105 transition-transform">
                           {selectedCommittee?.chair[0]}
                         </div>
                         <div>
@@ -294,13 +296,13 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
                     </div>
                     <div className="flex gap-3">
                       <input type="date" className="flex-1 bg-white dark:bg-slate-800 border border-emerald-100 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 outline-none" required />
-                      <button type="submit" className="px-8 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-emerald-200 dark:shadow-none hover:bg-emerald-700 transition-all active:scale-95">Publish Minutes</button>
+                      <button type="submit" className="px-8 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95">Publish Minutes</button>
                     </div>
                   </form>
                 </div>
               )}
 
-              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5">
                  <div className="flex justify-between items-center mb-8">
                    <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase tracking-tight">
                      <i className="fa-solid fa-file-contract text-emerald-500"></i> Records & Archive
@@ -309,9 +311,9 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {committeeDocs.length > 0 ? committeeDocs.map(doc => (
-                      <div key={doc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:bg-white dark:hover:bg-slate-800 transition-all group cursor-pointer shadow-sm">
+                      <div key={doc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:bg-white dark:hover:bg-slate-800 transition-all group cursor-pointer">
                         <div className="flex items-center gap-4">
-                           <div className="w-10 h-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-rose-500 shadow-sm group-hover:bg-rose-50 transition-colors">
+                           <div className="w-10 h-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-rose-500 group-hover:bg-rose-50 transition-colors">
                              <i className="fa-solid fa-file-pdf text-xl"></i>
                            </div>
                            <div className="overflow-hidden">
@@ -329,14 +331,14 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
             </div>
 
             <div className="space-y-6">
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+              <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5">
                  <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-tight mb-2">Member Input</h3>
                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">Submit proposals or share feedback directly with the {selectedCommittee?.name} committee.</p>
                  
                  {!showContact ? (
                    <button 
                      onClick={() => setShowContact(true)}
-                     className="w-full bg-emerald-600 text-white py-3 rounded-2xl font-black text-sm shadow-xl shadow-emerald-100 dark:shadow-none hover:bg-emerald-700 hover:-translate-y-0.5 transition-all active:scale-95"
+                     className="w-full bg-emerald-600 text-white py-3 rounded-2xl font-black text-sm hover:bg-emerald-700 hover:-translate-y-0.5 transition-all active:scale-95"
                    >
                      New Inquiry
                    </button>
@@ -347,7 +349,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
                         value={msgBody}
                         onChange={(e) => setMsgBody(e.target.value)}
                         placeholder="Detail your request or feedback..."
-                        className="w-full border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-emerald-500 outline-none h-32 resize-none bg-slate-50 dark:bg-slate-800 shadow-inner text-slate-900 dark:text-white"
+                        className="w-full border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-emerald-500 outline-none h-32 resize-none bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
                      />
                      <div className="flex gap-2">
                        <button 
@@ -360,7 +362,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
                        <button 
                         type="submit"
                         disabled={sentStatus}
-                        className={`flex-1 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${sentStatus ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-900 dark:bg-emerald-600 text-white hover:bg-black dark:hover:bg-emerald-700 shadow-lg shadow-slate-200 dark:shadow-none active:scale-95'}`}
+                        className={`flex-1 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${sentStatus ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-900 dark:bg-emerald-600 text-white hover:bg-black dark:hover:bg-emerald-700 active:scale-95'}`}
                        >
                          {sentStatus ? <i className="fa-solid fa-check mr-2"></i> : <i className="fa-solid fa-paper-plane mr-2"></i>}
                          {sentStatus ? 'Sent!' : 'Dispatch'}
@@ -370,13 +372,13 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, committees, setCommitt
                  )}
               </div>
 
-              <div className="bg-slate-900 dark:bg-slate-800 p-8 rounded-3xl shadow-xl shadow-slate-200 dark:shadow-none text-white relative overflow-hidden group">
+              <div className="bg-slate-900 dark:bg-slate-800 p-8 rounded-3xl text-white relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><i className="fa-solid fa-users text-7xl"></i></div>
                 <h3 className="text-xl font-black mb-2 flex items-center gap-2 uppercase tracking-tight">
                    <i className="fa-solid fa-star text-emerald-500"></i> Join Us
                 </h3>
                 <p className="text-slate-400 text-xs leading-relaxed mb-6">Our co-op thrives on member participation. Help shape our community by joining this committee.</p>
-                <button className="w-full bg-emerald-600 text-white py-3 rounded-2xl font-black text-sm shadow-md hover:bg-emerald-700 transition-all active:scale-95">
+                <button className="w-full bg-emerald-600 text-white py-3 rounded-2xl font-black text-sm hover:bg-emerald-700 transition-all active:scale-95">
                    Apply to Join
                 </button>
               </div>

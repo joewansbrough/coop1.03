@@ -66,7 +66,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
         </div>
         <button 
           onClick={() => setShowAddForm(true)}
-          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95"
+          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95"
         >
           <i className="fa-solid fa-calendar-plus"></i> Add New Event
         </button>
@@ -74,7 +74,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
 
       {showAddForm && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                 <i className="fa-solid fa-calendar-plus text-emerald-600"></i>
@@ -89,18 +89,22 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</label>
+                  <input type="date" required value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+                </div>
+                <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time</label>
                   <input type="time" required value={time} onChange={e => setTime(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</label>
-                  <select value={category} onChange={e => setCategory(e.target.value as any)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option>Meeting</option>
-                    <option>Social</option>
-                    <option>Maintenance</option>
-                    <option>Board</option>
-                  </select>
-                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</label>
+                <select value={category} onChange={e => setCategory(e.target.value as any)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
+                  <option>Meeting</option>
+                  <option>Social</option>
+                  <option>Maintenance</option>
+                  <option>Board</option>
+                </select>
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</label>
@@ -112,7 +116,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase shadow-lg shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all">Add New Event</button>
+                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 active:scale-95 transition-all">Add New Event</button>
               </div>
             </form>
           </div>
@@ -120,7 +124,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm p-6 overflow-hidden transition-colors duration-200">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 p-6 overflow-hidden transition-colors duration-200">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">{monthName} {currentYear}</h3>
             <div className="flex gap-2">
@@ -128,7 +132,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
               <button onClick={handleNextMonth} className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-xl text-slate-400 transition-colors"><i className="fa-solid fa-chevron-right"></i></button>
             </div>
           </div>
-          <div className="grid grid-cols-7 gap-px bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
+          <div className="grid grid-cols-7 gap-px bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
               <div key={day} className="bg-slate-50/50 dark:bg-slate-900/50 p-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">{day}</div>
             ))}
@@ -168,7 +172,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm transition-colors duration-200">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors duration-200">
             <h3 className="text-base font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2 border-b border-slate-50 dark:border-white/5 pb-4">
                <i className="fa-solid fa-clock-rotate-left text-emerald-500"></i>
                {monthName} Events
@@ -188,7 +192,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
                   <div 
                     key={e.id} 
                     onClick={() => navigate(`/calendar/${e.id}`)}
-                    className={`p-4 rounded-2xl border transition-all group shadow-sm cursor-pointer ${
+                    className={`p-4 rounded-2xl border transition-all group cursor-pointer ${
                       e.date === selectedDate 
                         ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-900/20' 
                         : 'border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-slate-800/30 hover:bg-white dark:hover:bg-slate-800 hover:border-emerald-200 dark:hover:border-emerald-500'

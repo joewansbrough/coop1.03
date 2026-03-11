@@ -36,7 +36,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95"
+          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95"
         >
           <i className="fa-solid fa-plus"></i> Add New Unit
         </button>
@@ -44,7 +44,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
 
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 shadow-2xl animate-in zoom-in-95">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 animate-in zoom-in-95">
             <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6">Register New Co-op Unit</h3>
             <form onSubmit={handleAddUnit} className="space-y-5">
               <div>
@@ -65,7 +65,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase shadow-lg hover:bg-emerald-700 flex items-center justify-center gap-2">
+                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 flex items-center justify-center gap-2">
                   <i className="fa-solid fa-plus"></i> Add New Unit
                 </button>
               </div>
@@ -81,7 +81,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
             <div 
               key={unit.id} 
               onClick={() => navigate(`/admin/units/${unit.id}`)}
-              className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden hover:shadow-xl hover:border-emerald-300 dark:hover:border-emerald-500 transition-all group flex flex-col cursor-pointer"
+              className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden hover:border-emerald-300 dark:hover:border-emerald-500 transition-all group flex flex-col cursor-pointer"
             >
               <div className={`h-2 ${
                 unit.status === 'Occupied' ? 'bg-emerald-500' :
@@ -124,7 +124,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
 
                 <div className="mt-6 pt-4 border-t border-slate-50 dark:border-white/5">
                   <button 
-                    className="w-full bg-slate-900 dark:bg-emerald-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all active:scale-95 shadow-md"
+                    className="w-full bg-slate-900 dark:bg-emerald-600 text-white py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all active:scale-95"
                   >
                     View Maintenance & Files
                   </button>

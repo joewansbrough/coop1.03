@@ -1,29 +1,46 @@
 
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MOCK_REQUESTS, MOCK_UNITS, MOCK_TENANTS } from '../constants';
-import { RequestStatus, MaintenanceNote, MaintenanceExpense, MaintenanceCategory, MaintenanceRequest } from '../types';
+import { RequestStatus, MaintenanceNote, MaintenanceExpense, MaintenanceCategory, MaintenanceRequest, Unit, Tenant } from '../types';
 
-const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false }) => {
+interface MaintenanceDetailProps {
+  isAdmin?: boolean;
+  requests?: MaintenanceRequest[];
+  setRequests?: React.Dispatch<React.SetStateAction<MaintenanceRequest[]>>;
+  units?: Unit[];
+  tenants?: Tenant[];
+}
+
+const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({ 
+  isAdmin = false, 
+  requests = [], 
+  setRequests,
+  units = [],
+  tenants = []
+}) => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
-  const userUnitId = 'u1';
-  const [request, setRequest] = useState(MOCK_REQUESTS.find(r => r.id === requestId));
+  
+  // For demo purposes, assume the first unit is the user's unit if they are not an admin
+  const userUnitId = units.length > 0 ? units[0].id : null;
+  
+  // Find the request from props or fallback to mock for safety (though props should be there)
+  const request = requests.find(r => r.id === requestId);
   
   // Access control check
   if (request && !isAdmin && request.unitId !== userUnitId) {
     return (
-      <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+      <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5">
         <i className="fa-solid fa-shield-halved text-5xl text-rose-500 mb-4 opacity-20"></i>
         <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Access Restricted</h2>
-        <p className="text-slate-500 dark:text-slate-400 font-medium">You are only authorized to view service records for your assigned unit (101).</p>
+        <p className="text-slate-500 dark:text-slate-400 font-medium">You are only authorized to view service records for your assigned unit.</p>
         <Link to="/maintenance" className="mt-8 inline-block bg-slate-900 dark:bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Return to Queue</Link>
       </div>
     );
   }
 
-  const unit = MOCK_UNITS.find(u => u.id === request?.unitId);
-  const tenant = MOCK_TENANTS.find(t => t.id === request?.tenantId);
+  const unit = units.find(u => u.id === request?.unitId);
+  const tenant = tenants.find(t => t.id === request?.tenantId);
 
   const [newNote, setNewNote] = useState('');
   const [newItem, setNewItem] = useState('');
@@ -36,18 +53,21 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
 
   const isLocked = request.status === RequestStatus.COMPLETED || request.status === RequestStatus.CANCELLED;
 
+  const updateRequest = (updated: MaintenanceRequest) => {
+    if (setRequests) {
+      setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
+    }
+  };
+
   const handleStatusChange = (status: RequestStatus) => {
     if (isLocked) return;
-    setRequest(prev => prev ? { ...prev, status, updatedAt: new Date().toISOString() } : undefined);
+    updateRequest({ ...request, status, updatedAt: new Date().toISOString() });
   };
 
   const toggleCategory = (cat: MaintenanceCategory) => {
-    setRequest(prev => {
-      if (!prev) return undefined;
-      const current = prev.category;
-      const next = current.includes(cat) ? current.filter(c => c !== cat) : [...current, cat];
-      return { ...prev, category: next, updatedAt: new Date().toISOString() };
-    });
+    const current = request.category;
+    const next = current.includes(cat) ? current.filter(c => c !== cat) : [...current, cat];
+    updateRequest({ ...request, category: next, updatedAt: new Date().toISOString() });
   };
 
   const addNote = (e: React.FormEvent) => {
@@ -59,7 +79,7 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
       date: new Date().toISOString(),
       content: newNote.trim()
     };
-    setRequest(prev => prev ? { ...prev, notes: [...prev.notes, note] } : undefined);
+    updateRequest({ ...request, notes: [...request.notes, note], updatedAt: new Date().toISOString() });
     setNewNote('');
   };
 
@@ -72,7 +92,7 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
       cost: parseFloat(newCost),
       date: new Date().toISOString().split('T')[0]
     };
-    setRequest(prev => prev ? { ...prev, expenses: [...prev.expenses, expense] } : undefined);
+    updateRequest({ ...request, expenses: [...request.expenses, expense], updatedAt: new Date().toISOString() });
     setNewItem('');
     setNewCost('');
   };
@@ -80,7 +100,7 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
   const handleReopen = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reopenReason.trim()) return;
-    setRequest(prev => prev ? { ...prev, status: RequestStatus.IN_PROGRESS, updatedAt: new Date().toISOString() } : undefined);
+    updateRequest({ ...request, status: RequestStatus.IN_PROGRESS, updatedAt: new Date().toISOString() });
     setShowReopenModal(false);
     setReopenReason('');
   };
@@ -102,7 +122,7 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
       </div>
 
       {/* RAG Status Bar */}
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5">
         <div className="grid grid-cols-2 sm:grid-cols-4 w-full gap-3">
           {(Object.values(RequestStatus)).map((status) => {
             const isActive = request.status === status;
@@ -113,7 +133,7 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
                 onClick={() => isAdmin && handleStatusChange(status)}
                 className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                   isActive 
-                    ? `bg-emerald-600 text-white shadow-lg shadow-emerald-500/10 dark:shadow-none scale-105 z-10` 
+                    ? `bg-emerald-600 text-white scale-105 z-10` 
                     : isAdmin 
                       ? 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 opacity-60 hover:opacity-100'
                       : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-700 opacity-30 cursor-not-allowed'
@@ -128,7 +148,7 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <section className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+          <section className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
             <div className="flex flex-wrap gap-2 mb-6">
               {request.category.map(cat => (
                 <span key={cat} className="text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -142,7 +162,7 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-8 border-t border-slate-50 dark:border-white/5">
               <div className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent">
-                <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 shadow-inner">
+                <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400">
                   <i className="fa-solid fa-door-open text-2xl"></i>
                 </div>
                 <div>
@@ -151,7 +171,7 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
                 </div>
               </div>
               <div className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent">
-                <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 shadow-inner">
+                <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400">
                   <i className="fa-solid fa-user-circle text-2xl"></i>
                 </div>
                 <div>
@@ -187,13 +207,13 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
               {!isLocked && (
                 <form onSubmit={addNote} className="pt-4">
                   <textarea
-                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 dark:text-slate-200 shadow-inner"
+                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 dark:text-slate-200"
                     placeholder={isAdmin ? "Log a new update or member contact..." : "Add a comment for the maintenance committee..."}
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                   />
                   <div className="flex justify-end mt-3">
-                    <button type="submit" className="bg-slate-900 dark:bg-emerald-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg dark:shadow-none transition-all active:scale-95">Post Update</button>
+                    <button type="submit" className="bg-slate-900 dark:bg-emerald-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">Post Update</button>
                   </div>
                 </form>
               )}
@@ -202,7 +222,7 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
 
           {/* Cost Ledger Section - Only for Admin */}
           {isAdmin && (
-            <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
+            <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
               <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex justify-between items-center">
                 <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Incident Expenditure Ledger</h3>
                 <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">Total: ${totalExpenses.toFixed(2)}</p>
@@ -244,10 +264,10 @@ const MaintenanceDetail: React.FC<{ isAdmin?: boolean }> = ({ isAdmin = false })
         </div>
 
         <div className="space-y-6">
-          <div className="bg-slate-900 dark:bg-slate-950 text-white p-8 rounded-3xl shadow-xl">
+          <div className="bg-slate-900 dark:bg-slate-950 text-white p-8 rounded-3xl">
              <h3 className="text-emerald-400 font-black uppercase text-[10px] tracking-widest mb-6">Work Order Actions</h3>
              <div className="space-y-3">
-                <button onClick={() => window.print()} className="w-full p-4 bg-emerald-600 text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/10 dark:shadow-none active:scale-95 group">
+                <button onClick={() => window.print()} className="w-full p-4 bg-emerald-600 text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-emerald-700 transition-all active:scale-95 group">
                   <i className="fa-solid fa-print group-hover:scale-110 transition-transform"></i>
                   <span className="text-[10px] font-black uppercase tracking-widest">Print Order</span>
                 </button>
