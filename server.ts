@@ -603,10 +603,10 @@ async function startServer() {
         data: { status: 'Occupied', currentTenantId: tenantId }
       });
 
-      // 3. Update Tenant
+      // 3. Update Tenant (including their start date in the new unit)
       await prisma.tenant.update({
         where: { id: tenantId },
-        data: { unitId: toUnitId }
+        data: { unitId: toUnitId, startDate: date }
       });
 
       // 4. Close old history
@@ -614,11 +614,26 @@ async function startServer() {
         where: { tenantId, unitId: fromUnitId, endDate: null },
         orderBy: { startDate: 'desc' }
       });
+      
       if (oldHistory) {
         await prisma.tenantHistory.update({
           where: { id: oldHistory.id },
           data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
         });
+      } else {
+        // Fallback: If no open record existed for the old unit, create one that ends now
+        const t = await prisma.tenant.findUnique({ where: { id: tenantId } });
+        if (t) {
+          await prisma.tenantHistory.create({
+            data: {
+              tenantId,
+              unitId: fromUnitId,
+              startDate: new Date(t.startDate),
+              endDate: new Date(date),
+              moveReason: 'Internal Transfer (Archived)'
+            }
+          });
+        }
       }
 
       // 5. Create new history
