@@ -421,7 +421,7 @@ app.post('/api/ai/summarize', async (req, res) => {
     const { content } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-lite',
-      contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant tags. CRITICAL: One of the tags MUST be the 4-digit year mentioned in the document (e.g., "2026") to enable sorting and filtering.\n\nContent: ${content.substring(0, 5000)}`,
+      contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`,
       config: {
         responseMimeType: 'application/json',
         responseSchema: {

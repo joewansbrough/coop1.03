@@ -457,7 +457,7 @@ async function startServer() {
       const ai = getAI();
       const { content } = req.body;
       const response = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
-        contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant tags. CRITICAL: One of the tags MUST be the 4-digit year mentioned in the document (e.g., "2026") to enable sorting and filtering.\n\nContent: ${content.substring(0, 5000)}` }] }],
+        contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
         generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: {

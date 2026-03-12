@@ -146,6 +146,24 @@ const Documents: React.FC<{
       if (prog >= 100) {
         clearInterval(interval);
         setTimeout(async () => {
+          const currentYear = new Date().getFullYear().toString();
+          let finalTags = [currentYear];
+          let finalContent = fileContent;
+
+          // Auto-trigger Gemini analysis before saving
+          setIsAnalyzing(true);
+          try {
+            const result = await geminiService.summarizeAndTag(fileContent);
+            finalTags = Array.from(new Set([currentYear, ...(result.tags || [])]));
+            if (result.summary) {
+              finalContent = fileContent + `\n\nSummary: ${result.summary}`;
+            }
+          } catch (err) {
+            console.error("Auto-analysis failed", err);
+          } finally {
+            setIsAnalyzing(false);
+          }
+
           const payload = {
             title: newDocTitle,
             category: newDocCategory,
@@ -154,8 +172,8 @@ const Documents: React.FC<{
             date: new Date().toISOString().split('T')[0],
             author: 'Board Administration',
             isPrivate: newDocIsPrivate,
-            content: fileContent,
-            tags: []
+            content: finalContent,
+            tags: finalTags
           };
 
           try {
@@ -165,6 +183,7 @@ const Documents: React.FC<{
               body: JSON.stringify(payload)
             });
             const data = await res.json();
+            
             setDocuments(prev => [data, ...prev]);
             setIsUploading(false);
             setUploadProgress(0);
@@ -173,7 +192,7 @@ const Documents: React.FC<{
             setNewDocIsPrivate(false);
             setSelectedFile(null);
             setFileContent('');
-            setReviewingDoc(data);
+            setReviewingDoc(data); // Open modal with analyzed data
           } catch (err) {
             console.error(err);
           }
@@ -193,7 +212,7 @@ const Documents: React.FC<{
       const data = await res.json();
       setDocuments(prev => prev.map(d => d.id === data.id ? data : d));
       setReviewingDoc(null);
-      alert("Document updated and archived.");
+      alert("Document saved.");
     } catch (err) {
       console.error(err);
     }
@@ -301,7 +320,7 @@ const Documents: React.FC<{
             {isUploading ? (
               <div className="space-y-4 py-8">
                 <div className="flex justify-between text-xs font-bold text-slate-500 uppercase">
-                  <span>Encrypting & Archiving...</span>
+                  <span>{isAnalyzing ? 'Analyzing content...' : 'Encrypting & Archiving...'}</span>
                   <span>{uploadProgress}%</span>
                 </div>
                 <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -634,7 +653,7 @@ const Documents: React.FC<{
                     onClick={handleSaveReview}
                     className="px-12 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                   >
-                    Finalize & Archive
+                    Save
                   </button>
                 )}
                 <button 
