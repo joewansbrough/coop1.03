@@ -7,12 +7,13 @@ import { useNavigate } from 'react-router-dom';
 
 interface MaintenanceProps {
   isAdmin?: boolean;
+  isGuest?: boolean;
   requests: MaintenanceRequest[];
   setRequests: React.Dispatch<React.SetStateAction<MaintenanceRequest[]>>;
   units: Unit[];
 }
 
-const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, setRequests, units }) => {
+const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, isGuest = false, requests, setRequests, units }) => {
   const navigate = useNavigate();
   const userUnitId = units.length > 0 ? units[0].id : 'u1';
   
@@ -23,7 +24,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [loading, setLoading] = useState(false);
   
   // Filter requests based on user role
-  const displayedRequests = isAdmin 
+  const displayedRequests = (isAdmin || isGuest)
     ? (Array.isArray(requests) ? requests : []) 
     : (Array.isArray(requests) ? requests.filter(r => r.unitId === userUnitId) : []);
   
@@ -49,6 +50,10 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isGuest) {
+      alert("Guest accounts cannot submit maintenance requests.");
+      return;
+    }
     const newRequest: MaintenanceRequest = {
       id: `r${Date.now()}`,
       title: description.substring(0, 30) + '...',
@@ -72,10 +77,12 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   };
 
   const updateRequestStatus = (id: string, status: RequestStatus) => {
+    if (isGuest) return;
     setRequests(requests.map(r => r.id === id ? { ...r, status, updatedAt: new Date().toISOString() } : r));
   };
 
   const approveQuote = (quoteId: string) => {
+    if (isGuest) return;
     setQuotes(quotes.map(q => q.id === quoteId ? { ...q, status: 'Approved' } : q));
     alert("Quote approved. Vendor has been notified.");
   };
@@ -88,13 +95,13 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     <div className="space-y-6 max-w-7xl mx-auto pb-12 transition-colors duration-200">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-slate-800 dark:text-white">{isAdmin ? 'Maintenance Operations' : 'My Service Requests'}</h2>
+          <h2 className="text-xl lg:text-2xl font-bold text-slate-800 dark:text-white">{isAdmin ? 'Maintenance Operations' : (isGuest ? 'Maintenance View (Guest)' : 'My Service Requests')}</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">
-            {isAdmin ? 'Managing building longevity and member comfort.' : 'Track and report issues for your residence.'}
+            {isAdmin ? 'Managing building longevity and member comfort.' : (isGuest ? 'Viewing all co-op maintenance activity.' : 'Track and report issues for your residence.')}
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          {isAdmin && (
+          {(isAdmin || isGuest) && (
             <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl flex-1 sm:flex-none">
               <button 
                 onClick={() => { setActiveView('requests'); setSelectedRequestIdForQuotes(null); }}
@@ -110,12 +117,14 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
               </button>
             </div>
           )}
-          <button 
-            onClick={() => setShowForm(!showForm)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"
-          >
-            <i className="fa-solid fa-plus"></i> Submit New Request
-          </button>
+          {!isGuest && (
+            <button 
+              onClick={() => setShowForm(!showForm)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              <i className="fa-solid fa-plus"></i> Submit New Request
+            </button>
+          )}
         </div>
       </div>
 

@@ -214,12 +214,13 @@ async function startServer() {
     }
 
     (req as any).session.user = {
-      email: 'joewansbrough@gmail.com',
-      name: 'Dev User',
-      picture: 'https://picsum.photos/seed/dev/200',
-      isAdmin: true,
+      email: 'guest@example.com',
+      name: 'Guest User',
+      picture: 'https://picsum.photos/seed/guest/200',
+      isAdmin: false,
+      isGuest: true,
       tenantId: null,
-      unitNumber: 'DEV-101'
+      unitNumber: 'GUEST-001'
     };
 
     res.json({ success: true, user: (req as any).session.user });

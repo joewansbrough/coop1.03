@@ -7,6 +7,7 @@ import { RequestStatus, Announcement, Unit, Tenant, MaintenanceRequest, CoopEven
 
 interface DashboardProps {
   isAdmin: boolean;
+  isGuest?: boolean;
   announcements: Announcement[];
   units: Unit[];
   tenants: Tenant[];
@@ -14,11 +15,11 @@ interface DashboardProps {
   events: CoopEvent[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, tenants, requests, events }) => {
+const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announcements, units, tenants, requests, events }) => {
   const navigate = useNavigate();
 
   // For members, only show stats for their unit (if they have one)
-  const userUnitId = units.length > 0 ? units[0].id : null;
+  const userUnitId = (units.length > 0 && !isGuest) ? units[0].id : null;
   
   const userOpenRequests = (userUnitId && Array.isArray(requests)) 
     ? requests.filter(r => r.unitId === userUnitId && r.status !== RequestStatus.COMPLETED && r.status !== RequestStatus.CANCELLED)
@@ -167,32 +168,44 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
-              <i className="fa-solid fa-house-circle-check"></i> Association Member Hub
+              <i className="fa-solid fa-house-circle-check"></i> {isGuest ? 'Guest Access Mode' : 'Association Member Hub'}
             </div>
-            <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome home.</h1>
+            <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">{isGuest ? 'Explore CoopConnect.' : 'Welcome home.'}</h1>
             <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
-              Streamline your co-op experience: report issues, review policies, and join community meetings.
+              {isGuest ? 'Browse association activities, review community policies, and see upcoming events.' : 'Streamline your co-op experience: report issues, review policies, and join community meetings.'}
             </p>
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Link to="/maintenance" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95">
-                <i className="fa-solid fa-wrench"></i> Report Issue
-              </Link>
-              <Link to="/documents" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
-                <i className="fa-solid fa-book-open"></i> Rules & Bylaws
-              </Link>
-            </div>
+            {!isGuest && (
+              <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Link to="/maintenance" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95">
+                  <i className="fa-solid fa-wrench"></i> Report Issue
+                </Link>
+                <Link to="/documents" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
+                  <i className="fa-solid fa-book-open"></i> Rules & Bylaws
+                </Link>
+              </div>
+            )}
+            {isGuest && (
+              <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Link to="/maintenance" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95">
+                  <i className="fa-solid fa-magnifying-glass"></i> View Maintenance
+                </Link>
+                <Link to="/calendar" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
+                  <i className="fa-solid fa-calendar"></i> Events Calendar
+                </Link>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
              <div className="grid grid-rows-2 gap-4">
                 <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
-                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">My Unit</p>
-                   <p className="text-2xl font-black">{userUnitId ? `Unit ${units.find(u => u.id === userUnitId)?.number}` : 'No Unit'}</p>
-                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Managed Asset</p>
+                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">System Asset</p>
+                   <p className="text-2xl font-black">{isGuest ? 'Unit G-01' : (userUnitId ? `Unit ${units.find(u => u.id === userUnitId)?.number}` : 'No Unit')}</p>
+                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Guest Viewpoint</p>
                 </div>
                 <Link to="/finances" className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center">
                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">My Balance</p>
                    <p className="text-2xl font-black">$0.00</p>
-                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Paid to Date</p>
+                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Guest Mode</p>
                 </Link>
              </div>
              <div className="flex h-full">
