@@ -60,7 +60,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
 
   const handleMoveOut = async () => {
     console.log("handleMoveOut triggered", { unit, currentTenant });
-    if (!unit || !currentTenant) return;
+    if (!unit) return;
     
     const moveOutDate = new Date().toISOString().split('T')[0];
 
@@ -68,16 +68,19 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
       await fetch(`/api/units/${unit.id}/move-out`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId: currentTenant.id, date: moveOutDate, reason: 'Voluntary Departure' })
+        body: JSON.stringify({ date: moveOutDate, reason: 'Voluntary Household Departure' })
       });
 
-      // Update local state for immediate feedback
+      // Update local state for ALL residents of the unit
+      const residentsToMoveOut = tenants.filter(t => t.unitId === unit.id);
+      
       const updatedTenants = tenants.map(t => {
-        if (t.id === currentTenant.id) {
+        if (residentsToMoveOut.some(r => r.id === t.id)) {
           return {
             ...t,
             status: 'Past' as const,
             endDate: moveOutDate,
+            unitId: null,
             history: (t.history || []).map(rh => 
               rh.unitId === unit.id && !rh.endDate 
                 ? { ...rh, endDate: moveOutDate } 
@@ -102,7 +105,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
       setTenants(updatedTenants);
       setUnits(updatedUnits);
       setShowMoveOutModal(false);
-      setNotification({ message: `Move-out processed successfully for ${currentTenant.firstName} ${currentTenant.lastName}.`, type: 'success' });
+      setNotification({ message: `Move-out processed for entire household (${residentsToMoveOut.length} members).`, type: 'success' });
       setTimeout(() => setNotification(null), 5000);
     } catch (err) {
       console.error(err);
@@ -197,7 +200,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
 
   const handleTransfer = async () => {
     console.log("handleTransfer triggered", { unit, currentTenant, selectedTargetUnitId });
-    if (!unit || !currentTenant || !selectedTargetUnitId) return;
+    if (!unit || !selectedTargetUnitId) return;
     const targetUnit = units.find(u => u.id === selectedTargetUnitId);
     if (!targetUnit) return;
 
@@ -207,12 +210,14 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
       await fetch(`/api/units/${unit.id}/transfer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId: currentTenant.id, fromUnitId: unit.id, toUnitId: targetUnit.id, date: transferDate })
+        body: JSON.stringify({ fromUnitId: unit.id, toUnitId: targetUnit.id, date: transferDate })
       });
 
-      // Update local state
+      // Update local state for ALL residents of the unit
+      const residentsToMove = tenants.filter(t => t.unitId === unit.id);
+
       const updatedTenants = tenants.map(t => {
-        if (t.id === currentTenant.id) {
+        if (residentsToMove.some(r => r.id === t.id)) {
           const archivedHistory = (t.history || []).map(rh => 
             rh.unitId === unit.id && !rh.endDate 
               ? { ...rh, endDate: transferDate } 
@@ -221,7 +226,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
           const newHistory = [
             ...archivedHistory,
             { 
-              id: `h${Date.now()}`, 
+              id: `h${Date.now()}-${t.id}`, 
               tenantId: t.id, 
               unitId: targetUnit.id, 
               unit: { number: targetUnit.number }, 
@@ -243,7 +248,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
           return { ...u, status: 'Vacant' as const, currentTenantId: undefined };
         }
         if (u.id === targetUnit.id) {
-          return { ...u, status: 'Occupied' as const, currentTenantId: currentTenant.id };
+          return { ...u, status: 'Occupied' as const, currentTenantId: residentsToMove[0]?.id };
         }
         return u;
       });
@@ -252,7 +257,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
       setUnits(updatedUnits);
       setShowTransferModal(false);
       setSelectedTargetUnitId('');
-      setNotification({ message: `Internal transfer successful. ${currentTenant.firstName} has moved to Unit ${targetUnit.number}.`, type: 'success' });
+      setNotification({ message: `Internal transfer successful. Household (${residentsToMove.length} members) has moved to Unit ${targetUnit.number}.`, type: 'success' });
       setTimeout(() => setNotification(null), 5000);
       navigate(`/admin/units/${targetUnit.id}`);
     } catch (err) {
