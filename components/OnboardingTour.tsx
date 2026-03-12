@@ -48,7 +48,7 @@ const STEPS: Step[] = [
   },
   {
     title: "Documents & Governance",
-    description: "Keep your co-op's records organized. Access bylaws, meeting minutes, and financial reports securely from any device.",
+    description: "Keep your co-op's records organized. Access bylaws, meeting minutes, and governance records securely from any device.",
     icon: <FileText className="w-12 h-12" />,
     color: "bg-indigo-500"
   },

@@ -63,10 +63,6 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
             <StatCard label="Service Queue" value={pendingRequests} icon="fa-wrench" color="bg-amber-500" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Dispatch <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
-          <Link to="/admin/reports" className="block hover:scale-[1.02] active:scale-95 transition-all group">
-            <StatCard label="Financial Status" value={units.length > 0 ? "Healthy" : "N/A"} icon="fa-heart-pulse" color="bg-purple-500" />
-            <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Analytics <i className="fa-solid fa-arrow-right ml-1"></i></div>
-          </Link>
           <Link to="/documents" className="block hover:scale-[1.02] active:scale-95 transition-all group">
             <StatCard label="Archived Docs" value={12} icon="fa-file-shield" color="bg-slate-700" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Library <i className="fa-solid fa-arrow-right ml-1"></i></div>
@@ -196,17 +192,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-             <div className="grid grid-rows-2 gap-4">
+             <div className="grid grid-rows-1 gap-4">
                 <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">System Asset</p>
                    <p className="text-2xl font-black">{isGuest ? 'Unit G-01' : (userUnitId ? `Unit ${units.find(u => u.id === userUnitId)?.number}` : 'No Unit')}</p>
                    <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Guest Viewpoint</p>
                 </div>
-                <Link to="/finances" className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center">
-                   <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">My Balance</p>
-                   <p className="text-2xl font-black">$0.00</p>
-                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Guest Mode</p>
-                </Link>
              </div>
              <div className="flex h-full">
                 {nextMeeting ? (

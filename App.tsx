@@ -8,7 +8,6 @@ import MaintenanceDetail from './pages/MaintenanceDetail';
 import Documents from './pages/Documents';
 import AdminUnits from './pages/AdminUnits';
 import UnitDetail from './pages/UnitDetail';
-import Finances from './pages/Finances';
 import Communications from './pages/Communications';
 import Calendar from './pages/Calendar';
 import EventDetail from './pages/EventDetail';
@@ -143,7 +142,6 @@ const App: React.FC = () => {
           <Route path="/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
           <Route path="/documents" element={<Documents isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} />} />
           <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} />} />
-          <Route path="/finances" element={<Finances isAdmin={effectiveIsAdmin} isGuest={isGuest} />} />
           <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} isGuest={isGuest} announcements={announcements} setAnnouncements={setAnnouncements} />} />
           <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isGuest={isGuest} tenants={tenants} setTenants={setTenants} units={units} />} />
           

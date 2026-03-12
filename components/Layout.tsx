@@ -98,7 +98,6 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, isGue
     { label: 'Maintenance', path: '/maintenance', icon: 'fa-tools' },
     { label: 'Documents', path: '/documents', icon: 'fa-file-lines' },
     { label: 'Policy Assistant', path: '/policy-assistant', icon: 'fa-robot' },
-    { label: 'Finances', path: '/finances', icon: 'fa-wallet' },
     { label: 'Communications', path: '/communications', icon: 'fa-comments' },
     { label: 'Directory', path: '/directory', icon: 'fa-address-book' },
   ];

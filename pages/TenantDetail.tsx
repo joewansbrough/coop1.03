@@ -17,7 +17,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
   const unit = units.find(u => u.id === tenant?.unitId);
   const tenantRequests = requests.filter(r => r.unitId === tenant?.unitId);
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'maintenance' | 'participation' | 'tenancy'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'maintenance' | 'participation' | 'tenancy'>('overview');
   const [showMsgModal, setShowMsgModal] = useState(false);
   const [msgBody, setMsgBody] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -100,9 +100,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard label="Account Balance" value={`$0`} icon="fa-wallet" color="bg-emerald-500" />
-        <StatCard label="Share Capital" value={`$2,000`} icon="fa-gem" color="bg-blue-500" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <StatCard label="Service History" value={tenantRequests.length} icon="fa-wrench" color="bg-amber-500" />
         <StatCard label="Volunteer Log" value={`12 hrs`} icon="fa-heart" color="bg-purple-500" />
       </div>
@@ -111,7 +109,6 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         {[
           { id: 'overview', label: 'Overview' },
           { id: 'tenancy', label: 'History' },
-          { id: 'financials', label: 'Ledger' },
           { id: 'maintenance', label: 'Service' },
           { id: 'participation', label: 'Participation' },
         ].map(tab => (
@@ -306,15 +303,6 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
               <div className="space-y-4">
                 <p className="text-xs text-slate-400 italic">No volunteer hours logged.</p>
               </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'financials' && (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
-            <div className="p-12 text-center">
-              <i className="fa-solid fa-vault text-4xl text-slate-200 dark:text-slate-800 mb-4"></i>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Financial Ledger Restricted</p>
             </div>
           </div>
         )}

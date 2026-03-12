@@ -413,15 +413,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                   <input type="text" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-2xl px-5 py-3 text-sm font-bold" placeholder="e.g. L-101" />
                 </div>
               </div>
-              <div className="p-5 bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl border border-emerald-100 dark:border-emerald-800/50 flex items-center gap-4">
-                 <div className="w-6 h-6 rounded bg-white dark:bg-emerald-600 border border-emerald-200 dark:border-emerald-500 flex items-center justify-center cursor-pointer">
-                   <input type="checkbox" className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" />
-                 </div>
-                 <div className="flex-1">
-                   <p className="text-xs font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-tight">Financial Subsidy Active</p>
-                   <p className="text-[10px] text-emerald-600/70 font-medium">Monthly adjustments will be applied to the ledger.</p>
-                 </div>
-              </div>
             </div>
             <div className="flex gap-4 mt-10">
               <button onClick={() => setShowSettings(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all">Discard Changes</button>
@@ -829,7 +820,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                   <i className="fa-solid fa-circle-info mr-1"></i> Turnover Checklist
                 </p>
                 <ul className="text-[10px] text-blue-600 dark:text-blue-500 space-y-1 font-medium">
-                  <li>• Share capital received and verified</li>
                   <li>• Occupancy agreement signed</li>
                   <li>• Move-in inspection completed</li>
                   <li>• Keys and fobs issued</li>
