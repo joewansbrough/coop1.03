@@ -11,6 +11,7 @@ interface LayoutProps {
   children: React.ReactNode;
   isAdmin: boolean;
   isActualAdmin?: boolean;
+  isGuest?: boolean;
   onToggleAdminView?: () => void;
   user: {
     email: string;
@@ -27,7 +28,7 @@ interface NavItem {
   isAdmin?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onToggleAdminView, user, coopName }) => {
+const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, isGuest, onToggleAdminView, user, coopName }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -97,7 +98,6 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     { label: 'Maintenance', path: '/maintenance', icon: 'fa-tools' },
     { label: 'Documents', path: '/documents', icon: 'fa-file-lines' },
     { label: 'Policy Assistant', path: '/policy-assistant', icon: 'fa-robot' },
-    { label: 'Finances', path: '/finances', icon: 'fa-wallet' },
     { label: 'Communications', path: '/communications', icon: 'fa-comments' },
     { label: 'Directory', path: '/directory', icon: 'fa-address-book' },
   ];
@@ -197,9 +197,9 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               {isAdmin ? 'Switch to Tenant View' : 'Switch to Admin View'}
             </button>
           ) : (
-            <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-800 text-slate-500 cursor-default">
-              <i className="fa-solid fa-user"></i>
-              Resident Session
+            <div className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-800 transition-all ${isGuest ? 'text-amber-500 border border-amber-500/20' : 'text-slate-500'} cursor-default`}>
+              <i className={`fa-solid ${isGuest ? 'fa-user-secret' : 'fa-user'}`}></i>
+              {isGuest ? 'Guest Access Session' : 'Resident Session'}
             </div>
           )}
         </div>
@@ -273,8 +273,9 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
                     <p className="text-xs font-black text-slate-900 dark:text-slate-100">{user.name}</p>
                     <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>
                     <div className="mt-3 flex gap-1">
-                       <span className="text-[8px] font-black px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded uppercase">Certified</span>
+                       <span className="text-[8px] font-black px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded uppercase">{isGuest ? 'Temporary' : 'Certified'}</span>
                        {isAdmin && <span className="text-[8px] font-black px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded uppercase">Administrator</span>}
+                       {isGuest && <span className="text-[8px] font-black px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded uppercase">Guest</span>}
                     </div>
                   </div>
                   <button onClick={() => { setIsProfileModalOpen(true); setIsProfileOpen(false); }} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">

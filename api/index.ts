@@ -39,7 +39,6 @@ app.use((req, res, next) => {
 
 // Mock Data
 const ADMIN_EMAILS = ['joewcoupons@gmail.com'];
-const TENANT_EMAILS = ['tenant1@example.com', 'tenant2@example.com'];
 
 // Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
@@ -165,6 +164,27 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
   res.json({ success: true });
 });
 
+// Development Bypass Login
+app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
+  // Security check: Only allow in development or preview environments
+  const isProduction = process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV;
+  if (isProduction) {
+    return res.status(403).json({ error: 'Bypass not allowed in production' });
+  }
+
+  (req as any).session.user = {
+    email: 'guest@example.com',
+    name: 'Guest User',
+    picture: 'https://picsum.photos/seed/guest/200',
+    isAdmin: false,
+    isGuest: true,
+    tenantId: null,
+    unitNumber: 'GUEST-001'
+  };
+
+  res.json({ success: true, user: (req as any).session.user });
+});
+
 // --- Database API Routes ---
 
 app.get('/api/units', async (req, res) => {
@@ -202,6 +222,28 @@ app.get('/api/maintenance', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+app.post('/api/maintenance', async (req, res) => {
+  const { title, description, status, priority, category, unitId, requestedBy } = req.body;
+  const request = await prisma.maintenanceRequest.create({
+    data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy }
+  });
+  res.json(request);
+});
+
+app.put('/api/maintenance/:id', async (req, res) => {
+  const { title, description, status, priority, category, unitId } = req.body;
+  const request = await prisma.maintenanceRequest.update({
+    where: { id: req.params.id },
+    data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId }
+  });
+  res.json(request);
+});
+
+app.delete('/api/maintenance/:id', async (req, res) => {
+  await prisma.maintenanceRequest.delete({ where: { id: req.params.id } });
+  res.json({ success: true });
+});
+
 app.get('/api/announcements', async (req, res) => {
   const announcements = await prisma.announcement.findMany({
     orderBy: { createdAt: 'desc' }
@@ -209,11 +251,55 @@ app.get('/api/announcements', async (req, res) => {
   res.json(announcements);
 });
 
+app.post('/api/announcements', async (req, res) => {
+  const { title, content, type, priority, author, date } = req.body;
+  const announcement = await prisma.announcement.create({
+    data: { title, content, type, priority, author, date }
+  });
+  res.json(announcement);
+});
+
+app.put('/api/announcements/:id', async (req, res) => {
+  const { title, content, type, priority, date } = req.body;
+  const announcement = await prisma.announcement.update({
+    where: { id: req.params.id },
+    data: { title, content, type, priority, date }
+  });
+  res.json(announcement);
+});
+
+app.delete('/api/announcements/:id', async (req, res) => {
+  await prisma.announcement.delete({ where: { id: req.params.id } });
+  res.json({ success: true });
+});
+
 app.get('/api/documents', async (req, res) => {
   const documents = await prisma.document.findMany({
     orderBy: { createdAt: 'desc' }
   });
   res.json(documents);
+});
+
+app.post('/api/documents', async (req, res) => {
+  const { title, category, url, fileType, author, date, tags, content } = req.body;
+  const document = await prisma.document.create({
+    data: { title, category, url, fileType, author, date, tags, content }
+  });
+  res.json(document);
+});
+
+app.put('/api/documents/:id', async (req, res) => {
+  const { title, category, tags, content } = req.body;
+  const document = await prisma.document.update({
+    where: { id: req.params.id },
+    data: { title, category, tags, content }
+  });
+  res.json(document);
+});
+
+app.delete('/api/documents/:id', async (req, res) => {
+  await prisma.document.delete({ where: { id: req.params.id } });
+  res.json({ success: true });
 });
 
 app.get('/api/committees', async (req, res) => {
@@ -228,6 +314,61 @@ app.get('/api/committees', async (req, res) => {
     }));
     res.json(mapped);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/events', async (req, res) => {
+  const events = await prisma.coopEvent.findMany({
+    include: { attendees: true },
+    orderBy: { date: 'asc' }
+  });
+  res.json(events);
+});
+
+app.post('/api/events', async (req, res) => {
+  const { title, description, date, time, location, category } = req.body;
+  const event = await prisma.coopEvent.create({
+    data: { title, description, date, time, location, category },
+    include: { attendees: true }
+  });
+  res.json(event);
+});
+
+app.put('/api/events/:id', async (req, res) => {
+  const { title, description, date, time, location, category } = req.body;
+  const event = await prisma.coopEvent.update({
+    where: { id: req.params.id },
+    data: { title, description, date, time, location, category },
+    include: { attendees: true }
+  });
+  res.json(event);
+});
+
+app.post('/api/events/:id/attend', async (req, res) => {
+  const user = (req as any).session?.user;
+  if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { email: user.email } });
+    if (!tenant) return res.status(404).json({ error: 'Tenant record not found for this user' });
+
+    const event = await prisma.coopEvent.update({
+      where: { id: req.params.id },
+      data: {
+        attendees: {
+          connect: { id: tenant.id }
+        }
+      },
+      include: { attendees: true }
+    });
+    res.json(event);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/events/:id', async (req, res) => {
+  await prisma.coopEvent.delete({ where: { id: req.params.id } });
+  res.json({ success: true });
 });
 
 // --- AI Routes ---
@@ -280,7 +421,7 @@ app.post('/api/ai/summarize', async (req, res) => {
     const { content } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-lite',
-      contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant tags.\n\nContent: ${content.substring(0, 5000)}`,
+      contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`,
       config: {
         responseMimeType: 'application/json',
         responseSchema: {

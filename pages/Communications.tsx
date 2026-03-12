@@ -5,38 +5,79 @@ import { Announcement } from '../types';
 
 const Communications: React.FC<{ 
   isAdmin: boolean, 
+  isGuest?: boolean,
   announcements: Announcement[], 
   setAnnouncements: React.Dispatch<React.SetStateAction<Announcement[]>> 
-}> = ({ isAdmin, announcements, setAnnouncements }) => {
+}> = ({ isAdmin, isGuest = false, announcements, setAnnouncements }) => {
   const [activeTab, setActiveTab] = useState<'announcements' | 'messaging'>('announcements');
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   
   // Announcements local UI state
   const [showNewAnnouncement, setShowNewAnnouncement] = useState(false);
+  const [editAnn, setEditAnn] = useState<Announcement | null>(null);
+  
   const [newAnnTitle, setNewAnnTitle] = useState('');
   const [newAnnContent, setNewAnnContent] = useState('');
   const [newAnnPriority, setNewAnnPriority] = useState<'Normal' | 'Urgent'>('Normal');
 
-  const handleCreateAnnouncement = (e: React.FormEvent) => {
+  const handleCreateAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAnnTitle || !newAnnContent) return;
+    if (isGuest || !newAnnTitle || !newAnnContent) return;
 
-    const newAnn: Announcement = {
-      id: `a${Date.now()}`,
+    const payload = {
       title: newAnnTitle,
       content: newAnnContent,
       type: 'General',
-      author: 'Management',
+      author: 'Board Administration',
       date: new Date().toISOString().split('T')[0],
       priority: newAnnPriority
     };
 
-    setAnnouncements([newAnn, ...announcements]);
-    setShowNewAnnouncement(false);
-    setNewAnnTitle('');
-    setNewAnnContent('');
-    setNewAnnPriority('Normal');
+    try {
+      const res = await fetch('/api/announcements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      setAnnouncements([data, ...announcements]);
+      setShowNewAnnouncement(false);
+      setNewAnnTitle('');
+      setNewAnnContent('');
+      setNewAnnPriority('Normal');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isGuest || !editAnn) return;
+
+    try {
+      const res = await fetch(`/api/announcements/${editAnn.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editAnn)
+      });
+      const data = await res.json();
+      setAnnouncements(announcements.map(a => a.id === data.id ? data : a));
+      setEditAnn(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteAnnouncement = async (id: string) => {
+    if (isGuest) return;
+    if (!window.confirm("Are you sure you want to delete this announcement?")) return;
+    try {
+      await fetch(`/api/announcements/${id}`, { method: 'DELETE' });
+      setAnnouncements(announcements.filter(a => a.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
@@ -85,7 +126,7 @@ const Communications: React.FC<{
       <div className="flex-1 overflow-hidden">
         {activeTab === 'announcements' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6 pb-8">
-            {isAdmin && !showNewAnnouncement && (
+            {isAdmin && !isGuest && !showNewAnnouncement && !editAnn && (
               <button 
                 onClick={() => setShowNewAnnouncement(true)}
                 className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center text-center hover:border-emerald-400 hover:bg-emerald-50 transition-all group"
@@ -100,34 +141,37 @@ const Communications: React.FC<{
               </button>
             )}
 
-            {isAdmin && showNewAnnouncement && (
+            {isAdmin && !isGuest && (showNewAnnouncement || editAnn) && (
               <div className="bg-white p-6 rounded-3xl border-2 border-emerald-500 animate-in zoom-in-95 duration-200 flex flex-col h-full">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-black text-emerald-600 uppercase tracking-widest">Draft Announcement</h3>
-                  <button onClick={() => setShowNewAnnouncement(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark"></i></button>
+                  <h3 className="text-sm font-black text-emerald-600 uppercase tracking-widest">{editAnn ? 'Edit Announcement' : 'Draft Announcement'}</h3>
+                  <button onClick={() => { setShowNewAnnouncement(false); setEditAnn(null); }} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark"></i></button>
                 </div>
-                <form onSubmit={handleCreateAnnouncement} className="space-y-4 flex-1 flex flex-col">
+                <form onSubmit={editAnn ? handleUpdateAnnouncement : handleCreateAnnouncement} className="space-y-4 flex-1 flex flex-col">
                   <div>
                     <input 
                       type="text" 
                       placeholder="Announcement Title"
-                      value={newAnnTitle}
-                      onChange={(e) => setNewAnnTitle(e.target.value)}
+                      value={editAnn ? editAnn.title : newAnnTitle}
+                      onChange={(e) => editAnn ? setEditAnn({...editAnn, title: e.target.value}) : setNewAnnTitle(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
                   <div className="flex-1">
                     <textarea 
                       placeholder="Write your message here..."
-                      value={newAnnContent}
-                      onChange={(e) => setNewAnnContent(e.target.value)}
+                      value={editAnn ? editAnn.content : newAnnContent}
+                      onChange={(e) => editAnn ? setEditAnn({...editAnn, content: e.target.value}) : setNewAnnContent(e.target.value)}
                       className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                     ></textarea>
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-auto pt-4">
                     <select 
-                      value={newAnnPriority}
-                      onChange={(e) => setNewAnnPriority(e.target.value as 'Normal' | 'Urgent')}
+                      value={editAnn ? editAnn.priority : newAnnPriority}
+                      onChange={(e) => {
+                        const val = e.target.value as 'Normal' | 'Urgent';
+                        editAnn ? setEditAnn({...editAnn, priority: val}) : setNewAnnPriority(val);
+                      }}
                       className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-widest outline-none flex-shrink-0"
                     >
                       <option value="Normal">Normal</option>
@@ -137,20 +181,28 @@ const Communications: React.FC<{
                       type="submit"
                       className="bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
                     >
-                      <i className="fa-solid fa-paper-plane"></i> Publish
+                      <i className={`fa-solid ${editAnn ? 'fa-save' : 'fa-paper-plane'}`}></i> {editAnn ? 'Update' : 'Publish'}
                     </button>
                   </div>
                 </form>
               </div>
             )}
             {announcements.map(ann => (
-              <div key={ann.id} className="bg-white p-6 rounded-3xl border border-slate-200 relative overflow-hidden flex flex-col h-full">
+              <div key={ann.id} className="bg-white p-6 rounded-3xl border border-slate-200 relative overflow-hidden flex flex-col h-full group">
                 {ann.priority === 'Urgent' && <div className="absolute top-0 left-0 right-0 h-1.5 bg-rose-500"></div>}
                 <div className="flex justify-between items-center mb-4">
                   <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${ann.priority === 'Urgent' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
                     {ann.priority}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-bold">{ann.date}</span>
+                  <div className="flex items-center gap-2">
+                    {isAdmin && !isGuest && (
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setEditAnn(ann)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg"><i className="fa-solid fa-pen text-[10px]"></i></button>
+                        <button onClick={() => deleteAnnouncement(ann.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"><i className="fa-solid fa-trash text-[10px]"></i></button>
+                      </div>
+                    )}
+                    <span className="text-[10px] text-slate-400 font-bold">{ann.date}</span>
+                  </div>
                 </div>
                 <h3 className="text-lg font-black text-slate-900 mb-2 leading-tight">{ann.title}</h3>
                 <p className="text-sm text-slate-600 leading-relaxed mb-8 flex-1">{ann.content}</p>
@@ -165,7 +217,6 @@ const Communications: React.FC<{
           </div>
         ) : (
           <div className="flex h-[calc(100vh-14rem)] bg-white rounded-3xl border border-slate-200 overflow-hidden relative">
-            {/* Thread List - Hidden on mobile if thread selected */}
             <div className={`
               ${selectedThread ? 'hidden md:flex' : 'flex'}
               w-full md:w-80 border-r border-slate-100 flex-col shrink-0 transition-all
@@ -202,7 +253,6 @@ const Communications: React.FC<{
               </div>
             </div>
 
-            {/* Chat Area - Full screen on mobile if thread selected */}
             <div className={`
               ${selectedThread ? 'flex' : 'hidden md:flex'}
               flex-1 flex-col bg-slate-50/50 relative

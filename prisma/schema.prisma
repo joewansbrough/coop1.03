@@ -36,6 +36,7 @@ model Tenant {
   unitId        String?
   unit          Unit?           @relation("CurrentResident")
   committees    Committee[]     @relation("CommitteeMembers")
+  events        CoopEvent[]     @relation("EventAttendees")
   history       TenantHistory[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -88,8 +89,23 @@ model Document {
   fileType  String   // "pdf", "doc", "xls"
   author    String   @default("Admin")
   date      String   // Added to match UI
+  content   String?  @default("")
+  tags      String[] @default([])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CoopEvent {
+  id          String   @id @default(uuid())
+  title       String
+  description String   @default("")
+  date        String
+  time        String
+  location    String
+  category    String   // "Meeting", "Social", "Maintenance", "Board"
+  attendees   Tenant[] @relation("EventAttendees")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Committee {

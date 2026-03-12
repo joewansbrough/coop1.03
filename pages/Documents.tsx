@@ -6,9 +6,10 @@ import { motion, AnimatePresence } from 'motion/react';
 
 const Documents: React.FC<{ 
   isAdmin: boolean, 
+  isGuest?: boolean,
   documents: Document[], 
   setDocuments: React.Dispatch<React.SetStateAction<Document[]>> 
-}> = ({ isAdmin, documents, setDocuments }) => {
+}> = ({ isAdmin, isGuest = false, documents, setDocuments }) => {
   const [filter, setFilter] = useState('All');
   const [question, setQuestion] = useState('');
   const [aiResponse, setAiResponse] = useState('');
@@ -35,7 +36,6 @@ const Documents: React.FC<{
   const filteredDocs = !Array.isArray(documents) ? [] : documents.filter(d => {
     if (filter === 'All') return true;
     if (categories.includes(filter)) return d.category === filter;
-    // If filter is not a category, assume it's a tag
     return d.tags?.includes(filter);
   });
 
@@ -51,7 +51,6 @@ const Documents: React.FC<{
 
   const handleDownload = (doc: Document, e: React.MouseEvent) => {
     e.stopPropagation();
-    // In a real app, this would be a real URL. For demo, we simulate a download.
     const blob = new Blob([doc.content || ''], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = window.document.createElement('a');
@@ -62,7 +61,6 @@ const Documents: React.FC<{
   };
 
   const handleViewDoc = (doc: Document) => {
-    // If it's a real URL, open it. Otherwise, show the review/view modal.
     if (doc.url && doc.url !== '#') {
       window.open(doc.url, '_blank');
     } else {
@@ -76,7 +74,6 @@ const Documents: React.FC<{
     setLoading(true);
     setAiResponse('');
     
-    // Build context from document contents
     const context = Array.isArray(documents) 
       ? documents
           .filter(d => d.category === 'Policy' || d.category === 'Bylaws')
@@ -100,11 +97,9 @@ const Documents: React.FC<{
       const content = e.target?.result as string;
       setFileContent(content);
     };
-    // For demo purposes, we'll read as text. In real app, we'd handle PDFs/DOCs via backend or OCR.
     if (file.type.includes('text') || file.name.endsWith('.txt')) {
       reader.readAsText(file);
     } else {
-      // Simulate content for non-text files in demo
       setFileContent(`[Simulated content for ${file.name}]\nThis document contains association rules and policies regarding ${file.name.toLowerCase()}. Members must adhere to all guidelines stated herein.`);
     }
   };
@@ -137,13 +132,9 @@ const Documents: React.FC<{
   };
 
   const handleSimulatedUpload = () => {
+    if (isGuest) return;
     if (!newDocTitle) {
       alert("Please provide a document title.");
-      return;
-    }
-    
-    if (!selectedFile && !newDocTitle) {
-      alert("Please select a file or provide a title.");
       return;
     }
     
@@ -154,45 +145,93 @@ const Documents: React.FC<{
       setUploadProgress(prog);
       if (prog >= 100) {
         clearInterval(interval);
-        setTimeout(() => {
-          const newDoc: Document = {
-            id: `d${Date.now()}`,
+        setTimeout(async () => {
+          const currentYear = new Date().getFullYear().toString();
+          let finalTags = [currentYear];
+          let finalContent = fileContent;
+
+          // Auto-trigger Gemini analysis before saving
+          setIsAnalyzing(true);
+          try {
+            const result = await geminiService.summarizeAndTag(fileContent);
+            finalTags = Array.from(new Set([currentYear, ...(result.tags || [])]));
+            if (result.summary) {
+              finalContent = fileContent + `\n\nSummary: ${result.summary}`;
+            }
+          } catch (err) {
+            console.error("Auto-analysis failed", err);
+          } finally {
+            setIsAnalyzing(false);
+          }
+
+          const payload = {
             title: newDocTitle,
             category: newDocCategory,
             url: '#',
             fileType: selectedFile?.name.split('.').pop() as any || 'pdf',
             date: new Date().toISOString().split('T')[0],
-            author: isAdmin ? 'Administrator' : 'Member',
+            author: 'Board Administration',
             isPrivate: newDocIsPrivate,
-            content: fileContent,
-            tags: []
+            content: finalContent,
+            tags: finalTags
           };
-          
-          setIsUploading(false);
-          setUploadProgress(0);
-          setShowUpload(false);
-          setNewDocTitle('');
-          setNewDocIsPrivate(false);
-          setSelectedFile(null);
-          setFileContent('');
-          
-          // Trigger review modal immediately after upload
-          setReviewingDoc(newDoc);
+
+          try {
+            const res = await fetch('/api/documents', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            setDocuments(prev => [data, ...prev]);
+            setIsUploading(false);
+            setUploadProgress(0);
+            setShowUpload(false);
+            setNewDocTitle('');
+            setNewDocIsPrivate(false);
+            setSelectedFile(null);
+            setFileContent('');
+            setReviewingDoc(data); // Open modal with analyzed data
+          } catch (err) {
+            console.error(err);
+          }
         }, 500);
       }
     }, 100);
   };
 
-  const handleSaveReview = () => {
-    if (reviewingDoc) {
-      setDocuments(prev => [reviewingDoc, ...prev]);
+  const handleSaveReview = async () => {
+    if (isGuest || !reviewingDoc) return;
+    try {
+      const res = await fetch(`/api/documents/${reviewingDoc.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reviewingDoc)
+      });
+      const data = await res.json();
+      setDocuments(prev => prev.map(d => d.id === data.id ? data : d));
       setReviewingDoc(null);
-      alert("Document reviewed, tagged, and archived.");
+      alert("Document saved.");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteDoc = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isGuest) return;
+    if (!window.confirm("Are you sure you want to delete this document?")) return;
+    try {
+      await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+      setDocuments(prev => prev.filter(d => d.id !== id));
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const handleAutoTag = async () => {
-    if (!reviewingDoc?.content) return;
+    if (isGuest || !reviewingDoc?.content) return;
     setIsAnalyzing(true);
     try {
       const result = await geminiService.summarizeAndTag(reviewingDoc.content);
@@ -258,7 +297,7 @@ const Documents: React.FC<{
             <h3 className="text-2xl font-black text-slate-800 dark:text-white">Resource Library</h3>
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Centralized association archives</p>
           </div>
-          {isAdmin && (
+          {isAdmin && !isGuest && (
             <button 
               onClick={() => setShowUpload(!showUpload)}
               className={`w-full sm:w-auto px-6 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all ${
@@ -271,7 +310,7 @@ const Documents: React.FC<{
           )}
         </div>
 
-        {showUpload && (
+        {showUpload && isAdmin && !isGuest && (
           <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 animate-in slide-in-from-top-4">
             <div className="flex justify-between items-center mb-6">
               <h4 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Association Upload Portal</h4>
@@ -281,7 +320,7 @@ const Documents: React.FC<{
             {isUploading ? (
               <div className="space-y-4 py-8">
                 <div className="flex justify-between text-xs font-bold text-slate-500 uppercase">
-                  <span>Encrypting & Archiving...</span>
+                  <span>{isAnalyzing ? 'Analyzing content...' : 'Encrypting & Archiving...'}</span>
                   <span>{uploadProgress}%</span>
                 </div>
                 <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -440,16 +479,26 @@ const Documents: React.FC<{
                   {doc.category}
                 </button>
                 <div className="flex gap-2">
-                  {isAdmin && (
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setReviewingDoc(doc);
-                      }}
-                      className="w-10 h-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-white rounded-xl flex items-center justify-center hover:bg-amber-500 transition-all active:scale-95"
-                    >
-                      <i className="fa-solid fa-pen-to-square"></i>
-                    </button>
+                  {isAdmin && !isGuest && (
+                    <>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReviewingDoc(doc);
+                        }}
+                        className="w-10 h-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-white rounded-xl flex items-center justify-center hover:bg-amber-500 transition-all active:scale-95"
+                        title="Edit"
+                      >
+                        <i className="fa-solid fa-pen-to-square"></i>
+                      </button>
+                      <button 
+                        onClick={(e) => deleteDoc(doc.id, e)}
+                        className="w-10 h-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-white rounded-xl flex items-center justify-center hover:bg-rose-500 transition-all active:scale-95"
+                        title="Delete"
+                      >
+                        <i className="fa-solid fa-trash"></i>
+                      </button>
+                    </>
                   )}
                   <button 
                     onClick={(e) => handleDownload(doc, e)}
@@ -477,10 +526,10 @@ const Documents: React.FC<{
               <div className="p-8 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
                 <div>
                   <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                    {isAdmin ? 'Document Review Portal' : 'Document Viewer'}
+                    {(isAdmin && !isGuest) ? 'Document Review Portal' : 'Document Viewer'}
                   </h3>
                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-                    {isAdmin ? 'Verify content & apply semantic tags' : 'View association archives & AI summaries'}
+                    {(isAdmin && !isGuest) ? 'Verify content & apply semantic tags' : 'View association archives & AI summaries'}
                   </p>
                 </div>
                 <button onClick={() => setReviewingDoc(null)} className="w-10 h-10 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 flex items-center justify-center transition-colors">
@@ -494,8 +543,8 @@ const Documents: React.FC<{
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Extracted Content</label>
                     <textarea 
                       value={reviewingDoc.content || ''}
-                      onChange={(e) => isAdmin && setReviewingDoc({ ...reviewingDoc, content: e.target.value })}
-                      readOnly={!isAdmin}
+                      onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, content: e.target.value })}
+                      readOnly={!isAdmin || isGuest}
                       className="w-full h-[400px] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-2xl p-6 text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                       placeholder="No content extracted..."
                     />
@@ -509,7 +558,7 @@ const Documents: React.FC<{
                         <i className="fa-solid fa-wand-magic-sparkles"></i>
                         <h4 className="text-[10px] font-black uppercase tracking-widest">AI Intelligence</h4>
                       </div>
-                      {isAdmin && (
+                      {isAdmin && !isGuest && (
                         <button 
                           onClick={handleAutoTag}
                           disabled={isAnalyzing}
@@ -520,7 +569,7 @@ const Documents: React.FC<{
                       )}
                     </div>
                     <p className="text-[11px] text-emerald-800/70 dark:text-emerald-400/70 leading-relaxed font-medium">
-                      {isAdmin 
+                      {(isAdmin && !isGuest) 
                         ? "Use Gemini to automatically categorize this document, extract key policies, and suggest relevant search tags."
                         : "This document has been indexed by Gemini to provide instant answers in the Resource Search."}
                     </p>
@@ -535,8 +584,8 @@ const Documents: React.FC<{
                           <input 
                             type="text" 
                             value={reviewingDoc.title}
-                            readOnly={!isAdmin}
-                            onChange={(e) => isAdmin && setReviewingDoc({ ...reviewingDoc, title: e.target.value })}
+                            readOnly={!isAdmin || isGuest}
+                            onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, title: e.target.value })}
                             className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none"
                           />
                         </div>
@@ -544,8 +593,8 @@ const Documents: React.FC<{
                           <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Category</p>
                           <select 
                             value={reviewingDoc.category}
-                            disabled={!isAdmin}
-                            onChange={(e) => isAdmin && setReviewingDoc({ ...reviewingDoc, category: e.target.value as Document['category'] })}
+                            disabled={!isAdmin || isGuest}
+                            onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, category: e.target.value as Document['category'] })}
                             className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none appearance-none"
                           >
                             {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
@@ -560,7 +609,7 @@ const Documents: React.FC<{
                         {reviewingDoc.tags?.map((tag, i) => (
                           <div key={i} className="flex items-center gap-2 bg-white dark:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10">
                             <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">#{tag}</span>
-                            {isAdmin && (
+                            {isAdmin && !isGuest && (
                               <button 
                                 onClick={() => setReviewingDoc({ ...reviewingDoc, tags: reviewingDoc.tags?.filter((_, index) => index !== i) })}
                                 className="text-slate-400 hover:text-red-500"
@@ -570,7 +619,7 @@ const Documents: React.FC<{
                             )}
                           </div>
                         ))}
-                        {isAdmin && (
+                        {isAdmin && !isGuest && (
                           <input 
                             type="text"
                             placeholder="+ Add tag..."
@@ -597,14 +646,14 @@ const Documents: React.FC<{
                   onClick={() => setReviewingDoc(null)}
                   className="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
                 >
-                  {isAdmin ? 'Discard Changes' : 'Close Viewer'}
+                  {(isAdmin && !isGuest) ? 'Discard Changes' : 'Close Viewer'}
                 </button>
-                {isAdmin && (
+                {isAdmin && !isGuest && (
                   <button 
                     onClick={handleSaveReview}
                     className="px-12 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                   >
-                    Finalize & Archive
+                    Save
                   </button>
                 )}
                 <button 

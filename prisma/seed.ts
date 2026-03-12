@@ -10,6 +10,7 @@ async function main() {
   await prisma.announcement.deleteMany();
   await prisma.document.deleteMany();
   await prisma.committee.deleteMany();
+  await prisma.coopEvent.deleteMany();
   await prisma.tenant.deleteMany();
   await prisma.unit.deleteMany();
 
@@ -175,13 +176,13 @@ async function main() {
 
   console.log('Seeding announcements...');
   const announcementData = [
-    { title: 'Annual General Meeting — April 12th', content: 'The Oak Bay Housing Co-operative Annual General Meeting will be held on Saturday, April 12th at 2:00 PM in the Community Room. Agenda items include the 2025 financial review, election of board members, and proposed bylaw amendments. All members are encouraged to attend. Light refreshments will be provided. Please RSVP to admin@oakbaycoop.bc.ca by April 5th.', type: 'General', priority: 'High', author: 'joewcoupons@gmail.com', date: '2026-03-08', createdAt: new Date('2026-03-08') },
-    { title: 'Water Shutoff — March 18th 9AM–1PM', content: 'A scheduled water shutoff is required to complete repairs to the main building supply line. The shutoff will affect all units and will take place on Tuesday March 18th from 9:00 AM to approximately 1:00 PM. Please store sufficient water in advance. We apologize for the inconvenience and thank you for your patience.', type: 'Maintenance', priority: 'Urgent', author: 'joewcoupons@gmail.com', date: '2026-03-06', createdAt: new Date('2026-03-06') },
-    { title: 'New Recycling Guidelines Effective April 1st', content: 'The City of Victoria has updated its recycling program. Starting April 1st, soft plastics must be deposited in the dedicated soft plastics bin in the recycling room rather than the blue bin. Glass bottles and jars should be rinsed before recycling. Updated sorting guides have been posted in the recycling room and laundry room.', type: 'General', priority: 'Normal', author: 'joewcoupons@gmail.com', date: '2026-03-01', createdAt: new Date('2026-03-01') },
-    { title: 'Parking Lot Repaving — Weekend of March 22nd', content: 'The parking lot will be repaved over the weekend of March 22nd–23rd. All vehicles must be removed from the lot by 7:00 AM Saturday. Street parking is available on Foul Bay Road and Granite Street. Vehicles left in the lot may be towed at the owner\'s expense. The lot will reopen by Sunday evening.', type: 'Maintenance', priority: 'High', author: 'joewcoupons@gmail.com', date: '2026-02-28', createdAt: new Date('2026-02-28') },
-    { title: 'Spring Garden Volunteer Day — April 5th', content: 'Join your neighbours for the annual spring garden cleanup on Saturday April 5th starting at 10:00 AM. We\'ll be pruning, planting, and refreshing the communal garden beds. Tools and gloves provided. Lunch will be served at noon. This counts toward your annual participation hours.', type: 'General', priority: 'Normal', author: 'joewcoupons@gmail.com', date: '2026-02-20', createdAt: new Date('2026-02-20') },
-    { title: 'Housing Charge Increase — Effective July 1st', content: 'Following the board\'s annual financial review, housing charges will increase by 3.2% effective July 1st, 2026. This increase reflects rising municipal taxes, insurance premiums, and maintenance costs. Individual notice letters will be mailed to all members by April 15th.', type: 'General', priority: 'High', author: 'joewcoupons@gmail.com', date: '2026-02-15', createdAt: new Date('2026-02-15') },
-    { title: 'Fire Alarm System Test — March 14th', content: 'The building\'s fire alarm system will undergo its mandatory annual inspection on Friday March 14th between 10:00 AM and 3:00 PM. Expect brief alarm activations throughout the day. Please do not call 911 during testing periods.', type: 'Maintenance', priority: 'Normal', author: 'joewcoupons@gmail.com', date: '2026-03-04', createdAt: new Date('2026-03-04') },
+    { title: 'Annual General Meeting — April 12th', content: 'The Oak Bay Housing Co-operative Annual General Meeting will be held on Saturday, April 12th at 2:00 PM in the Community Room. Agenda items include the 2025 financial review, election of board members, and proposed bylaw amendments. All members are encouraged to attend. Light refreshments will be provided. Please RSVP to admin@oakbaycoop.bc.ca by April 5th.', type: 'General', priority: 'High', author: 'Board Administration', date: '2026-03-08', createdAt: new Date('2026-03-08') },
+    { title: 'Water Shutoff — March 18th 9AM–1PM', content: 'A scheduled water shutoff is required to complete repairs to the main building supply line. The shutoff will affect all units and will take place on Tuesday March 18th from 9:00 AM to approximately 1:00 PM. Please store sufficient water in advance. We apologize for the inconvenience and thank you for your patience.', type: 'Maintenance', priority: 'Urgent', author: 'Maintenance Committee', date: '2026-03-06', createdAt: new Date('2026-03-06') },
+    { title: 'New Recycling Guidelines Effective April 1st', content: 'The City of Victoria has updated its recycling program. Starting April 1st, soft plastics must be deposited in the dedicated soft plastics bin in the recycling room rather than the blue bin. Glass bottles and jars should be rinsed before recycling. Updated sorting guides have been posted in the recycling room and laundry room.', type: 'General', priority: 'Normal', author: 'Board Administration', date: '2026-03-01', createdAt: new Date('2026-03-01') },
+    { title: 'Parking Lot Repaving — Weekend of March 22nd', content: 'The parking lot will be repaved over the weekend of March 22nd–23rd. All vehicles must be removed from the lot by 7:00 AM Saturday. Street parking is available on Foul Bay Road and Granite Street. Vehicles left in the lot may be towed at the owner\'s expense. The lot will reopen by Sunday evening.', type: 'Maintenance', priority: 'High', author: 'Maintenance Committee', date: '2026-02-28', createdAt: new Date('2026-02-28') },
+    { title: 'Spring Garden Volunteer Day — April 5th', content: 'Join your neighbours for the annual spring garden cleanup on Saturday April 5th starting at 10:00 AM. We\'ll be pruning, planting, and refreshing the communal garden beds. Tools and gloves provided. Lunch will be served at noon. This counts toward your annual participation hours.', type: 'General', priority: 'Normal', author: 'Garden Committee', date: '2026-02-20', createdAt: new Date('2026-02-20') },
+    { title: 'Housing Charge Increase — Effective July 1st', content: 'Following the board\'s annual financial review, housing charges will increase by 3.2% effective July 1st, 2026. This increase reflects rising municipal taxes, insurance premiums, and maintenance costs. Individual notice letters will be mailed to all members by April 15th.', type: 'General', priority: 'High', author: 'Finance Committee', date: '2026-02-15', createdAt: new Date('2026-02-15') },
+    { title: 'Fire Alarm System Test — March 14th', content: 'The building\'s fire alarm system will undergo its mandatory annual inspection on Friday March 14th between 10:00 AM and 3:00 PM. Expect brief alarm activations throughout the day. Please do not call 911 during testing periods.', type: 'Maintenance', priority: 'Normal', author: 'Board Administration', date: '2026-03-04', createdAt: new Date('2026-03-04') },
   ];
   for (const a of announcementData) {
     await prisma.announcement.create({ data: a });
@@ -189,134 +190,85 @@ async function main() {
 
   console.log('Seeding documents...');
   const documentData = [
-    { title: 'Oak Bay Co-op Rules & Regulations 2024', category: 'Bylaws', url: 'https://storage.example.com/docs/rules-2024.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2024-01-15', createdAt: new Date('2024-01-15') },
-    { title: 'Co-operative Housing Act — BC', category: 'Bylaws', url: 'https://storage.example.com/docs/coop-act-bc.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2023-06-01', createdAt: new Date('2023-06-01') },
-    { title: 'Member Handbook 2025', category: 'Policies', url: 'https://storage.example.com/docs/member-handbook-2025.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2025-01-01', createdAt: new Date('2025-01-01') },
-    { title: 'Pet Policy', category: 'Policies', url: 'https://storage.example.com/docs/pet-policy.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2023-09-01', createdAt: new Date('2023-09-01') },
-    { title: 'Noise & Quiet Hours Policy', category: 'Policies', url: 'https://storage.example.com/docs/noise-policy.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2022-11-15', createdAt: new Date('2022-11-15') },
-    { title: 'Parking Policy & Stall Assignment', category: 'Policies', url: 'https://storage.example.com/docs/parking-policy.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2024-03-01', createdAt: new Date('2024-03-01') },
-    { title: 'AGM Minutes — April 2025', category: 'Minutes', url: 'https://storage.example.com/docs/agm-minutes-2025.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2025-04-20', createdAt: new Date('2025-04-20') },
-    { title: 'Board Meeting Minutes — February 2026', category: 'Minutes', url: 'https://storage.example.com/docs/board-minutes-feb-2026.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2026-02-18', createdAt: new Date('2026-02-18') },
-    { title: 'Board Meeting Minutes — January 2026', category: 'Minutes', url: 'https://storage.example.com/docs/board-minutes-jan-2026.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2026-01-21', createdAt: new Date('2026-01-21') },
-    { title: '2025 Annual Financial Statements', category: 'Financials', url: 'https://storage.example.com/docs/financials-2025.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2026-02-01', createdAt: new Date('2026-02-01') },
-    { title: '2026 Operating Budget', category: 'Financials', url: 'https://storage.example.com/docs/budget-2026.xls', fileType: 'xls', author: 'joewcoupons@gmail.com', date: '2026-01-10', createdAt: new Date('2026-01-10') },
-    { title: 'Reserve Fund Study 2024', category: 'Financials', url: 'https://storage.example.com/docs/reserve-fund-2024.pdf', fileType: 'pdf', author: 'joewcoupons@gmail.com', date: '2024-06-15', createdAt: new Date('2024-06-15') },
+    { title: 'Oak Bay Co-op Rules & Regulations 2024', category: 'Bylaws', url: 'https://storage.example.com/docs/rules-2024.pdf', fileType: 'pdf', author: 'Board Administration', date: '2024-01-15', createdAt: new Date('2024-01-15'), tags: ['legal', 'governance', 'bylaws'] },
+    { title: 'Co-operative Housing Act — BC', category: 'Bylaws', url: 'https://storage.example.com/docs/coop-act-bc.pdf', fileType: 'pdf', author: 'Legislative BC', date: '2023-06-01', createdAt: new Date('2023-06-01'), tags: ['legal', 'provincial'] },
+    { title: 'Member Handbook 2025', category: 'Policies', url: 'https://storage.example.com/docs/member-handbook-2025.pdf', fileType: 'pdf', author: 'Membership Committee', date: '2025-01-01', createdAt: new Date('2025-01-01'), tags: ['handbook', 'rules'] },
+    { title: 'Pet Policy', category: 'Policies', url: 'https://storage.example.com/docs/pet-policy.pdf', fileType: 'pdf', author: 'Board Administration', date: '2023-09-01', createdAt: new Date('2023-09-01'), tags: ['pets', 'rules'] },
+    { title: 'Noise & Quiet Hours Policy', category: 'Policies', url: 'https://storage.example.com/docs/noise-policy.pdf', fileType: 'pdf', author: 'Board Administration', date: '2022-11-15', createdAt: new Date('2022-11-15'), tags: ['noise', 'living'] },
+    { title: 'Parking Policy & Stall Assignment', category: 'Policies', url: 'https://storage.example.com/docs/parking-policy.pdf', fileType: 'pdf', author: 'Maintenance Committee', date: '2024-03-01', createdAt: new Date('2024-03-01'), tags: ['parking', 'vehicles'] },
+    { title: 'AGM Minutes — April 2025', category: 'Minutes', url: 'https://storage.example.com/docs/agm-minutes-2025.pdf', fileType: 'pdf', author: 'Secretary', date: '2025-04-20', createdAt: new Date('2025-04-20'), tags: ['minutes', 'agm'] },
+    { title: 'Board Meeting Minutes — February 2026', category: 'Minutes', url: 'https://storage.example.com/docs/board-minutes-feb-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-02-18', createdAt: new Date('2026-02-18'), tags: ['minutes', 'board'] },
+    { title: 'Board Meeting Minutes — January 2026', category: 'Minutes', url: 'https://storage.example.com/docs/board-minutes-jan-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-01-21', createdAt: new Date('2026-01-21'), tags: ['minutes', 'board'] },
+    { title: '2025 Annual Financial Statements', category: 'Financials', url: 'https://storage.example.com/docs/financials-2025.pdf', fileType: 'pdf', author: 'Finance Committee', date: '2026-02-01', createdAt: new Date('2026-02-01'), tags: ['financial', 'audit'] },
+    { title: '2026 Operating Budget', category: 'Financials', url: 'https://storage.example.com/docs/budget-2026.xls', fileType: 'xls', author: 'Finance Committee', date: '2026-01-10', createdAt: new Date('2026-01-10'), tags: ['budget', 'financial'] },
+    { title: 'Reserve Fund Study 2024', category: 'Financials', url: 'https://storage.example.com/docs/reserve-fund-2024.pdf', fileType: 'pdf', author: 'Board Administration', date: '2024-06-15', createdAt: new Date('2024-06-15'), tags: ['reserve', 'future-planning'] },
   ];
   for (const d of documentData) {
     await prisma.document.create({ data: d });
   }
 
   console.log('Seeding committees...');
-  await prisma.committee.create({
-    data: {
-      name: 'Board of Directors',
-      description: 'Elected governing body responsible for overall co-op management, policy decisions, and financial oversight.',
-      chair: 'george.papadopoulos@email.com',
-      icon: 'fa-landmark',
-      members: {
-        connect: [
-          { id: tenants['george.papadopoulos@email.com'].id },
-          { id: tenants['thomas.bergstrom@email.com'].id },
-          { id: tenants['patricia.macleod@email.com'].id },
-          { id: tenants['james.nakamura@email.com'].id },
-          { id: tenants['fatima.alhassan@email.com'].id },
-        ],
-      },
-    },
-  });
+  const committeeData = [
+    { name: 'Board of Directors', description: 'Elected governing body responsible for overall co-op management, policy decisions, and financial oversight.', chair: 'George Papadopoulos', icon: 'fa-landmark', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com', 'patricia.macleod@email.com', 'james.nakamura@email.com', 'fatima.alhassan@email.com'] },
+    { name: 'Maintenance Committee', description: 'Oversees building upkeep, coordinates repairs, manages contractor relationships, and reviews maintenance requests.', chair: 'Thomas Bergstrom', icon: 'fa-wrench', members: ['thomas.bergstrom@email.com', 'brian.walsh@email.com', 'carlos.rivera@email.com', 'robert.tremblay@email.com'] },
+    { name: 'Finance Committee', description: 'Reviews financial statements, prepares budgets, monitors reserve fund, and recommends housing charge adjustments.', chair: 'Patricia MacLeod', icon: 'fa-dollar-sign', members: ['patricia.macleod@email.com', 'ahmed.patel@email.com', 'margaret.chen@email.com'] },
+    { name: 'Membership Committee', description: 'Reviews applications, manages the waitlist, conducts interviews, and facilitates member orientation.', chair: 'Fatima Al-Hassan', icon: 'fa-users', members: ['fatima.alhassan@email.com', 'aisha.mohammed@email.com', 'yuki.tanaka@email.com', 'michael.johansson@email.com'] },
+    { name: 'Garden Committee', description: 'Plans and maintains communal garden areas, organizes volunteer days, and manages the community composting program.', chair: 'Helen Papadopoulos', icon: 'fa-leaf', members: ['helen.papadopoulos@email.com', 'linda.nakamura@email.com', 'karen.bergstrom@email.com', 'wei.liu@email.com', 'catherine.walsh@email.com'] },
+    { name: 'Social Committee', description: 'Organizes community events, potlucks, seasonal celebrations, and fosters neighbourly connections among members.', chair: 'Susan Tremblay', icon: 'fa-calendar', members: ['susan.tremblay@email.com', 'priya.sharma@email.com', 'nadia.patel@email.com', 'david.okafor@email.com'] },
+  ];
 
-  await prisma.committee.create({
-    data: {
-      name: 'Maintenance Committee',
-      description: 'Oversees building upkeep, coordinates repairs, manages contractor relationships, and reviews maintenance requests.',
-      chair: 'thomas.bergstrom@email.com',
-      icon: 'fa-wrench',
-      members: {
-        connect: [
-          { id: tenants['thomas.bergstrom@email.com'].id },
-          { id: tenants['brian.walsh@email.com'].id },
-          { id: tenants['carlos.rivera@email.com'].id },
-          { id: tenants['robert.tremblay@email.com'].id },
-        ],
+  for (const c of committeeData) {
+    await prisma.committee.create({
+      data: {
+        name: c.name,
+        description: c.description,
+        chair: c.chair,
+        icon: c.icon,
+        members: {
+          connect: c.members.map(email => ({ id: tenants[email].id })),
+        },
       },
-    },
-  });
+    });
+  }
 
-  await prisma.committee.create({
-    data: {
-      name: 'Finance Committee',
-      description: 'Reviews financial statements, prepares budgets, monitors reserve fund, and recommends housing charge adjustments.',
-      chair: 'patricia.macleod@email.com',
-      icon: 'fa-dollar-sign',
-      members: {
-        connect: [
-          { id: tenants['patricia.macleod@email.com'].id },
-          { id: tenants['ahmed.patel@email.com'].id },
-          { id: tenants['margaret.chen@email.com'].id },
-        ],
-      },
-    },
-  });
+  console.log('Seeding calendar events...');
+  const baseEvents = [
+    { title: 'Board of Directors Meeting', category: 'Board', location: 'Community Room', time: '19:00', description: 'Monthly governance review and policy discussion.' },
+    { title: 'Community Potluck', category: 'Social', location: 'Courtyard', time: '17:30', description: 'Bring a dish to share and meet your neighbours!' },
+    { title: 'Maintenance Committee Check', category: 'Maintenance', location: 'Basement/Roof', time: '10:00', description: 'Routine building system inspection.' },
+    { title: 'General Member Meeting', category: 'Meeting', location: 'Community Room', time: '19:30', description: 'Quarterly update for all co-op members.' },
+    { title: 'Garden Volunteer Day', category: 'Social', location: 'Garden Beds', time: '09:00', description: 'Helping keep our communal spaces green and clean.' },
+  ];
 
-  await prisma.committee.create({
-    data: {
-      name: 'Membership Committee',
-      description: 'Reviews applications, manages the waitlist, conducts interviews, and facilitates member orientation.',
-      chair: 'fatima.alhassan@email.com',
-      icon: 'fa-users',
-      members: {
-        connect: [
-          { id: tenants['fatima.alhassan@email.com'].id },
-          { id: tenants['aisha.mohammed@email.com'].id },
-          { id: tenants['yuki.tanaka@email.com'].id },
-          { id: tenants['michael.johansson@email.com'].id },
-        ],
-      },
-    },
-  });
+  const startDate = new Date('2026-03-01');
+  const endDate = new Date('2026-12-31');
+  let currentDate = new Date(startDate);
 
-  await prisma.committee.create({
-    data: {
-      name: 'Garden Committee',
-      description: 'Plans and maintains communal garden areas, organizes volunteer days, and manages the community composting program.',
-      chair: 'helen.papadopoulos@email.com',
-      icon: 'fa-leaf',
-      members: {
-        connect: [
-          { id: tenants['helen.papadopoulos@email.com'].id },
-          { id: tenants['linda.nakamura@email.com'].id },
-          { id: tenants['karen.bergstrom@email.com'].id },
-          { id: tenants['wei.liu@email.com'].id },
-          { id: tenants['catherine.walsh@email.com'].id },
-        ],
-      },
-    },
-  });
-
-  await prisma.committee.create({
-    data: {
-      name: 'Social Committee',
-      description: 'Organizes community events, potlucks, seasonal celebrations, and fosters neighbourly connections among members.',
-      chair: 'susan.tremblay@email.com',
-      icon: 'fa-calendar',
-      members: {
-        connect: [
-          { id: tenants['susan.tremblay@email.com'].id },
-          { id: tenants['priya.sharma@email.com'].id },
-          { id: tenants['nadia.patel@email.com'].id },
-          { id: tenants['david.okafor@email.com'].id },
-        ],
-      },
-    },
-  });
+  while (currentDate <= endDate) {
+    const numEvents = Math.floor(Math.random() * 2) + 2;
+    for (let i = 0; i < numEvents; i++) {
+      const baseEvent = baseEvents[Math.floor(Math.random() * baseEvents.length)];
+      const eventDate = new Date(currentDate);
+      eventDate.setDate(Math.floor(Math.random() * 28) + 1);
+      
+      await prisma.coopEvent.create({
+        data: {
+          ...baseEvent,
+          date: eventDate.toISOString().split('T')[0],
+        },
+      });
+    }
+    currentDate.setMonth(currentDate.getMonth() + 1);
+  }
 
   console.log('✅ Seeding complete!');
   console.log(`  • ${units.length} units`);
-  console.log(`  • ${tenantData.length} tenants`);
+  console.log(`  • ${Object.keys(tenants).length} tenants`);
   console.log('  • 12 maintenance requests');
   console.log('  • 7 announcements');
   console.log('  • 12 documents');
   console.log('  • 6 committees');
+  console.log('  • Monthly calendar events through end of 2026');
 }
 
 main()

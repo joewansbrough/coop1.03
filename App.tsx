@@ -8,7 +8,6 @@ import MaintenanceDetail from './pages/MaintenanceDetail';
 import Documents from './pages/Documents';
 import AdminUnits from './pages/AdminUnits';
 import UnitDetail from './pages/UnitDetail';
-import Finances from './pages/Finances';
 import Communications from './pages/Communications';
 import Calendar from './pages/Calendar';
 import EventDetail from './pages/EventDetail';
@@ -28,6 +27,7 @@ interface User {
   name: string;
   picture: string;
   isAdmin: boolean;
+  isGuest?: boolean;
 }
 
 const App: React.FC = () => {
@@ -62,22 +62,24 @@ const App: React.FC = () => {
 
   const fetchAllData = async () => {
     try {
-      const [unitsRes, tenantsRes, requestsRes, announcementsRes, docsRes, committeesRes] = await Promise.all([
+      const [unitsRes, tenantsRes, requestsRes, announcementsRes, docsRes, committeesRes, eventsRes] = await Promise.all([
         fetch('/api/units'),
         fetch('/api/tenants'),
         fetch('/api/maintenance'),
         fetch('/api/announcements'),
         fetch('/api/documents'),
-        fetch('/api/committees')
+        fetch('/api/committees'),
+        fetch('/api/events')
       ]);
 
-      const [unitsData, tenantsData, requestsData, announcementsData, docsData, committeesData] = await Promise.all([
+      const [unitsData, tenantsData, requestsData, announcementsData, docsData, committeesData, eventsData] = await Promise.all([
         unitsRes.json(),
         tenantsRes.json(),
         requestsRes.json(),
         announcementsRes.json(),
         docsRes.json(),
-        committeesRes.json()
+        committeesRes.json(),
+        eventsRes.json()
       ]);
 
       setUnits(Array.isArray(unitsData) ? unitsData : []);
@@ -86,6 +88,7 @@ const App: React.FC = () => {
       setAnnouncements(Array.isArray(announcementsData) ? announcementsData : []);
       setDocuments(Array.isArray(docsData) ? docsData : []);
       setCommittees(Array.isArray(committeesData) ? committeesData : []);
+      setEvents(Array.isArray(eventsData) ? eventsData : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }
@@ -117,40 +120,41 @@ const App: React.FC = () => {
   }
 
   const effectiveIsAdmin = user.isAdmin && !isAdminOverride;
+  const isGuest = !!user.isGuest;
 
   return (
     <HashRouter>
       <Layout 
         isAdmin={effectiveIsAdmin} 
         isActualAdmin={user.isAdmin}
+        isGuest={isGuest}
         onToggleAdminView={() => setIsAdminOverride(!isAdminOverride)}
         user={user} 
         coopName={coopName}
       >
         <Routes>
-          <Route path="/" element={<Dashboard isAdmin={effectiveIsAdmin} announcements={announcements} units={units} tenants={tenants} requests={requests} events={events} />} />
-          <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} events={events} setEvents={setEvents} />} />
-          <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} events={events} setEvents={setEvents} />} />
+          <Route path="/" element={<Dashboard isAdmin={effectiveIsAdmin} isGuest={isGuest} announcements={announcements} units={units} tenants={tenants} requests={requests} events={events} />} />
+          <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} isGuest={isGuest} events={events} setEvents={setEvents} />} />
+          <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} events={events} setEvents={setEvents} />} />
           <Route path="/announcements/:annId" element={<AnnouncementDetail announcements={announcements} />} />
-          <Route path="/committees" element={<Committees isAdmin={effectiveIsAdmin} committees={committees} setCommittees={setCommittees} tenants={tenants} />} />
-          <Route path="/maintenance" element={<Maintenance isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} />} />
-          <Route path="/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
-          <Route path="/documents" element={<Documents isAdmin={effectiveIsAdmin} documents={documents} setDocuments={setDocuments} />} />
+          <Route path="/committees" element={<Committees isAdmin={effectiveIsAdmin} isGuest={isGuest} committees={committees} setCommittees={setCommittees} tenants={tenants} />} />
+          <Route path="/maintenance" element={<Maintenance isAdmin={effectiveIsAdmin} isGuest={isGuest} requests={requests} setRequests={setRequests} units={units} />} />
+          <Route path="/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
+          <Route path="/documents" element={<Documents isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} />} />
           <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} />} />
-          <Route path="/finances" element={<Finances isAdmin={effectiveIsAdmin} />} />
-          <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} announcements={announcements} setAnnouncements={setAnnouncements} />} />
-          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} tenants={tenants} setTenants={setTenants} units={units} />} />
+          <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} isGuest={isGuest} announcements={announcements} setAnnouncements={setAnnouncements} />} />
+          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isGuest={isGuest} tenants={tenants} setTenants={setTenants} units={units} />} />
           
           {/* Admin Routes */}
           {effectiveIsAdmin && (
             <>
               <Route path="/admin/units" element={<AdminUnits units={units} setUnits={setUnits} tenants={tenants} />} />
               <Route path="/admin/units/:unitId" element={<UnitDetail units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} />} />
-              <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} tenants={tenants} setTenants={setTenants} units={units} />} />
+              <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} isGuest={isGuest} tenants={tenants} setTenants={setTenants} units={units} />} />
               <Route path="/admin/tenants/:tenantId" element={<TenantDetail tenants={tenants} units={units} requests={requests} />} />
               <Route path="/admin/waitlist" element={<Waitlist tenants={tenants} setTenants={setTenants} />} />
               <Route path="/admin/reports" element={<Reports />} />
-              <Route path="/admin/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
+              <Route path="/admin/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
             </>
           )}
 
