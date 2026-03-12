@@ -559,6 +559,17 @@ async function startServer() {
             where: { id: history.id },
             data: { endDate: new Date(date), moveReason: reason || 'Household Move-out' }
           });
+        } else {
+          // Backfill: Create record if missing
+          await prisma.tenantHistory.create({
+            data: {
+              tenantId: resident.id,
+              unitId: req.params.id,
+              startDate: new Date(resident.startDate || date),
+              endDate: new Date(date),
+              moveReason: reason || 'Household Move-out (Archived)'
+            }
+          });
         }
       }
 
@@ -636,6 +647,17 @@ async function startServer() {
           await prisma.tenantHistory.update({
             where: { id: oldHistory.id },
             data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
+          });
+        } else {
+          // Backfill: Create record for old unit
+          await prisma.tenantHistory.create({
+            data: {
+              tenantId: resident.id,
+              unitId: fromUnitId,
+              startDate: new Date(resident.startDate || date),
+              endDate: new Date(date),
+              moveReason: 'Internal Transfer (Archived)'
+            }
           });
         }
 
