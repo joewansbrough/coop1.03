@@ -318,6 +318,7 @@ app.get('/api/committees', async (req, res) => {
 
 app.get('/api/events', async (req, res) => {
   const events = await prisma.coopEvent.findMany({
+    include: { attendees: true },
     orderBy: { date: 'asc' }
   });
   res.json(events);
@@ -326,7 +327,8 @@ app.get('/api/events', async (req, res) => {
 app.post('/api/events', async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
   const event = await prisma.coopEvent.create({
-    data: { title, description, date, time, location, category }
+    data: { title, description, date, time, location, category },
+    include: { attendees: true }
   });
   res.json(event);
 });
@@ -335,9 +337,33 @@ app.put('/api/events/:id', async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
   const event = await prisma.coopEvent.update({
     where: { id: req.params.id },
-    data: { title, description, date, time, location, category }
+    data: { title, description, date, time, location, category },
+    include: { attendees: true }
   });
   res.json(event);
+});
+
+app.post('/api/events/:id/attend', async (req, res) => {
+  const user = (req as any).session?.user;
+  if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { email: user.email } });
+    if (!tenant) return res.status(404).json({ error: 'Tenant record not found for this user' });
+
+    const event = await prisma.coopEvent.update({
+      where: { id: req.params.id },
+      data: {
+        attendees: {
+          connect: { id: tenant.id }
+        }
+      },
+      include: { attendees: true }
+    });
+    res.json(event);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.delete('/api/events/:id', async (req, res) => {
@@ -395,7 +421,7 @@ app.post('/api/ai/summarize', async (req, res) => {
     const { content } = req.body;
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-lite',
-      contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant tags.\n\nContent: ${content.substring(0, 5000)}`,
+      contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant tags. CRITICAL: One of the tags MUST be the 4-digit year mentioned in the document (e.g., "2026") to enable sorting and filtering.\n\nContent: ${content.substring(0, 5000)}`,
       config: {
         responseMimeType: 'application/json',
         responseSchema: {

@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
+import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
 
@@ -354,6 +355,7 @@ async function startServer() {
   app.get('/api/events', async (req, res) => {
     try {
       const events = await prisma.coopEvent.findMany({
+        include: { attendees: true },
         orderBy: { date: 'asc' }
       });
       res.json(events);
@@ -365,7 +367,8 @@ async function startServer() {
   app.post('/api/events', async (req, res) => {
     const { title, description, date, time, location, category } = req.body;
     const event = await prisma.coopEvent.create({
-      data: { title, description, date, time, location, category }
+      data: { title, description, date, time, location, category },
+      include: { attendees: true }
     });
     res.json(event);
   });
@@ -374,14 +377,103 @@ async function startServer() {
     const { title, description, date, time, location, category } = req.body;
     const event = await prisma.coopEvent.update({
       where: { id: req.params.id },
-      data: { title, description, date, time, location, category }
+      data: { title, description, date, time, location, category },
+      include: { attendees: true }
     });
     res.json(event);
+  });
+
+  app.post('/api/events/:id/attend', async (req, res) => {
+    const user = (req as any).session?.user;
+    if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
+
+    try {
+      const tenant = await prisma.tenant.findUnique({ where: { email: user.email } });
+      if (!tenant) return res.status(404).json({ error: 'Tenant record not found for this user' });
+
+      const event = await prisma.coopEvent.update({
+        where: { id: req.params.id },
+        data: {
+          attendees: {
+            connect: { id: tenant.id }
+          }
+        },
+        include: { attendees: true }
+      });
+      res.json(event);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.delete('/api/events/:id', async (req, res) => {
     await prisma.coopEvent.delete({ where: { id: req.params.id } });
     res.json({ success: true });
+  });
+
+  // --- AI Routes ---
+  const getAI = () => new GoogleGenAI(process.env.API_KEY || '');
+
+  app.post('/api/ai/triage', async (req, res) => {
+    try {
+      const ai = getAI();
+      const { description } = req.body;
+      const response = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+        contents: [{ role: 'user', parts: [{ text: `Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"` }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              urgency: { type: Type.STRING },
+              category: { type: Type.STRING },
+              reasoning: { type: Type.STRING }
+            },
+            required: ['urgency', 'category']
+          }
+        }
+      });
+      res.json(JSON.parse(response.response.text() || '{}'));
+    } catch (e: any) {
+      res.status(500).json({ urgency: 'Medium', category: 'Other', error: e.message });
+    }
+  });
+
+  app.post('/api/ai/policy', async (req, res) => {
+    try {
+      const ai = getAI();
+      const { question, context } = req.body;
+      const response = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+        contents: [{ role: 'user', parts: [{ text: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}` }] }]
+      });
+      res.json({ answer: response.response.text() });
+    } catch (e: any) {
+      res.status(500).json({ answer: 'Unable to answer at this time. Please contact the board.', error: e.message });
+    }
+  });
+
+  app.post('/api/ai/summarize', async (req, res) => {
+    try {
+      const ai = getAI();
+      const { content } = req.body;
+      const response = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+        contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant tags. CRITICAL: One of the tags MUST be the 4-digit year mentioned in the document (e.g., "2026") to enable sorting and filtering.\n\nContent: ${content.substring(0, 5000)}` }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              summary: { type: Type.STRING },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ['summary', 'tags']
+          }
+        }
+      });
+      res.json(JSON.parse(response.response.text() || '{}'));
+    } catch (e: any) {
+      res.status(500).json({ summary: '', tags: [], error: e.message });
+    }
   });
 
   app.get('/api/debug/config', (req, res) => {

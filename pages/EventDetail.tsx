@@ -1,43 +1,77 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MOCK_EVENTS } from '../constants';
-import { CoopEvent } from '../types';
+import { CoopEvent, Tenant } from '../types';
 
 interface EventDetailProps {
   isAdmin: boolean;
+  isGuest?: boolean;
+  user: { email: string; name: string };
   events: CoopEvent[];
   setEvents: React.Dispatch<React.SetStateAction<CoopEvent[]>>;
 }
 
-const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, events, setEvents }) => {
+const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, user, events, setEvents }) => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const [event, setEvent] = useState(events.find(e => e.id === eventId));
   const [isEditing, setIsEditing] = useState(false);
+  const [isAttending, setIsAttending] = useState(false);
 
   useEffect(() => {
-    setEvent(events.find(e => e.id === eventId));
-  }, [eventId, events]);
+    const foundEvent = events.find(e => e.id === eventId);
+    setEvent(foundEvent);
+    if (foundEvent && foundEvent.attendees) {
+      setIsAttending(foundEvent.attendees.some(a => a.email === user.email));
+    }
+  }, [eventId, events, user.email]);
 
   if (!event) return <div className="p-8 text-center text-slate-500">Event not found.</div>;
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
-    const updatedEvent: CoopEvent = {
-      ...event,
+    const payload = {
       title: (form.elements.namedItem('title') as HTMLInputElement).value,
-      category: (form.elements.namedItem('category') as HTMLSelectElement).value as any,
+      category: (form.elements.namedItem('category') as HTMLSelectElement).value,
       date: (form.elements.namedItem('date') as HTMLInputElement).value,
       time: (form.elements.namedItem('time') as HTMLInputElement).value,
       location: (form.elements.namedItem('location') as HTMLInputElement).value,
       description: (form.elements.namedItem('description') as HTMLTextAreaElement).value,
     };
     
-    setEvents(events.map(ev => ev.id === event.id ? updatedEvent : ev));
-    setIsEditing(false);
-    alert("Event details updated successfully!");
+    try {
+      const res = await fetch(`/api/events/${event.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      setEvents(events.map(ev => ev.id === event.id ? data : ev));
+      setIsEditing(false);
+      alert("Event details updated successfully!");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAttend = async () => {
+    if (isGuest) return;
+    try {
+      const res = await fetch(`/api/events/${event.id}/attend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEvents(events.map(ev => ev.id === event.id ? data : ev));
+        setIsAttending(true);
+      } else {
+        alert(data.error || "Failed to confirm attendance.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -142,7 +176,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, events, setEvents })
               </div>
 
               <div className="space-y-6">
-                {isAdmin && (
+                {isAdmin && !isGuest && (
                   <button 
                     onClick={() => setIsEditing(true)}
                     className="w-full bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95"
@@ -153,11 +187,32 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, events, setEvents })
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-white/5">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Attendee List</h4>
                   <div className="space-y-3">
-                    <p className="text-xs text-slate-400 italic">No members have confirmed attendance yet.</p>
+                    {event.attendees && event.attendees.length > 0 ? (
+                      event.attendees.map((attendee: Tenant) => (
+                        <div key={attendee.id} className="flex items-center gap-3">
+                          <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] text-white font-black">
+                            {attendee.firstName[0]}{attendee.lastName[0]}
+                          </div>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{attendee.firstName} {attendee.lastName}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">No members have confirmed attendance yet.</p>
+                    )}
                   </div>
-                  <button className="w-full mt-6 py-3 text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800 transition-all">
-                    I'm Attending
-                  </button>
+                  {!isAttending && !isGuest && (
+                    <button 
+                      onClick={handleAttend}
+                      className="w-full mt-6 py-3 text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800 transition-all"
+                    >
+                      I'm Attending
+                    </button>
+                  )}
+                  {isAttending && (
+                    <div className="w-full mt-6 py-3 text-center text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                      <i className="fa-solid fa-check mr-2"></i> Confirmed
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -136,7 +136,7 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<Dashboard isAdmin={effectiveIsAdmin} isGuest={isGuest} announcements={announcements} units={units} tenants={tenants} requests={requests} events={events} />} />
           <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} isGuest={isGuest} events={events} setEvents={setEvents} />} />
-          <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} events={events} setEvents={setEvents} />} />
+          <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} events={events} setEvents={setEvents} />} />
           <Route path="/announcements/:annId" element={<AnnouncementDetail announcements={announcements} />} />
           <Route path="/committees" element={<Committees isAdmin={effectiveIsAdmin} isGuest={isGuest} committees={committees} setCommittees={setCommittees} tenants={tenants} />} />
           <Route path="/maintenance" element={<Maintenance isAdmin={effectiveIsAdmin} isGuest={isGuest} requests={requests} setRequests={setRequests} units={units} />} />

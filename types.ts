@@ -133,6 +133,7 @@ export interface CoopEvent {
   location: string;
   category: string;
   description: string;
+  attendees?: Tenant[];
 }
 
 export interface Transaction {
