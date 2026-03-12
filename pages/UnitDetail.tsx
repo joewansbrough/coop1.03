@@ -19,26 +19,28 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   const currentResidents = tenants.filter(t => t.unitId === unitId && t.status === 'Current');
   const primaryResident = currentResidents.find(t => t.id === unit?.currentTenantId) || currentResidents[0];
   
-  // Calculate full unit history from either the unit's own occupancyHistory or all tenants' residency records
-  const unitHistory = (unit?.occupancyHistory && unit.occupancyHistory.length > 0)
-    ? unit.occupancyHistory.map(rh => ({
-        tenant: rh.tenant || tenants.find(t => t.id === rh.tenantId),
-        startDate: rh.startDate,
-        endDate: rh.endDate,
-        moveReason: rh.moveReason,
-        isCurrent: !rh.endDate
-      }))
-    : tenants.flatMap(t => 
-        (t.history || [])
-          .filter(rh => rh.unitId === unitId)
-          .map(rh => ({
-            tenant: t,
-            startDate: rh.startDate,
-            endDate: rh.endDate,
-            moveReason: rh.moveReason,
-            isCurrent: !rh.endDate
-          }))
-      ).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+  // Calculate full unit history, ensuring current residents are ALWAYS included at the top
+  const historicalRecords = (unit?.occupancyHistory || [])
+    .filter(rh => rh.endDate) // Past records only from history
+    .map(rh => ({
+      tenant: rh.tenant || tenants.find(t => t.id === rh.tenantId),
+      startDate: rh.startDate,
+      endDate: rh.endDate,
+      moveReason: rh.moveReason,
+      isCurrent: false
+    }));
+
+  const activeRecords = currentResidents.map(resident => ({
+    tenant: resident,
+    startDate: resident.startDate,
+    endDate: undefined,
+    moveReason: 'Current Residency',
+    isCurrent: true
+  }));
+
+  const unitHistory = [...activeRecords, ...historicalRecords].sort((a, b) => 
+    new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+  );
 
   const requests = allRequests.filter(r => r.unitId === unitId);
   
