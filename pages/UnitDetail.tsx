@@ -15,6 +15,19 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   const { unitId } = useParams<{ unitId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const refreshData = async () => {
+    const [unitsRes, tenantsRes] = await Promise.all([
+      fetch('/api/units'),
+      fetch('/api/tenants')
+    ]);
+    const [freshUnits, freshTenants] = await Promise.all([
+      unitsRes.json(),
+      tenantsRes.json()
+    ]);
+    setUnits(freshUnits);
+    setTenants(freshTenants);
+  };
   const unit = units.find(u => u.id === unitId);
   const currentResidents = tenants.filter(t => t.unitId === unitId && t.status === 'Current');
   const primaryResident = currentResidents.find(t => t.id === unit?.currentTenantId) || currentResidents[0];
@@ -105,8 +118,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
         return u;
       });
 
-      setTenants(updatedTenants);
-      setUnits(updatedUnits);
+      await refreshData();
       setShowMoveOutModal(false);
       setNotification({ message: `Move-out processed for entire household (${residentsToMoveOut.length} members).`, type: 'success' });
       setTimeout(() => setNotification(null), 5000);
@@ -184,8 +196,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
         return u;
       });
 
-      setTenants(updatedTenants);
-      setUnits(updatedUnits);
+      await refreshData();
       setShowMoveInModal(false);
       setSelectedNewTenantId('');
       
@@ -256,8 +267,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
         return u;
       });
 
-      setTenants(updatedTenants);
-      setUnits(updatedUnits);
+      await refreshData();
       setShowTransferModal(false);
       setSelectedTargetUnitId('');
       setNotification({ message: `Internal transfer successful. Household (${residentsToMove.length} members) has moved to Unit ${targetUnit.number}.`, type: 'success' });
