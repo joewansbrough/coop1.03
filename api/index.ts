@@ -165,6 +165,28 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
   res.json({ success: true });
 });
 
+// Development Bypass Login
+app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
+  // Security check: Only allow in development or preview environments
+  // On Vercel, we check for VERCEL_ENV
+  const isProduction = process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV;
+  if (isProduction) {
+    return res.status(403).json({ error: 'Bypass not allowed in production' });
+  }
+
+  (req as any).session.user = {
+    email: 'guest@example.com',
+    name: 'Guest User',
+    picture: 'https://picsum.photos/seed/guest/200',
+    isAdmin: false,
+    isGuest: true,
+    tenantId: null,
+    unitNumber: 'GUEST-001'
+  };
+
+  res.json({ success: true, user: (req as any).session.user });
+});
+
 // --- Database API Routes ---
 
 app.get('/api/units', async (req, res) => {
