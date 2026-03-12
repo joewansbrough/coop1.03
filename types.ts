@@ -61,7 +61,6 @@ export interface Tenant {
   history?: TenantHistory[];
   balance?: number;
   shareCapital?: number;
-  residencyHistory?: any[];
   split?: any;
   createdAt?: string;
   updatedAt?: string;

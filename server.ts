@@ -218,7 +218,12 @@ async function startServer() {
   app.get('/api/units', async (req, res) => {
     try {
       const units = await prisma.unit.findMany({
-        include: { currentTenant: true }
+        include: { 
+          currentTenant: true,
+          occupancyHistory: {
+            include: { tenant: true }
+          }
+        }
       });
       res.json(units);
     } catch (error) {
@@ -229,7 +234,12 @@ async function startServer() {
   app.get('/api/tenants', async (req, res) => {
     try {
       const tenants = await prisma.tenant.findMany({
-        include: { unit: true }
+        include: { 
+          unit: true,
+          history: {
+            include: { unit: true }
+          }
+        }
       });
       res.json(tenants);
     } catch (error) {

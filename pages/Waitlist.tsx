@@ -24,7 +24,7 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
       startDate: new Date().toISOString().split('T')[0],
       balance: 0,
       shareCapital: 0,
-      residencyHistory: []
+      history: []
     };
     setTenants([...tenants, newApplicant]);
     setShowAddModal(false);

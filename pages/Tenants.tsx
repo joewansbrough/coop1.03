@@ -26,8 +26,9 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
 
   const handleAddTenant = (e: React.FormEvent) => {
     e.preventDefault();
+    const newId = `t${Date.now()}`;
     const newTenant: Tenant = {
-      id: `t${Date.now()}`,
+      id: newId,
       firstName,
       lastName,
       email,
@@ -37,11 +38,12 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
       status: status as any,
       balance: 0,
       shareCapital: 0,
-      residencyHistory: unitId ? [{
+      history: unitId ? [{
+        id: `h${Date.now()}`,
+        tenantId: newId,
         unitId,
-        unitNumber: units.find(u => u.id === unitId)?.number || '',
+        unit: { number: units.find(u => u.id === unitId)?.number || '' } as any,
         startDate: new Date().toISOString().split('T')[0],
-        isCurrent: true
       }] : []
     };
     setTenants([...tenants, newTenant]);

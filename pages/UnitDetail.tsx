@@ -20,14 +20,14 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   
   // Calculate full unit history from all tenants' residency records
   const unitHistory = tenants.flatMap(t => 
-    (t.residencyHistory || [])
+    (t.history || [])
       .filter(rh => rh.unitId === unitId)
       .map(rh => ({
         tenant: t,
         startDate: rh.startDate,
         endDate: rh.endDate,
         moveReason: rh.moveReason,
-        isCurrent: rh.isCurrent
+        isCurrent: !rh.endDate
       }))
   ).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
@@ -70,9 +70,9 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
             ...t,
             status: 'Past' as const,
             endDate: moveOutDate,
-            residencyHistory: (t.residencyHistory || []).map(rh => 
-              rh.unitId === unit.id && rh.isCurrent 
-                ? { ...rh, isCurrent: false, endDate: moveOutDate } 
+            history: (t.history || []).map(rh => 
+              rh.unitId === unit.id && !rh.endDate 
+                ? { ...rh, endDate: moveOutDate } 
                 : rh
             )
           };
@@ -122,17 +122,23 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
       // Update local state
       const updatedTenants = tenants.map(t => {
         if (t.id === selectedNewTenantId) {
-          let history = t.residencyHistory || [];
+          let history = t.history || [];
           if (isInternalMove && previousUnitId) {
             history = history.map(rh => 
-              rh.unitId === previousUnitId && rh.isCurrent 
-                ? { ...rh, isCurrent: false, endDate: moveInDate } 
+              rh.unitId === previousUnitId && !rh.endDate 
+                ? { ...rh, endDate: moveInDate } 
                 : rh
             );
           }
           const newHistory = [
             ...history,
-            { unitId: unit.id, unitNumber: unit.number, startDate: moveInDate, isCurrent: true }
+            { 
+              id: `h${Date.now()}`, 
+              tenantId: t.id, 
+              unitId: unit.id, 
+              unit: { number: unit.number }, 
+              startDate: moveInDate 
+            }
           ];
           return {
             ...t,
@@ -140,7 +146,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
             status: 'Current' as const,
             startDate: moveInDate,
             endDate: undefined,
-            residencyHistory: newHistory
+            history: newHistory
           };
         }
         return t;
@@ -199,20 +205,26 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
       // Update local state
       const updatedTenants = tenants.map(t => {
         if (t.id === currentTenant.id) {
-          const archivedHistory = (t.residencyHistory || []).map(rh => 
-            rh.unitId === unit.id && rh.isCurrent 
-              ? { ...rh, isCurrent: false, endDate: transferDate } 
+          const archivedHistory = (t.history || []).map(rh => 
+            rh.unitId === unit.id && !rh.endDate 
+              ? { ...rh, endDate: transferDate } 
               : rh
           );
           const newHistory = [
             ...archivedHistory,
-            { unitId: targetUnit.id, unitNumber: targetUnit.number, startDate: transferDate, isCurrent: true }
+            { 
+              id: `h${Date.now()}`, 
+              tenantId: t.id, 
+              unitId: targetUnit.id, 
+              unit: { number: targetUnit.number }, 
+              startDate: transferDate 
+            }
           ];
           return {
             ...t,
             unitId: targetUnit.id,
             startDate: transferDate,
-            residencyHistory: newHistory
+            history: newHistory
           };
         }
         return t;
