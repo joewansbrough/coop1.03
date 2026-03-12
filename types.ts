@@ -27,6 +27,7 @@ export interface TenantHistory {
   tenantId: string;
   unitId: string;
   unit?: Unit;
+  tenant?: Tenant;
   startDate: string;
   endDate?: string;
   moveReason?: string;
