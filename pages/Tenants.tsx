@@ -55,10 +55,21 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
   };
 
   const filteredTenants = tenants.filter(t => {
-    const matchesSearch = `${t.firstName} ${t.lastName}`.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = `${t.firstName} ${t.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
+                        t.email.toLowerCase().includes(search.toLowerCase()) ||
+                        (t.unitId && units.find(u => u.id === t.unitId)?.number.includes(search));
     const matchesFilter = filter === 'All' || t.status === filter;
     return matchesSearch && matchesFilter;
   });
+
+  // Grouping logic: Units with their members, plus a "Waitlist/Unassigned" group
+  const unitGroups = units.map(unit => {
+    const members = filteredTenants.filter(t => t.unitId === unit.id);
+    return { unit, members };
+  }).filter(group => group.members.length > 0)
+    .sort((a, b) => a.unit.number.localeCompare(b.unit.number, undefined, { numeric: true }));
+
+  const waitlistMembers = filteredTenants.filter(t => !t.unitId);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-12 transition-colors duration-200">
@@ -133,7 +144,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
           <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
           <input 
             type="text" 
-            placeholder={isAdmin ? "Filter by name or identity..." : "Search neighbors..."} 
+            placeholder={isAdmin ? "Filter by name, unit, or identity..." : "Search neighbors..."} 
             className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-slate-900 dark:text-white"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -154,53 +165,117 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
         )}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden overflow-x-auto">
-        <table className="w-full text-left min-w-[800px]">
-          <thead className="bg-slate-50 dark:bg-slate-950/50 border-b border-slate-200 dark:border-white/5">
-            <tr>
-              <th className="px-6 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Member Identity</th>
-              <th className="px-6 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Unit Assignment</th>
-              {isAdmin && <th className="px-6 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Membership Status</th>}
-              <th className="px-6 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-right">
-                {isAdmin ? 'View' : 'Contact'}
-              </th>
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-white/5">
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Asset/Unit</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Shareholders / Members</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Contact Info</th>
+              <th className="px-8 py-5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Residency</th>
+              <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Details</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-            {filteredTenants.map(t => (
-              <tr key={t.id} onClick={() => isAdmin && navigate(`/admin/tenants/${t.id}`)} className={`hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group ${isAdmin ? 'cursor-pointer' : ''}`}>
-                <td className="px-6 py-5">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center font-black text-slate-400 dark:text-slate-500 text-xs uppercase group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20 group-hover:text-emerald-600 transition-colors">{t.firstName[0]}{t.lastName[0]}</div>
-                    <div>
-                      <p className="text-sm font-black text-slate-800 dark:text-white">{t.firstName} {t.lastName}</p>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">{t.email}</p>
-                    </div>
+          <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+            {unitGroups.map(group => (
+              <tr key={group.unit.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group/row">
+                <td className="px-8 py-6">
+                  <div className="flex flex-col">
+                    <span className="text-base font-black text-slate-900 dark:text-white">Unit {group.unit.number}</span>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{group.unit.type} • Floor {group.unit.floor}</span>
                   </div>
                 </td>
-                <td className="px-6 py-5">
-                  <span className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider">Unit {units.find(u => u.id === t.unitId)?.number || 'N/A'}</span>
+                <td className="px-8 py-6">
+                  <div className="flex flex-col gap-2">
+                    {group.members.map(member => (
+                      <div key={member.id} className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-[10px] font-black uppercase shrink-0">
+                          {member.firstName[0]}{member.lastName[0]}
+                        </div>
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{member.firstName} {member.lastName}</span>
+                      </div>
+                    ))}
+                  </div>
                 </td>
-                {isAdmin && (
-                  <td className="px-6 py-5">
-                    <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase border tracking-widest ${
-                      t.status === 'Current' ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-500 border-slate-100 dark:border-white/5'
-                    }`}>
-                      {t.status}
-                    </span>
-                  </td>
-                )}
-                <td className="px-6 py-5 text-right">
-                  {isAdmin ? (
-                    <i className="fa-solid fa-arrow-right-long text-slate-300 dark:text-slate-700 group-hover:text-emerald-500 transition-all"></i>
-                  ) : (
-                    <button className="p-2 text-slate-300 hover:text-emerald-500 transition-colors">
-                      <i className="fa-solid fa-envelope"></i>
-                    </button>
-                  )}
+                <td className="px-8 py-6">
+                  <div className="flex flex-col gap-1.5">
+                    {group.members.map(member => (
+                      <div key={member.id} className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate max-w-[200px]" title={member.email}>
+                        {member.email}
+                      </div>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-8 py-6">
+                  <div className="flex flex-col gap-1">
+                    {group.members.map(member => (
+                      <span key={member.id} className="text-[10px] font-bold text-slate-400 uppercase">
+                        Since {new Date(member.startDate).toLocaleDateString([], { month: 'short', year: 'numeric' })}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-8 py-6 text-right">
+                  <div className="flex flex-col items-end gap-2">
+                    {group.members.map(member => (
+                      <button 
+                        key={member.id}
+                        onClick={() => navigate(isAdmin ? `/admin/tenants/${member.id}` : `/directory`)}
+                        className="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500 transition-all shadow-sm"
+                      >
+                        <i className="fa-solid fa-arrow-right-long text-xs"></i>
+                      </button>
+                    ))}
+                  </div>
                 </td>
               </tr>
             ))}
+
+            {/* Waitlist Section */}
+            {waitlistMembers.length > 0 && (
+              <>
+                <tr className="bg-slate-50 dark:bg-slate-950/80">
+                  <td colSpan={5} className="px-8 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Waitlist & Unassigned Members</td>
+                </tr>
+                {waitlistMembers.map(member => (
+                  <tr key={member.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group/row">
+                    <td className="px-8 py-6">
+                      <span className="text-[10px] font-black px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-lg uppercase">Waitlist</span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center text-xs font-black uppercase shrink-0">
+                          {member.firstName[0]}{member.lastName[0]}
+                        </div>
+                        <span className="text-sm font-bold text-slate-800 dark:text-white">{member.firstName} {member.lastName}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{member.email}</span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Applied {new Date(member.startDate).toLocaleDateString()}</span>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <button 
+                        onClick={() => navigate(isAdmin ? `/admin/tenants/${member.id}` : `/directory`)}
+                        className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 inline-flex items-center justify-center text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500 transition-all shadow-sm"
+                      >
+                        <i className="fa-solid fa-arrow-right-long"></i>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </>
+            )}
+
+            {unitGroups.length === 0 && waitlistMembers.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-8 py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-xs italic">
+                  No member records found matching your criteria.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

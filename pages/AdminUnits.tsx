@@ -6,6 +6,7 @@ import { Unit, Tenant } from '../types';
 const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetStateAction<Unit[]>>, tenants: Tenant[] }> = ({ units, setUnits, tenants }) => {
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [filter, setFilter] = useState<'All' | 'Occupied' | 'Vacant' | 'Maintenance'>('All');
   
   // Form State
   const [number, setNumber] = useState('');
@@ -27,11 +28,18 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
     alert("New unit added to association inventory.");
   };
 
+  const sortedUnits = [...units]
+    .filter(u => filter === 'All' || u.status === filter)
+    .sort((a, b) => {
+      if (a.floor !== b.floor) return a.floor - b.floor;
+      return a.number.localeCompare(b.number, undefined, { numeric: true });
+    });
+
   return (
     <div className="space-y-6 pb-12 transition-colors duration-200">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Unit Inventory</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Unit Inventory</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">Managing building envelope and unit assignments.</p>
         </div>
         <button 
@@ -40,6 +48,18 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
         >
           <i className="fa-solid fa-plus"></i> Add New Unit
         </button>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-wrap gap-1">
+        {['All', 'Occupied', 'Vacant', 'Maintenance'].map(f => (
+          <button 
+            key={f}
+            onClick={() => setFilter(f as any)}
+            className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${filter === f ? 'bg-slate-900 dark:bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'}`}
+          >
+            {f}
+          </button>
+        ))}
       </div>
 
       {showAddModal && (
@@ -75,7 +95,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {units.map(unit => {
+        {sortedUnits.map(unit => {
           const tenant = tenants.find(t => t.id === unit.currentTenantId);
           return (
             <div 

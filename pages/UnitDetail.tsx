@@ -50,49 +50,59 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   const [selectedNewTenantId, setSelectedNewTenantId] = useState('');
   const [selectedTargetUnitId, setSelectedTargetUnitId] = useState('');
 
-  const handleMoveOut = () => {
+  const handleMoveOut = async () => {
     console.log("handleMoveOut triggered", { unit, currentTenant });
     if (!unit || !currentTenant) return;
     
     const moveOutDate = new Date().toISOString().split('T')[0];
 
-    // 1. Update Tenant
-    const updatedTenants = tenants.map(t => {
-      if (t.id === currentTenant.id) {
-        return {
-          ...t,
-          status: 'Past' as const,
-          endDate: moveOutDate,
-          residencyHistory: t.residencyHistory?.map(rh => 
-            rh.unitId === unit.id && rh.isCurrent 
-              ? { ...rh, isCurrent: false, endDate: moveOutDate } 
-              : rh
-          )
-        };
-      }
-      return t;
-    });
+    try {
+      await fetch(`/api/units/${unit.id}/move-out`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: currentTenant.id, date: moveOutDate, reason: 'Voluntary Departure' })
+      });
 
-    // 2. Update Unit
-    const updatedUnits = units.map(u => {
-      if (u.id === unit.id) {
-        return {
-          ...u,
-          status: 'Vacant' as const,
-          currentTenantId: undefined
-        };
-      }
-      return u;
-    });
+      // Update local state for immediate feedback
+      const updatedTenants = tenants.map(t => {
+        if (t.id === currentTenant.id) {
+          return {
+            ...t,
+            status: 'Past' as const,
+            endDate: moveOutDate,
+            residencyHistory: (t.residencyHistory || []).map(rh => 
+              rh.unitId === unit.id && rh.isCurrent 
+                ? { ...rh, isCurrent: false, endDate: moveOutDate } 
+                : rh
+            )
+          };
+        }
+        return t;
+      });
 
-    setTenants(updatedTenants);
-    setUnits(updatedUnits);
-    setShowMoveOutModal(false);
-    setNotification({ message: `Move-out processed successfully for ${currentTenant.firstName} ${currentTenant.lastName}.`, type: 'success' });
-    setTimeout(() => setNotification(null), 5000);
+      const updatedUnits = units.map(u => {
+        if (u.id === unit.id) {
+          return {
+            ...u,
+            status: 'Vacant' as const,
+            currentTenantId: undefined
+          };
+        }
+        return u;
+      });
+
+      setTenants(updatedTenants);
+      setUnits(updatedUnits);
+      setShowMoveOutModal(false);
+      setNotification({ message: `Move-out processed successfully for ${currentTenant.firstName} ${currentTenant.lastName}.`, type: 'success' });
+      setTimeout(() => setNotification(null), 5000);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to process move-out.");
+    }
   };
 
-  const handleMoveIn = () => {
+  const handleMoveIn = async () => {
     console.log("handleMoveIn triggered", { unit, selectedNewTenantId });
     if (!unit || !selectedNewTenantId) return;
     const newTenant = tenants.find(t => t.id === selectedNewTenantId);
@@ -102,72 +112,76 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
     const isInternalMove = newTenant.status === 'Current';
     const previousUnitId = newTenant.unitId;
 
-    // 1. Update Tenants
-    const updatedTenants = tenants.map(t => {
-      if (t.id === selectedNewTenantId) {
-        // Archive previous residency if it was an internal move
-        let history = t.residencyHistory || [];
-        if (isInternalMove && previousUnitId) {
-          history = history.map(rh => 
-            rh.unitId === previousUnitId && rh.isCurrent 
-              ? { ...rh, isCurrent: false, endDate: moveInDate } 
-              : rh
-          );
+    try {
+      await fetch(`/api/units/${unit.id}/move-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: selectedNewTenantId, date: moveInDate })
+      });
+
+      // Update local state
+      const updatedTenants = tenants.map(t => {
+        if (t.id === selectedNewTenantId) {
+          let history = t.residencyHistory || [];
+          if (isInternalMove && previousUnitId) {
+            history = history.map(rh => 
+              rh.unitId === previousUnitId && rh.isCurrent 
+                ? { ...rh, isCurrent: false, endDate: moveInDate } 
+                : rh
+            );
+          }
+          const newHistory = [
+            ...history,
+            { unitId: unit.id, unitNumber: unit.number, startDate: moveInDate, isCurrent: true }
+          ];
+          return {
+            ...t,
+            unitId: unit.id,
+            status: 'Current' as const,
+            startDate: moveInDate,
+            endDate: undefined,
+            residencyHistory: newHistory
+          };
         }
-        
-        // Add new residency
-        const newHistory = [
-          ...history,
-          { unitId: unit.id, unitNumber: unit.number, startDate: moveInDate, isCurrent: true }
-        ];
+        return t;
+      });
 
-        return {
-          ...t,
-          unitId: unit.id,
-          status: 'Current' as const,
-          startDate: moveInDate,
-          endDate: undefined,
-          residencyHistory: newHistory
-        };
-      }
-      return t;
-    });
+      const updatedUnits = units.map(u => {
+        if (u.id === unit.id) {
+          return {
+            ...u,
+            status: 'Occupied' as const,
+            currentTenantId: selectedNewTenantId
+          };
+        }
+        if (isInternalMove && u.id === previousUnitId) {
+          return {
+            ...u,
+            status: 'Vacant' as const,
+            currentTenantId: undefined
+          };
+        }
+        return u;
+      });
 
-    // 2. Update Units
-    const updatedUnits = units.map(u => {
-      // Set target unit to occupied
-      if (u.id === unit.id) {
-        return {
-          ...u,
-          status: 'Occupied' as const,
-          currentTenantId: selectedNewTenantId
-        };
-      }
-      // If internal move, set previous unit to vacant
-      if (isInternalMove && u.id === previousUnitId) {
-        return {
-          ...u,
-          status: 'Vacant' as const,
-          currentTenantId: undefined
-        };
-      }
-      return u;
-    });
-
-    setTenants(updatedTenants);
-    setUnits(updatedUnits);
-    setShowMoveInModal(false);
-    setSelectedNewTenantId('');
-    
-    const message = isInternalMove 
-      ? `Internal transfer processed. ${newTenant.firstName} has moved from Unit ${units.find(u => u.id === previousUnitId)?.number} to Unit ${unit.number}.`
-      : `Move-in processed. ${newTenant.firstName} ${newTenant.lastName} is now the primary resident of Unit ${unit.number}.`;
-    
-    setNotification({ message, type: 'success' });
-    setTimeout(() => setNotification(null), 5000);
+      setTenants(updatedTenants);
+      setUnits(updatedUnits);
+      setShowMoveInModal(false);
+      setSelectedNewTenantId('');
+      
+      const message = isInternalMove 
+        ? `Internal transfer processed. ${newTenant.firstName} has moved from Unit ${units.find(u => u.id === previousUnitId)?.number} to Unit ${unit.number}.`
+        : `Move-in processed. ${newTenant.firstName} ${newTenant.lastName} is now the primary resident of Unit ${unit.number}.`;
+      
+      setNotification({ message, type: 'success' });
+      setTimeout(() => setNotification(null), 5000);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to process move-in.");
+    }
   };
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     console.log("handleTransfer triggered", { unit, currentTenant, selectedTargetUnitId });
     if (!unit || !currentTenant || !selectedTargetUnitId) return;
     const targetUnit = units.find(u => u.id === selectedTargetUnitId);
@@ -175,56 +189,56 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
 
     const transferDate = new Date().toISOString().split('T')[0];
 
-    // 1. Update Tenant
-    const updatedTenants = tenants.map(t => {
-      if (t.id === currentTenant.id) {
-        const archivedHistory = (t.residencyHistory || []).map(rh => 
-          rh.unitId === unit.id && rh.isCurrent 
-            ? { ...rh, isCurrent: false, endDate: transferDate } 
-            : rh
-        );
-        const newHistory = [
-          ...archivedHistory,
-          { unitId: targetUnit.id, unitNumber: targetUnit.number, startDate: transferDate, isCurrent: true }
-        ];
-        return {
-          ...t,
-          unitId: targetUnit.id,
-          startDate: transferDate,
-          residencyHistory: newHistory
-        };
-      }
-      return t;
-    });
+    try {
+      await fetch(`/api/units/${unit.id}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: currentTenant.id, fromUnitId: unit.id, toUnitId: targetUnit.id, date: transferDate })
+      });
 
-    // 2. Update Units
-    const updatedUnits = units.map(u => {
-      // Current unit becomes vacant
-      if (u.id === unit.id) {
-        return {
-          ...u,
-          status: 'Vacant' as const,
-          currentTenantId: undefined
-        };
-      }
-      // Target unit becomes occupied
-      if (u.id === targetUnit.id) {
-        return {
-          ...u,
-          status: 'Occupied' as const,
-          currentTenantId: currentTenant.id
-        };
-      }
-      return u;
-    });
+      // Update local state
+      const updatedTenants = tenants.map(t => {
+        if (t.id === currentTenant.id) {
+          const archivedHistory = (t.residencyHistory || []).map(rh => 
+            rh.unitId === unit.id && rh.isCurrent 
+              ? { ...rh, isCurrent: false, endDate: transferDate } 
+              : rh
+          );
+          const newHistory = [
+            ...archivedHistory,
+            { unitId: targetUnit.id, unitNumber: targetUnit.number, startDate: transferDate, isCurrent: true }
+          ];
+          return {
+            ...t,
+            unitId: targetUnit.id,
+            startDate: transferDate,
+            residencyHistory: newHistory
+          };
+        }
+        return t;
+      });
 
-    setTenants(updatedTenants);
-    setUnits(updatedUnits);
-    setShowTransferModal(false);
-    setSelectedTargetUnitId('');
-    setNotification({ message: `Internal transfer successful. ${currentTenant.firstName} has moved to Unit ${targetUnit.number}.`, type: 'success' });
-    setTimeout(() => setNotification(null), 5000);
-    navigate(`/admin/units/${targetUnit.id}`);
+      const updatedUnits = units.map(u => {
+        if (u.id === unit.id) {
+          return { ...u, status: 'Vacant' as const, currentTenantId: undefined };
+        }
+        if (u.id === targetUnit.id) {
+          return { ...u, status: 'Occupied' as const, currentTenantId: currentTenant.id };
+        }
+        return u;
+      });
+
+      setTenants(updatedTenants);
+      setUnits(updatedUnits);
+      setShowTransferModal(false);
+      setSelectedTargetUnitId('');
+      setNotification({ message: `Internal transfer successful. ${currentTenant.firstName} has moved to Unit ${targetUnit.number}.`, type: 'success' });
+      setTimeout(() => setNotification(null), 5000);
+      navigate(`/admin/units/${targetUnit.id}`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to process transfer.");
+    }
   };
 
   // Handle tab from URL query param

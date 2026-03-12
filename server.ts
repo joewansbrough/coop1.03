@@ -258,12 +258,25 @@ async function startServer() {
   });
 
   app.put('/api/maintenance/:id', async (req, res) => {
-    const { title, description, status, priority, category, unitId } = req.body;
-    const request = await prisma.maintenanceRequest.update({
-      where: { id: req.params.id },
-      data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId }
-    });
-    res.json(request);
+    const { title, description, status, priority, category, unitId, notes, expenses } = req.body;
+    try {
+      const request = await prisma.maintenanceRequest.update({
+        where: { id: req.params.id },
+        data: { 
+          title, 
+          description, 
+          status, 
+          priority, 
+          category: Array.isArray(category) ? category[0] : category, 
+          unitId,
+          notes: notes ? (Array.isArray(notes) ? notes : [notes]) : undefined,
+          expenses: expenses ? (Array.isArray(expenses) ? expenses : [expenses]) : undefined
+        }
+      });
+      res.json(request);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.delete('/api/maintenance/:id', async (req, res) => {
@@ -491,6 +504,125 @@ async function startServer() {
       hasSession: !!(req as any).session,
       hasUser: !!(req as any).session?.user,
     });
+  });
+
+  app.get('/api/tenants/:id/history', async (req, res) => {
+    try {
+      const history = await prisma.tenantHistory.findMany({
+        where: { tenantId: req.params.id },
+        include: { unit: true },
+        orderBy: { startDate: 'desc' }
+      });
+      res.json(history);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post('/api/units/:id/move-out', async (req, res) => {
+    const { tenantId, date, reason } = req.body;
+    try {
+      // 1. Update Unit status
+      await prisma.unit.update({
+        where: { id: req.params.id },
+        data: { status: 'Vacant', currentTenantId: null }
+      });
+
+      // 2. Update Tenant status
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { status: 'Past', unitId: null }
+      });
+
+      // 3. Update History record (set end date)
+      const history = await prisma.tenantHistory.findFirst({
+        where: { tenantId, unitId: req.params.id, endDate: null },
+        orderBy: { startDate: 'desc' }
+      });
+
+      if (history) {
+        await prisma.tenantHistory.update({
+          where: { id: history.id },
+          data: { endDate: new Date(date), moveReason: reason }
+        });
+      }
+
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post('/api/units/:id/move-in', async (req, res) => {
+    const { tenantId, date } = req.body;
+    try {
+      // 1. Update Unit status
+      await prisma.unit.update({
+        where: { id: req.params.id },
+        data: { status: 'Occupied', currentTenantId: tenantId }
+      });
+
+      // 2. Update Tenant status
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { status: 'Current', unitId: req.params.id, startDate: date }
+      });
+
+      // 3. Create new History record
+      await prisma.tenantHistory.create({
+        data: {
+          tenantId,
+          unitId: req.params.id,
+          startDate: new Date(date),
+          moveReason: 'Move-in'
+        }
+      });
+
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post('/api/units/:id/transfer', async (req, res) => {
+    const { tenantId, fromUnitId, toUnitId, date } = req.body;
+    try {
+      // 1. Vacate old unit
+      await prisma.unit.update({
+        where: { id: fromUnitId },
+        data: { status: 'Vacant', currentTenantId: null }
+      });
+
+      // 2. Occupy new unit
+      await prisma.unit.update({
+        where: { id: toUnitId },
+        data: { status: 'Occupied', currentTenantId: tenantId }
+      });
+
+      // 3. Update Tenant
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { unitId: toUnitId }
+      });
+
+      // 4. Close old history
+      const oldHistory = await prisma.tenantHistory.findFirst({
+        where: { tenantId, unitId: fromUnitId, endDate: null },
+        orderBy: { startDate: 'desc' }
+      });
+      if (oldHistory) {
+        await prisma.tenantHistory.update({
+          where: { id: oldHistory.id },
+          data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
+        });
+      }
+
+      // 5. Create new history
+      await prisma.tenantHistory.create({
+        data: {
+          tenantId,
+          unitId: toUnitId,
+          startDate: new Date(date),
+          moveReason: 'Internal Transfer'
+        }
+      });
+
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
   // API 404 handler

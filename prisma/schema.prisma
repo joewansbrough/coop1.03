@@ -65,6 +65,8 @@ model MaintenanceRequest {
   unit        Unit     @relation(fields: [unitId], references: [id])
   tenantId    String?  // Added to match UI
   requestedBy String?  // Email of the tenant who requested
+  notes       Json?    // Array of MaintenanceNote
+  expenses    Json?    // Array of MaintenanceExpense
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

@@ -180,24 +180,36 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
             <h1 className="text-4xl font-black text-slate-900 dark:text-white leading-tight mb-8">{request.description}</h1>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-8 border-t border-slate-50 dark:border-white/5">
-              <div className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent">
-                <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400">
+              <Link to={`/admin/units/${unit?.id}`} className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent hover:border-emerald-500/50 transition-all">
+                <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
                   <i className="fa-solid fa-door-open text-2xl"></i>
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Asset Location</p>
-                  <p className="text-xl font-black text-slate-800 dark:text-slate-200">Unit #{unit?.number || 'N/A'}</p>
+                  <p className="text-xl font-black text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">Unit #{unit?.number || 'N/A'}</p>
                 </div>
-              </div>
-              <div className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent">
-                <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400">
-                  <i className="fa-solid fa-user-circle text-2xl"></i>
+              </Link>
+              {tenant ? (
+                <Link to={`/admin/tenants/${tenant.id}`} className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent hover:border-blue-500/50 transition-all">
+                  <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors">
+                    <i className="fa-solid fa-user-circle text-2xl"></i>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Submitted By</p>
+                    <p className="text-xl font-black text-slate-800 dark:text-slate-200 group-hover:text-blue-600 transition-colors">{tenant.firstName} {tenant.lastName}</p>
+                  </div>
+                </Link>
+              ) : (
+                <div className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent">
+                  <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400">
+                    <i className="fa-solid fa-user-circle text-2xl"></i>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Submitted By</p>
+                    <p className="text-xl font-black text-slate-800 dark:text-slate-200 italic">System User</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Submitted By</p>
-                  <p className="text-xl font-black text-slate-800 dark:text-slate-200">{tenant ? `${tenant.firstName} ${tenant.lastName}` : 'System User'}</p>
-                </div>
-              </div>
+              )}
             </div>
           </section>
 
