@@ -21,13 +21,9 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
   
-  // For demo purposes, assume the first unit is the user's unit if they are not an admin
   const userUnitId = units.length > 0 ? units[0].id : null;
-  
-  // Find the request from props or fallback to mock for safety (though props should be there)
   const request = requests.find(r => r.id === requestId);
   
-  // Access control check
   if (request && !isAdmin && request.unitId !== userUnitId) {
     return (
       <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5">
@@ -53,21 +49,34 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
 
   const isLocked = request.status === RequestStatus.COMPLETED || request.status === RequestStatus.CANCELLED;
 
-  const updateRequest = (updated: MaintenanceRequest) => {
-    if (setRequests) {
-      setRequests(prev => prev.map(r => r.id === updated.id ? updated : r));
+  const persistUpdate = async (updated: MaintenanceRequest) => {
+    try {
+      const res = await fetch(`/api/maintenance/${updated.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...updated,
+          category: updated.category[0] // API expects string for category
+        })
+      });
+      const data = await res.json();
+      if (setRequests) {
+        setRequests(prev => prev.map(r => r.id === data.id ? { ...data, category: [data.category] } : r));
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const handleStatusChange = (status: RequestStatus) => {
-    if (isLocked) return;
-    updateRequest({ ...request, status, updatedAt: new Date().toISOString() });
+    if (isLocked && status !== RequestStatus.IN_PROGRESS) return;
+    persistUpdate({ ...request, status, updatedAt: new Date().toISOString() });
   };
 
   const toggleCategory = (cat: MaintenanceCategory) => {
     const current = request.category;
     const next = current.includes(cat) ? current.filter(c => c !== cat) : [...current, cat];
-    updateRequest({ ...request, category: next, updatedAt: new Date().toISOString() });
+    persistUpdate({ ...request, category: next, updatedAt: new Date().toISOString() });
   };
 
   const addNote = (e: React.FormEvent) => {
@@ -79,7 +88,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
       date: new Date().toISOString(),
       content: newNote.trim()
     };
-    updateRequest({ ...request, notes: [...request.notes, note], updatedAt: new Date().toISOString() });
+    persistUpdate({ ...request, notes: [...(request.notes || []), note], updatedAt: new Date().toISOString() });
     setNewNote('');
   };
 
@@ -92,7 +101,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
       cost: parseFloat(newCost),
       date: new Date().toISOString().split('T')[0]
     };
-    updateRequest({ ...request, expenses: [...request.expenses, expense], updatedAt: new Date().toISOString() });
+    persistUpdate({ ...request, expenses: [...(request.expenses || []), expense], updatedAt: new Date().toISOString() });
     setNewItem('');
     setNewCost('');
   };
@@ -100,12 +109,13 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const handleReopen = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reopenReason.trim()) return;
-    updateRequest({ ...request, status: RequestStatus.IN_PROGRESS, updatedAt: new Date().toISOString() });
+    handleStatusChange(RequestStatus.IN_PROGRESS);
     setShowReopenModal(false);
     setReopenReason('');
   };
 
-  const totalExpenses = request.expenses.reduce((acc, curr) => acc + curr.cost, 0);
+  // Bug fix: Add null check for expenses
+  const totalExpenses = (request.expenses || []).reduce((acc, curr) => acc + curr.cost, 0);
   const availableCategories: MaintenanceCategory[] = ['Plumbing', 'Electrical', 'Structural', 'Appliance', 'HVAC', 'Exterior', 'Safety', 'Other'];
 
   return (
@@ -121,7 +131,6 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
         )}
       </div>
 
-      {/* RAG Status Bar */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5">
         <div className="grid grid-cols-2 sm:grid-cols-4 w-full gap-3">
           {(Object.values(RequestStatus)).map((status) => {
@@ -155,8 +164,18 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                   <i className="fa-solid fa-tag mr-2"></i>{cat}
                 </span>
               ))}
-              {isAdmin && !isLocked && <button onClick={() => setIsEditingCategories(true)} className="text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:border-emerald-500 transition-colors flex items-center gap-2"><i className="fa-solid fa-plus"></i> Edit Service Type</button>}
+              {isAdmin && !isLocked && <button onClick={() => setIsEditingCategories(!isEditingCategories)} className="text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:border-emerald-500 transition-colors flex items-center gap-2"><i className="fa-solid fa-plus"></i> Edit Service Type</button>}
             </div>
+
+            {isEditingCategories && (
+              <div className="flex flex-wrap gap-2 mb-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
+                {availableCategories.map(cat => (
+                  <button key={cat} onClick={() => toggleCategory(cat)} className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${request.category.includes(cat) ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-400 hover:text-emerald-600 border border-slate-100 dark:border-white/5'}`}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
             
             <h1 className="text-4xl font-black text-slate-900 dark:text-white leading-tight mb-8">{request.description}</h1>
             
@@ -167,7 +186,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Asset Location</p>
-                  <p className="text-xl font-black text-slate-800 dark:text-slate-200">Unit #{unit?.number}</p>
+                  <p className="text-xl font-black text-slate-800 dark:text-slate-200">Unit #{unit?.number || 'N/A'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent">
@@ -176,19 +195,18 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Submitted By</p>
-                  <p className="text-xl font-black text-slate-800 dark:text-slate-200">{tenant?.firstName} {tenant?.lastName}</p>
+                  <p className="text-xl font-black text-slate-800 dark:text-slate-200">{tenant ? `${tenant.firstName} ${tenant.lastName}` : 'System User'}</p>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* Activity Log Feed */}
           <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50">
               <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Activity Log & Dispatch Feed</h3>
             </div>
             <div className="p-6 space-y-6">
-              {request.notes.map((note) => (
+              {(request.notes || []).map((note) => (
                 <div key={note.id} className="flex gap-4">
                   <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
                     {note.author[0]}
@@ -220,7 +238,6 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
             </div>
           </section>
 
-          {/* Cost Ledger Section - Only for Admin */}
           {isAdmin && (
             <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
               <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex justify-between items-center">
@@ -245,14 +262,14 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                          </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                         {request.expenses.map(exp => (
+                         {(request.expenses || []).map(exp => (
                            <tr key={exp.id}>
                               <td className="px-4 py-3 text-[10px] font-bold text-slate-500">{exp.date}</td>
                               <td className="px-4 py-3 text-xs font-black text-slate-800 dark:text-slate-200">{exp.item}</td>
                               <td className="px-4 py-3 text-sm font-black text-slate-900 dark:text-white text-right">${exp.cost.toFixed(2)}</td>
                            </tr>
                          ))}
-                         {request.expenses.length === 0 && (
+                         {(!request.expenses || request.expenses.length === 0) && (
                            <tr><td colSpan={3} className="px-4 py-8 text-center text-[10px] font-black uppercase text-slate-300">No costs recorded.</td></tr>
                          )}
                       </tbody>
@@ -287,6 +304,28 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
           </div>
         </div>
       </div>
+
+      {showReopenModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tight">Re-open Maintenance Case</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Please provide a reason for reopening this record. This will be logged in the activity feed.</p>
+            <form onSubmit={handleReopen} className="space-y-4">
+              <textarea 
+                required 
+                value={reopenReason} 
+                onChange={e => setReopenReason(e.target.value)}
+                className="w-full h-32 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                placeholder="Reason for reopening..."
+              />
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setShowReopenModal(false)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">Cancel</button>
+                <button type="submit" className="flex-1 py-3 bg-amber-500 text-white rounded-xl text-xs font-black uppercase hover:bg-amber-600">Confirm Reopen</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

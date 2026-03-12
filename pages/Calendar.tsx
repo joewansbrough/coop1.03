@@ -1,20 +1,21 @@
 
 import React, { useState } from 'react';
-import { MOCK_EVENTS } from '../constants';
 import { CoopEvent } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 interface CalendarProps {
   isAdmin?: boolean;
+  isGuest?: boolean;
   events: CoopEvent[];
   setEvents: React.Dispatch<React.SetStateAction<CoopEvent[]>>;
 }
 
-const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents }) => {
+const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, events, setEvents }) => {
   const navigate = useNavigate();
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editEvent, setEditEvent] = useState<CoopEvent | null>(null);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -37,22 +38,57 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
     setViewDate(new Date(currentYear, currentMonth + 1, 1));
   };
 
-  const handleAddEvent = (e: React.FormEvent) => {
+  const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newEvent: CoopEvent = {
-      id: `e${Date.now()}`,
-      title,
-      date: selectedDate,
-      time,
-      location,
-      category,
-      description
-    };
-    setEvents([...events, newEvent]);
-    setShowAddForm(false);
-    setTitle('');
-    setDescription('');
-    alert("Event added to community calendar!");
+    if (isGuest) return;
+
+    const payload = { title, date: selectedDate, time, location, category, description };
+
+    try {
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      setEvents([...events, data]);
+      setShowAddForm(false);
+      setTitle('');
+      setDescription('');
+      alert("Event added to community calendar!");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isGuest || !editEvent) return;
+
+    try {
+      const res = await fetch(`/api/events/${editEvent.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editEvent)
+      });
+      const data = await res.json();
+      setEvents(events.map(ev => ev.id === data.id ? data : ev));
+      setEditEvent(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteEvent = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isGuest) return;
+    if (!window.confirm("Are you sure you want to delete this event?")) return;
+    try {
+      await fetch(`/api/events/${id}`, { method: 'DELETE' });
+      setEvents(events.filter(ev => ev.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const monthName = viewDate.toLocaleString('default', { month: 'long' });
@@ -64,42 +100,47 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Community Calendar</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm">Co-op meetings, social gatherings, and building maintenance events.</p>
         </div>
-        <button 
-          onClick={() => setShowAddForm(true)}
-          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95"
-        >
-          <i className="fa-solid fa-calendar-plus"></i> Add New Event
-        </button>
+        {isAdmin && !isGuest && (
+          <button 
+            onClick={() => setShowAddForm(true)}
+            className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95"
+          >
+            <i className="fa-solid fa-calendar-plus"></i> Add New Event
+          </button>
+        )}
       </div>
 
-      {showAddForm && (
+      {(showAddForm || editEvent) && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                 <i className="fa-solid fa-calendar-plus text-emerald-600"></i>
-                Create Co-op Event
+                {editEvent ? 'Edit Co-op Event' : 'Create Co-op Event'}
               </h3>
-              <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-xl"></i></button>
+              <button onClick={() => { setShowAddForm(false); setEditEvent(null); }} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <form onSubmit={handleAddEvent} className="space-y-5">
+            <form onSubmit={editEvent ? handleUpdateEvent : handleAddEvent} className="space-y-5">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Event Title</label>
-                <input type="text" required value={title} onChange={e => setTitle(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" placeholder="e.g. Garden Clean-up" />
+                <input type="text" required value={editEvent ? editEvent.title : title} onChange={e => editEvent ? setEditEvent({...editEvent, title: e.target.value}) : setTitle(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" placeholder="e.g. Garden Clean-up" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</label>
-                  <input type="date" required value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+                  <input type="date" required value={editEvent ? editEvent.date : selectedDate} onChange={e => editEvent ? setEditEvent({...editEvent, date: e.target.value}) : setSelectedDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time</label>
-                  <input type="time" required value={time} onChange={e => setTime(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+                  <input type="time" required value={editEvent ? editEvent.time : time} onChange={e => editEvent ? setEditEvent({...editEvent, time: e.target.value}) : setTime(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
                 </div>
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</label>
-                <select value={category} onChange={e => setCategory(e.target.value as any)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
+                <select value={editEvent ? editEvent.category : category} onChange={e => {
+                  const val = e.target.value as any;
+                  editEvent ? setEditEvent({...editEvent, category: val}) : setCategory(val);
+                }} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500">
                   <option>Meeting</option>
                   <option>Social</option>
                   <option>Maintenance</option>
@@ -108,15 +149,17 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</label>
-                <input type="text" required value={location} onChange={e => setLocation(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Common Room / Courtyard" />
+                <input type="text" required value={editEvent ? editEvent.location : location} onChange={e => editEvent ? setEditEvent({...editEvent, location: e.target.value}) : setLocation(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Common Room / Courtyard" />
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Details</label>
-                <textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 h-24 resize-none" placeholder="Add some context..."></textarea>
+                <textarea value={editEvent ? editEvent.description : description} onChange={e => editEvent ? setEditEvent({...editEvent, description: e.target.value}) : setDescription(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 h-24 resize-none" placeholder="Add some context..."></textarea>
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 active:scale-95 transition-all">Add New Event</button>
+                <button type="button" onClick={() => { setShowAddForm(false); setEditEvent(null); }} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 active:scale-95 transition-all">
+                  <i className={`fa-solid ${editEvent ? 'fa-save' : 'fa-plus'}`}></i> {editEvent ? 'Save Changes' : 'Add New Event'}
+                </button>
               </div>
             </form>
           </div>
@@ -204,9 +247,17 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
                          e.category === 'Social' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' :
                          'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                        }`}>{e.category}</span>
-                       <div className="flex flex-col items-end">
-                         <span className="text-[10px] font-black text-slate-400 uppercase">{e.time}</span>
-                         <span className="text-[8px] font-bold text-slate-400 uppercase">{new Date(e.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                       <div className="flex items-center gap-1">
+                         {isAdmin && !isGuest && (
+                           <div className="flex gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <button onClick={(ev) => { ev.stopPropagation(); setEditEvent(e); }} className="p-1 text-amber-600 hover:bg-amber-50 rounded"><i className="fa-solid fa-pen text-[10px]"></i></button>
+                             <button onClick={(ev) => deleteEvent(e.id, ev)} className="p-1 text-rose-600 hover:bg-rose-50 rounded"><i className="fa-solid fa-trash text-[10px]"></i></button>
+                           </div>
+                         )}
+                         <div className="flex flex-col items-end">
+                           <span className="text-[10px] font-black text-slate-400 uppercase">{e.time}</span>
+                           <span className="text-[8px] font-bold text-slate-400 uppercase">{new Date(e.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                         </div>
                        </div>
                     </div>
                     <h4 className="font-black text-slate-800 dark:text-white leading-tight mb-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{e.title}</h4>
@@ -222,7 +273,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, events, setEvents 
                 </div>
               )}
             </div>
-            {isAdmin && (
+            {isAdmin && !isGuest && (
                <button 
                  onClick={() => setShowAddForm(true)}
                  className="w-full mt-6 py-3 border border-dashed border-slate-200 dark:border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-all flex items-center justify-center gap-2"

@@ -63,22 +63,24 @@ const App: React.FC = () => {
 
   const fetchAllData = async () => {
     try {
-      const [unitsRes, tenantsRes, requestsRes, announcementsRes, docsRes, committeesRes] = await Promise.all([
+      const [unitsRes, tenantsRes, requestsRes, announcementsRes, docsRes, committeesRes, eventsRes] = await Promise.all([
         fetch('/api/units'),
         fetch('/api/tenants'),
         fetch('/api/maintenance'),
         fetch('/api/announcements'),
         fetch('/api/documents'),
-        fetch('/api/committees')
+        fetch('/api/committees'),
+        fetch('/api/events')
       ]);
 
-      const [unitsData, tenantsData, requestsData, announcementsData, docsData, committeesData] = await Promise.all([
+      const [unitsData, tenantsData, requestsData, announcementsData, docsData, committeesData, eventsData] = await Promise.all([
         unitsRes.json(),
         tenantsRes.json(),
         requestsRes.json(),
         announcementsRes.json(),
         docsRes.json(),
-        committeesRes.json()
+        committeesRes.json(),
+        eventsRes.json()
       ]);
 
       setUnits(Array.isArray(unitsData) ? unitsData : []);
@@ -87,6 +89,7 @@ const App: React.FC = () => {
       setAnnouncements(Array.isArray(announcementsData) ? announcementsData : []);
       setDocuments(Array.isArray(docsData) ? docsData : []);
       setCommittees(Array.isArray(committeesData) ? committeesData : []);
+      setEvents(Array.isArray(eventsData) ? eventsData : []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     }

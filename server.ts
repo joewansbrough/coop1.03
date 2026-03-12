@@ -18,7 +18,6 @@ const prisma = new PrismaClient();
 
 // Mock Data (In a real app, these would be in a database)
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'joewansbrough@gmail.com'];
-const TENANT_EMAILS = ['tenant1@example.com', 'tenant2@example.com'];
 
 async function startServer() {
   const app = express();
@@ -95,7 +94,6 @@ async function startServer() {
   app.get('/api/auth/url', (req, res) => {
     const baseUrl = getBaseUrl(req);
     const redirectUri = `${baseUrl}/auth/callback`;
-    console.log('Initiating OAuth with redirectUri:', redirectUri);
     
     if (!process.env.GOOGLE_CLIENT_ID) {
       return res.status(500).json({ error: 'GOOGLE_CLIENT_ID is not configured' });
@@ -123,7 +121,6 @@ async function startServer() {
     try {
       const baseUrl = getBaseUrl(req);
       const redirectUri = `${baseUrl}/auth/callback`;
-      console.log('Exchanging code for token with redirectUri:', redirectUri);
       
       const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
         code,
@@ -140,7 +137,6 @@ async function startServer() {
 
       const userData = userResponse.data;
       const email = userData.email.toLowerCase();
-      console.log('Google user email:', email);
 
       // Check permissions
       let userInDb = await prisma.tenant.findUnique({
@@ -149,19 +145,9 @@ async function startServer() {
       });
 
       const isAdmin = ADMIN_EMAILS.includes(email);
-      const isTenant = TENANT_EMAILS.includes(email) || !!userInDb || isAdmin;
-
-      if (!isTenant) {
-        return res.send(`
-          <html>
-            <body>
-              <script>
-                alert("Access denied. Your email ${email} is not registered in CoopConnect BC.");
-                window.close();
-              </script>
-            </body>
-          </html>
-        `);
+      
+      if (!userInDb && !isAdmin) {
+        return res.send(`<html><body><script>alert("Access denied for ${email}. You are not registered in the co-op database.");window.close();</script></body></html>`);
       }
 
       // Set session
@@ -256,10 +242,32 @@ async function startServer() {
         include: { unit: true },
         orderBy: { createdAt: 'desc' }
       });
-      res.json(requests);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch maintenance requests' });
-    }
+      // UI expects category as an array
+      const mapped = requests.map(r => ({ ...r, category: [r.category] }));
+      res.json(mapped);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post('/api/maintenance', async (req, res) => {
+    const { title, description, status, priority, category, unitId, requestedBy } = req.body;
+    const request = await prisma.maintenanceRequest.create({
+      data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy }
+    });
+    res.json(request);
+  });
+
+  app.put('/api/maintenance/:id', async (req, res) => {
+    const { title, description, status, priority, category, unitId } = req.body;
+    const request = await prisma.maintenanceRequest.update({
+      where: { id: req.params.id },
+      data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId }
+    });
+    res.json(request);
+  });
+
+  app.delete('/api/maintenance/:id', async (req, res) => {
+    await prisma.maintenanceRequest.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
   });
 
   app.get('/api/announcements', async (req, res) => {
@@ -273,6 +281,28 @@ async function startServer() {
     }
   });
 
+  app.post('/api/announcements', async (req, res) => {
+    const { title, content, type, priority, author, date } = req.body;
+    const announcement = await prisma.announcement.create({
+      data: { title, content, type, priority, author, date }
+    });
+    res.json(announcement);
+  });
+
+  app.put('/api/announcements/:id', async (req, res) => {
+    const { title, content, type, priority, date } = req.body;
+    const announcement = await prisma.announcement.update({
+      where: { id: req.params.id },
+      data: { title, content, type, priority, date }
+    });
+    res.json(announcement);
+  });
+
+  app.delete('/api/announcements/:id', async (req, res) => {
+    await prisma.announcement.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  });
+
   app.get('/api/documents', async (req, res) => {
     try {
       const documents = await prisma.document.findMany({
@@ -284,15 +314,74 @@ async function startServer() {
     }
   });
 
+  app.post('/api/documents', async (req, res) => {
+    const { title, category, url, fileType, author, date, tags, content } = req.body;
+    const document = await prisma.document.create({
+      data: { title, category, url, fileType, author, date, tags, content }
+    });
+    res.json(document);
+  });
+
+  app.put('/api/documents/:id', async (req, res) => {
+    const { title, category, tags, content } = req.body;
+    const document = await prisma.document.update({
+      where: { id: req.params.id },
+      data: { title, category, tags, content }
+    });
+    res.json(document);
+  });
+
+  app.delete('/api/documents/:id', async (req, res) => {
+    await prisma.document.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  });
+
   app.get('/api/committees', async (req, res) => {
     try {
       const committees = await prisma.committee.findMany({
         include: { members: true }
       });
-      res.json(committees);
+      const mapped = committees.map(c => ({
+        ...c,
+        members: c.members.map((m: any) => `${m.firstName} ${m.lastName}`)
+      }));
+      res.json(mapped);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch committees' });
     }
+  });
+
+  app.get('/api/events', async (req, res) => {
+    try {
+      const events = await prisma.coopEvent.findMany({
+        orderBy: { date: 'asc' }
+      });
+      res.json(events);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch events' });
+    }
+  });
+
+  app.post('/api/events', async (req, res) => {
+    const { title, description, date, time, location, category } = req.body;
+    const event = await prisma.coopEvent.create({
+      data: { title, description, date, time, location, category }
+    });
+    res.json(event);
+  });
+
+  app.put('/api/events/:id', async (req, res) => {
+    const { title, description, date, time, location, category } = req.body;
+    const event = await prisma.coopEvent.update({
+      where: { id: req.params.id },
+      data: { title, description, date, time, location, category }
+    });
+    res.json(event);
+  });
+
+  app.delete('/api/events/:id', async (req, res) => {
+    await prisma.coopEvent.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
   });
 
   app.get('/api/debug/config', (req, res) => {
@@ -346,4 +435,3 @@ startServer().catch(err => {
   console.error('Failed to start server:', err);
   process.exit(1);
 });
-

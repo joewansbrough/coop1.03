@@ -183,7 +183,8 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
           {committees.map(committee => (
             <div
               key={committee.id}
-              className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-emerald-400 dark:hover:border-emerald-500/50 hover:-translate-y-1 transition-all text-left group overflow-hidden relative"
+              onClick={() => setSelectedId(committee.id)}
+              className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-emerald-400 dark:hover:border-emerald-500/50 hover:-translate-y-1 transition-all text-left group overflow-hidden relative cursor-pointer"
             >
               <div className="absolute -right-8 -bottom-8 opacity-[0.03] text-9xl group-hover:opacity-[0.08] transition-opacity">
                 <i className={`fa-solid ${committee.icon}`}></i>
@@ -195,19 +196,16 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
                 <div className="flex gap-2">
                   {isAdmin && !isGuest && (
                     <button 
-                      onClick={() => setShowAssignMember(committee.id)}
+                      onClick={(e) => { e.stopPropagation(); setShowAssignMember(committee.id); }}
                       className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"
                       title="Assign Member"
                     >
                       <i className="fa-solid fa-user-plus"></i>
                     </button>
                   )}
-                  <button 
-                    onClick={() => setSelectedId(committee.id)}
-                    className="p-2 text-slate-400 hover:text-emerald-500 transition-colors"
-                  >
+                  <div className="p-2 text-slate-400 group-hover:text-emerald-500 transition-colors">
                     <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                  </button>
+                  </div>
                 </div>
               </div>
               <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2 relative z-10 uppercase tracking-tight">{committee.name}</h3>
