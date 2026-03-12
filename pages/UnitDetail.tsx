@@ -9,24 +9,28 @@ interface UnitDetailProps {
   tenants: Tenant[];
   setTenants: React.Dispatch<React.SetStateAction<Tenant[]>>;
   requests: MaintenanceRequest[];
+  setRequests: React.Dispatch<React.SetStateAction<MaintenanceRequest[]>>;
 }
 
-const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTenants, requests: allRequests }) => {
+const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTenants, requests: allRequests, setRequests }) => {
   const { unitId } = useParams<{ unitId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
 
   const refreshData = async () => {
-    const [unitsRes, tenantsRes] = await Promise.all([
+    const [unitsRes, tenantsRes, requestsRes] = await Promise.all([
       fetch('/api/units'),
-      fetch('/api/tenants')
+      fetch('/api/tenants'),
+      fetch('/api/maintenance')
     ]);
-    const [freshUnits, freshTenants] = await Promise.all([
+    const [freshUnits, freshTenants, freshRequests] = await Promise.all([
       unitsRes.json(),
-      tenantsRes.json()
+      tenantsRes.json(),
+      requestsRes.json()
     ]);
     setUnits(freshUnits);
     setTenants(freshTenants);
+    setRequests(freshRequests);
   };
   const unit = units.find(u => u.id === unitId);
   const currentResidents = tenants.filter(t => t.unitId === unitId && t.status === 'Current');
