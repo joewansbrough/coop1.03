@@ -60,7 +60,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   const [selectedTargetUnitId, setSelectedTargetUnitId] = useState('');
 
   const handleMoveOut = async () => {
-    console.log("handleMoveOut triggered", { unit, currentTenant });
+    console.log("handleMoveOut triggered", { unit, primaryResident });
     if (!unit) return;
     
     const moveOutDate = new Date().toISOString().split('T')[0];
@@ -200,7 +200,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   };
 
   const handleTransfer = async () => {
-    console.log("handleTransfer triggered", { unit, currentTenant, selectedTargetUnitId });
+    console.log("handleTransfer triggered", { unit, primaryResident, selectedTargetUnitId });
     if (!unit || !selectedTargetUnitId) return;
     const targetUnit = units.find(u => u.id === selectedTargetUnitId);
     if (!targetUnit) return;
@@ -750,7 +750,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                 </div>
                 <div>
                   <p className="text-sm font-bold text-rose-900 dark:text-rose-300">Confirm Move-Out</p>
-                  <p className="text-xs text-rose-600 dark:text-rose-500 font-medium">You are about to move out {currentTenant?.firstName} {currentTenant?.lastName} from Unit {unit.number}.</p>
+                  <p className="text-xs text-rose-600 dark:text-rose-500 font-medium">You are about to move out {primaryResident?.firstName} {primaryResident?.lastName} from Unit {unit.number}.</p>
                 </div>
               </div>
 
@@ -795,7 +795,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
             <div className="space-y-6">
               <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Transferring Resident</p>
-                <p className="text-lg font-bold text-slate-800 dark:text-slate-200">{currentTenant?.firstName} {currentTenant?.lastName}</p>
+                <p className="text-lg font-bold text-slate-800 dark:text-slate-200">{primaryResident?.firstName} {primaryResident?.lastName}</p>
                 <p className="text-xs text-slate-500">Currently in Unit {unit.number}</p>
               </div>
 
