@@ -16,7 +16,8 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   const navigate = useNavigate();
   const location = useLocation();
   const unit = units.find(u => u.id === unitId);
-  const currentTenant = tenants.find(t => t.id === unit?.currentTenantId);
+  const currentResidents = tenants.filter(t => t.unitId === unitId && t.status === 'Current');
+  const primaryResident = currentResidents.find(t => t.id === unit?.currentTenantId) || currentResidents[0];
   
   // Calculate full unit history from either the unit's own occupancyHistory or all tenants' residency records
   const unitHistory = (unit?.occupancyHistory && unit.occupancyHistory.length > 0)
@@ -509,38 +510,47 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
             <div className="lg:col-span-2 space-y-8">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                  <i className="fa-solid fa-user-group text-emerald-500"></i> Current Resident Detail
+                  <i className="fa-solid fa-user-group text-emerald-500"></i> Household Residents ({currentResidents.length})
                 </h3>
-                {currentTenant ? (
-                  <div className="flex flex-col md:flex-row gap-8 items-start">
-                    <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-300 text-4xl shrink-0 border border-slate-200 dark:border-white/5">
-                      <i className="fa-solid fa-user"></i>
-                    </div>
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
-                      <Link to={`/admin/tenants/${currentTenant.id}`} className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-transparent hover:border-emerald-500 transition-all group">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Full Member Name</p>
-                        <p className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600">{currentTenant.firstName} {currentTenant.lastName} <i className="fa-solid fa-arrow-up-right-from-square text-xs ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
-                      </Link>
-                      <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl flex justify-between items-center">
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Move-in Date</p>
-                          <p className="text-slate-700 dark:text-slate-300 font-bold">{new Date(currentTenant.startDate).toLocaleDateString()}</p>
+                {currentResidents.length > 0 ? (
+                  <div className="space-y-6">
+                    {currentResidents.map(resident => (
+                      <div key={resident.id} className="flex flex-col md:flex-row gap-6 items-start p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-transparent hover:border-emerald-500/30 transition-all group">
+                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-300 text-2xl shrink-0 border border-slate-200 dark:border-white/5">
+                          {resident.id === unit.currentTenantId ? <i className="fa-solid fa-user-tie text-emerald-500"></i> : <i className="fa-solid fa-user"></i>}
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          <button 
-                            onClick={() => setShowTransferModal(true)}
-                            className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95"
-                          >
-                            Transfer to Unit
-                          </button>
-                          <button 
-                            onClick={() => setShowMoveOutModal(true)}
-                            className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30 active:scale-95"
-                          >
-                            Process Move-Out
-                          </button>
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Link to={`/admin/tenants/${resident.id}`} className="block">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                                {resident.id === unit.currentTenantId ? 'Primary Member' : 'Household Member'}
+                              </p>
+                              <p className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">
+                                {resident.firstName} {resident.lastName} 
+                                <i className="fa-solid fa-arrow-up-right-from-square text-xs ml-2 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                              </p>
+                            </Link>
+                          </div>
+                          <div className="flex flex-col justify-center">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resident Since</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300 font-bold">{new Date(resident.startDate).toLocaleDateString()}</p>
+                          </div>
                         </div>
                       </div>
+                    ))}
+                    <div className="flex gap-3 pt-4">
+                      <button 
+                        onClick={() => setShowTransferModal(true)}
+                        className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95 flex items-center gap-2"
+                      >
+                        <i className="fa-solid fa-right-left"></i> Transfer Household
+                      </button>
+                      <button 
+                        onClick={() => setShowMoveOutModal(true)}
+                        className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30 active:scale-95 flex items-center gap-2"
+                      >
+                        <i className="fa-solid fa-user-minus"></i> Process Move-Out
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -550,10 +560,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                     </div>
                     <p className="text-slate-500 dark:text-slate-400 font-bold mb-6">This unit is currently vacant.</p>
                     <button 
-                      onClick={() => {
-                        console.log("Move-In button clicked (Overview)");
-                        setShowMoveInModal(true);
-                      }}
+                      onClick={() => setShowMoveInModal(true)}
                       className="bg-emerald-600 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                       <i className="fa-solid fa-plus"></i> Process Move-In
@@ -663,7 +670,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
           <div className="space-y-8">
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
                <div className="p-6 border-b border-slate-50 dark:border-white/5 flex justify-between items-center">
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Current Residents</h3>
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Household Members ({currentResidents.length})</h3>
                   {unit.status === 'Occupied' && (
                     <div className="flex flex-wrap gap-2">
                       <button 
@@ -698,18 +705,22 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                    {currentTenant ? (
-                      <tr className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                    {currentResidents.length > 0 ? currentResidents.map(resident => (
+                      <tr key={resident.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
                         <td className="px-6 py-4 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-black text-xs uppercase">{currentTenant.firstName[0]}</div>
-                          <span className="text-sm font-black text-slate-800 dark:text-slate-200">{currentTenant.firstName} {currentTenant.lastName}</span>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase ${resident.id === unit.currentTenantId ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500'}`}>
+                            {resident.firstName[0]}
+                          </div>
+                          <span className="text-sm font-black text-slate-800 dark:text-slate-200">{resident.firstName} {resident.lastName}</span>
                         </td>
-                        <td className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Primary Member</td>
+                        <td className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">
+                          {resident.id === unit.currentTenantId ? 'Primary Member' : 'Household Member'}
+                        </td>
                         <td className="px-6 py-4 text-right">
-                          <Link to={`/admin/tenants/${currentTenant.id}`} className="text-emerald-600 hover:underline text-[10px] font-black uppercase">View Details</Link>
+                          <Link to={`/admin/tenants/${resident.id}`} className="text-emerald-600 hover:underline text-[10px] font-black uppercase">View Details</Link>
                         </td>
                       </tr>
-                    ) : (
+                    )) : (
                       <tr>
                         <td colSpan={3} className="px-6 py-12 text-center text-slate-400 text-xs italic font-medium">
                           No active residents assigned to this unit.
