@@ -126,28 +126,44 @@ const Finances: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
               <h4 className="font-black text-slate-800 dark:text-white text-xs uppercase tracking-widest">Historical Settlements</h4>
               <button className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900 px-4 py-2 rounded-xl transition-all uppercase tracking-widest">Download PDF Summary</button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[600px]">
-                <thead className="bg-slate-50 dark:bg-slate-950/50">
-                  <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Effective Date</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                  {myTransactions.map(t => (
-                    <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 font-bold">{new Date(t.date).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-sm text-slate-800 dark:text-slate-200 font-black">{t.type}</td>
-                      <td className="px-6 py-4 text-[10px] text-slate-400 font-black uppercase">{t.description}</td>
-                      <td className="px-6 py-4 text-sm text-slate-900 dark:text-white font-black text-right">${t.amount.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            {/* Mobile: Cards */}
+            <div className="sm:hidden divide-y divide-slate-100 dark:divide-white/5">
+              {myTransactions.length > 0 ? myTransactions.map(t => (
+                <div key={t.id} className="p-4 flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-black text-slate-800 dark:text-slate-200">{t.type}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mt-0.5">{t.description}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{new Date(t.date).toLocaleDateString()}</p>
+                  </div>
+                  <span className="text-sm font-black text-slate-900 dark:text-white shrink-0">${t.amount.toFixed(2)}</span>
+                </div>
+              )) : (
+                <div className="px-6 py-12 text-center text-slate-400 text-xs italic">No transactions found.</div>
+              )}
             </div>
+
+            {/* Desktop: Table */}
+            <table className="hidden sm:table w-full text-left">
+              <thead className="bg-slate-50 dark:bg-slate-950/50">
+                <tr>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Effective Date</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+                {myTransactions.map(t => (
+                  <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4 text-xs text-slate-500 dark:text-slate-400 font-bold">{new Date(t.date).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-sm text-slate-800 dark:text-slate-200 font-black">{t.type}</td>
+                    <td className="px-6 py-4 text-[10px] text-slate-400 font-black uppercase">{t.description}</td>
+                    <td className="px-6 py-4 text-sm text-slate-900 dark:text-white font-black text-right">${t.amount.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

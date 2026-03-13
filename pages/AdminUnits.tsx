@@ -44,7 +44,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95"
+          className="w-full sm:w-auto bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95"
         >
           <i className="fa-solid fa-plus"></i> Add New Unit
         </button>
@@ -63,8 +63,8 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
       </div>
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 animate-in zoom-in-95">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-8 animate-in slide-in-from-bottom sm:zoom-in-95">
             <h3 className="text-xl font-black text-slate-900 dark:text-white mb-6">Register New Co-op Unit</h3>
             <form onSubmit={handleAddUnit} className="space-y-5">
               <div>

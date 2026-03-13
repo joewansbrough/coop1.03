@@ -7,7 +7,6 @@ import { RequestStatus, Announcement, Unit, Tenant, MaintenanceRequest, CoopEven
 
 interface DashboardProps {
   isAdmin: boolean;
-  isGuest?: boolean;
   announcements: Announcement[];
   units: Unit[];
   tenants: Tenant[];
@@ -15,11 +14,11 @@ interface DashboardProps {
   events: CoopEvent[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announcements, units, tenants, requests, events }) => {
+const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, tenants, requests, events }) => {
   const navigate = useNavigate();
 
   // For members, only show stats for their unit (if they have one)
-  const userUnitId = (units.length > 0 && !isGuest) ? units[0].id : null;
+  const userUnitId = units.length > 0 ? units[0].id : null;
   
   const userOpenRequests = (userUnitId && Array.isArray(requests)) 
     ? requests.filter(r => r.unitId === userUnitId && r.status !== RequestStatus.COMPLETED && r.status !== RequestStatus.CANCELLED)
@@ -50,16 +49,6 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
   if (isAdmin) {
     return (
       <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 transition-colors duration-200">
-        <header className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-[0.03] text-[12rem] pointer-events-none dark:text-white">
-            <i className="fa-solid fa-screwdriver-wrench"></i>
-          </div>
-          <div className="relative z-10">
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Board Administration</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">Operational oversight and community management portal.</p>
-          </div>
-        </header>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <Link to="/admin/units" className="block hover:scale-[1.02] active:scale-95 transition-all group">
             <StatCard label="Managed Units" value={units.length} icon="fa-building" color="bg-emerald-500" />
@@ -72,6 +61,10 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
           <Link to="/maintenance" className="block hover:scale-[1.02] active:scale-95 transition-all group">
             <StatCard label="Service Queue" value={pendingRequests} icon="fa-wrench" color="bg-amber-500" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Dispatch <i className="fa-solid fa-arrow-right ml-1"></i></div>
+          </Link>
+          <Link to="/admin/reports" className="block hover:scale-[1.02] active:scale-95 transition-all group">
+            <StatCard label="Financial Status" value={units.length > 0 ? "Healthy" : "N/A"} icon="fa-heart-pulse" color="bg-purple-500" />
+            <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Analytics <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
           <Link to="/documents" className="block hover:scale-[1.02] active:scale-95 transition-all group">
             <StatCard label="Archived Docs" value={12} icon="fa-file-shield" color="bg-slate-700" />
@@ -93,10 +86,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
             </div>
             {units.length > 0 ? (
               <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3 lg:gap-5">
-                {[...units].sort((a, b) => {
-                  if (a.floor !== b.floor) return a.floor - b.floor;
-                  return a.number.localeCompare(b.number, undefined, { numeric: true });
-                }).map(unit => (
+                {units.map(unit => (
                   <button
                     key={unit.id}
                     onClick={() => navigate(`/admin/units/${unit.id}`)}
@@ -166,52 +156,6 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
             </div>
           </div>
         </div>
-
-        {/* Live Dispatch Feed */}
-        <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden">
-          <div className="p-6 border-b border-slate-50 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-1.5 h-6 bg-amber-500 rounded-full"></div>
-              <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Maintenance Dispatch Feed</h3>
-            </div>
-            <Link to="/maintenance" className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:underline">View Full Queue</Link>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {requests.slice(0, 6).map(req => {
-                const unit = units.find(u => u.id === req.unitId);
-                const lastNote = req.notes && req.notes.length > 0 ? req.notes[req.notes.length - 1] : null;
-                return (
-                  <Link 
-                    to={`/maintenance/${req.id}`} 
-                    key={req.id} 
-                    className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-transparent hover:border-amber-500/50 transition-all group"
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <span className="text-[10px] font-black px-2.5 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-white/5 text-slate-500 uppercase">Unit {unit?.number || '??'}</span>
-                      <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${
-                        req.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                        req.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                        'bg-emerald-100 text-emerald-700'
-                      }`}>
-                        {req.status}
-                      </span>
-                    </div>
-                    <h4 className="text-sm font-black text-slate-800 dark:text-white mb-2 group-hover:text-amber-600 transition-colors line-clamp-1">{req.title}</h4>
-                    {lastNote ? (
-                      <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-white/5">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Latest Update</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 italic line-clamp-2">"{lastNote.content}"</p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-400 italic mt-4">No activity logged yet.</p>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </section>
       </div>
     );
   }
@@ -223,40 +167,29 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
-              <i className="fa-solid fa-house-circle-check"></i> {isGuest ? 'Guest Access Mode' : 'Association Member Hub'}
+              <i className="fa-solid fa-house-circle-check"></i> Association Member Hub
             </div>
-            <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">{isGuest ? 'Explore CoopConnect.' : 'Welcome home.'}</h1>
+            <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome home.</h1>
             <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
-              {isGuest ? 'Browse association activities, review community policies, and see upcoming events.' : 'Streamline your co-op experience: report issues, review policies, and join community meetings.'}
+              Streamline your co-op experience: report issues, review policies, and join community meetings.
             </p>
-            {!isGuest && (
-              <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link to="/maintenance" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95">
-                  <i className="fa-solid fa-wrench"></i> Report Issue
-                </Link>
-                <Link to="/documents" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
-                  <i className="fa-solid fa-book-open"></i> Rules & Bylaws
-                </Link>
-              </div>
-            )}
-            {isGuest && (
-              <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link to="/maintenance" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95">
-                  <i className="fa-solid fa-magnifying-glass"></i> View Maintenance
-                </Link>
-                <Link to="/calendar" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
-                  <i className="fa-solid fa-calendar"></i> Events Calendar
-                </Link>
-              </div>
-            )}
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <Link to="/maintenance" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95">
+                <i className="fa-solid fa-wrench"></i> Report Issue
+              </Link>
+              <Link to="/documents" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
+                <i className="fa-solid fa-book-open"></i> Rules & Bylaws
+              </Link>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-             <div className="grid grid-rows-1 gap-4">
+             <div className="grid grid-rows-2 gap-4">
                 <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
-                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">System Asset</p>
-                   <p className="text-2xl font-black">{isGuest ? 'Unit G-01' : (userUnitId ? `Unit ${units.find(u => u.id === userUnitId)?.number}` : 'No Unit')}</p>
-                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Guest Viewpoint</p>
+                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">My Unit</p>
+                   <p className="text-2xl font-black">{userUnitId ? `Unit ${units.find(u => u.id === userUnitId)?.number}` : 'No Unit'}</p>
+                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Managed Asset</p>
                 </div>
+
              </div>
              <div className="flex h-full">
                 {nextMeeting ? (
