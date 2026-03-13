@@ -67,7 +67,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
-                <i className="fa-solid fa-shield-halved"></i> Association Admin Hub
+                <i className="fa-solid fa-shield-halved"></i> Co-Operative Housing Association Admin Hub
               </div>
               <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome, Admin.</h1>
               <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
@@ -243,7 +243,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
-              <i className="fa-solid fa-house-circle-check"></i> Association Member Hub
+              <i className="fa-solid fa-house-circle-check"></i> Co-Operative Housing Association Member Hub
             </div>
             <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome home.</h1>
             <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">

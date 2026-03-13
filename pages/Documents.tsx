@@ -9,8 +9,9 @@ const Documents: React.FC<{
   isAdmin: boolean, 
   isGuest?: boolean,
   documents: Document[], 
-  setDocuments: React.Dispatch<React.SetStateAction<Document[]>> 
-}> = ({ isAdmin, isGuest = false, documents, setDocuments }) => {
+  setDocuments: React.Dispatch<React.SetStateAction<Document[]>>,
+  committees?: Committee[]
+}> = ({ isAdmin, isGuest = false, documents, setDocuments, committees = [] }) => {
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [question, setQuestion] = useState('');
@@ -27,6 +28,7 @@ const Documents: React.FC<{
   // New document form state
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocCategory, setNewDocCategory] = useState<Document['category']>('Policy');
+  const [newDocCommittee, setNewDocCommittee] = useState<string>('');
   const [newDocIsPrivate, setNewDocIsPrivate] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
@@ -157,7 +159,8 @@ const Documents: React.FC<{
           setIsAnalyzing(true);
           try {
             const result = await geminiService.summarizeAndTag(fileContent);
-            finalTags = Array.from(new Set([currentYear, ...(result.tags || [])]));
+            const committeeTags = newDocCommittee ? [newDocCommittee] : [];
+            finalTags = Array.from(new Set([currentYear, ...committeeTags, ...(result.tags || [])]));
             if (result.summary) {
               finalContent = fileContent + `\n\nSummary: ${result.summary}`;
             }
@@ -381,6 +384,19 @@ const Documents: React.FC<{
                       {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
+                  {isAdmin && committees.length > 0 && (
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Link to Committee (Optional)</label>
+                      <select 
+                        value={newDocCommittee}
+                        onChange={(e) => setNewDocCommittee(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">None (General Document)</option>
+                        {committees.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 py-2">
                     <input 
                       type="checkbox" 

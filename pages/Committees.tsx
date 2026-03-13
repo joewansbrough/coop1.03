@@ -18,6 +18,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
   const [showUpload, setShowUpload] = useState(false);
   const [showAddCommittee, setShowAddCommittee] = useState(false);
   const [showAssignMember, setShowAssignMember] = useState<string | null>(null);
+  const [viewMember, setViewMember] = useState<Tenant | null>(null);
   
   const [msgBody, setMsgBody] = useState('');
   const [sentStatus, setSentStatus] = useState(false);
@@ -178,6 +179,48 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
         </div>
       )}
 
+      {viewMember && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] p-8 animate-in zoom-in-95 border border-slate-200 dark:border-white/5 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6">
+              <button onClick={() => setViewMember(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                <i className="fa-solid fa-xmark text-xl"></i>
+              </button>
+            </div>
+            
+            <div className="flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-emerald-100 dark:bg-emerald-900/30 rounded-3xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-4xl font-black mb-6 border border-emerald-200 dark:border-emerald-500/20">
+                {viewMember.firstName[0]}{viewMember.lastName[0]}
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-1">{viewMember.firstName} {viewMember.lastName}</h3>
+              <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-8">Active Member</p>
+              
+              <div className="w-full space-y-4 text-left">
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Unit Assignment</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                    {viewMember.unitId ? `Unit ${tenants.find(t => t.id === viewMember.id)?.unitId === 'u1' ? '402' : '101'}` : 'Not Assigned'}
+                  </p>
+                </div>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Email Address</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewMember.email}</p>
+                </div>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Phone Number</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{viewMember.phone}</p>
+                </div>
+              </div>
+              
+              <div className="w-full mt-8 grid grid-cols-2 gap-3">
+                <button className="py-3 bg-slate-900 dark:bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 active:scale-95 transition-all">Send Message</button>
+                <button onClick={() => setViewMember(null)} className="py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 active:scale-95 transition-all">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!selectedId ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {committees.map(committee => (
@@ -270,9 +313,18 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
                     <div>
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 dark:border-white/5 pb-2">Active Members</h4>
                       <div className="flex flex-wrap gap-2">
-                        {selectedCommittee?.members.map(member => (
-                          <span key={member} className="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold border border-slate-200 dark:border-white/5 hover:border-emerald-300 transition-colors cursor-default">{member}</span>
-                        ))}
+                        {selectedCommittee?.members.map(member => {
+                          const tenant = tenants.find(t => `${t.firstName} ${t.lastName}` === member);
+                          return (
+                            <button 
+                              key={member} 
+                              onClick={() => tenant && setViewMember(tenant)}
+                              className="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold border border-slate-200 dark:border-white/5 hover:border-emerald-300 dark:hover:border-emerald-500/50 transition-colors cursor-pointer active:scale-95"
+                            >
+                              {member}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                     <div>
