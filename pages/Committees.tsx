@@ -377,9 +377,9 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
               <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5">
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase tracking-tight">
-                    <i className="fa-solid fa-file-contract text-emerald-500"></i> Records & Archive
-                  </h3>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">PIPA Compliant Storage</span>
+                                       <i className="fa-solid fa-file-contract text-emerald-500"></i> Records & Archive
+                                     </h3>
+
                 </div>
 
                 <div className="mb-8">
