@@ -258,16 +258,43 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
               </Link>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-             <div className="grid grid-rows-2 gap-4">
-                <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
-                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">My Unit</p>
-                   <p className="text-2xl font-black">{userUnitId ? `Unit ${units.find(u => u.id === userUnitId)?.number}` : 'No Unit'}</p>
-                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Managed Asset</p>
-                </div>
-
-             </div>
-             <div className="flex h-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex h-full">
+                {userUnitId ? (
+                  <Link to={`/admin/units/${userUnitId}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center group">
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-4">My Residency</p>
+                    <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
+                      <i className="fa-solid fa-house-user text-2xl"></i>
+                    </div>
+                    <p className="text-3xl font-black mb-1">Unit {units.find(u => u.id === userUnitId)?.number}</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">
+                      {units.find(u => u.id === userUnitId)?.type} • Floor {units.find(u => u.id === userUnitId)?.floor}
+                    </p>
+                    <div className="mt-6 pt-6 border-t border-white/5 w-full flex justify-around">
+                      <div className="text-center">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
+                        <p className="text-[10px] font-black text-emerald-400 uppercase">Active</p>
+                      </div>
+                      <div className="text-center border-l border-white/5 pl-6">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Requests</p>
+                        <p className={`text-[10px] font-black uppercase ${userOpenRequests.length > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
+                          {userOpenRequests.length} Pending
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">My Unit</p>
+                    <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
+                      <i className="fa-solid fa-house-slash text-2xl"></i>
+                    </div>
+                    <p className="text-xl font-black">No Unit Assigned</p>
+                    <p className="text-[9px] font-bold text-slate-600 uppercase mt-1">Contact administration</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex h-full">
                 {nextMeeting ? (
                   <Link to={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center">
                     <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-4">Next Meeting</p>
