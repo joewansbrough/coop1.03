@@ -169,9 +169,3 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
 };
 
 export default AdminUnits;
-
-    </div>
-  );
-};
-
-export default AdminUnits;
