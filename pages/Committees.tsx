@@ -210,7 +210,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Unit Assignment</p>
                   <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                    {viewMember.unitId ? `Unit ${tenants.find(t => t.id === viewMember.id)?.unitId === 'u1' ? '402' : '101'}` : 'Not Assigned'}
+                    {viewMember.unitId ? `Unit ${viewMember.unitId}` : 'Not Assigned'}
                   </p>
                 </div>
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
