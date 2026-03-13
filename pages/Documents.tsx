@@ -9,8 +9,9 @@ const Documents: React.FC<{
   isAdmin: boolean, 
   isGuest?: boolean,
   documents: Document[], 
-  setDocuments: React.Dispatch<React.SetStateAction<Document[]>> 
-}> = ({ isAdmin, isGuest = false, documents, setDocuments }) => {
+  setDocuments: React.Dispatch<React.SetStateAction<Document[]>>,
+  committees?: Committee[]
+}> = ({ isAdmin, isGuest = false, documents, setDocuments, committees = [] }) => {
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [question, setQuestion] = useState('');
@@ -27,6 +28,7 @@ const Documents: React.FC<{
   // New document form state
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocCategory, setNewDocCategory] = useState<Document['category']>('Policy');
+  const [newDocCommittee, setNewDocCommittee] = useState<string>('');
   const [newDocIsPrivate, setNewDocIsPrivate] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
@@ -94,24 +96,10 @@ const Documents: React.FC<{
     }
   };
 
-  const readFileContent = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      setFileContent(content);
-    };
-    if (file.type.includes('text') || file.name.endsWith('.txt')) {
-      reader.readAsText(file);
-    } else {
-      setFileContent(`[Simulated content for ${file.name}]\nThis document contains association rules and policies regarding ${file.name.toLowerCase()}. Members must adhere to all guidelines stated herein.`);
-    }
-  };
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      readFileContent(file);
       if (!newDocTitle) {
         setNewDocTitle(file.name.split('.')[0]);
       }
@@ -123,7 +111,6 @@ const Documents: React.FC<{
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       setSelectedFile(file);
-      readFileContent(file);
       if (!newDocTitle) {
         setNewDocTitle(file.name.split('.')[0]);
       }
@@ -134,74 +121,62 @@ const Documents: React.FC<{
     e.preventDefault();
   };
 
-  const handleSimulatedUpload = () => {
-    if (isGuest) return;
+  const handleSimulatedUpload = async () => {
+    if (isGuest || !selectedFile) return;
     if (!newDocTitle) {
       alert("Please provide a document title.");
       return;
     }
     
     setIsUploading(true);
+    
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('title', newDocTitle);
+    formData.append('category', newDocCategory);
+    formData.append('isPrivate', String(newDocIsPrivate));
+    formData.append('committee', newDocCommittee);
+
+    // Simulate progress for UX
     let prog = 0;
     const interval = setInterval(() => {
-      prog += 10;
+      prog = Math.min(prog + 10, 90);
       setUploadProgress(prog);
-      if (prog >= 100) {
-        clearInterval(interval);
-        setTimeout(async () => {
-          const currentYear = new Date().getFullYear().toString();
-          let finalTags = [currentYear];
-          let finalContent = fileContent;
+    }, 200);
 
-          // Auto-trigger Gemini analysis before saving
-          setIsAnalyzing(true);
-          try {
-            const result = await geminiService.summarizeAndTag(fileContent);
-            finalTags = Array.from(new Set([currentYear, ...(result.tags || [])]));
-            if (result.summary) {
-              finalContent = fileContent + `\n\nSummary: ${result.summary}`;
-            }
-          } catch (err) {
-            console.error("Auto-analysis failed", err);
-          } finally {
-            setIsAnalyzing(false);
-          }
+    try {
+      const res = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-          const payload = {
-            title: newDocTitle,
-            category: newDocCategory,
-            url: '#',
-            fileType: selectedFile?.name.split('.').pop() as any || 'pdf',
-            date: new Date().toISOString().split('T')[0],
-            author: 'Board Administration',
-            isPrivate: newDocIsPrivate,
-            content: finalContent,
-            tags: finalTags
-          };
-
-          try {
-            const res = await fetch('/api/documents', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            
-            setDocuments(prev => [data, ...prev]);
-            setIsUploading(false);
-            setUploadProgress(0);
-            setShowUpload(false);
-            setNewDocTitle('');
-            setNewDocIsPrivate(false);
-            setSelectedFile(null);
-            setFileContent('');
-            setReviewingDoc(data); // Open modal with analyzed data
-          } catch (err) {
-            console.error(err);
-          }
-        }, 500);
+      clearInterval(interval);
+      setUploadProgress(100);
+      
+      if (!res.ok) {
+        throw new Error('Upload failed');
       }
-    }, 100);
+      
+      const data = await res.json();
+      
+      setDocuments(prev => [data, ...prev]);
+      setShowUpload(false);
+      // Reset form
+      setNewDocTitle('');
+      setNewDocCategory('Policy');
+      setNewDocCommittee('');
+      setNewDocIsPrivate(false);
+      setSelectedFile(null);
+      
+      setReviewingDoc(data);
+    } catch (err) {
+      console.error(err);
+      alert('File upload failed.');
+      clearInterval(interval);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
   };
 
   const handleSaveReview = async () => {
@@ -381,6 +356,19 @@ const Documents: React.FC<{
                       {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
+                  {isAdmin && committees.length > 0 && (
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Link to Committee (Optional)</label>
+                      <select 
+                        value={newDocCommittee}
+                        onChange={(e) => setNewDocCommittee(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">None (General Document)</option>
+                        {committees.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 py-2">
                     <input 
                       type="checkbox" 

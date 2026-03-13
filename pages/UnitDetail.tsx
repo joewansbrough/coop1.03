@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { RequestStatus, Unit, Tenant, MaintenanceRequest } from '../types';
 
 interface UnitDetailProps {
+  isAdmin?: boolean;
   units: Unit[];
   setUnits: React.Dispatch<React.SetStateAction<Unit[]>>;
   tenants: Tenant[];
@@ -11,7 +12,7 @@ interface UnitDetailProps {
   requests: MaintenanceRequest[];
 }
 
-const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTenants, requests: allRequests }) => {
+const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnits, tenants, setTenants, requests: allRequests }) => {
   const { unitId } = useParams<{ unitId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -376,9 +377,15 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 transition-colors duration-200">
       <div className="flex items-center gap-4 text-slate-500 text-sm mb-2">
-        <Link to="/admin/units" className="hover:text-emerald-600 transition-colors flex items-center gap-1 font-bold">
-          <i className="fa-solid fa-arrow-left"></i> Back to Units
-        </Link>
+        {isAdmin ? (
+          <Link to="/admin/units" className="hover:text-emerald-600 transition-colors flex items-center gap-1 font-bold">
+            <i className="fa-solid fa-arrow-left"></i> Back to Units
+          </Link>
+        ) : (
+          <Link to="/" className="hover:text-emerald-600 transition-colors flex items-center gap-1 font-bold">
+            <i className="fa-solid fa-arrow-left"></i> Back to Dashboard
+          </Link>
+        )}
         <span>/</span>
         <span className="font-semibold text-slate-800 dark:text-slate-200">Unit {unit.number}</span>
       </div>
@@ -411,51 +418,50 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
           </div>
         </div>
         <div className="flex flex-wrap gap-2 md:gap-3 w-full lg:w-auto relative z-20 justify-start lg:justify-end">
-          {unit.status !== 'Occupied' && (
-            <button 
-              onClick={() => {
-                console.log("Move-In button clicked (Header)");
-                setShowMoveInModal(true);
-              }}
-              className="flex-1 md:flex-none bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-            >
-              <i className="fa-solid fa-user-plus"></i> <span>Process Move-In</span>
-            </button>
-          )}
-          {unit.status === 'Occupied' && (
+          {isAdmin && (
             <>
-              <button 
-                onClick={() => {
-                  console.log("Transfer button clicked (Header)");
-                  setShowTransferModal(true);
-                }}
-                className="flex-1 md:flex-none bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-800 active:scale-95 flex items-center justify-center gap-2"
-              >
-                <i className="fa-solid fa-right-left"></i> <span>Internal Transfer</span>
-              </button>
-              <button 
-                onClick={() => {
-                  console.log("Move-Out button clicked (Header)");
-                  setShowMoveOutModal(true);
-                }}
-                className="flex-1 md:flex-none bg-rose-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-rose-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                <i className="fa-solid fa-user-minus"></i> <span>Process Move-Out</span>
-              </button>
+              {unit.status !== 'Occupied' && (
+                <button 
+                  onClick={() => setShowMoveInModal(true)}
+                  className="flex-1 md:flex-none bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-user-plus"></i> <span>Process Move-In</span>
+                </button>
+              )}
+              {unit.status === 'Occupied' && (
+                <>
+                  <button 
+                    onClick={() => setShowTransferModal(true)}
+                    className="flex-1 md:flex-none bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-800 active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-right-left"></i> <span>Internal Transfer</span>
+                  </button>
+                  <button 
+                    onClick={() => setShowMoveOutModal(true)}
+                    className="flex-1 md:flex-none bg-rose-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-rose-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-user-minus"></i> <span>Process Move-Out</span>
+                  </button>
+                </>
+              )}
             </>
           )}
-          <button 
-            onClick={() => setShowUpload(!showUpload)}
-            className="flex-1 md:flex-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-          >
-            <i className="fa-solid fa-cloud-arrow-up"></i> <span>Document</span>
-          </button>
-          <button 
-            onClick={() => setShowSettings(true)}
-            className="flex-1 md:flex-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-2.5 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-          >
-            <i className="fa-solid fa-gear"></i> <span>Settings</span>
-          </button>
+          {isAdmin && (
+            <button 
+              onClick={() => setShowUpload(!showUpload)}
+              className="flex-1 md:flex-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-cloud-arrow-up"></i> <span>Document</span>
+            </button>
+          )}
+          {isAdmin && (
+            <button 
+              onClick={() => setShowSettings(true)}
+              className="flex-1 md:flex-none bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-6 py-2.5 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-gear"></i> <span>Settings</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -581,20 +587,22 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                         </div>
                       </div>
                     ))}
-                    <div className="flex gap-3 pt-4">
-                      <button 
-                        onClick={() => setShowTransferModal(true)}
-                        className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95 flex items-center gap-2"
-                      >
-                        <i className="fa-solid fa-right-left"></i> Transfer Household
-                      </button>
-                      <button 
-                        onClick={() => setShowMoveOutModal(true)}
-                        className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30 active:scale-95 flex items-center gap-2"
-                      >
-                        <i className="fa-solid fa-user-minus"></i> Process Move-Out
-                      </button>
-                    </div>
+                    {isAdmin && (
+                      <div className="flex gap-3 pt-4">
+                        <button 
+                          onClick={() => setShowTransferModal(true)}
+                          className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95 flex items-center gap-2"
+                        >
+                          <i className="fa-solid fa-right-left"></i> Transfer Household
+                        </button>
+                        <button 
+                          onClick={() => setShowMoveOutModal(true)}
+                          className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30 active:scale-95 flex items-center gap-2"
+                        >
+                          <i className="fa-solid fa-user-minus"></i> Process Move-Out
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-12 bg-slate-50 dark:bg-slate-950/50 rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 flex flex-col items-center justify-center">
@@ -624,12 +632,14 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                 </div>
               </div>
             </div>
-            <div className="space-y-6">
-               <div className="bg-slate-900 text-white p-8 rounded-3xl">
-                  <h3 className="font-black uppercase text-[10px] tracking-widest text-emerald-400 mb-6">Internal Notes</h3>
-                  <p className="text-sm font-medium leading-relaxed opacity-70 italic border-l-2 border-emerald-500 pl-4">"Floor joists inspected in 2022. No significant settling found. Member reported balcony door sticking in high humidity."</p>
-               </div>
-            </div>
+            {isAdmin && (
+              <div className="space-y-6">
+                 <div className="bg-slate-900 text-white p-8 rounded-3xl">
+                    <h3 className="font-black uppercase text-[10px] tracking-widest text-emerald-400 mb-6">Internal Notes</h3>
+                    <p className="text-sm font-medium leading-relaxed opacity-70 italic border-l-2 border-emerald-500 pl-4">"Floor joists inspected in 2022. No significant settling found. Member reported balcony door sticking in high humidity."</p>
+                 </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -657,13 +667,15 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                         <span className="text-[8px] font-black px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded uppercase">Current</span>
                       )}
                     </div>
-                    <Link
-                      to={`/admin/tenants/${record.tenant.id}`}
-                      className="text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase shrink-0"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      Profile <i className="fa-solid fa-arrow-right text-[8px]"></i>
-                    </Link>
+                    {isAdmin && (
+                      <Link
+                        to={`/admin/tenants/${record.tenant.id}`}
+                        className="text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase shrink-0"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        Profile <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                      </Link>
+                    )}
                   </div>
                   <p className="text-xs font-bold text-slate-500 dark:text-slate-400 pl-10">
                     {new Date(record.startDate).toLocaleDateString()} — {record.endDate ? new Date(record.endDate).toLocaleDateString() : 'Present'}
@@ -712,9 +724,13 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                       {record.moveReason || 'Not recorded'}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link to={`/admin/tenants/${record.tenant.id}`} className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 text-[10px] font-black uppercase tracking-widest flex items-center justify-end gap-1">
-                        View Profile <i className="fa-solid fa-arrow-right text-[8px]"></i>
-                      </Link>
+                      {isAdmin ? (
+                        <Link to={`/admin/tenants/${record.tenant.id}`} className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 text-[10px] font-black uppercase tracking-widest flex items-center justify-end gap-1">
+                          View Profile <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                        </Link>
+                      ) : (
+                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Archived</span>
+                      )}
                     </td>
                   </tr>
                 )) : (
@@ -791,9 +807,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                         </p>
                       </div>
                     </div>
-                    <Link to={`/admin/tenants/${resident.id}`} className="text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase shrink-0">
-                      View <i className="fa-solid fa-arrow-right text-[8px]"></i>
-                    </Link>
+                    {isAdmin && (
+                      <Link to={`/admin/tenants/${resident.id}`} className="text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase shrink-0">
+                        View <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                      </Link>
+                    )}
                   </div>
                 )) : (
                   <div className="px-6 py-12 text-center text-slate-400 text-xs italic font-medium">No active residents assigned to this unit.</div>
@@ -822,7 +840,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                         {resident.id === unit.currentTenantId ? 'Primary Member' : 'Household Member'}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Link to={`/admin/tenants/${resident.id}`} className="text-emerald-600 hover:underline text-[10px] font-black uppercase">View Details</Link>
+                        {isAdmin ? (
+                          <Link to={`/admin/tenants/${resident.id}`} className="text-emerald-600 hover:underline text-[10px] font-black uppercase">View Details</Link>
+                        ) : (
+                          <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Member</span>
+                        )}
                       </td>
                     </tr>
                   )) : (

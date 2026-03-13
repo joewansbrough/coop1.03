@@ -67,7 +67,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
-                <i className="fa-solid fa-shield-halved"></i> Association Admin Hub
+                <i className="fa-solid fa-shield-halved"></i> Co-Operative Housing Association Admin Hub
               </div>
               <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome, Admin.</h1>
               <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
@@ -243,7 +243,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
-              <i className="fa-solid fa-house-circle-check"></i> Association Member Hub
+              <i className="fa-solid fa-house-circle-check"></i> Co-Operative Housing Association Member Hub
             </div>
             <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome home.</h1>
             <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
@@ -258,20 +258,47 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
               </Link>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-             <div className="grid grid-rows-2 gap-4">
-                <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
-                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">My Unit</p>
-                   <p className="text-2xl font-black">{userUnitId ? `Unit ${units.find(u => u.id === userUnitId)?.number}` : 'No Unit'}</p>
-                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Managed Asset</p>
-                </div>
-
-             </div>
-             <div className="flex h-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex h-full">
+                {userUnitId ? (
+                  <Link to={`/admin/units/${userUnitId}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center group">
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-4">My Residency</p>
+                    <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
+                      <i className="fa-solid fa-house-user text-2xl"></i>
+                    </div>
+                    <p className="text-3xl font-black mb-1">Unit {units.find(u => u.id === userUnitId)?.number}</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">
+                      {units.find(u => u.id === userUnitId)?.type} • Floor {units.find(u => u.id === userUnitId)?.floor}
+                    </p>
+                    <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        {userOpenRequests.length > 0 ? (
+                          <span className="text-amber-400">{userOpenRequests.length} Pending Requests</span>
+                        ) : (
+                          <span className="text-emerald-400">Residency Active</span>
+                        )}
+                      </p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">My Residency</p>
+                    <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
+                      <i className="fa-solid fa-house-slash text-2xl"></i>
+                    </div>
+                    <p className="text-xl font-black mb-1">No Unit</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Contact administration</p>
+                    <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TBD</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex h-full">
                 {nextMeeting ? (
-                  <Link to={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center">
+                  <Link to={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center group">
                     <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-4">Next Meeting</p>
-                    <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4">
+                    <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
                       <i className="fa-solid fa-calendar-day text-2xl"></i>
                     </div>
                     <p className="text-3xl font-black mb-1">{new Date(nextMeeting.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
@@ -286,8 +313,11 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
                     <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
                       <i className="fa-solid fa-calendar-xmark text-2xl"></i>
                     </div>
-                    <p className="text-xl font-black">TBD</p>
-                    <p className="text-[9px] font-bold text-slate-600 uppercase mt-1">No upcoming events</p>
+                    <p className="text-xl font-black mb-1">TBD</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">No upcoming events</p>
+                    <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TBD</p>
+                    </div>
                   </div>
                 )}
              </div>
