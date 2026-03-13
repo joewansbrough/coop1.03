@@ -50,12 +50,12 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
         </button>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-wrap gap-1">
+      <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl overflow-x-auto scrollbar-hide">
         {['All', 'Occupied', 'Vacant', 'Maintenance'].map(f => (
-          <button 
+          <button
             key={f}
             onClick={() => setFilter(f as any)}
-            className={`px-6 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${filter === f ? 'bg-slate-900 dark:bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'}`}
+            className={`flex-1 px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${filter === f ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
           >
             {f}
           </button>
