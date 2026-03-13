@@ -7,7 +7,6 @@ import { RequestStatus, Announcement, Unit, Tenant, MaintenanceRequest, CoopEven
 
 interface DashboardProps {
   isAdmin: boolean;
-  isGuest?: boolean;
   announcements: Announcement[];
   units: Unit[];
   tenants: Tenant[];
@@ -15,11 +14,11 @@ interface DashboardProps {
   events: CoopEvent[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announcements, units, tenants, requests, events }) => {
+const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, tenants, requests, events }) => {
   const navigate = useNavigate();
 
   // For members, only show stats for their unit (if they have one)
-  const userUnitId = (units.length > 0 && !isGuest) ? units[0].id : null;
+  const userUnitId = units.length > 0 ? units[0].id : null;
   
   const userOpenRequests = (userUnitId && Array.isArray(requests)) 
     ? requests.filter(r => r.unitId === userUnitId && r.status !== RequestStatus.COMPLETED && r.status !== RequestStatus.CANCELLED)
@@ -47,35 +46,93 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
   const upcomingEvents = events.slice(0, 3);
   const recentAnnouncements = announcements.slice(0, 2);
 
+  // Group units by floor for the map
+  const unitsByFloor = units.reduce((acc, unit) => {
+    const floor = unit.floor || 0;
+    if (!acc[floor]) acc[floor] = [];
+    acc[floor].push(unit);
+    return acc;
+  }, {} as Record<number, Unit[]>);
+
+  const sortedFloors = Object.keys(unitsByFloor)
+    .map(Number)
+    .sort((a, b) => a - b);
+
   if (isAdmin) {
     return (
       <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 transition-colors duration-200">
-        <header className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-[0.03] text-[12rem] pointer-events-none dark:text-white">
-            <i className="fa-solid fa-screwdriver-wrench"></i>
+        {/* Admin Welcome Header */}
+        <div className="relative overflow-hidden bg-slate-900 dark:bg-slate-950 rounded-[2.5rem] p-8 lg:p-12 text-white border border-white/5">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full -mr-40 -mt-40 blur-[100px] pointer-events-none"></div>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
+                <i className="fa-solid fa-shield-halved"></i> Association Admin Hub
+              </div>
+              <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome, Admin.</h1>
+              <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
+                Manage units, residents, and maintenance across your co-op community.
+              </p>
+              <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Link to="/maintenance" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95 shadow-lg shadow-emerald-500/20">
+                  <i className="fa-solid fa-wrench"></i> Service Queue
+                </Link>
+                <Link to="/admin/reports" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
+                  <i className="fa-solid fa-chart-line"></i> Financial Reports
+                </Link>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-rows-2 gap-4">
+                  <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">Managed Units</p>
+                    <p className="text-2xl font-black">{units.length}</p>
+                  </div>
+                  <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
+                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Residents</p>
+                    <p className="text-2xl font-black">{tenants.filter(t => t.status === 'Current').length}</p>
+                  </div>
+              </div>
+              <div className="flex h-full">
+                  {nextMeeting ? (
+                    <Link to={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center">
+                      <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-4">Next Meeting</p>
+                      <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4">
+                        <i className="fa-solid fa-calendar-day text-2xl"></i>
+                      </div>
+                      <p className="text-3xl font-black mb-1">{new Date(nextMeeting.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">{nextMeeting.title}</p>
+                    </Link>
+                  ) : (
+                    <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Next Meeting</p>
+                      <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
+                        <i className="fa-solid fa-calendar-xmark text-2xl"></i>
+                      </div>
+                      <p className="text-xl font-black">TBD</p>
+                    </div>
+                  )}
+              </div>
+            </div>
           </div>
-          <div className="relative z-10">
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Board Administration</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">Operational oversight and community management portal.</p>
-          </div>
-        </header>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <Link to="/admin/units" className="block hover:scale-[1.02] active:scale-95 transition-all group">
-            <StatCard label="Managed Units" value={units.length} icon="fa-building" color="bg-emerald-500" />
-            <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Inventory <i className="fa-solid fa-arrow-right ml-1"></i></div>
+            <StatCard label="Unit Inventory" value={units.length} icon="fa-building" color="bg-emerald-500" />
+            <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Manage All <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
           <Link to="/admin/tenants" className="block hover:scale-[1.02] active:scale-95 transition-all group">
-            <StatCard label="Resident Count" value={tenants.filter(t => t.status === 'Current').length} icon="fa-users" color="bg-blue-500" />
+            <StatCard label="Total Residents" value={tenants.filter(t => t.status === 'Current').length} icon="fa-users" color="bg-blue-500" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Directory <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
           <Link to="/maintenance" className="block hover:scale-[1.02] active:scale-95 transition-all group">
-            <StatCard label="Service Queue" value={pendingRequests} icon="fa-wrench" color="bg-amber-500" />
+            <StatCard label="Active Requests" value={pendingRequests} icon="fa-wrench" color="bg-amber-500" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Dispatch <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
-          <Link to="/documents" className="block hover:scale-[1.02] active:scale-95 transition-all group">
-            <StatCard label="Archived Docs" value={12} icon="fa-file-shield" color="bg-slate-700" />
-            <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Library <i className="fa-solid fa-arrow-right ml-1"></i></div>
+          <Link to="/admin/waitlist" className="block hover:scale-[1.02] active:scale-95 transition-all group">
+            <StatCard label="Waitlist Size" value={tenants.filter(t => t.status === 'Waitlist').length} icon="fa-clock-rotate-left" color="bg-purple-500" />
+            <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">View Queue <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
         </div>
 
@@ -92,22 +149,31 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
               </div>
             </div>
             {units.length > 0 ? (
-              <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3 lg:gap-5">
-                {[...units].sort((a, b) => {
-                  if (a.floor !== b.floor) return a.floor - b.floor;
-                  return a.number.localeCompare(b.number, undefined, { numeric: true });
-                }).map(unit => (
-                  <button
-                    key={unit.id}
-                    onClick={() => navigate(`/admin/units/${unit.id}`)}
-                    className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all hover:scale-110 active:scale-95 group relative ${
-                      unit.status === 'Occupied' ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-500 text-emerald-700 dark:text-emerald-400' :
-                      'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-600'
-                    }`}
-                  >
-                    <span className="text-xs lg:text-sm font-black">{unit.number}</span>
-                    <i className="fa-solid fa-house text-[8px] lg:text-[10px] mt-1 opacity-20 group-hover:opacity-100 transition-opacity"></i>
-                  </button>
+              <div className="space-y-10">
+                {sortedFloors.map(floor => (
+                  <div key={floor} className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                        Floor {floor}
+                      </div>
+                      <div className="h-px bg-slate-100 dark:bg-slate-800 flex-1"></div>
+                    </div>
+                    <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3 lg:gap-5">
+                      {unitsByFloor[floor].sort((a, b) => a.number.localeCompare(b.number)).map(unit => (
+                        <button
+                          key={unit.id}
+                          onClick={() => navigate(`/admin/units/${unit.id}`)}
+                          className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all hover:scale-110 active:scale-95 group relative shadow-sm ${
+                            unit.status === 'Occupied' ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-500 text-emerald-700 dark:text-emerald-400' :
+                            'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-600'
+                          }`}
+                        >
+                          <span className="text-xs lg:text-sm font-black">{unit.number}</span>
+                          <i className="fa-solid fa-house text-[8px] lg:text-[10px] mt-1 opacity-20 group-hover:opacity-100 transition-opacity"></i>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (
@@ -166,52 +232,6 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
             </div>
           </div>
         </div>
-
-        {/* Live Dispatch Feed */}
-        <section className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden">
-          <div className="p-6 border-b border-slate-50 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-1.5 h-6 bg-amber-500 rounded-full"></div>
-              <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Maintenance Dispatch Feed</h3>
-            </div>
-            <Link to="/maintenance" className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hover:underline">View Full Queue</Link>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {requests.slice(0, 6).map(req => {
-                const unit = units.find(u => u.id === req.unitId);
-                const lastNote = req.notes && req.notes.length > 0 ? req.notes[req.notes.length - 1] : null;
-                return (
-                  <Link 
-                    to={`/maintenance/${req.id}`} 
-                    key={req.id} 
-                    className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-transparent hover:border-amber-500/50 transition-all group"
-                  >
-                    <div className="flex justify-between items-start mb-4">
-                      <span className="text-[10px] font-black px-2.5 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-100 dark:border-white/5 text-slate-500 uppercase">Unit {unit?.number || '??'}</span>
-                      <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase ${
-                        req.status === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                        req.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                        'bg-emerald-100 text-emerald-700'
-                      }`}>
-                        {req.status}
-                      </span>
-                    </div>
-                    <h4 className="text-sm font-black text-slate-800 dark:text-white mb-2 group-hover:text-amber-600 transition-colors line-clamp-1">{req.title}</h4>
-                    {lastNote ? (
-                      <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-white/5">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Latest Update</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 italic line-clamp-2">"{lastNote.content}"</p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-400 italic mt-4">No activity logged yet.</p>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </section>
       </div>
     );
   }
@@ -223,40 +243,29 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest = false, announc
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
-              <i className="fa-solid fa-house-circle-check"></i> {isGuest ? 'Guest Access Mode' : 'Association Member Hub'}
+              <i className="fa-solid fa-house-circle-check"></i> Association Member Hub
             </div>
-            <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">{isGuest ? 'Explore CoopConnect.' : 'Welcome home.'}</h1>
+            <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome home.</h1>
             <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
-              {isGuest ? 'Browse association activities, review community policies, and see upcoming events.' : 'Streamline your co-op experience: report issues, review policies, and join community meetings.'}
+              Streamline your co-op experience: report issues, review policies, and join community meetings.
             </p>
-            {!isGuest && (
-              <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link to="/maintenance" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95">
-                  <i className="fa-solid fa-wrench"></i> Report Issue
-                </Link>
-                <Link to="/documents" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
-                  <i className="fa-solid fa-book-open"></i> Rules & Bylaws
-                </Link>
-              </div>
-            )}
-            {isGuest && (
-              <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link to="/maintenance" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95">
-                  <i className="fa-solid fa-magnifying-glass"></i> View Maintenance
-                </Link>
-                <Link to="/calendar" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
-                  <i className="fa-solid fa-calendar"></i> Events Calendar
-                </Link>
-              </div>
-            )}
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <Link to="/maintenance" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95">
+                <i className="fa-solid fa-wrench"></i> Report Issue
+              </Link>
+              <Link to="/documents" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
+                <i className="fa-solid fa-book-open"></i> Rules & Bylaws
+              </Link>
+            </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-             <div className="grid grid-rows-1 gap-4">
+             <div className="grid grid-rows-2 gap-4">
                 <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
-                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">System Asset</p>
-                   <p className="text-2xl font-black">{isGuest ? 'Unit G-01' : (userUnitId ? `Unit ${units.find(u => u.id === userUnitId)?.number}` : 'No Unit')}</p>
-                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Guest Viewpoint</p>
+                   <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">My Unit</p>
+                   <p className="text-2xl font-black">{userUnitId ? `Unit ${units.find(u => u.id === userUnitId)?.number}` : 'No Unit'}</p>
+                   <p className="text-[9px] text-slate-500 font-bold uppercase mt-1">Managed Asset</p>
                 </div>
+
              </div>
              <div className="flex h-full">
                 {nextMeeting ? (

@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { geminiService } from '../services/geminiService';
 import { Document } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import FilterBar from '../components/FilterBar';
 
 const Documents: React.FC<{ 
   isAdmin: boolean, 
@@ -11,6 +12,7 @@ const Documents: React.FC<{
   setDocuments: React.Dispatch<React.SetStateAction<Document[]>> 
 }> = ({ isAdmin, isGuest = false, documents, setDocuments }) => {
   const [filter, setFilter] = useState('All');
+  const [search, setSearch] = useState('');
   const [question, setQuestion] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,11 +34,12 @@ const Documents: React.FC<{
 
   const categories = ['All', 'Minutes', 'Policy', 'Financial', 'Bylaws', 'Newsletters'];
   
-  // Filtering logic that supports both categories and tags
+  // Filtering logic that supports categories, tags, and search
   const filteredDocs = !Array.isArray(documents) ? [] : documents.filter(d => {
-    if (filter === 'All') return true;
-    if (categories.includes(filter)) return d.category === filter;
-    return d.tags?.includes(filter);
+    const matchesFilter = filter === 'All' || d.category === filter || d.tags?.includes(filter);
+    const matchesSearch = d.title.toLowerCase().includes(search.toLowerCase()) || 
+                         d.tags?.some(t => t.toLowerCase().includes(search.toLowerCase()));
+    return matchesFilter && matchesSearch;
   });
 
   const handleTagClick = (tag: string, e: React.MouseEvent) => {
@@ -407,21 +410,14 @@ const Documents: React.FC<{
           </div>
         )}
 
-        <div className="flex overflow-x-auto gap-2 scrollbar-hide">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilter(cat)}
-              className={`whitespace-nowrap px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                filter === cat 
-                  ? 'bg-slate-900 dark:bg-emerald-600 text-white border-slate-900 dark:border-emerald-600' 
-                  : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-white/5 hover:border-emerald-300 hover:text-emerald-600'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        <FilterBar 
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search by title or tags..."
+          filter={filter}
+          onFilterChange={setFilter}
+          filterOptions={categories}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredDocs.map(doc => (

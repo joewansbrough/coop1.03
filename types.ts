@@ -27,6 +27,7 @@ export interface TenantHistory {
   tenantId: string;
   unitId: string;
   unit?: Unit;
+  tenant?: Tenant;
   startDate: string;
   endDate?: string;
   moveReason?: string;
@@ -61,7 +62,6 @@ export interface Tenant {
   history?: TenantHistory[];
   balance?: number;
   shareCapital?: number;
-  residencyHistory?: any[];
   split?: any;
   createdAt?: string;
   updatedAt?: string;

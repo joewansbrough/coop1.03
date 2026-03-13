@@ -157,21 +157,75 @@ async function main() {
 
   console.log('Seeding maintenance requests...');
   const maintenanceData = [
-    { title: 'Leaking kitchen faucet', description: 'The kitchen faucet has been dripping constantly for the past week. Water is pooling under the sink cabinet.', status: 'Pending', priority: 'Medium', category: 'Plumbing', unitNumber: '101', requestedBy: 'margaret.chen@email.com', createdAt: new Date('2026-02-28') },
-    { title: 'Bathroom exhaust fan not working', description: 'The exhaust fan in the main bathroom stopped working. There is condensation building up on the ceiling.', status: 'In Progress', priority: 'Medium', category: 'Electrical', unitNumber: '102', requestedBy: 'david.okafor@email.com', createdAt: new Date('2026-02-20') },
+    { 
+      title: 'Leaking kitchen faucet', 
+      description: 'The kitchen faucet has been dripping constantly for the past week. Water is pooling under the sink cabinet.', 
+      status: 'Pending', 
+      priority: 'Medium', 
+      category: 'Plumbing', 
+      unitNumber: '101', 
+      requestedBy: 'margaret.chen@email.com', 
+      createdAt: new Date('2026-02-28'),
+      notes: [
+        { id: 'n1', author: 'Member Note', date: '2026-03-01T10:00:00Z', content: 'Drip is getting worse, please prioritize.' },
+        { id: 'n2', author: 'Board Admin', date: '2026-03-02T09:00:00Z', content: 'Maintenance committee notified. Plumber scheduled for Thursday.' }
+      ]
+    },
+    { 
+      title: 'Bathroom exhaust fan not working', 
+      description: 'The exhaust fan in the main bathroom stopped working. There is condensation building up on the ceiling.', 
+      status: 'In Progress', 
+      priority: 'Medium', 
+      category: 'Electrical', 
+      unitNumber: '102', 
+      requestedBy: 'david.okafor@email.com', 
+      createdAt: new Date('2026-02-20'),
+      notes: [
+        { id: 'n3', author: 'Board Admin', date: '2026-02-22T14:00:00Z', content: 'Contractor assigned. Part ordered.' }
+      ]
+    },
+    { 
+      title: 'Dishwasher not draining', 
+      description: 'The dishwasher fills with water but does not drain after cycle completes. Standing water remains at bottom.', 
+      status: 'Completed', 
+      priority: 'Medium', 
+      category: 'Appliance', 
+      unitNumber: '104', 
+      requestedBy: 'james.nakamura@email.com', 
+      createdAt: new Date('2026-01-15'),
+      expenses: [
+        { id: 'ex1', item: 'Drain pump replacement', cost: 145.50, date: '2026-01-20' },
+        { id: 'ex2', item: 'Labor - 1.5 hours', cost: 120.00, date: '2026-01-20' }
+      ],
+      notes: [
+        { id: 'n4', author: 'Board Admin', date: '2026-01-20T16:00:00Z', content: 'Fixed. Pump was clogged with debris.' }
+      ]
+    },
     { title: 'Broken window latch - balcony door', description: 'The latch on the balcony sliding door is broken. The door does not lock properly which is a security concern.', status: 'Pending', priority: 'High', category: 'Structural', unitNumber: '103', requestedBy: 'robert.tremblay@email.com', createdAt: new Date('2026-03-01') },
-    { title: 'Dishwasher not draining', description: 'The dishwasher fills with water but does not drain after cycle completes. Standing water remains at bottom.', status: 'Completed', priority: 'Medium', category: 'Appliance', unitNumber: '104', requestedBy: 'james.nakamura@email.com', createdAt: new Date('2026-01-15') },
     { title: 'Heating unit making loud noise', description: 'The baseboard heater in the living room is making a loud banging noise when it turns on. Happens every morning.', status: 'In Progress', priority: 'Low', category: 'HVAC', unitNumber: '106', requestedBy: 'carlos.rivera@email.com', createdAt: new Date('2026-02-10') },
     { title: 'Water damage on ceiling', description: 'Brown water stain appearing on the bedroom ceiling. Appears to be coming from unit above. Getting larger over time.', status: 'Pending', priority: 'Urgent', category: 'Structural', unitNumber: '201', requestedBy: 'aisha.mohammed@email.com', createdAt: new Date('2026-03-05') },
     { title: 'Unit 204 full renovation', description: 'Unit undergoing full renovation following previous tenant departure. Flooring, paint, kitchen fixtures all being replaced.', status: 'In Progress', priority: 'Medium', category: 'Structural', unitNumber: '204', requestedBy: null, createdAt: new Date('2026-02-01') },
     { title: 'Stove burner not igniting', description: 'Front left burner on gas stove does not ignite. Clicking sound present but no flame. Other burners work fine.', status: 'Pending', priority: 'Medium', category: 'Appliance', unitNumber: '203', requestedBy: 'wei.liu@email.com', createdAt: new Date('2026-03-07') },
     { title: 'Exterior parking lot light out', description: 'The lamp post nearest to stalls 12-15 is not working. Area is very dark at night, safety concern for residents.', status: 'Pending', priority: 'High', category: 'Electrical', unitNumber: '301', requestedBy: 'george.papadopoulos@email.com', createdAt: new Date('2026-03-03') },
-    { title: 'Bathroom tiles cracked', description: 'Several floor tiles in the main bathroom have cracked. One tile has a sharp edge that is a safety hazard.', status: 'Completed', priority: 'High', category: 'Structural', unitNumber: '302', requestedBy: 'michael.johansson@email.com', createdAt: new Date('2026-01-20') },
+    { title: 'Bathroom tiles cracked', description: 'Several floor tiles in the main bathroom have cracked. One tile has a sharp edge that is a safety hazard.', status: 'Completed', priority: 'High', category: 'Structural', unitNumber: '302', requestedBy: 'michael.johansson@email.com', createdAt: new Date('2026-01-20'), expenses: [{ id: 'ex3', item: 'Tile repair kit', cost: 35.99, date: '2026-01-25' }] },
     { title: 'Intercom not working', description: 'The intercom handset in the unit does not ring when visitors buzz from the front door. Cannot let guests in.', status: 'Pending', priority: 'Medium', category: 'Electrical', unitNumber: '303', requestedBy: 'yuki.tanaka@email.com', createdAt: new Date('2026-03-08') },
     { title: 'Hallway carpet damage', description: 'Large section of hallway carpet near Unit 305 has come loose and is a tripping hazard for all residents on floor 3.', status: 'In Progress', priority: 'High', category: 'Safety', unitNumber: '305', requestedBy: null, createdAt: new Date('2026-02-25') },
   ];
   for (const m of maintenanceData) {
-    await prisma.maintenanceRequest.create({ data: { title: m.title, description: m.description, status: m.status, priority: m.priority, category: m.category, unitId: unitMap[m.unitNumber], requestedBy: m.requestedBy, createdAt: m.createdAt } });
+    await prisma.maintenanceRequest.create({ 
+      data: { 
+        title: m.title, 
+        description: m.description, 
+        status: m.status, 
+        priority: m.priority, 
+        category: m.category, 
+        unitId: unitMap[m.unitNumber], 
+        requestedBy: m.requestedBy, 
+        createdAt: m.createdAt,
+        notes: m.notes || null,
+        expenses: m.expenses || null
+      } 
+    });
   }
 
   console.log('Seeding announcements...');

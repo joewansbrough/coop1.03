@@ -15,21 +15,45 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   const { unitId } = useParams<{ unitId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const refreshData = async () => {
+    const [unitsRes, tenantsRes] = await Promise.all([
+      fetch('/api/units'),
+      fetch('/api/tenants')
+    ]);
+    const [freshUnits, freshTenants] = await Promise.all([
+      unitsRes.json(),
+      tenantsRes.json()
+    ]);
+    setUnits(freshUnits);
+    setTenants(freshTenants);
+  };
   const unit = units.find(u => u.id === unitId);
-  const currentTenant = tenants.find(t => t.id === unit?.currentTenantId);
+  const currentResidents = tenants.filter(t => t.unitId === unitId && t.status === 'Current');
+  const primaryResident = currentResidents.find(t => t.id === unit?.currentTenantId) || currentResidents[0];
   
-  // Calculate full unit history from all tenants' residency records
-  const unitHistory = tenants.flatMap(t => 
-    (t.residencyHistory || [])
-      .filter(rh => rh.unitId === unitId)
-      .map(rh => ({
-        tenant: t,
-        startDate: rh.startDate,
-        endDate: rh.endDate,
-        moveReason: rh.moveReason,
-        isCurrent: rh.isCurrent
-      }))
-  ).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+  // Calculate full unit history, ensuring current residents are ALWAYS included at the top
+  const historicalRecords = (unit?.occupancyHistory || [])
+    .filter(rh => rh.endDate) // Past records only from history
+    .map(rh => ({
+      tenant: rh.tenant || tenants.find(t => t.id === rh.tenantId),
+      startDate: rh.startDate,
+      endDate: rh.endDate,
+      moveReason: rh.moveReason,
+      isCurrent: false
+    }));
+
+  const activeRecords = currentResidents.map(resident => ({
+    tenant: resident,
+    startDate: resident.startDate,
+    endDate: undefined,
+    moveReason: 'Current Residency',
+    isCurrent: true
+  }));
+
+  const unitHistory = [...activeRecords, ...historicalRecords].sort((a, b) => 
+    new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+  );
 
   const requests = allRequests.filter(r => r.unitId === unitId);
   
@@ -51,8 +75,8 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   const [selectedTargetUnitId, setSelectedTargetUnitId] = useState('');
 
   const handleMoveOut = async () => {
-    console.log("handleMoveOut triggered", { unit, currentTenant });
-    if (!unit || !currentTenant) return;
+    console.log("handleMoveOut triggered", { unit, primaryResident });
+    if (!unit) return;
     
     const moveOutDate = new Date().toISOString().split('T')[0];
 
@@ -60,19 +84,22 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
       await fetch(`/api/units/${unit.id}/move-out`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId: currentTenant.id, date: moveOutDate, reason: 'Voluntary Departure' })
+        body: JSON.stringify({ date: moveOutDate, reason: 'Voluntary Household Departure' })
       });
 
-      // Update local state for immediate feedback
+      // Update local state for ALL residents of the unit
+      const residentsToMoveOut = tenants.filter(t => t.unitId === unit.id);
+      
       const updatedTenants = tenants.map(t => {
-        if (t.id === currentTenant.id) {
+        if (residentsToMoveOut.some(r => r.id === t.id)) {
           return {
             ...t,
             status: 'Past' as const,
             endDate: moveOutDate,
-            residencyHistory: (t.residencyHistory || []).map(rh => 
-              rh.unitId === unit.id && rh.isCurrent 
-                ? { ...rh, isCurrent: false, endDate: moveOutDate } 
+            unitId: null,
+            history: (t.history || []).map(rh => 
+              rh.unitId === unit.id && !rh.endDate 
+                ? { ...rh, endDate: moveOutDate } 
                 : rh
             )
           };
@@ -91,10 +118,9 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
         return u;
       });
 
-      setTenants(updatedTenants);
-      setUnits(updatedUnits);
+      await refreshData();
       setShowMoveOutModal(false);
-      setNotification({ message: `Move-out processed successfully for ${currentTenant.firstName} ${currentTenant.lastName}.`, type: 'success' });
+      setNotification({ message: `Move-out processed for entire household (${residentsToMoveOut.length} members).`, type: 'success' });
       setTimeout(() => setNotification(null), 5000);
     } catch (err) {
       console.error(err);
@@ -122,17 +148,23 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
       // Update local state
       const updatedTenants = tenants.map(t => {
         if (t.id === selectedNewTenantId) {
-          let history = t.residencyHistory || [];
+          let history = t.history || [];
           if (isInternalMove && previousUnitId) {
             history = history.map(rh => 
-              rh.unitId === previousUnitId && rh.isCurrent 
-                ? { ...rh, isCurrent: false, endDate: moveInDate } 
+              rh.unitId === previousUnitId && !rh.endDate 
+                ? { ...rh, endDate: moveInDate } 
                 : rh
             );
           }
           const newHistory = [
             ...history,
-            { unitId: unit.id, unitNumber: unit.number, startDate: moveInDate, isCurrent: true }
+            { 
+              id: `h${Date.now()}`, 
+              tenantId: t.id, 
+              unitId: unit.id, 
+              unit: { number: unit.number }, 
+              startDate: moveInDate 
+            }
           ];
           return {
             ...t,
@@ -140,7 +172,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
             status: 'Current' as const,
             startDate: moveInDate,
             endDate: undefined,
-            residencyHistory: newHistory
+            history: newHistory
           };
         }
         return t;
@@ -164,8 +196,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
         return u;
       });
 
-      setTenants(updatedTenants);
-      setUnits(updatedUnits);
+      await refreshData();
       setShowMoveInModal(false);
       setSelectedNewTenantId('');
       
@@ -182,8 +213,8 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
   };
 
   const handleTransfer = async () => {
-    console.log("handleTransfer triggered", { unit, currentTenant, selectedTargetUnitId });
-    if (!unit || !currentTenant || !selectedTargetUnitId) return;
+    console.log("handleTransfer triggered", { unit, primaryResident, selectedTargetUnitId });
+    if (!unit || !selectedTargetUnitId) return;
     const targetUnit = units.find(u => u.id === selectedTargetUnitId);
     if (!targetUnit) return;
 
@@ -193,26 +224,34 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
       await fetch(`/api/units/${unit.id}/transfer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tenantId: currentTenant.id, fromUnitId: unit.id, toUnitId: targetUnit.id, date: transferDate })
+        body: JSON.stringify({ fromUnitId: unit.id, toUnitId: targetUnit.id, date: transferDate })
       });
 
-      // Update local state
+      // Update local state for ALL residents of the unit
+      const residentsToMove = tenants.filter(t => t.unitId === unit.id);
+
       const updatedTenants = tenants.map(t => {
-        if (t.id === currentTenant.id) {
-          const archivedHistory = (t.residencyHistory || []).map(rh => 
-            rh.unitId === unit.id && rh.isCurrent 
-              ? { ...rh, isCurrent: false, endDate: transferDate } 
+        if (residentsToMove.some(r => r.id === t.id)) {
+          const archivedHistory = (t.history || []).map(rh => 
+            rh.unitId === unit.id && !rh.endDate 
+              ? { ...rh, endDate: transferDate } 
               : rh
           );
           const newHistory = [
             ...archivedHistory,
-            { unitId: targetUnit.id, unitNumber: targetUnit.number, startDate: transferDate, isCurrent: true }
+            { 
+              id: `h${Date.now()}-${t.id}`, 
+              tenantId: t.id, 
+              unitId: targetUnit.id, 
+              unit: { number: targetUnit.number }, 
+              startDate: transferDate 
+            }
           ];
           return {
             ...t,
             unitId: targetUnit.id,
             startDate: transferDate,
-            residencyHistory: newHistory
+            history: newHistory
           };
         }
         return t;
@@ -223,16 +262,15 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
           return { ...u, status: 'Vacant' as const, currentTenantId: undefined };
         }
         if (u.id === targetUnit.id) {
-          return { ...u, status: 'Occupied' as const, currentTenantId: currentTenant.id };
+          return { ...u, status: 'Occupied' as const, currentTenantId: residentsToMove[0]?.id };
         }
         return u;
       });
 
-      setTenants(updatedTenants);
-      setUnits(updatedUnits);
+      await refreshData();
       setShowTransferModal(false);
       setSelectedTargetUnitId('');
-      setNotification({ message: `Internal transfer successful. ${currentTenant.firstName} has moved to Unit ${targetUnit.number}.`, type: 'success' });
+      setNotification({ message: `Internal transfer successful. Household (${residentsToMove.length} members) has moved to Unit ${targetUnit.number}.`, type: 'success' });
       setTimeout(() => setNotification(null), 5000);
       navigate(`/admin/units/${targetUnit.id}`);
     } catch (err) {
@@ -256,7 +294,38 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
     <div className="space-y-4">
       <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest px-2">{title}</h3>
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
-        <table className="w-full text-left">
+
+        {/* Mobile: Cards */}
+        <div className="sm:hidden divide-y divide-slate-100 dark:divide-white/5">
+          {requestList.length > 0 ? requestList.map(req => (
+            <div
+              key={req.id}
+              className="p-4 active:bg-slate-50 dark:active:bg-white/5 transition-colors"
+              onClick={() => navigate(`/admin/maintenance/${req.id}`)}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex-1 line-clamp-2">{req.description}</p>
+                <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase shrink-0 whitespace-nowrap ${
+                  req.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                  req.status === RequestStatus.PENDING ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                }`}>
+                  {req.status}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mt-1.5">
+                <span className="text-[9px] font-black px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded uppercase">{req.category[0]}</span>
+                <span className="text-slate-300 dark:text-slate-600">·</span>
+                <span className="text-[10px] font-bold text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+          )) : (
+            <div className="px-6 py-12 text-center text-slate-400 text-xs italic font-medium">No records found in this section.</div>
+          )}
+        </div>
+
+        {/* Desktop: Table */}
+        <table className="hidden sm:table w-full text-left">
           <thead>
             <tr className="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-white/5">
               <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest w-32">Date</th>
@@ -267,8 +336,8 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
           </thead>
           <tbody className="divide-y divide-slate-50 dark:divide-white/5">
             {requestList.length > 0 ? requestList.map(req => (
-              <tr 
-                key={req.id} 
+              <tr
+                key={req.id}
                 onClick={() => navigate(`/admin/maintenance/${req.id}`)}
                 className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
               >
@@ -484,38 +553,47 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
             <div className="lg:col-span-2 space-y-8">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                  <i className="fa-solid fa-user-group text-emerald-500"></i> Current Resident Detail
+                  <i className="fa-solid fa-user-group text-emerald-500"></i> Household Residents ({currentResidents.length})
                 </h3>
-                {currentTenant ? (
-                  <div className="flex flex-col md:flex-row gap-8 items-start">
-                    <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-300 text-4xl shrink-0 border border-slate-200 dark:border-white/5">
-                      <i className="fa-solid fa-user"></i>
-                    </div>
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
-                      <Link to={`/admin/tenants/${currentTenant.id}`} className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-transparent hover:border-emerald-500 transition-all group">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Full Member Name</p>
-                        <p className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600">{currentTenant.firstName} {currentTenant.lastName} <i className="fa-solid fa-arrow-up-right-from-square text-xs ml-1 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
-                      </Link>
-                      <div className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl flex justify-between items-center">
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Move-in Date</p>
-                          <p className="text-slate-700 dark:text-slate-300 font-bold">{new Date(currentTenant.startDate).toLocaleDateString()}</p>
+                {currentResidents.length > 0 ? (
+                  <div className="space-y-6">
+                    {currentResidents.map(resident => (
+                      <div key={resident.id} className="flex flex-col md:flex-row gap-6 items-start p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-transparent hover:border-emerald-500/30 transition-all group">
+                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-300 text-2xl shrink-0 border border-slate-200 dark:border-white/5">
+                          {resident.id === unit.currentTenantId ? <i className="fa-solid fa-user-tie text-emerald-500"></i> : <i className="fa-solid fa-user"></i>}
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          <button 
-                            onClick={() => setShowTransferModal(true)}
-                            className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95"
-                          >
-                            Transfer to Unit
-                          </button>
-                          <button 
-                            onClick={() => setShowMoveOutModal(true)}
-                            className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30 active:scale-95"
-                          >
-                            Process Move-Out
-                          </button>
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Link to={`/admin/tenants/${resident.id}`} className="block">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                                {resident.id === unit.currentTenantId ? 'Primary Member' : 'Household Member'}
+                              </p>
+                              <p className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">
+                                {resident.firstName} {resident.lastName} 
+                                <i className="fa-solid fa-arrow-up-right-from-square text-xs ml-2 opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                              </p>
+                            </Link>
+                          </div>
+                          <div className="flex flex-col justify-center">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resident Since</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300 font-bold">{new Date(resident.startDate).toLocaleDateString()}</p>
+                          </div>
                         </div>
                       </div>
+                    ))}
+                    <div className="flex gap-3 pt-4">
+                      <button 
+                        onClick={() => setShowTransferModal(true)}
+                        className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95 flex items-center gap-2"
+                      >
+                        <i className="fa-solid fa-right-left"></i> Transfer Household
+                      </button>
+                      <button 
+                        onClick={() => setShowMoveOutModal(true)}
+                        className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30 active:scale-95 flex items-center gap-2"
+                      >
+                        <i className="fa-solid fa-user-minus"></i> Process Move-Out
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -525,10 +603,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                     </div>
                     <p className="text-slate-500 dark:text-slate-400 font-bold mb-6">This unit is currently vacant.</p>
                     <button 
-                      onClick={() => {
-                        console.log("Move-In button clicked (Overview)");
-                        setShowMoveInModal(true);
-                      }}
+                      onClick={() => setShowMoveInModal(true)}
                       className="bg-emerald-600 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                       <i className="fa-solid fa-plus"></i> Process Move-In
@@ -567,54 +642,90 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
 
         {activeTab === 'history' && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
-             <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-slate-50/50 dark:bg-slate-950/30 border-b border-slate-100 dark:border-white/5">
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Term</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Resident Name</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Move-Out Date</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Reason for Moving</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Profile</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                  {unitHistory.length > 0 ? unitHistory.map((record, idx) => (
-                    <tr key={`${record.tenant.id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
-                      <td className="px-6 py-4 text-xs font-bold text-slate-500">
-                        {new Date(record.startDate).toLocaleDateString()} - {record.endDate ? new Date(record.endDate).toLocaleDateString() : 'Present'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase ${record.isCurrent ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
-                            {record.tenant.firstName[0]}
-                          </div>
-                          <span className="text-sm font-black text-slate-800 dark:text-slate-200">{record.tenant.firstName} {record.tenant.lastName}</span>
-                          {record.isCurrent && (
-                            <span className="text-[8px] font-black px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded uppercase tracking-tighter">Current</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-bold text-slate-600 dark:text-slate-400">
-                        {record.endDate ? new Date(record.endDate).toLocaleDateString() : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-medium text-slate-500 italic">
-                        {record.moveReason || 'Not recorded'}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Link to={`/admin/tenants/${record.tenant.id}`} className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 text-[10px] font-black uppercase tracking-widest flex items-center justify-end gap-1">
-                          View Profile <i className="fa-solid fa-arrow-right text-[8px]"></i>
-                        </Link>
-                      </td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-xs italic font-medium">
-                        No residency history found for this unit.
-                      </td>
-                    </tr>
+
+            {/* Mobile: Cards */}
+            <div className="sm:hidden divide-y divide-slate-100 dark:divide-white/5">
+              {unitHistory.length > 0 ? unitHistory.map((record, idx) => (
+                <div key={`${record.tenant.id}-${idx}`} className="p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase shrink-0 ${record.isCurrent ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+                        {record.tenant.firstName[0]}
+                      </div>
+                      <span className="text-sm font-black text-slate-800 dark:text-slate-200">{record.tenant.firstName} {record.tenant.lastName}</span>
+                      {record.isCurrent && (
+                        <span className="text-[8px] font-black px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded uppercase">Current</span>
+                      )}
+                    </div>
+                    <Link
+                      to={`/admin/tenants/${record.tenant.id}`}
+                      className="text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase shrink-0"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      Profile <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                    </Link>
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 pl-10">
+                    {new Date(record.startDate).toLocaleDateString()} — {record.endDate ? new Date(record.endDate).toLocaleDateString() : 'Present'}
+                  </p>
+                  {record.moveReason && record.moveReason !== 'Current Residency' && (
+                    <p className="text-xs text-slate-400 italic pl-10">{record.moveReason}</p>
                   )}
-                </tbody>
-             </table>
+                </div>
+              )) : (
+                <div className="px-6 py-12 text-center text-slate-400 text-xs italic font-medium">No residency history found for this unit.</div>
+              )}
+            </div>
+
+            {/* Desktop: Table */}
+            <table className="hidden sm:table w-full text-left">
+              <thead>
+                <tr className="bg-slate-50/50 dark:bg-slate-950/30 border-b border-slate-100 dark:border-white/5">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Term</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Resident Name</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Move-Out Date</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Reason for Moving</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Profile</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+                {unitHistory.length > 0 ? unitHistory.map((record, idx) => (
+                  <tr key={`${record.tenant.id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                    <td className="px-6 py-4 text-xs font-bold text-slate-500">
+                      {new Date(record.startDate).toLocaleDateString()} - {record.endDate ? new Date(record.endDate).toLocaleDateString() : 'Present'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase ${record.isCurrent ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+                          {record.tenant.firstName[0]}
+                        </div>
+                        <span className="text-sm font-black text-slate-800 dark:text-slate-200">{record.tenant.firstName} {record.tenant.lastName}</span>
+                        {record.isCurrent && (
+                          <span className="text-[8px] font-black px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded uppercase tracking-tighter">Current</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-600 dark:text-slate-400">
+                      {record.endDate ? new Date(record.endDate).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 text-xs font-medium text-slate-500 italic">
+                      {record.moveReason || 'Not recorded'}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link to={`/admin/tenants/${record.tenant.id}`} className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 text-[10px] font-black uppercase tracking-widest flex items-center justify-end gap-1">
+                        View Profile <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                      </Link>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-xs italic font-medium">
+                      No residency history found for this unit.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         )}
 
@@ -637,62 +748,92 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
         {activeTab === 'occupancy' && (
           <div className="space-y-8">
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
-               <div className="p-6 border-b border-slate-50 dark:border-white/5 flex justify-between items-center">
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Current Residents</h3>
-                  {unit.status === 'Occupied' && (
-                    <div className="flex flex-wrap gap-2">
-                      <button 
-                        onClick={() => setShowTransferModal(true)}
-                        className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95"
-                      >
-                        Internal Transfer
-                      </button>
-                      <button 
-                        onClick={() => setShowMoveOutModal(true)}
-                        className="bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30 active:scale-95"
-                      >
-                        Process Move-Out
-                      </button>
-                    </div>
-                  )}
-                  {unit.status !== 'Occupied' && (
-                    <button 
-                      onClick={() => setShowMoveInModal(true)}
-                      className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+              <div className="p-4 sm:p-6 border-b border-slate-50 dark:border-white/5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Household Members ({currentResidents.length})</h3>
+                {unit.status === 'Occupied' && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setShowTransferModal(true)}
+                      className="flex-1 sm:flex-none bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95"
                     >
-                      <i className="fa-solid fa-plus"></i> Process Move-In
+                      Internal Transfer
                     </button>
-                  )}
-               </div>
-               <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-slate-50/50 dark:bg-slate-950/30">
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Member Name</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
-                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Profile</th>
+                    <button
+                      onClick={() => setShowMoveOutModal(true)}
+                      className="flex-1 sm:flex-none bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all border border-rose-100 dark:border-rose-900/30 active:scale-95"
+                    >
+                      Process Move-Out
+                    </button>
+                  </div>
+                )}
+                {unit.status !== 'Occupied' && (
+                  <button
+                    onClick={() => setShowMoveInModal(true)}
+                    className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-plus"></i> Process Move-In
+                  </button>
+                )}
+              </div>
+
+              {/* Mobile: Cards */}
+              <div className="sm:hidden divide-y divide-slate-100 dark:divide-white/5">
+                {currentResidents.length > 0 ? currentResidents.map(resident => (
+                  <div key={resident.id} className="flex items-center justify-between p-4 gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs uppercase shrink-0 ${resident.id === unit.currentTenantId ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+                        {resident.firstName[0]}
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-200">{resident.firstName} {resident.lastName}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase">
+                          {resident.id === unit.currentTenantId ? 'Primary Member' : 'Household Member'}
+                        </p>
+                      </div>
+                    </div>
+                    <Link to={`/admin/tenants/${resident.id}`} className="text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase shrink-0">
+                      View <i className="fa-solid fa-arrow-right text-[8px]"></i>
+                    </Link>
+                  </div>
+                )) : (
+                  <div className="px-6 py-12 text-center text-slate-400 text-xs italic font-medium">No active residents assigned to this unit.</div>
+                )}
+              </div>
+
+              {/* Desktop: Table */}
+              <table className="hidden sm:table w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50/50 dark:bg-slate-950/30">
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Member Name</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Profile</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+                  {currentResidents.length > 0 ? currentResidents.map(resident => (
+                    <tr key={resident.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                      <td className="px-6 py-4 flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase ${resident.id === unit.currentTenantId ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500'}`}>
+                          {resident.firstName[0]}
+                        </div>
+                        <span className="text-sm font-black text-slate-800 dark:text-slate-200">{resident.firstName} {resident.lastName}</span>
+                      </td>
+                      <td className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">
+                        {resident.id === unit.currentTenantId ? 'Primary Member' : 'Household Member'}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link to={`/admin/tenants/${resident.id}`} className="text-emerald-600 hover:underline text-[10px] font-black uppercase">View Details</Link>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                    {currentTenant ? (
-                      <tr className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                        <td className="px-6 py-4 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-black text-xs uppercase">{currentTenant.firstName[0]}</div>
-                          <span className="text-sm font-black text-slate-800 dark:text-slate-200">{currentTenant.firstName} {currentTenant.lastName}</span>
-                        </td>
-                        <td className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Primary Member</td>
-                        <td className="px-6 py-4 text-right">
-                          <Link to={`/admin/tenants/${currentTenant.id}`} className="text-emerald-600 hover:underline text-[10px] font-black uppercase">View Details</Link>
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr>
-                        <td colSpan={3} className="px-6 py-12 text-center text-slate-400 text-xs italic font-medium">
-                          No active residents assigned to this unit.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-               </table>
+                  )) : (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-12 text-center text-slate-400 text-xs italic font-medium">
+                        No active residents assigned to this unit.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -714,7 +855,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
                 </div>
                 <div>
                   <p className="text-sm font-bold text-rose-900 dark:text-rose-300">Confirm Move-Out</p>
-                  <p className="text-xs text-rose-600 dark:text-rose-500 font-medium">You are about to move out {currentTenant?.firstName} {currentTenant?.lastName} from Unit {unit.number}.</p>
+                  <p className="text-xs text-rose-600 dark:text-rose-500 font-medium">You are about to move out {primaryResident?.firstName} {primaryResident?.lastName} from Unit {unit.number}.</p>
                 </div>
               </div>
 
@@ -759,7 +900,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ units, setUnits, tenants, setTe
             <div className="space-y-6">
               <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Transferring Resident</p>
-                <p className="text-lg font-bold text-slate-800 dark:text-slate-200">{currentTenant?.firstName} {currentTenant?.lastName}</p>
+                <p className="text-lg font-bold text-slate-800 dark:text-slate-200">{primaryResident?.firstName} {primaryResident?.lastName}</p>
                 <p className="text-xs text-slate-500">Currently in Unit {unit.number}</p>
               </div>
 
