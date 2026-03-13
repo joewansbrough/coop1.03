@@ -144,12 +144,12 @@ const App: React.FC = () => {
           <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} />} />
           <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} isGuest={isGuest} announcements={announcements} setAnnouncements={setAnnouncements} />} />
           <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isGuest={isGuest} tenants={tenants} setTenants={setTenants} units={units} />} />
+          <Route path="/admin/units/:unitId" element={<UnitDetail isAdmin={effectiveIsAdmin} units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} setRequests={setRequests} />} />
           
           {/* Admin Routes */}
           {effectiveIsAdmin && (
             <>
               <Route path="/admin/units" element={<AdminUnits units={units} setUnits={setUnits} tenants={tenants} />} />
-              <Route path="/admin/units/:unitId" element={<UnitDetail units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} setRequests={setRequests} />} />
               <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} isGuest={isGuest} tenants={tenants} setTenants={setTenants} units={units} />} />
               <Route path="/admin/tenants/:tenantId" element={<TenantDetail tenants={tenants} units={units} requests={requests} />} />
               <Route path="/admin/waitlist" element={<Waitlist tenants={tenants} setTenants={setTenants} />} />
