@@ -43,11 +43,10 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
 
   const committeeDocs = Array.isArray(documents)
     ? documents.filter(d => {
-      const matchesCommittee = d.category === 'Committee' ||
-        (selectedCommittee && d.title.toLowerCase().includes(selectedCommittee.name.toLowerCase())) ||
-        (selectedCommittee && d.tags?.includes(selectedCommittee.name));
-      const matchesSearch = d.title.toLowerCase().includes(docSearch.toLowerCase()) ||
-        d.tags?.some(t => t.toLowerCase().includes(docSearch.toLowerCase()));
+      if (!selectedCommittee) return false;
+      const matchesCommittee = d.tags?.includes(selectedCommittee.name);
+      const matchesSearch = d.title.toLowerCase().includes(docSearch.toLowerCase()) || 
+                           d.tags?.some(t => t.toLowerCase().includes(docSearch.toLowerCase()));
       const matchesFilter = docFilter === 'All' || d.category === docFilter;
       return matchesCommittee && matchesSearch && matchesFilter;
     })
