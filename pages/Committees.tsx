@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Committee, Tenant, Document } from '../types';
+import FilterBar from '../components/FilterBar';
 
 interface CommitteesProps {
   isAdmin: boolean;
@@ -27,6 +28,12 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
   const [newCommitteeDesc, setNewCommitteeDesc] = useState('');
   const [newCommitteeChair, setNewCommitteeChair] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
+  const [docSearch, setDocSearch] = useState('');
+  const [docFilter, setDocFilter] = useState('All');
+  const [docSearch, setDocSearch] = useState('');
+  const [docFilter, setDocFilter] = useState('All');
+  const [docSearch, setDocSearch] = useState('');
+  const [docFilter, setDocFilter] = useState('All');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -37,8 +44,17 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
   }, [location.search, committees]);
 
   const selectedCommittee = Array.isArray(committees) ? committees.find(c => c.id === selectedId) : null;
+  
   const committeeDocs = Array.isArray(documents) 
-    ? documents.filter(d => d.category === 'Committee' || (selectedCommittee && d.title.toLowerCase().includes(selectedCommittee.name.toLowerCase())))
+    ? documents.filter(d => {
+        const matchesCommittee = d.category === 'Committee' || 
+                                (selectedCommittee && d.title.toLowerCase().includes(selectedCommittee.name.toLowerCase())) ||
+                                (selectedCommittee && d.tags?.includes(selectedCommittee.name));
+        const matchesSearch = d.title.toLowerCase().includes(docSearch.toLowerCase()) || 
+                             d.tags?.some(t => t.toLowerCase().includes(docSearch.toLowerCase()));
+        const matchesFilter = docFilter === 'All' || d.category === docFilter;
+        return matchesCommittee && matchesSearch && matchesFilter;
+      })
     : [];
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -369,6 +385,18 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
                    </h3>
                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">PIPA Compliant Storage</span>
                  </div>
+
+                 <div className="mb-8">
+                   <FilterBar 
+                     search={docSearch}
+                     onSearchChange={setDocSearch}
+                     searchPlaceholder="Search records..."
+                     filter={docFilter}
+                     onFilterChange={setDocFilter}
+                     filterOptions={['All', 'Minutes', 'Policy', 'Financial']}
+                   />
+                 </div>
+
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {committeeDocs.length > 0 ? committeeDocs.map(doc => (
                       <div key={doc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:bg-white dark:hover:bg-slate-800 transition-all group cursor-pointer">

@@ -105,7 +105,7 @@ const Documents: React.FC<{
     if (file.type.includes('text') || file.name.endsWith('.txt')) {
       reader.readAsText(file);
     } else {
-      setFileContent(`[Simulated content for ${file.name}]\nThis document contains association rules and policies regarding ${file.name.toLowerCase()}. Members must adhere to all guidelines stated herein.`);
+      setFileContent(`[Binary Content: ${file.name}]`);
     }
   };
 
