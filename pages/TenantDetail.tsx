@@ -216,46 +216,103 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                 <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading History...</p>
               </div>
             ) : (
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 dark:bg-slate-950/50">
-                  <tr>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Period</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Notes</th>
-                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                  {history.map((h, idx) => (
-                    <tr key={h.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4">
-                        <Link to={`/admin/units/${h.unitId}`} className="text-sm font-black text-slate-800 dark:text-slate-200 hover:text-emerald-600">Unit {h.unit?.number}</Link>
-                      </td>
-                      <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">
-                        {new Date(h.startDate).toLocaleDateString()} - {h.endDate ? new Date(h.endDate).toLocaleDateString() : 'Present'}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-medium text-slate-500 italic">{h.moveReason || 'N/A'}</td>
-                      <td className="px-6 py-4 text-right">
-                        <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${!h.endDate ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+              <>
+                {/* Mobile: Cards */}
+                <div className="sm:hidden divide-y divide-slate-100 dark:divide-white/5">
+                  {history.length > 0 ? history.map(h => (
+                    <div key={h.id} className="p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Link to={`/admin/units/${h.unitId}`} className="text-sm font-black text-slate-800 dark:text-slate-200 hover:text-emerald-600">
+                          Unit {h.unit?.number}
+                        </Link>
+                        <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${!h.endDate ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
                           {!h.endDate ? 'Current' : 'Past'}
                         </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {history.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center text-xs text-slate-400 italic">No residency history found for this member.</td>
-                    </tr>
+                      </div>
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                        {new Date(h.startDate).toLocaleDateString()} — {h.endDate ? new Date(h.endDate).toLocaleDateString() : 'Present'}
+                      </p>
+                      {h.moveReason && (
+                        <p className="text-xs text-slate-400 italic">{h.moveReason}</p>
+                      )}
+                    </div>
+                  )) : (
+                    <div className="px-6 py-12 text-center text-xs text-slate-400 italic">No residency history found for this member.</div>
                   )}
-                </tbody>
-              </table>
+                </div>
+
+                {/* Desktop: Table */}
+                <table className="hidden sm:table w-full text-left">
+                  <thead className="bg-slate-50 dark:bg-slate-950/50">
+                    <tr>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unit</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Period</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Notes</th>
+                      <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+                    {history.map(h => (
+                      <tr key={h.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4">
+                          <Link to={`/admin/units/${h.unitId}`} className="text-sm font-black text-slate-800 dark:text-slate-200 hover:text-emerald-600">Unit {h.unit?.number}</Link>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">
+                          {new Date(h.startDate).toLocaleDateString()} - {h.endDate ? new Date(h.endDate).toLocaleDateString() : 'Present'}
+                        </td>
+                        <td className="px-6 py-4 text-xs font-medium text-slate-500 italic">{h.moveReason || 'N/A'}</td>
+                        <td className="px-6 py-4 text-right">
+                          <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${!h.endDate ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                            {!h.endDate ? 'Current' : 'Past'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {history.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-12 text-center text-xs text-slate-400 italic">No residency history found for this member.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </>
             )}
           </div>
         )}
 
         {activeTab === 'maintenance' && (
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
-            <table className="w-full text-left">
+
+            {/* Mobile: Cards */}
+            <div className="sm:hidden divide-y divide-slate-100 dark:divide-white/5">
+              {tenantRequests.length > 0 ? tenantRequests.map(req => (
+                <div
+                  key={req.id}
+                  className="p-4 active:bg-slate-50 dark:active:bg-white/5 transition-colors"
+                  onClick={() => navigate(`/admin/maintenance/${req.id}`)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex-1 line-clamp-2">{req.title}</p>
+                    <span className={`text-[9px] font-black px-2 py-1 rounded uppercase shrink-0 ${
+                      req.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
+                      req.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {req.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">{req.priority}</span>
+                    <span className="text-slate-300 dark:text-slate-600">·</span>
+                    <span className="text-[10px] font-bold text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              )) : (
+                <div className="px-6 py-12 text-center text-xs text-slate-400 italic">No service requests found for this member.</div>
+              )}
+            </div>
+
+            {/* Desktop: Table */}
+            <table className="hidden sm:table w-full text-left">
               <thead className="bg-slate-50 dark:bg-slate-950/50">
                 <tr>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
@@ -266,8 +323,8 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
               </thead>
               <tbody className="divide-y divide-slate-50 dark:divide-white/5">
                 {tenantRequests.map(req => (
-                  <tr 
-                    key={req.id} 
+                  <tr
+                    key={req.id}
                     onClick={() => navigate(`/admin/maintenance/${req.id}`)}
                     className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
                   >
@@ -276,7 +333,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                     <td className="px-6 py-4 text-xs font-black text-slate-500 uppercase">{req.priority}</td>
                     <td className="px-6 py-4 text-right">
                       <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${
-                        req.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' : 
+                        req.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
                         req.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
                       }`}>
                         {req.status}
