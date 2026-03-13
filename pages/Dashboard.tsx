@@ -267,38 +267,38 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
                       <i className="fa-solid fa-house-user text-2xl"></i>
                     </div>
                     <p className="text-3xl font-black mb-1">Unit {units.find(u => u.id === userUnitId)?.number}</p>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">
                       {units.find(u => u.id === userUnitId)?.type} • Floor {units.find(u => u.id === userUnitId)?.floor}
                     </p>
-                    <div className="mt-6 pt-6 border-t border-white/5 w-full flex justify-around">
-                      <div className="text-center">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
-                        <p className="text-[10px] font-black text-emerald-400 uppercase">Active</p>
-                      </div>
-                      <div className="text-center border-l border-white/5 pl-6">
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Requests</p>
-                        <p className={`text-[10px] font-black uppercase ${userOpenRequests.length > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
-                          {userOpenRequests.length} Pending
-                        </p>
-                      </div>
+                    <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        {userOpenRequests.length > 0 ? (
+                          <span className="text-amber-400">{userOpenRequests.length} Pending Requests</span>
+                        ) : (
+                          <span className="text-emerald-400">Residency Active</span>
+                        )}
+                      </p>
                     </div>
                   </Link>
                 ) : (
                   <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">My Unit</p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">My Residency</p>
                     <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
                       <i className="fa-solid fa-house-slash text-2xl"></i>
                     </div>
-                    <p className="text-xl font-black">No Unit Assigned</p>
-                    <p className="text-[9px] font-bold text-slate-600 uppercase mt-1">Contact administration</p>
+                    <p className="text-xl font-black mb-1">No Unit</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Contact administration</p>
+                    <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TBD</p>
+                    </div>
                   </div>
                 )}
               </div>
               <div className="flex h-full">
                 {nextMeeting ? (
-                  <Link to={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center">
+                  <Link to={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center group">
                     <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-4">Next Meeting</p>
-                    <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4">
+                    <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
                       <i className="fa-solid fa-calendar-day text-2xl"></i>
                     </div>
                     <p className="text-3xl font-black mb-1">{new Date(nextMeeting.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
@@ -313,8 +313,11 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
                     <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
                       <i className="fa-solid fa-calendar-xmark text-2xl"></i>
                     </div>
-                    <p className="text-xl font-black">TBD</p>
-                    <p className="text-[9px] font-bold text-slate-600 uppercase mt-1">No upcoming events</p>
+                    <p className="text-xl font-black mb-1">TBD</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">No upcoming events</p>
+                    <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TBD</p>
+                    </div>
                   </div>
                 )}
              </div>
