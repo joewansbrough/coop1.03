@@ -162,7 +162,9 @@ const Documents: React.FC<{
             const committeeTags = newDocCommittee ? [newDocCommittee] : [];
             finalTags = Array.from(new Set([currentYear, ...committeeTags, ...(result.tags || [])]));
             if (result.summary) {
-              finalContent = fileContent + `\n\nSummary: ${result.summary}`;
+              finalContent = `${result.summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]`;
+            } else {
+              finalContent = `[Uploaded on: ${new Date().toLocaleDateString()}]`;
             }
           } catch (err) {
             console.error("Auto-analysis failed", err);
