@@ -2,10 +2,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Unit, Tenant } from '../types';
+import FilterBar from '../components/FilterBar';
 
 const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetStateAction<Unit[]>>, tenants: Tenant[] }> = ({ units, setUnits, tenants }) => {
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'All' | 'Occupied' | 'Vacant' | 'Maintenance'>('All');
   
   // Form State
@@ -29,7 +31,11 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
   };
 
   const sortedUnits = [...units]
-    .filter(u => filter === 'All' || u.status === filter)
+    .filter(u => {
+      const matchesFilter = filter === 'All' || u.status === filter;
+      const matchesSearch = u.number.includes(search) || u.type.toLowerCase().includes(search.toLowerCase());
+      return matchesFilter && matchesSearch;
+    })
     .sort((a, b) => {
       if (a.floor !== b.floor) return a.floor - b.floor;
       return a.number.localeCompare(b.number, undefined, { numeric: true });
@@ -50,17 +56,14 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
         </button>
       </div>
 
-      <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl overflow-x-auto scrollbar-hide">
-        {['All', 'Occupied', 'Vacant', 'Maintenance'].map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f as any)}
-            className={`flex-1 px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${filter === f ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
+      <FilterBar 
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Filter by unit number or type..."
+        filter={filter}
+        onFilterChange={setFilter}
+        filterOptions={['All', 'Occupied', 'Vacant', 'Maintenance']}
+      />
 
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">

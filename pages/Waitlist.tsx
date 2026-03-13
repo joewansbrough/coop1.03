@@ -1,16 +1,26 @@
 
 import React, { useState } from 'react';
 import { Tenant } from '../types';
+import FilterBar from '../components/FilterBar';
 
 const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.SetStateAction<Tenant[]>> }> = ({ tenants, setTenants }) => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('All');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [unitType, setUnitType] = useState('2BR');
 
-  const waitlistMembers = tenants.filter(t => t.status === 'Waitlist');
+  const waitlistMembers = tenants.filter(t => {
+    if (t.status !== 'Waitlist') return false;
+    const matchesFilter = filter === 'All' || 
+                         (filter === '3BR+' ? (t.notes?.includes('3BR') || t.notes?.includes('4BR')) : t.notes?.includes(filter));
+    const matchesSearch = `${t.firstName} ${t.lastName}`.toLowerCase().includes(search.toLowerCase()) || 
+                         t.email.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
   const handleAddApplication = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,14 +105,17 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
         </div>
       )}
 
+      <FilterBar 
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search applicants by name or email..."
+        filter={filter}
+        onFilterChange={setFilter}
+        filterOptions={['All', '1BR', '2BR', '3BR+']}
+      />
+
       <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl">
-            <button className="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm">All</button>
-            <button className="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all">1BR</button>
-            <button className="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all">2BR</button>
-            <button className="px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-all">3BR+</button>
-          </div>
           <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Sorted by Application Date</span>
         </div>
         

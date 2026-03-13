@@ -4,6 +4,7 @@ import { MaintenanceRequest, RequestStatus, RepairQuote, MaintenanceCategory, Un
 import { MOCK_REQUESTS, MOCK_UNITS, MOCK_QUOTES } from '../constants';
 import { geminiService } from '../services/geminiService';
 import { useNavigate } from 'react-router-dom';
+import FilterBar from '../components/FilterBar';
 
 interface MaintenanceProps {
   isAdmin?: boolean;
@@ -21,11 +22,18 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [activeView, setActiveView] = useState<'requests' | 'quotes'>('requests');
   const [selectedRequestIdForQuotes, setSelectedRequestIdForQuotes] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('All');
   
-  // Filter requests based on user role
-  const displayedRequests = isAdmin 
-    ? (Array.isArray(requests) ? requests : []) 
-    : (Array.isArray(requests) ? requests.filter(r => r.unitId === userUnitId) : []);
+  // Filter requests based on user role, search, and status filter
+  const displayedRequests = (Array.isArray(requests) ? requests : [])
+    .filter(r => isAdmin || r.unitId === userUnitId)
+    .filter(r => {
+      const matchesFilter = filter === 'All' || r.status === filter;
+      const matchesSearch = r.description.toLowerCase().includes(search.toLowerCase()) || 
+                           (units.find(u => u.id === r.unitId)?.number.includes(search));
+      return matchesFilter && matchesSearch;
+    });
   
   // Form State
   const [description, setDescription] = useState('');
@@ -118,6 +126,15 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
           </button>
         </div>
       </div>
+
+      <FilterBar 
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search maintenance requests..."
+        filter={filter}
+        onFilterChange={setFilter}
+        filterOptions={['All', 'Pending', 'In Progress', 'Completed', 'Cancelled']}
+      />
 
       {showForm && (
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 animate-in fade-in slide-in-from-top-4">

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Tenant, Unit } from '../types';
 import { useNavigate } from 'react-router-dom';
+import FilterBar from '../components/FilterBar';
 
 interface TenantsProps {
   isAdmin?: boolean;
@@ -141,31 +142,14 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
       )}
 
       {/* Search + Filter */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-[2rem] border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-          <input
-            type="text"
-            placeholder={isAdmin ? "Filter by name, unit, or email..." : "Search neighbors..."}
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        {isAdmin && (
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl overflow-x-auto">
-            {['All', 'Current', 'Past', 'Waitlist'].map(f => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${filter === f ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <FilterBar 
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={isAdmin ? "Filter by name, unit, or email..." : "Search neighbors..."}
+        filter={filter}
+        onFilterChange={setFilter}
+        filterOptions={['All', 'Current', 'Past', 'Waitlist']}
+      />
 
       {/* ── Mobile: Card List ── */}
       <div className="sm:hidden space-y-3">
