@@ -8,6 +8,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenAI, Type } from '@google/genai';
+import multer from 'multer';
+import pdf from 'pdf-parse';
 
 dotenv.config();
 
@@ -80,6 +82,8 @@ async function startServer() {
     
     return url;
   };
+
+const upload = multer({ storage: multer.memoryStorage() });
 
   // API Request Logger
   app.use('/api', (req, res, next) => {
@@ -339,12 +343,50 @@ async function startServer() {
     }
   });
 
-  app.post('/api/documents', async (req, res) => {
-    const { title, category, url, fileType, author, date, tags, content } = req.body;
-    const document = await prisma.document.create({
-      data: { title, category, url, fileType, author, date, tags, content }
-    });
-    res.json(document);
+  app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded.' });
+    }
+
+    try {
+      let content = '';
+      if (req.file.mimetype === 'application/pdf') {
+        const data = await pdf(req.file.buffer);
+        content = data.text;
+      } else {
+        content = req.file.buffer.toString('utf-8');
+      }
+
+      const { title, category, isPrivate, committee } = req.body;
+      const currentYear = new Date().getFullYear().toString();
+      
+      // Get AI summary
+      const aiResponse = await axios.post(`http://localhost:${PORT}/api/ai/summarize`, { content });
+      const { summary, tags: aiTags } = aiResponse.data;
+
+      const committeeTags = committee ? [committee] : [];
+      const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...(aiTags || [])]));
+
+      const finalContent = `${summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]`;
+
+      const document = await prisma.document.create({
+        data: {
+          title,
+          category,
+          isPrivate: isPrivate === 'true',
+          content: finalContent,
+          tags: finalTags,
+          url: '#', // Placeholder, in a real app this would be a file storage URL
+          fileType: req.file.mimetype.split('/')[1] || 'unknown',
+          author: (req as any).session?.user?.name || 'System',
+          date: new Date().toISOString().split('T')[0],
+        }
+      });
+      res.json(document);
+    } catch (error: any) {
+      console.error('File upload error:', error);
+      res.status(500).json({ error: 'Failed to process file upload.', details: error.message });
+    }
   });
 
   app.put('/api/documents/:id', async (req, res) => {

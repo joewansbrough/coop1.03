@@ -96,24 +96,10 @@ const Documents: React.FC<{
     }
   };
 
-  const readFileContent = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      setFileContent(content);
-    };
-    if (file.type.includes('text') || file.name.endsWith('.txt')) {
-      reader.readAsText(file);
-    } else {
-      setFileContent(`[Binary Content: ${file.name}]`);
-    }
-  };
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setSelectedFile(file);
-      readFileContent(file);
       if (!newDocTitle) {
         setNewDocTitle(file.name.split('.')[0]);
       }
@@ -125,7 +111,6 @@ const Documents: React.FC<{
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       setSelectedFile(file);
-      readFileContent(file);
       if (!newDocTitle) {
         setNewDocTitle(file.name.split('.')[0]);
       }
@@ -136,77 +121,62 @@ const Documents: React.FC<{
     e.preventDefault();
   };
 
-  const handleSimulatedUpload = () => {
-    if (isGuest) return;
+  const handleSimulatedUpload = async () => {
+    if (isGuest || !selectedFile) return;
     if (!newDocTitle) {
       alert("Please provide a document title.");
       return;
     }
     
     setIsUploading(true);
+    
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('title', newDocTitle);
+    formData.append('category', newDocCategory);
+    formData.append('isPrivate', String(newDocIsPrivate));
+    formData.append('committee', newDocCommittee);
+
+    // Simulate progress for UX
     let prog = 0;
     const interval = setInterval(() => {
-      prog += 10;
+      prog = Math.min(prog + 10, 90);
       setUploadProgress(prog);
-      if (prog >= 100) {
-        clearInterval(interval);
-        setTimeout(async () => {
-          const currentYear = new Date().getFullYear().toString();
-          let finalTags = [currentYear];
-          let finalContent = fileContent;
+    }, 200);
 
-          // Auto-trigger Gemini analysis before saving
-          setIsAnalyzing(true);
-          try {
-            const result = await geminiService.summarizeAndTag(fileContent);
-            const committeeTags = newDocCommittee ? [newDocCommittee] : [];
-            finalTags = Array.from(new Set([currentYear, ...committeeTags, ...(result.tags || [])]));
-            if (result.summary) {
-              finalContent = `${result.summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]`;
-            } else {
-              finalContent = `[Uploaded on: ${new Date().toLocaleDateString()}]`;
-            }
-          } catch (err) {
-            console.error("Auto-analysis failed", err);
-          } finally {
-            setIsAnalyzing(false);
-          }
+    try {
+      const res = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-          const payload = {
-            title: newDocTitle,
-            category: newDocCategory,
-            url: '#',
-            fileType: selectedFile?.name.split('.').pop() as any || 'pdf',
-            date: new Date().toISOString().split('T')[0],
-            author: 'Board Administration',
-            isPrivate: newDocIsPrivate,
-            content: finalContent,
-            tags: finalTags
-          };
-
-          try {
-            const res = await fetch('/api/documents', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            
-            setDocuments(prev => [data, ...prev]);
-            setIsUploading(false);
-            setUploadProgress(0);
-            setShowUpload(false);
-            setNewDocTitle('');
-            setNewDocIsPrivate(false);
-            setSelectedFile(null);
-            setFileContent('');
-            setReviewingDoc(data); // Open modal with analyzed data
-          } catch (err) {
-            console.error(err);
-          }
-        }, 500);
+      clearInterval(interval);
+      setUploadProgress(100);
+      
+      if (!res.ok) {
+        throw new Error('Upload failed');
       }
-    }, 100);
+      
+      const data = await res.json();
+      
+      setDocuments(prev => [data, ...prev]);
+      setShowUpload(false);
+      // Reset form
+      setNewDocTitle('');
+      setNewDocCategory('Policy');
+      setNewDocCommittee('');
+      setNewDocIsPrivate(false);
+      setSelectedFile(null);
+      
+      setReviewingDoc(data);
+    } catch (err) {
+      console.error(err);
+      alert('File upload failed.');
+      clearInterval(interval);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
   };
 
   const handleSaveReview = async () => {
