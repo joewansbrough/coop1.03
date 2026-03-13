@@ -15,6 +15,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
+// Database client
 const prisma = new PrismaClient();
 
 // Mock Data (In a real app, these would be in a database)
