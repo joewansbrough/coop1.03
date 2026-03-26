@@ -127,15 +127,18 @@ const Documents: React.FC<{
       alert("Please provide a document title.");
       return;
     }
-    
+
     setIsUploading(true);
-    
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('title', newDocTitle);
-    formData.append('category', newDocCategory);
-    formData.append('isPrivate', String(newDocIsPrivate));
-    formData.append('committee', newDocCommittee);
+
+    // Read file as text to avoid multipart/form-data issues on Vercel
+    const readFileAsText = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+    };
 
     // Simulate progress for UX
     let prog = 0;
@@ -145,20 +148,35 @@ const Documents: React.FC<{
     }, 200);
 
     try {
-      const res = await fetch('/api/documents/upload', {
+      const fileContent = await readFileAsText(selectedFile);
+
+      const payload = {
+        title: newDocTitle,
+        category: newDocCategory,
+        isPrivate: newDocIsPrivate,
+        committee: newDocCommittee,
+        content: fileContent,
+        fileType: selectedFile.name.split('.').pop() || 'txt',
+        date: new Date().toISOString().split('T')[0]
+      };
+
+      const res = await fetch('/api/documents', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload),
       });
 
       clearInterval(interval);
       setUploadProgress(100);
-      
+
       const data = await res.json();
 
       if (!res.ok) {
         throw new Error(data.details || data.error || 'Upload failed');
       }
-      
+
       setDocuments(prev => [data, ...prev]);
       setShowUpload(false);
       // Reset form
@@ -167,7 +185,7 @@ const Documents: React.FC<{
       setNewDocCommittee('');
       setNewDocIsPrivate(false);
       setSelectedFile(null);
-      
+
       setReviewingDoc(data);
     } catch (err: any) {
       console.error(err);
@@ -178,7 +196,6 @@ const Documents: React.FC<{
       setUploadProgress(0);
     }
   };
-
   const handleSaveReview = async () => {
     if (isGuest || !reviewingDoc) return;
     try {

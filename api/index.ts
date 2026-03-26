@@ -410,9 +410,59 @@ app.get('/api/documents', async (req, res) => {
 });
 
 app.post('/api/documents', async (req, res) => {
-  const { title, category, url, fileType, author, date, tags, content } = req.body;
+  const { title, category, url, fileType, author, date, tags, content, committee, isPrivate } = req.body;
+  
+  let summary = "";
+  let aiTags: string[] = [];
+  
+  // Get AI summary if content is provided
+  if (content && content.length > 50) {
+    try {
+      const ai = getAI();
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              summary: { type: Type.STRING },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ['summary', 'tags']
+          }
+        }
+      });
+      const aiData = JSON.parse(response.text || '{}');
+      summary = aiData.summary || "";
+      aiTags = aiData.tags || [];
+    } catch (e: any) {
+      console.error('AI summarization failed during document creation:', e.message);
+    }
+  }
+
+  const currentYear = new Date().getFullYear().toString();
+  const committeeTags = committee ? [committee] : [];
+  const providedTags = Array.isArray(tags) ? tags : [];
+  const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags, ...aiTags]));
+  
+  const finalContent = summary 
+    ? `${summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]\n\n${content || ''}`
+    : content;
+
   const document = await prisma.document.create({
-    data: { title, category, url, fileType, author, date, tags, content }
+    data: { 
+      title: title || 'Untitled Document', 
+      category: category || 'General', 
+      url: url || '#', 
+      fileType: fileType || 'txt', 
+      author: author || ((req as any).session?.user?.name || 'System'), 
+      date: date || new Date().toISOString().split('T')[0], 
+      tags: finalTags, 
+      content: finalContent,
+      isPrivate: isPrivate === true
+    }
   });
   res.json(document);
 });
