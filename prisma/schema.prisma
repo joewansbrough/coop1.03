@@ -87,6 +87,7 @@ model Document {
   id        String   @id @default(uuid())
   title     String
   category  String
+  committee String?  @default("")
   url       String
   fileType  String
   author    String   @default("Admin")
@@ -96,6 +97,7 @@ model Document {
   isPrivate Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
 }
 
 model CoopEvent {
