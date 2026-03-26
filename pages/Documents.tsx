@@ -209,16 +209,15 @@ const Documents: React.FC<{
       const res = await fetch(`/api/documents/${reviewingDoc.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ // Ensure object structure is correct and includes committee/isPrivate
-          body: JSON.stringify({
-                title: reviewingDoc.title,
-                category: reviewingDoc.category,
-                tags: reviewingDoc.tags,
-                content: reviewingDoc.content,
-                committee: reviewingDoc.committee ?? '', // Provide default if undefined/null
-                isPrivate: reviewingDoc.isPrivate ?? false, // Provide default if undefined/null
-              })
-            });
+        body: JSON.stringify({
+          title: reviewingDoc.title,
+          category: reviewingDoc.category,
+          tags: reviewingDoc.tags,
+          content: reviewingDoc.content,
+          committee: reviewingDoc.committee ?? '', // Provide default for committee
+          isPrivate: reviewingDoc.isPrivate ?? false, // Provide default for isPrivate
+        }), // Correctly close JSON.stringify and fetch options
+      });
       const data = await res.json(); // Get the response data
 
       if (!res.ok) { // Handle non-2xx responses
