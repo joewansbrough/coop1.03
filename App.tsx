@@ -135,7 +135,7 @@ const App: React.FC = () => {
         coopName={coopName}
       >
         <Routes>
-          <Route path="/" element={<Dashboard isAdmin={effectiveIsAdmin} isGuest={isGuest} announcements={announcements} units={units} tenants={tenants} requests={requests} events={events} />} />
+          <Route path="/" element={<Dashboard isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} announcements={announcements} units={units} tenants={tenants} requests={requests} events={events} />} />
           <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} isGuest={isGuest} events={events} setEvents={setEvents} />} />
           <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} events={events} setEvents={setEvents} />} />
           <Route path="/announcements/:annId" element={<AnnouncementDetail announcements={announcements} />} />

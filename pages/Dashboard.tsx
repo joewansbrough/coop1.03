@@ -7,6 +7,11 @@ import { RequestStatus, Announcement, Unit, Tenant, MaintenanceRequest, CoopEven
 
 interface DashboardProps {
   isAdmin: boolean;
+  isGuest?: boolean;
+  user: {
+    name: string;
+    [key: string]: any;
+  };
   announcements: Announcement[];
   units: Unit[];
   tenants: Tenant[];
@@ -14,8 +19,10 @@ interface DashboardProps {
   events: CoopEvent[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, tenants, requests, events }) => {
+const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user, announcements, units, tenants, requests, events }) => {
   const navigate = useNavigate();
+
+  const firstName = user?.name ? user.name.split(' ')[0] : '';
 
   // For members, only show stats for their unit (if they have one)
   const userUnitId = units.length > 0 ? units[0].id : null;
@@ -69,7 +76,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
                 <i className="fa-solid fa-shield-halved"></i> Co-Operative Housing Association Admin Hub
               </div>
-              <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome, Admin.</h1>
+              <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome home, {firstName}.</h1>
               <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
                 Manage units, residents, and maintenance across your co-op community.
               </p>
@@ -245,7 +252,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, announcements, units, te
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-emerald-500/20">
               <i className="fa-solid fa-house-circle-check"></i> Co-Operative Housing Association Member Hub
             </div>
-            <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome home.</h1>
+            <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome home, {firstName}.</h1>
             <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-md mx-auto lg:mx-0">
               Streamline your co-op experience: report issues, review policies, and join community meetings.
             </p>
