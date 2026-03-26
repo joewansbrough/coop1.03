@@ -9,6 +9,13 @@ dotenv.config();
 
 const app = express();
 
+// Helper to sanitize strings for PostgreSQL (removes null bytes and invalid UTF-8 sequences)
+const sanitizeUtf8 = (str: string): string => {
+  if (!str) return "";
+  // Remove null bytes (\u0000) and other non-printable control characters that Postgres rejects
+  return str.replace(/\0/g, '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g, "");
+};
+
 // Prisma singleton helper
 let prismaInstance: PrismaClient;
 const getPrisma = () => {
@@ -809,9 +816,18 @@ app.get('/api/seed', async (req, res) => {
 
     console.log('Seeding maintenance requests...');
     const maintenanceData = [
-      { title: 'Leaking kitchen faucet', description: 'The kitchen faucet has been dripping constantly for the past week.', status: 'Pending', priority: 'Medium', category: 'Plumbing', unitNumber: '101', requestedBy: 'margaret.chen@email.com', createdAt: new Date('2026-02-28') },
-      { title: 'Bathroom exhaust fan not working', description: 'The exhaust fan in the main bathroom stopped working.', status: 'In Progress', priority: 'Medium', category: 'Electrical', unitNumber: '102', requestedBy: 'david.okafor@email.com', createdAt: new Date('2026-02-20') },
-      { title: 'Dishwasher not draining', description: 'The dishwasher fills with water but does not drain.', status: 'Completed', priority: 'Medium', category: 'Appliance', unitNumber: '104', requestedBy: 'james.nakamura@email.com', createdAt: new Date('2026-01-15') },
+      { title: 'Leaking kitchen faucet', description: 'The kitchen faucet has been dripping constantly for the past week. Water is pooling under the sink cabinet.', status: 'Pending', priority: 'Medium', category: 'Plumbing', unitNumber: '101', requestedBy: 'margaret.chen@email.com', createdAt: new Date('2026-02-28') },
+      { title: 'Bathroom exhaust fan not working', description: 'The exhaust fan in the main bathroom stopped working. There is condensation building up on the ceiling.', status: 'In Progress', priority: 'Medium', category: 'Electrical', unitNumber: '102', requestedBy: 'david.okafor@email.com', createdAt: new Date('2026-02-20') },
+      { title: 'Dishwasher not draining', description: 'The dishwasher fills with water but does not drain after cycle completes. Standing water remains at bottom.', status: 'Completed', priority: 'Medium', category: 'Appliance', unitNumber: '104', requestedBy: 'james.nakamura@email.com', createdAt: new Date('2026-01-15') },
+      { title: 'Broken window latch - balcony door', description: 'The latch on the balcony sliding door is broken. The door does not lock properly which is a security concern.', status: 'Pending', priority: 'High', category: 'Structural', unitNumber: '103', requestedBy: 'robert.tremblay@email.com', createdAt: new Date('2026-03-01') },
+      { title: 'Heating unit making loud noise', description: 'The baseboard heater in the living room is making a loud banging noise when it turns on. Happens every morning.', status: 'In Progress', priority: 'Low', category: 'HVAC', unitNumber: '106', requestedBy: 'carlos.rivera@email.com', createdAt: new Date('2026-02-10') },
+      { title: 'Water damage on ceiling', description: 'Brown water stain appearing on the bedroom ceiling. Appears to be coming from unit above. Getting larger over time.', status: 'Pending', priority: 'Urgent', category: 'Structural', unitNumber: '201', requestedBy: 'aisha.mohammed@email.com', createdAt: new Date('2026-03-05') },
+      { title: 'Unit 204 full renovation', description: 'Unit undergoing full renovation following previous tenant departure. Flooring, paint, kitchen fixtures all being replaced.', status: 'In Progress', priority: 'Medium', category: 'Structural', unitNumber: '204', requestedBy: null, createdAt: new Date('2026-02-01') },
+      { title: 'Stove burner not igniting', description: 'Front left burner on gas stove does not ignite. Clicking sound present but no flame. Other burners work fine.', status: 'Pending', priority: 'Medium', category: 'Appliance', unitNumber: '203', requestedBy: 'wei.liu@email.com', createdAt: new Date('2026-03-07') },
+      { title: 'Exterior parking lot light out', description: 'The lamp post nearest to stalls 12-15 is not working. Area is very dark at night, safety concern for residents.', status: 'Pending', priority: 'High', category: 'Electrical', unitNumber: '301', requestedBy: 'george.papadopoulos@email.com', createdAt: new Date('2026-03-03') },
+      { title: 'Bathroom tiles cracked', description: 'Several floor tiles in the main bathroom have cracked. One tile has a sharp edge that is a safety hazard.', status: 'Completed', priority: 'High', category: 'Structural', unitNumber: '302', requestedBy: 'michael.johansson@email.com', createdAt: new Date('2026-01-20') },
+      { title: 'Intercom not working', description: 'The intercom handset in the unit does not ring when visitors buzz from the front door. Cannot let guests in.', status: 'Pending', priority: 'Medium', category: 'Electrical', unitNumber: '303', requestedBy: 'yuki.tanaka@email.com', createdAt: new Date('2026-03-08') },
+      { title: 'Hallway carpet damage', description: 'Large section of hallway carpet near Unit 305 has come loose and is a tripping hazard for all residents on floor 3.', status: 'In Progress', priority: 'High', category: 'Safety', unitNumber: '305', requestedBy: null, createdAt: new Date('2026-02-25') },
     ];
     for (const m of maintenanceData) {
       await p.maintenanceRequest.create({ 
@@ -830,8 +846,13 @@ app.get('/api/seed', async (req, res) => {
 
     console.log('Seeding announcements...');
     const announcementData = [
-      { title: 'Annual General Meeting — April 12th', content: 'Meeting details...', type: 'General', priority: 'High', author: 'Board Administration', date: '2026-03-08' },
-      { title: 'Water Shutoff — March 18th', content: 'Shutoff details...', type: 'Maintenance', priority: 'Urgent', author: 'Maintenance Committee', date: '2026-03-06' },
+      { title: 'Annual General Meeting — April 12th', content: 'The Oak Bay Housing Co-operative Annual General Meeting will be held on Saturday, April 12th at 2:00 PM in the Community Room. Agenda items include the 2025 financial review, election of board members, and proposed bylaw amendments. All members are encouraged to attend. Light refreshments will be provided. Please RSVP to admin@oakbaycoop.bc.ca by April 5th.', type: 'General', priority: 'High', author: 'Board Administration', date: '2026-03-08' },
+      { title: 'Water Shutoff — March 18th 9AM–1PM', content: 'A scheduled water shutoff is required to complete repairs to the main building supply line. The shutoff will affect all units and will take place on Tuesday March 18th from 9:00 AM to approximately 1:00 PM. Please store sufficient water in advance. We apologize for the inconvenience and thank you for your patience.', type: 'Maintenance', priority: 'Urgent', author: 'Maintenance Committee', date: '2026-03-06' },
+      { title: 'New Recycling Guidelines Effective April 1st', content: 'The City of Victoria has updated its recycling program. Starting April 1st, soft plastics must be deposited in the dedicated soft plastics bin in the recycling room rather than the blue bin. Glass bottles and jars should be rinsed before recycling. Updated sorting guides have been posted in the recycling room and laundry room.', type: 'General', priority: 'Normal', author: 'Board Administration', date: '2026-03-01' },
+      { title: 'Parking Lot Repaving — Weekend of March 22nd', content: 'The parking lot will be repaved over the weekend of March 22nd–23rd. All vehicles must be removed from the lot by 7:00 AM Saturday. Street parking is available on Foul Bay Road and Granite Street. Vehicles left in the lot may be towed at the owner\'s expense. The lot will reopen by Sunday evening.', type: 'Maintenance', priority: 'High', author: 'Maintenance Committee', date: '2026-02-28' },
+      { title: 'Spring Garden Volunteer Day — April 5th', content: 'Join your neighbours for the annual spring garden cleanup on Saturday April 5th starting at 10:00 AM. We\'ll be pruning, planting, and refreshing the communal garden beds. Tools and gloves provided. Lunch will be served at noon. This counts toward your annual participation hours.', type: 'General', priority: 'Normal', author: 'Garden Committee', date: '2026-02-20' },
+      { title: 'Housing Charge Increase — Effective July 1st', content: 'Following the board\'s annual financial review, housing charges will increase by 3.2% effective July 1st, 2026. This increase reflects rising municipal taxes, insurance premiums, and maintenance costs. Individual notice letters will be mailed to all members by April 15th.', type: 'General', priority: 'High', author: 'Finance Committee', date: '2026-02-15' },
+      { title: 'Fire Alarm System Test — March 14th', content: 'The building\'s fire alarm system will undergo its mandatory annual inspection on Friday March 14th between 10:00 AM and 3:00 PM. Expect brief alarm activations throughout the day. Please do not call 911 during testing periods.', type: 'Maintenance', priority: 'Normal', author: 'Board Administration', date: '2026-03-04' },
     ];
     for (const a of announcementData) {
       await p.announcement.create({ data: a });
@@ -840,7 +861,17 @@ app.get('/api/seed', async (req, res) => {
     console.log('Seeding documents...');
     const documentData = [
       { title: 'Oak Bay Co-op Rules & Regulations 2024', category: 'Bylaws', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2024-01-15', tags: ['legal', 'governance', 'bylaws'] },
-      { title: 'Member Handbook 2025', category: 'Policy', url: '#', fileType: 'pdf', author: 'Membership Committee', date: '2025-01-01', tags: ['handbook', 'rules'] },
+      { title: 'Co-operative Housing Act — BC', category: 'Bylaws', url: '#', fileType: 'pdf', author: 'Legislative BC', date: '2023-06-01', tags: ['legal', 'provincial'] },
+      { title: 'Member Handbook 2025', category: 'Policies', url: '#', fileType: 'pdf', author: 'Membership Committee', date: '2025-01-01', tags: ['handbook', 'rules'] },
+      { title: 'Pet Policy', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2023-09-01', tags: ['pets', 'rules'] },
+      { title: 'Noise & Quiet Hours Policy', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2022-11-15', tags: ['noise', 'living'] },
+      { title: 'Parking Policy & Stall Assignment', category: 'Policies', url: '#', fileType: 'pdf', author: 'Maintenance Committee', date: '2024-03-01', tags: ['parking', 'vehicles'] },
+      { title: 'AGM Minutes — April 2025', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2025-04-20', tags: ['minutes', 'agm'] },
+      { title: 'Board Meeting Minutes — February 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-02-18', tags: ['minutes', 'board'] },
+      { title: 'Board Meeting Minutes — January 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-01-21', tags: ['minutes', 'board'] },
+      { title: '2025 Annual Financial Statements', category: 'Financials', url: '#', fileType: 'pdf', author: 'Finance Committee', date: '2026-02-01', tags: ['financial', 'audit'] },
+      { title: '2026 Operating Budget', category: 'Financials', url: '#', fileType: 'xls', author: 'Finance Committee', date: '2026-01-10', tags: ['budget', 'financial'] },
+      { title: 'Reserve Fund Study 2024', category: 'Financials', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2024-06-15', tags: ['reserve', 'future-planning'] },
     ];
     for (const d of documentData) {
       await p.document.create({ data: d });
@@ -848,9 +879,12 @@ app.get('/api/seed', async (req, res) => {
 
     console.log('Seeding committees...');
     const committeeData = [
-      { name: 'Board of Directors', description: 'Governing body.', chair: 'George Papadopoulos', icon: 'fa-landmark', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com'] },
-      { name: 'Maintenance Committee', description: 'Building upkeep.', chair: 'Thomas Bergstrom', icon: 'fa-wrench', members: ['thomas.bergstrom@email.com', 'robert.tremblay@email.com'] },
-      { name: 'Finance Committee', description: 'Budgets.', chair: 'Patricia MacLeod', icon: 'fa-dollar-sign', members: ['patricia.macleod@email.com', 'margaret.chen@email.com'] },
+      { name: 'Board of Directors', description: 'Elected governing body responsible for overall co-op management, policy decisions, and financial oversight.', chair: 'George Papadopoulos', icon: 'fa-landmark', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com', 'patricia.macleod@email.com', 'james.nakamura@email.com', 'fatima.alhassan@email.com'] },
+      { name: 'Maintenance Committee', description: 'Oversees building upkeep, coordinates repairs, manages contractor relationships, and reviews maintenance requests.', chair: 'Thomas Bergstrom', icon: 'fa-wrench', members: ['thomas.bergstrom@email.com', 'brian.walsh@email.com', 'carlos.rivera@email.com', 'robert.tremblay@email.com'] },
+      { name: 'Finance Committee', description: 'Reviews financial statements, prepares budgets, monitors reserve fund, and recommends housing charge adjustments.', chair: 'Patricia MacLeod', icon: 'fa-dollar-sign', members: ['patricia.macleod@email.com', 'ahmed.patel@email.com', 'margaret.chen@email.com'] },
+      { name: 'Membership Committee', description: 'Reviews applications, manages the waitlist, conducts interviews, and facilitates member orientation.', chair: 'Fatima Al-Hassan', icon: 'fa-users', members: ['fatima.alhassan@email.com', 'aisha.mohammed@email.com', 'yuki.tanaka@email.com', 'michael.johansson@email.com'] },
+      { name: 'Garden Committee', description: 'Plans and maintains communal garden areas, organizes volunteer days, and manages the community composting program.', chair: 'Helen Papadopoulos', icon: 'fa-leaf', members: ['helen.papadopoulos@email.com', 'linda.nakamura@email.com', 'karen.bergstrom@email.com', 'wei.liu@email.com', 'catherine.walsh@email.com'] },
+      { name: 'Social Committee', description: 'Organizes community events, potlucks, seasonal celebrations, and fosters neighbourly connections among members.', chair: 'Susan Tremblay', icon: 'fa-calendar', members: ['susan.tremblay@email.com', 'priya.sharma@email.com', 'nadia.patel@email.com', 'david.okafor@email.com'] },
     ];
 
     for (const c of committeeData) {
@@ -865,6 +899,36 @@ app.get('/api/seed', async (req, res) => {
           },
         },
       });
+    }
+
+    console.log('Seeding calendar events...');
+    const baseEvents = [
+      { title: 'Board of Directors Meeting', category: 'Board', location: 'Community Room', time: '19:00', description: 'Monthly governance review and policy discussion.' },
+      { title: 'Community Potluck', category: 'Social', location: 'Courtyard', time: '17:30', description: 'Bring a dish to share and meet your neighbours!' },
+      { title: 'Maintenance Committee Check', category: 'Maintenance', location: 'Basement/Roof', time: '10:00', description: 'Routine building system inspection.' },
+      { title: 'General Member Meeting', category: 'Meeting', location: 'Community Room', time: '19:30', description: 'Quarterly update for all co-op members.' },
+      { title: 'Garden Volunteer Day', category: 'Social', location: 'Garden Beds', time: '09:00', description: 'Helping keep our communal spaces green and clean.' },
+    ];
+
+    const startDate = new Date('2026-03-01');
+    const endDate = new Date('2026-12-31');
+    let currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      const numEvents = Math.floor(Math.random() * 2) + 2;
+      for (let i = 0; i < numEvents; i++) {
+        const baseEvent = baseEvents[Math.floor(Math.random() * baseEvents.length)];
+        const eventDate = new Date(currentDate);
+        eventDate.setDate(Math.floor(Math.random() * 28) + 1);
+        
+        await p.coopEvent.create({
+          data: {
+            ...baseEvent,
+            date: eventDate.toISOString().split('T')[0],
+          },
+        });
+      }
+      currentDate.setMonth(currentDate.getMonth() + 1);
     }
 
     res.json({ success: true, message: "Mock data seeded successfully." });
