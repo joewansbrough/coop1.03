@@ -630,12 +630,26 @@ app.post('/api/ai/summarize', async (req, res) => {
 
 
 app.get('/api/migrate', async (req, res) => {
-  const { execSync } = await import('child_process');
   try {
-    const output = execSync('npx prisma migrate deploy');
-    res.json({ success: true, output: output.toString() });
+    const p = getPrisma();
+    
+    // Manually add missing columns if they don't exist
+    // This is a robust way to sync the DB state in serverless environments
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "content" TEXT DEFAULT '';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "isPrivate" BOOLEAN NOT NULL DEFAULT false;`);
+    
+    res.json({ 
+      success: true, 
+      message: "Database schema updated successfully using raw SQL." 
+    });
   } catch (e: any) {
-    res.status(500).json({ success: false, error: e.message, stderr: e.stderr?.toString() });
+    console.error('Migration error:', e);
+    res.status(500).json({ 
+      success: false, 
+      error: e.message,
+      stack: e.stack
+    });
   }
 });
 
