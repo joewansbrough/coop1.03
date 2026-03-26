@@ -8,7 +8,15 @@ import { GoogleGenAI, Type } from '@google/genai';
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient();
+
+// Prisma singleton helper
+let prismaInstance: PrismaClient;
+const getPrisma = () => {
+  if (!prismaInstance) {
+    prismaInstance = new PrismaClient();
+  }
+  return prismaInstance;
+};
 
 // Trust proxy for secure cookies on Vercel
 app.set('trust proxy', true);
@@ -620,6 +628,16 @@ app.post('/api/ai/summarize', async (req, res) => {
   }
 });
 
+
+app.get('/api/migrate', async (req, res) => {
+  const { execSync } = await import('child_process');
+  try {
+    const output = execSync('npx prisma migrate deploy');
+    res.json({ success: true, output: output.toString() });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message, stderr: e.stderr?.toString() });
+  }
+});
 
 app.get(['/api/debug/config', '/debug/config'], (req, res) => {
   res.json({
