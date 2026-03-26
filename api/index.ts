@@ -38,7 +38,7 @@ app.use((req, res, next) => {
 });
 
 // Mock Data
-const ADMIN_EMAILS = ['joewcoupons@gmail.com'];
+const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com'];
 
 // Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
@@ -63,7 +63,7 @@ const authRouter = express.Router();
 authRouter.get('/url', (req, res) => {
   const baseUrl = getBaseUrl(req);
   const redirectUri = `${baseUrl}/auth/callback`;
-  
+
   if (!process.env.GOOGLE_CLIENT_ID) {
     return res.status(500).json({ error: 'GOOGLE_CLIENT_ID is not configured in Vercel environment variables' });
   }
@@ -91,7 +91,7 @@ app.get('/auth/callback', async (req, res) => {
   try {
     const baseUrl = getBaseUrl(req);
     const redirectUri = `${baseUrl}/auth/callback`;
-    
+
     const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -116,7 +116,7 @@ app.get('/auth/callback', async (req, res) => {
 
     // For now, let's assume if they are in ADMIN_EMAILS, they are admins
     const isAdmin = ADMIN_EMAILS.includes(email);
-    
+
     // If not in DB but is admin, we might want to allow them anyway
     if (!user && !isAdmin) {
       return res.send(`<html><body><script>alert("Access denied for ${email}. You are not registered in the co-op database.");window.close();</script></body></html>`);
