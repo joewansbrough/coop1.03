@@ -204,36 +204,35 @@ const Documents: React.FC<{
     }
   };
   const handleSaveReview = async () => {
-    if (isGuest || !reviewingDoc) return;
+    if (isGuest || !reviewingDoc) return; // Exit if guest or no doc to review
     try {
       const res = await fetch(`/api/documents/${reviewingDoc.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-                title: reviewingDoc.title,
-                category: reviewingDoc.category,
-                tags: reviewingDoc.tags,
-                content: reviewingDoc.content,
-                committee: reviewingDoc.committee, // Explicitly send committee
-                isPrivate: reviewingDoc.isPrivate, // Explicitly send isPrivate
-              })
-            });
-
-
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ // Ensure object structure is correct and includes committee/isPrivate
+          title: reviewingDoc.title,
           category: reviewingDoc.category,
           tags: reviewingDoc.tags,
           content: reviewingDoc.content,
-          committee: reviewingDoc.committee, // Include committee here
-          isPrivate: reviewingDoc.isPrivate,
+          committee: reviewingDoc.committee, // Explicitly send committee
+          isPrivate: reviewingDoc.isPrivate, // Explicitly send isPrivate
         })
       });
-      const data = await res.json();
+
+      const data = await res.json(); // Get the response data
+
+      if (!res.ok) { // Handle non-2xx responses
+        throw new Error(data.details || data.error || `HTTP error! status: ${res.status}`);
+      }
+      
+      // Update the documents list and close modal
       setDocuments(prev => prev.map(d => d.id === data.id ? data : d));
-      setReviewingDoc(null);
+      setReviewingDoc(null); // Close the modal
       alert("Document saved.");
-    } catch (err) {
-      console.error(err);
-      alert('Failed to save document.');
+
+    } catch (err: any) { // Catch errors during fetch or JSON parsing
+      console.error("Failed to save document:", err);
+      alert(`Failed to save document: ${err.message}`);
     }
   };
   const deleteDoc = async (id: string, e: React.MouseEvent) => {
