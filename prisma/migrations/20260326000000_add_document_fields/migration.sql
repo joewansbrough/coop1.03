@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Document" ADD COLUMN "content" TEXT DEFAULT '',
+ADD COLUMN "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
+ADD COLUMN "isPrivate" BOOLEAN NOT NULL DEFAULT false;
