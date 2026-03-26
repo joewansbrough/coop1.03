@@ -204,69 +204,67 @@ const Documents: React.FC<{
     }
   };
   const handleSaveReview = async () => {
-    if (isGuest || !reviewingDoc) return; // Exit if guest or no doc to review
+    if (isGuest || !reviewingDoc) return;
     try {
-      const handleSaveReview = async () => {
-        if (isGuest || !reviewingDoc) return;
-        try {
-          const res = await fetch(`/api/documents/${reviewingDoc.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: reviewingDoc.title,
-              category: reviewingDoc.category,
-              tags: reviewingDoc.tags,
-              content: reviewingDoc.content,
-              committee: reviewingDoc.committee ?? '',
-              isPrivate: reviewingDoc.isPrivate ?? false,
-            }),
-          });
+      const res = await fetch(`/api/documents/${reviewingDoc.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: reviewingDoc.title,
+          category: reviewingDoc.category,
+          tags: reviewingDoc.tags,
+          content: reviewingDoc.content,
+          committee: reviewingDoc.committee ?? '',
+          isPrivate: reviewingDoc.isPrivate ?? false,
+        }),
+      });
 
-          const data = await res.json();
+      const data = await res.json();
 
-          if (!res.ok) {
-            throw new Error(data.details || data.error || `HTTP error! status: ${res.status}`);
-          }
+      if (!res.ok) {
+        throw new Error(data.details || data.error || `HTTP error! status: ${res.status}`);
+      }
 
-          setDocuments(prev => prev.map(d => d.id === data.id ? data : d));
-          setReviewingDoc(null);
-          alert("Document saved.");
+      setDocuments(prev => prev.map(d => d.id === data.id ? data : d));
+      setReviewingDoc(null);
+      alert("Document saved.");
 
-        } catch (err: any) {
-          console.error("Failed to save document:", err);
-          alert(`Failed to save document: ${err.message}`);
-        }
-      };
-      const deleteDoc = async (id: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (isGuest) return;
-        if (!window.confirm("Are you sure you want to delete this document?")) return;
-        try {
-          await fetch(`/api/documents/${id}`, { method: 'DELETE' });
-          setDocuments(prev => prev.filter(d => d.id !== id));
-        } catch (err) {
-          console.error(err);
-        }
-      };
+    } catch (err: any) {
+      console.error("Failed to save document:", err);
+      alert(`Failed to save document: ${err.message}`);
+    }
+  };
 
-      const handleAutoTag = async () => {
-        if (isGuest || !reviewingDoc?.content) return;
-        setIsAnalyzing(true);
-        try {
-          const result = await geminiService.summarizeAndTag(reviewingDoc.content);
-          setReviewingDoc(prev => prev ? {
-            ...prev,
-            tags: result.tags || [],
-            content: prev.content + (result.summary ? `\n\nSummary: ${result.summary}` : '')
-          } : null);
-        } catch (err) {
-          console.error("Auto-tagging failed", err);
-        } finally {
-          setIsAnalyzing(false);
-        }
-      };
+  const deleteDoc = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isGuest) return;
+    if (!window.confirm("Are you sure you want to delete this document?")) return;
+    try {
+      await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+      setDocuments(prev => prev.filter(d => d.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-      return (
+  const handleAutoTag = async () => {
+    if (isGuest || !reviewingDoc?.content) return;
+    setIsAnalyzing(true);
+    try {
+      const result = await geminiService.summarizeAndTag(reviewingDoc.content);
+      setReviewingDoc(prev => prev ? {
+        ...prev,
+        tags: result.tags || [],
+        content: prev.content + (result.summary ? `\n\nSummary: ${result.summary}` : '')
+      } : null);
+    } catch (err) {
+      console.error("Auto-tagging failed", err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  return (
         <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12">
           <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 opacity-5 text-[15rem] pointer-events-none group-hover:opacity-10 transition-opacity">
