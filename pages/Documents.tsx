@@ -597,7 +597,7 @@ const Documents: React.FC<{
                       <div className="space-y-4">
                         <div>
                           <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Document Metadata</label>
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-2 gap-4 mb-4">
                             <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5">
                               <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Title</p>
                               <input
@@ -619,6 +619,18 @@ const Documents: React.FC<{
                                 {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
                               </select>
                             </div>
+                          </div>
+                          <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5">
+                            <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Committee</p>
+                            <select
+                              value={reviewingDoc.committee || ''}
+                              disabled={!isAdmin || isGuest}
+                              onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, committee: e.target.value })}
+                              className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none appearance-none"
+                            >
+                              <option value="">None</option>
+                              {committees.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            </select>
                           </div>
                         </div>
 
