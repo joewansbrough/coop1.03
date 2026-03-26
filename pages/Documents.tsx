@@ -148,7 +148,14 @@ const Documents: React.FC<{
     }, 200);
 
     try {
-      const fileContent = await readFileAsText(selectedFile);
+      let fileContent = await readFileAsText(selectedFile);
+      
+      // Vercel has a 4.5MB request body limit. 
+      // We truncate content to ~1MB to be safe and ensure the JSON payload succeeds.
+      const MAX_CONTENT_LENGTH = 1024 * 1024; 
+      if (fileContent.length > MAX_CONTENT_LENGTH) {
+        fileContent = fileContent.substring(0, MAX_CONTENT_LENGTH) + "\n\n[Content truncated for size...]";
+      }
 
       const payload = {
         title: newDocTitle,
