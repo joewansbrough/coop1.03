@@ -207,9 +207,24 @@ const Documents: React.FC<{
     if (isGuest || !reviewingDoc) return;
     try {
       const res = await fetch(`/api/documents/${reviewingDoc.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reviewingDoc)
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: reviewingDoc.title,
+            category: reviewingDoc.category,
+            tags: reviewingDoc.tags,
+            content: reviewingDoc.content,
+            committee: reviewingDoc.committee, // Ensure committee is included
+            isPrivate: reviewingDoc.isPrivate,
+          })
+        });
+
+          category: reviewingDoc.category,
+          tags: reviewingDoc.tags,
+          content: reviewingDoc.content,
+          committee: reviewingDoc.committee, // Include committee here
+          isPrivate: reviewingDoc.isPrivate,
+        })
       });
       const data = await res.json();
       setDocuments(prev => prev.map(d => d.id === data.id ? data : d));
@@ -217,9 +232,9 @@ const Documents: React.FC<{
       alert("Document saved.");
     } catch (err) {
       console.error(err);
+      alert('Failed to save document.');
     }
   };
-
   const deleteDoc = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (isGuest) return;
