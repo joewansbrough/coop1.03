@@ -118,7 +118,7 @@ app.get('/auth/callback', async (req, res) => {
     const email = userData.email.toLowerCase();
 
     // Find or create user in database
-    let user = await prisma.tenant.findUnique({
+    let user = await getPrisma().tenant.findUnique({
       where: { email },
       include: { unit: true }
     });
@@ -197,7 +197,7 @@ app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
 // --- Database API Routes ---
 
 app.get('/api/units', async (req, res) => {
-  const units = await prisma.unit.findMany({
+  const units = await getPrisma().unit.findMany({
     include: {
       currentTenant: true,
       occupancyHistory: {
@@ -210,14 +210,14 @@ app.get('/api/units', async (req, res) => {
 });
 
 app.get('/api/tenants', async (req, res) => {
-  const tenants = await prisma.tenant.findMany({
+  const tenants = await getPrisma().tenant.findMany({
     include: { unit: true }
   });
   res.json(tenants);
 });
 
 app.get('/api/tenants/:id/history', async (req, res) => {
-  const history = await prisma.tenantHistory.findMany({
+  const history = await getPrisma().tenantHistory.findMany({
     where: { tenantId: req.params.id },
     include: { unit: true },
     orderBy: { startDate: 'desc' }
@@ -232,28 +232,28 @@ app.post('/api/units/:id/move-out', async (req, res) => {
   const { date, reason } = req.body;
   try {
     // Find all current residents of this unit
-    const residents = await prisma.tenant.findMany({ where: { unitId: id, status: 'Current' } });
+    const residents = await getPrisma().tenant.findMany({ where: { unitId: id, status: 'Current' } });
 
     for (const tenant of residents) {
       // Close any open TenantHistory record for this unit
-      const openHistory = await prisma.tenantHistory.findFirst({
+      const openHistory = await getPrisma().tenantHistory.findFirst({
         where: { tenantId: tenant.id, unitId: id, endDate: null }
       });
       if (openHistory) {
-        await prisma.tenantHistory.update({
+        await getPrisma().tenantHistory.update({
           where: { id: openHistory.id },
           data: { endDate: new Date(date), moveReason: reason || 'Voluntary Household Departure' }
         });
       }
       // Mark tenant as Past and unlink from unit
-      await prisma.tenant.update({
+      await getPrisma().tenant.update({
         where: { id: tenant.id },
         data: { status: 'Past', unitId: null }
       });
     }
 
     // Mark unit as Vacant
-    await prisma.unit.update({
+    await getPrisma().unit.update({
       where: { id },
       data: { status: 'Vacant', currentTenantId: null }
     });
@@ -266,40 +266,40 @@ app.post('/api/units/:id/move-in', async (req, res) => {
   const { id } = req.params;
   const { tenantId, date } = req.body;
   try {
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const tenant = await getPrisma().tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
     // If internal transfer: close open history record on their previous unit
     if (tenant.unitId && tenant.unitId !== id) {
-      const openHistory = await prisma.tenantHistory.findFirst({
+      const openHistory = await getPrisma().tenantHistory.findFirst({
         where: { tenantId, unitId: tenant.unitId, endDate: null }
       });
       if (openHistory) {
-        await prisma.tenantHistory.update({
+        await getPrisma().tenantHistory.update({
           where: { id: openHistory.id },
           data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
         });
       }
       // Vacate previous unit
-      await prisma.unit.update({
+      await getPrisma().unit.update({
         where: { id: tenant.unitId },
         data: { status: 'Vacant', currentTenantId: null }
       });
     }
 
     // Create new TenantHistory record for the new unit
-    await prisma.tenantHistory.create({
+    await getPrisma().tenantHistory.create({
       data: { tenantId, unitId: id, startDate: new Date(date) }
     });
 
     // Update tenant
-    await prisma.tenant.update({
+    await getPrisma().tenant.update({
       where: { id: tenantId },
       data: { unitId: id, status: 'Current', startDate: date }
     });
 
     // Update unit
-    await prisma.unit.update({
+    await getPrisma().unit.update({
       where: { id },
       data: { status: 'Occupied', currentTenantId: tenantId }
     });
@@ -313,33 +313,33 @@ app.post('/api/units/:id/transfer', async (req, res) => {
   const { toUnitId, date } = req.body;
   try {
     // Find all residents of the source unit
-    const residents = await prisma.tenant.findMany({ where: { unitId: id, status: 'Current' } });
+    const residents = await getPrisma().tenant.findMany({ where: { unitId: id, status: 'Current' } });
 
     for (const tenant of residents) {
       // Close open history on source unit
-      const openHistory = await prisma.tenantHistory.findFirst({
+      const openHistory = await getPrisma().tenantHistory.findFirst({
         where: { tenantId: tenant.id, unitId: id, endDate: null }
       });
       if (openHistory) {
-        await prisma.tenantHistory.update({
+        await getPrisma().tenantHistory.update({
           where: { id: openHistory.id },
           data: { endDate: new Date(date), moveReason: 'Internal Unit Transfer' }
         });
       }
       // Open new history on destination unit
-      await prisma.tenantHistory.create({
+      await getPrisma().tenantHistory.create({
         data: { tenantId: tenant.id, unitId: toUnitId, startDate: new Date(date) }
       });
       // Update tenant's unit
-      await prisma.tenant.update({
+      await getPrisma().tenant.update({
         where: { id: tenant.id },
         data: { unitId: toUnitId, startDate: date }
       });
     }
 
     // Vacate source unit, occupy destination unit
-    await prisma.unit.update({ where: { id }, data: { status: 'Vacant', currentTenantId: null } });
-    await prisma.unit.update({
+    await getPrisma().unit.update({ where: { id }, data: { status: 'Vacant', currentTenantId: null } });
+    await getPrisma().unit.update({
       where: { id: toUnitId },
       data: { status: 'Occupied', currentTenantId: residents[0]?.id ?? null }
     });
@@ -350,7 +350,7 @@ app.post('/api/units/:id/transfer', async (req, res) => {
 
 app.get('/api/maintenance', async (req, res) => {
   try {
-    const requests = await prisma.maintenanceRequest.findMany({
+    const requests = await getPrisma().maintenanceRequest.findMany({
       include: { unit: true },
       orderBy: { createdAt: 'desc' }
     });
@@ -362,7 +362,7 @@ app.get('/api/maintenance', async (req, res) => {
 
 app.post('/api/maintenance', async (req, res) => {
   const { title, description, status, priority, category, unitId, requestedBy } = req.body;
-  const request = await prisma.maintenanceRequest.create({
+  const request = await getPrisma().maintenanceRequest.create({
     data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy }
   });
   res.json(request);
@@ -370,7 +370,7 @@ app.post('/api/maintenance', async (req, res) => {
 
 app.put('/api/maintenance/:id', async (req, res) => {
   const { title, description, status, priority, category, unitId } = req.body;
-  const request = await prisma.maintenanceRequest.update({
+  const request = await getPrisma().maintenanceRequest.update({
     where: { id: req.params.id },
     data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId }
   });
@@ -378,12 +378,12 @@ app.put('/api/maintenance/:id', async (req, res) => {
 });
 
 app.delete('/api/maintenance/:id', async (req, res) => {
-  await prisma.maintenanceRequest.delete({ where: { id: req.params.id } });
+  await getPrisma().maintenanceRequest.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
 app.get('/api/announcements', async (req, res) => {
-  const announcements = await prisma.announcement.findMany({
+  const announcements = await getPrisma().announcement.findMany({
     orderBy: { createdAt: 'desc' }
   });
   res.json(announcements);
@@ -391,7 +391,7 @@ app.get('/api/announcements', async (req, res) => {
 
 app.post('/api/announcements', async (req, res) => {
   const { title, content, type, priority, author, date } = req.body;
-  const announcement = await prisma.announcement.create({
+  const announcement = await getPrisma().announcement.create({
     data: { title, content, type, priority, author, date }
   });
   res.json(announcement);
@@ -399,7 +399,7 @@ app.post('/api/announcements', async (req, res) => {
 
 app.put('/api/announcements/:id', async (req, res) => {
   const { title, content, type, priority, date } = req.body;
-  const announcement = await prisma.announcement.update({
+  const announcement = await getPrisma().announcement.update({
     where: { id: req.params.id },
     data: { title, content, type, priority, date }
   });
@@ -407,12 +407,12 @@ app.put('/api/announcements/:id', async (req, res) => {
 });
 
 app.delete('/api/announcements/:id', async (req, res) => {
-  await prisma.announcement.delete({ where: { id: req.params.id } });
+  await getPrisma().announcement.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
 app.get('/api/documents', async (req, res) => {
-  const documents = await prisma.document.findMany({
+  const documents = await getPrisma().document.findMany({
     orderBy: { createdAt: 'desc' }
   });
   res.json(documents);
@@ -460,7 +460,7 @@ app.post('/api/documents', async (req, res) => {
     ? `${summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]\n\n${content || ''}`
     : content;
 
-  const document = await prisma.document.create({
+  const document = await getPrisma().document.create({
     data: { 
       title: title || 'Untitled Document', 
       category: category || 'General', 
@@ -478,7 +478,7 @@ app.post('/api/documents', async (req, res) => {
 
 app.put('/api/documents/:id', async (req, res) => {
   const { title, category, tags, content } = req.body;
-  const document = await prisma.document.update({
+  const document = await getPrisma().document.update({
     where: { id: req.params.id },
     data: { title, category, tags, content }
   });
@@ -486,13 +486,13 @@ app.put('/api/documents/:id', async (req, res) => {
 });
 
 app.delete('/api/documents/:id', async (req, res) => {
-  await prisma.document.delete({ where: { id: req.params.id } });
+  await getPrisma().document.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
 app.get('/api/committees', async (req, res) => {
   try {
-    const committees = await prisma.committee.findMany({
+    const committees = await getPrisma().committee.findMany({
       include: { members: true }
     });
     // UI expects members as an array of name strings
@@ -505,7 +505,7 @@ app.get('/api/committees', async (req, res) => {
 });
 
 app.get('/api/events', async (req, res) => {
-  const events = await prisma.coopEvent.findMany({
+  const events = await getPrisma().coopEvent.findMany({
     include: { attendees: true },
     orderBy: { date: 'asc' }
   });
@@ -514,7 +514,7 @@ app.get('/api/events', async (req, res) => {
 
 app.post('/api/events', async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
-  const event = await prisma.coopEvent.create({
+  const event = await getPrisma().coopEvent.create({
     data: { title, description, date, time, location, category },
     include: { attendees: true }
   });
@@ -523,7 +523,7 @@ app.post('/api/events', async (req, res) => {
 
 app.put('/api/events/:id', async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
-  const event = await prisma.coopEvent.update({
+  const event = await getPrisma().coopEvent.update({
     where: { id: req.params.id },
     data: { title, description, date, time, location, category },
     include: { attendees: true }
@@ -536,10 +536,10 @@ app.post('/api/events/:id/attend', async (req, res) => {
   if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const tenant = await prisma.tenant.findUnique({ where: { email: user.email } });
+    const tenant = await getPrisma().tenant.findUnique({ where: { email: user.email } });
     if (!tenant) return res.status(404).json({ error: 'Tenant record not found for this user' });
 
-    const event = await prisma.coopEvent.update({
+    const event = await getPrisma().coopEvent.update({
       where: { id: req.params.id },
       data: {
         attendees: {
@@ -555,7 +555,7 @@ app.post('/api/events/:id/attend', async (req, res) => {
 });
 
 app.delete('/api/events/:id', async (req, res) => {
-  await prisma.coopEvent.delete({ where: { id: req.params.id } });
+  await getPrisma().coopEvent.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
@@ -650,6 +650,217 @@ app.get('/api/migrate', async (req, res) => {
       error: e.message,
       stack: e.stack
     });
+  }
+});
+
+app.get('/api/seed', async (req, res) => {
+  try {
+    const p = getPrisma();
+    console.log('Clearing existing data...');
+    await p.tenantHistory.deleteMany();
+    await p.maintenanceRequest.deleteMany();
+    await p.announcement.deleteMany();
+    await p.document.deleteMany();
+    await p.committee.deleteMany();
+    await p.coopEvent.deleteMany();
+    await p.tenant.deleteMany();
+    await p.unit.deleteMany();
+
+    console.log('Seeding units...');
+    const unitDefs = [
+      { number: '101', type: '1BR', floor: 1, status: 'Occupied' },
+      { number: '102', type: '2BR', floor: 1, status: 'Occupied' },
+      { number: '103', type: '2BR', floor: 1, status: 'Occupied' },
+      { number: '104', type: '3BR', floor: 1, status: 'Occupied' },
+      { number: '105', type: '1BR', floor: 1, status: 'Vacant' },
+      { number: '106', type: '2BR', floor: 1, status: 'Occupied' },
+      { number: '107', type: '1BR', floor: 1, status: 'Occupied' },
+      { number: '108', type: '2BR', floor: 1, status: 'Occupied' },
+      { number: '109', type: '1BR', floor: 1, status: 'Occupied' },
+      { number: '201', type: '2BR', floor: 2, status: 'Occupied' },
+      { number: '202', type: '3BR', floor: 2, status: 'Occupied' },
+      { number: '203', type: '1BR', floor: 2, status: 'Occupied' },
+      { number: '204', type: '2BR', floor: 2, status: 'Maintenance' },
+      { number: '205', type: '3BR', floor: 2, status: 'Occupied' },
+      { number: '206', type: '2BR', floor: 2, status: 'Occupied' },
+      { number: '207', type: '1BR', floor: 2, status: 'Occupied' },
+      { number: '208', type: '1BR', floor: 2, status: 'Occupied' },
+      { number: '209', type: '2BR', floor: 2, status: 'Occupied' },
+      { number: '301', type: '3BR', floor: 3, status: 'Occupied' },
+      { number: '302', type: '2BR', floor: 3, status: 'Occupied' },
+      { number: '303', type: '1BR', floor: 3, status: 'Occupied' },
+      { number: '304', type: '2BR', floor: 3, status: 'Vacant' },
+      { number: '305', type: '3BR', floor: 3, status: 'Occupied' },
+      { number: '306', type: '4BR', floor: 3, status: 'Occupied' },
+      { number: '307', type: '2BR', floor: 3, status: 'Occupied' },
+      { number: '308', type: '1BR', floor: 3, status: 'Occupied' },
+      { number: '309', type: '2BR', floor: 3, status: 'Occupied' },
+      { number: '401', type: '2BR', floor: 4, status: 'Occupied' },
+      { number: '402', type: '1BR', floor: 4, status: 'Occupied' },
+      { number: '403', type: '2BR', floor: 4, status: 'Occupied' },
+      { number: '404', type: '1BR', floor: 4, status: 'Occupied' },
+      { number: '405', type: '2BR', floor: 4, status: 'Vacant' },
+      { number: '406', type: '1BR', floor: 4, status: 'Occupied' },
+      { number: '407', type: '2BR', floor: 4, status: 'Occupied' },
+    ];
+
+    const units: any[] = [];
+    for (const u of unitDefs) {
+      const unit = await p.unit.create({ data: u });
+      units.push(unit);
+    }
+
+    const unitMap: Record<string, string> = {};
+    units.forEach(u => { unitMap[u.number] = u.id; });
+
+    console.log('Seeding tenants...');
+    const tenantData = [
+      { firstName: 'Margaret', lastName: 'Chen', email: 'margaret.chen@email.com', phone: '250-555-0101', startDate: '2019-03-15', status: 'Current', unit: '101' },
+      { firstName: 'David', lastName: 'Okafor', email: 'david.okafor@email.com', phone: '250-555-0102', startDate: '2020-07-01', status: 'Current', unit: '102' },
+      { firstName: 'Priya', lastName: 'Sharma', email: 'priya.sharma@email.com', phone: '250-555-0103', startDate: '2021-01-10', status: 'Current', unit: '102' },
+      { firstName: 'Robert', lastName: 'Tremblay', email: 'robert.tremblay@email.com', phone: '250-555-0104', startDate: '2018-09-01', status: 'Current', unit: '103' },
+      { firstName: 'Susan', lastName: 'Tremblay', email: 'susan.tremblay@email.com', phone: '250-555-0105', startDate: '2018-09-01', status: 'Current', unit: '103' },
+      { firstName: 'James', lastName: 'Nakamura', email: 'james.nakamura@email.com', phone: '250-555-0106', startDate: '2017-05-20', status: 'Current', unit: '104' },
+      { firstName: 'Linda', lastName: 'Nakamura', email: 'linda.nakamura@email.com', phone: '250-555-0107', startDate: '2017-05-20', status: 'Current', unit: '104' },
+      { firstName: 'Carlos', lastName: 'Rivera', email: 'carlos.rivera@email.com', phone: '250-555-0108', startDate: '2022-02-14', status: 'Current', unit: '106' },
+      { firstName: 'Aisha', lastName: 'Mohammed', email: 'aisha.mohammed@email.com', phone: '250-555-0109', startDate: '2021-08-30', status: 'Current', unit: '201' },
+      { firstName: 'Thomas', lastName: 'Bergstrom', email: 'thomas.bergstrom@email.com', phone: '250-555-0110', startDate: '2016-11-01', status: 'Current', unit: '202' },
+      { firstName: 'Karen', lastName: 'Bergstrom', email: 'karen.bergstrom@email.com', phone: '250-555-0111', startDate: '2016-11-01', status: 'Current', unit: '202' },
+      { firstName: 'Wei', lastName: 'Liu', email: 'wei.liu@email.com', phone: '250-555-0112', startDate: '2023-04-01', status: 'Current', unit: '203' },
+      { firstName: 'Patricia', lastName: 'MacLeod', email: 'patricia.macleod@email.com', phone: '250-555-0113', startDate: '2019-06-15', status: 'Current', unit: '205' },
+      { firstName: 'Kevin', lastName: 'MacLeod', email: 'kevin.macleod@email.com', phone: '250-555-0114', startDate: '2019-06-15', status: 'Current', unit: '205' },
+      { firstName: 'Fatima', lastName: 'Al-Hassan', email: 'fatima.alhassan@email.com', phone: '250-555-0115', startDate: '2020-10-01', status: 'Current', unit: '206' },
+      { firstName: 'George', lastName: 'Papadopoulos', email: 'george.papadopoulos@email.com', phone: '250-555-0116', startDate: '2015-03-01', status: 'Current', unit: '301' },
+      { firstName: 'Helen', lastName: 'Papadopoulos', email: 'helen.papadopoulos@email.com', phone: '250-555-0117', startDate: '2015-03-01', status: 'Current', unit: '301' },
+      { firstName: 'Michael', lastName: 'Johansson', email: 'michael.johansson@email.com', phone: '250-555-0118', startDate: '2022-09-01', status: 'Current', unit: '302' },
+      { firstName: 'Yuki', lastName: 'Tanaka', email: 'yuki.tanaka@email.com', phone: '250-555-0119', startDate: '2023-01-15', status: 'Current', unit: '303' },
+      { firstName: 'Brian', lastName: 'Walsh', email: 'brian.walsh@email.com', phone: '250-555-0120', startDate: '2018-07-01', status: 'Current', unit: '305' },
+      { firstName: 'Catherine', lastName: 'Walsh', email: 'catherine.walsh@email.com', phone: '250-555-0121', startDate: '2018-07-01', status: 'Current', unit: '305' },
+      { firstName: 'Ahmed', lastName: 'Patel', email: 'ahmed.patel@email.com', phone: '250-555-0122', startDate: '2017-12-01', status: 'Current', unit: '306' },
+      { firstName: 'Nadia', lastName: 'Patel', email: 'nadia.patel@email.com', phone: '250-555-0123', startDate: '2017-12-01', status: 'Current', unit: '306' },
+      { firstName: 'Oliver', lastName: 'Grant', email: 'oliver.grant@email.com', phone: '250-555-0130', startDate: '2024-01-10', status: 'Waitlist', unit: undefined },
+      { firstName: 'Sophie', lastName: 'Dubois', email: 'sophie.dubois@email.com', phone: '250-555-0131', startDate: '2024-03-22', status: 'Waitlist', unit: undefined },
+      { firstName: 'Marcus', lastName: 'Williams', email: 'marcus.williams@email.com', phone: '250-555-0132', startDate: '2024-05-14', status: 'Waitlist', unit: undefined },
+      { firstName: 'Eleanor', lastName: 'Frost', email: 'eleanor.frost@email.com', phone: '250-555-0140', startDate: '2015-01-01', status: 'Past', unit: undefined },
+      { firstName: 'Raymond', lastName: 'Kim', email: 'raymond.kim@email.com', phone: '250-555-0141', startDate: '2016-06-01', status: 'Past', unit: undefined },
+      { firstName: 'Ingrid', lastName: 'Sorensen', email: 'ingrid.sorensen@email.com', phone: '250-555-0124', startDate: '2021-05-01', status: 'Current', unit: '107' },
+      { firstName: 'Paulo', lastName: 'Ferreira', email: 'paulo.ferreira@email.com', phone: '250-555-0125', startDate: '2022-11-15', status: 'Current', unit: '108' },
+      { firstName: 'Diana', lastName: 'Ferreira', email: 'diana.ferreira@email.com', phone: '250-555-0126', startDate: '2022-11-15', status: 'Current', unit: '108' },
+      { firstName: 'Lena', lastName: 'Kowalski', email: 'lena.kowalski@email.com', phone: '250-555-0127', startDate: '2023-08-01', status: 'Current', unit: '109' },
+      { firstName: 'Derek', lastName: 'Munroe', email: 'derek.munroe@email.com', phone: '250-555-0128', startDate: '2020-04-01', status: 'Current', unit: '207' },
+      { firstName: 'Amara', lastName: 'Diallo', email: 'amara.diallo@email.com', phone: '250-555-0129', startDate: '2024-02-01', status: 'Current', unit: '208' },
+      { firstName: 'Stefan', lastName: 'Novak', email: 'stefan.novak@email.com', phone: '250-555-0133', startDate: '2021-09-15', status: 'Current', unit: '209' },
+      { firstName: 'Jana', lastName: 'Novak', email: 'jana.novak@email.com', phone: '250-555-0134', startDate: '2021-09-15', status: 'Current', unit: '209' },
+      { firstName: 'Trevor', lastName: 'Osei', email: 'trevor.osei@email.com', phone: '250-555-0135', startDate: '2022-06-01', status: 'Current', unit: '307' },
+      { firstName: 'Miriam', lastName: 'Goldstein', email: 'miriam.goldstein@email.com', phone: '250-555-0136', startDate: '2023-03-15', status: 'Current', unit: '308' },
+      { firstName: 'Kenji', lastName: 'Watanabe', email: 'kenji.watanabe@email.com', phone: '250-555-0137', startDate: '2020-12-01', status: 'Current', unit: '309' },
+      { firstName: 'Yuna', lastName: 'Watanabe', email: 'yuna.watanabe@email.com', phone: '250-555-0138', startDate: '2020-12-01', status: 'Current', unit: '309' },
+      { firstName: 'Bernard', lastName: 'Lefebvre', email: 'bernard.lefebvre@email.com', phone: '250-555-0150', startDate: '2024-06-01', status: 'Current', unit: '401' },
+      { firstName: 'Claire', lastName: 'Lefebvre', email: 'claire.lefebvre@email.com', phone: '250-555-0151', startDate: '2024-06-01', status: 'Current', unit: '401' },
+      { firstName: 'Ravi', lastName: 'Krishnamurthy', email: 'ravi.krishnamurthy@email.com', phone: '250-555-0152', startDate: '2024-07-15', status: 'Current', unit: '402' },
+      { firstName: 'Elena', lastName: 'Vasquez', email: 'elena.vasquez@email.com', phone: '250-555-0153', startDate: '2024-08-01', status: 'Current', unit: '403' },
+      { firstName: 'Marco', lastName: 'Vasquez', email: 'marco.vasquez@email.com', phone: '250-555-0154', startDate: '2024-08-01', status: 'Current', unit: '403' },
+      { firstName: 'Hana', lastName: 'Becker', email: 'hana.becker@email.com', phone: '250-555-0155', startDate: '2024-09-01', status: 'Current', unit: '404' },
+      { firstName: 'Isaiah', lastName: 'Campbell', email: 'isaiah.campbell@email.com', phone: '250-555-0156', startDate: '2025-01-15', status: 'Current', unit: '406' },
+      { firstName: 'Natasha', lastName: 'Ivanova', email: 'natasha.ivanova@email.com', phone: '250-555-0157', startDate: '2025-02-01', status: 'Current', unit: '407' },
+      { firstName: 'Dmitri', lastName: 'Ivanov', email: 'dmitri.ivanov@email.com', phone: '250-555-0158', startDate: '2025-02-01', status: 'Current', unit: '407' },
+    ];
+
+    const tenants: Record<string, any> = {};
+    for (const t of tenantData) {
+      const tenant = await p.tenant.create({
+        data: {
+          firstName: t.firstName,
+          lastName: t.lastName,
+          email: t.email,
+          phone: t.phone,
+          startDate: t.startDate,
+          status: t.status,
+          unitId: t.unit ? unitMap[t.unit] : null,
+        },
+      });
+      tenants[t.email] = tenant;
+
+      if (t.unit && unitMap[t.unit]) {
+        await p.unit.update({
+          where: { id: unitMap[t.unit] },
+          data: { currentTenantId: tenant.id },
+        });
+        await p.tenantHistory.create({
+          data: {
+            tenantId: tenant.id,
+            unitId: unitMap[t.unit],
+            startDate: new Date(t.startDate),
+            moveReason: 'Initial occupancy',
+          },
+        });
+      }
+    }
+
+    console.log('Seeding maintenance requests...');
+    const maintenanceData = [
+      { title: 'Leaking kitchen faucet', description: 'The kitchen faucet has been dripping constantly for the past week.', status: 'Pending', priority: 'Medium', category: 'Plumbing', unitNumber: '101', requestedBy: 'margaret.chen@email.com', createdAt: new Date('2026-02-28') },
+      { title: 'Bathroom exhaust fan not working', description: 'The exhaust fan in the main bathroom stopped working.', status: 'In Progress', priority: 'Medium', category: 'Electrical', unitNumber: '102', requestedBy: 'david.okafor@email.com', createdAt: new Date('2026-02-20') },
+      { title: 'Dishwasher not draining', description: 'The dishwasher fills with water but does not drain.', status: 'Completed', priority: 'Medium', category: 'Appliance', unitNumber: '104', requestedBy: 'james.nakamura@email.com', createdAt: new Date('2026-01-15') },
+    ];
+    for (const m of maintenanceData) {
+      await p.maintenanceRequest.create({ 
+        data: { 
+          title: m.title, 
+          description: m.description, 
+          status: m.status, 
+          priority: m.priority, 
+          category: m.category, 
+          unitId: unitMap[m.unitNumber], 
+          requestedBy: m.requestedBy, 
+          createdAt: m.createdAt
+        } 
+      });
+    }
+
+    console.log('Seeding announcements...');
+    const announcementData = [
+      { title: 'Annual General Meeting — April 12th', content: 'Meeting details...', type: 'General', priority: 'High', author: 'Board Administration', date: '2026-03-08' },
+      { title: 'Water Shutoff — March 18th', content: 'Shutoff details...', type: 'Maintenance', priority: 'Urgent', author: 'Maintenance Committee', date: '2026-03-06' },
+    ];
+    for (const a of announcementData) {
+      await p.announcement.create({ data: a });
+    }
+
+    console.log('Seeding documents...');
+    const documentData = [
+      { title: 'Oak Bay Co-op Rules & Regulations 2024', category: 'Bylaws', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2024-01-15', tags: ['legal', 'governance', 'bylaws'] },
+      { title: 'Member Handbook 2025', category: 'Policy', url: '#', fileType: 'pdf', author: 'Membership Committee', date: '2025-01-01', tags: ['handbook', 'rules'] },
+    ];
+    for (const d of documentData) {
+      await p.document.create({ data: d });
+    }
+
+    console.log('Seeding committees...');
+    const committeeData = [
+      { name: 'Board of Directors', description: 'Governing body.', chair: 'George Papadopoulos', icon: 'fa-landmark', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com'] },
+      { name: 'Maintenance Committee', description: 'Building upkeep.', chair: 'Thomas Bergstrom', icon: 'fa-wrench', members: ['thomas.bergstrom@email.com', 'robert.tremblay@email.com'] },
+      { name: 'Finance Committee', description: 'Budgets.', chair: 'Patricia MacLeod', icon: 'fa-dollar-sign', members: ['patricia.macleod@email.com', 'margaret.chen@email.com'] },
+    ];
+
+    for (const c of committeeData) {
+      await p.committee.create({
+        data: {
+          name: c.name,
+          description: c.description,
+          chair: c.chair,
+          icon: c.icon,
+          members: {
+            connect: c.members.map(email => ({ id: tenants[email].id })),
+          },
+        },
+      });
+    }
+
+    res.json({ success: true, message: "Mock data seeded successfully." });
+  } catch (e: any) {
+    console.error('Seeding error:', e);
+    res.status(500).json({ success: false, error: e.message });
   }
 });
 
