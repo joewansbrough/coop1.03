@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { geminiService } from '../services/geminiService';
-import { Document } from '../types';
+import { Document, Committee } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import FilterBar from '../components/FilterBar';
 

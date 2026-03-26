@@ -360,9 +360,31 @@ const upload = multer({ storage: multer.memoryStorage() });
       const { title, category, isPrivate, committee } = req.body;
       const currentYear = new Date().getFullYear().toString();
       
-      // Get AI summary
-      const aiResponse = await axios.post(`http://localhost:${PORT}/api/ai/summarize`, { content });
-      const { summary, tags: aiTags } = aiResponse.data;
+      // Get AI summary directly
+      let summary = "";
+      let aiTags: string[] = [];
+      try {
+        const ai = getAI();
+        const aiResult = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+          contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                summary: { type: Type.STRING },
+                tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+              },
+              required: ['summary', 'tags']
+            }
+          }
+        });
+        const aiData = JSON.parse(aiResult.response.text() || '{}');
+        summary = aiData.summary || "";
+        aiTags = aiData.tags || [];
+      } catch (aiErr) {
+        console.error('AI summarization failed during upload:', aiErr);
+      }
 
       const committeeTags = committee ? [committee] : [];
       const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...(aiTags || [])]));
