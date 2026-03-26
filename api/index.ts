@@ -487,7 +487,7 @@ app.put('/api/documents/:id', async (req, res) => {
   const { title, category, tags, content } = req.body;
   const document = await getPrisma().document.update({
     where: { id: req.params.id },
-    data: { title, category, tags, content }
+    data: { title, category, tags, content, committee }
   });
   res.json(document);
 });
