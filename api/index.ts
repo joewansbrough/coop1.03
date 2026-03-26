@@ -484,10 +484,10 @@ app.post('/api/documents', async (req, res) => {
 });
 
 app.put('/api/documents/:id', async (req, res) => {
-  const { title, category, tags, content } = req.body;
+  const { title, category, tags, content, committee, isPrivate } = req.body;
   const document = await getPrisma().document.update({
     where: { id: req.params.id },
-    data: { title, category, tags, content, committee }
+    data: { title, category, tags, content, committee, isPrivate }
   });
   res.json(document);
 });
