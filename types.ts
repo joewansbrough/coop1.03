@@ -113,9 +113,6 @@ export interface Document {
   updatedAt?: string;
 }
 
-  updatedAt?: string;
-}
-
 export interface Committee {
   id: string;
   name: string;
