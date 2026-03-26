@@ -43,8 +43,8 @@ async function startServer() {
   });
 
   // Middleware
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
   
   app.use(cookieSession({
     name: 'session',
@@ -84,7 +84,10 @@ async function startServer() {
     return url;
   };
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+});
 
   // API Request Logger
   app.use('/api', (req, res, next) => {
@@ -344,7 +347,18 @@ const upload = multer({ storage: multer.memoryStorage() });
     }
   });
 
-  app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
+  app.post('/api/documents/upload', (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        console.error('Multer Error:', err);
+        return res.status(400).json({ error: 'File upload error', details: err.message });
+      } else if (err) {
+        console.error('Unknown upload error:', err);
+        return res.status(500).json({ error: 'Server error during upload', details: err.message });
+      }
+      next();
+    });
+  }, async (req, res) => {
     console.log('--- Document Upload Started ---');
     if (!req.file) {
       console.error('Upload Error: No file in request');
