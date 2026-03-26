@@ -10,7 +10,15 @@ import pdf from 'pdf-parse';
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient();
+
+// Prisma singleton helper
+let prismaInstance: PrismaClient;
+const getPrisma = () => {
+  if (!prismaInstance) {
+    prismaInstance = new PrismaClient();
+  }
+  return prismaInstance;
+};
 
 // Trust proxy for secure cookies on Vercel
 app.set('trust proxy', true);
@@ -118,7 +126,7 @@ app.get('/auth/callback', async (req, res) => {
     const email = userData.email.toLowerCase();
 
     // Find or create user in database
-    let user = await prisma.tenant.findUnique({
+    let user = await getPrisma().tenant.findUnique({
       where: { email },
       include: { unit: true }
     });
@@ -197,7 +205,7 @@ app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
 // --- Database API Routes ---
 
 app.get('/api/units', async (req, res) => {
-  const units = await prisma.unit.findMany({
+  const units = await getPrisma().unit.findMany({
     include: {
       currentTenant: true,
       occupancyHistory: {
@@ -210,14 +218,14 @@ app.get('/api/units', async (req, res) => {
 });
 
 app.get('/api/tenants', async (req, res) => {
-  const tenants = await prisma.tenant.findMany({
+  const tenants = await getPrisma().tenant.findMany({
     include: { unit: true }
   });
   res.json(tenants);
 });
 
 app.get('/api/tenants/:id/history', async (req, res) => {
-  const history = await prisma.tenantHistory.findMany({
+  const history = await getPrisma().tenantHistory.findMany({
     where: { tenantId: req.params.id },
     include: { unit: true },
     orderBy: { startDate: 'desc' }
@@ -232,28 +240,28 @@ app.post('/api/units/:id/move-out', async (req, res) => {
   const { date, reason } = req.body;
   try {
     // Find all current residents of this unit
-    const residents = await prisma.tenant.findMany({ where: { unitId: id, status: 'Current' } });
+    const residents = await getPrisma().tenant.findMany({ where: { unitId: id, status: 'Current' } });
 
     for (const tenant of residents) {
       // Close any open TenantHistory record for this unit
-      const openHistory = await prisma.tenantHistory.findFirst({
+      const openHistory = await getPrisma().tenantHistory.findFirst({
         where: { tenantId: tenant.id, unitId: id, endDate: null }
       });
       if (openHistory) {
-        await prisma.tenantHistory.update({
+        await getPrisma().tenantHistory.update({
           where: { id: openHistory.id },
           data: { endDate: new Date(date), moveReason: reason || 'Voluntary Household Departure' }
         });
       }
       // Mark tenant as Past and unlink from unit
-      await prisma.tenant.update({
+      await getPrisma().tenant.update({
         where: { id: tenant.id },
         data: { status: 'Past', unitId: null }
       });
     }
 
     // Mark unit as Vacant
-    await prisma.unit.update({
+    await getPrisma().unit.update({
       where: { id },
       data: { status: 'Vacant', currentTenantId: null }
     });
@@ -266,40 +274,40 @@ app.post('/api/units/:id/move-in', async (req, res) => {
   const { id } = req.params;
   const { tenantId, date } = req.body;
   try {
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const tenant = await getPrisma().tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
     // If internal transfer: close open history record on their previous unit
     if (tenant.unitId && tenant.unitId !== id) {
-      const openHistory = await prisma.tenantHistory.findFirst({
+      const openHistory = await getPrisma().tenantHistory.findFirst({
         where: { tenantId, unitId: tenant.unitId, endDate: null }
       });
       if (openHistory) {
-        await prisma.tenantHistory.update({
+        await getPrisma().tenantHistory.update({
           where: { id: openHistory.id },
           data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
         });
       }
       // Vacate previous unit
-      await prisma.unit.update({
+      await getPrisma().unit.update({
         where: { id: tenant.unitId },
         data: { status: 'Vacant', currentTenantId: null }
       });
     }
 
     // Create new TenantHistory record for the new unit
-    await prisma.tenantHistory.create({
+    await getPrisma().tenantHistory.create({
       data: { tenantId, unitId: id, startDate: new Date(date) }
     });
 
     // Update tenant
-    await prisma.tenant.update({
+    await getPrisma().tenant.update({
       where: { id: tenantId },
       data: { unitId: id, status: 'Current', startDate: date }
     });
 
     // Update unit
-    await prisma.unit.update({
+    await getPrisma().unit.update({
       where: { id },
       data: { status: 'Occupied', currentTenantId: tenantId }
     });
@@ -313,33 +321,33 @@ app.post('/api/units/:id/transfer', async (req, res) => {
   const { toUnitId, date } = req.body;
   try {
     // Find all residents of the source unit
-    const residents = await prisma.tenant.findMany({ where: { unitId: id, status: 'Current' } });
+    const residents = await getPrisma().tenant.findMany({ where: { unitId: id, status: 'Current' } });
 
     for (const tenant of residents) {
       // Close open history on source unit
-      const openHistory = await prisma.tenantHistory.findFirst({
+      const openHistory = await getPrisma().tenantHistory.findFirst({
         where: { tenantId: tenant.id, unitId: id, endDate: null }
       });
       if (openHistory) {
-        await prisma.tenantHistory.update({
+        await getPrisma().tenantHistory.update({
           where: { id: openHistory.id },
           data: { endDate: new Date(date), moveReason: 'Internal Unit Transfer' }
         });
       }
       // Open new history on destination unit
-      await prisma.tenantHistory.create({
+      await getPrisma().tenantHistory.create({
         data: { tenantId: tenant.id, unitId: toUnitId, startDate: new Date(date) }
       });
       // Update tenant's unit
-      await prisma.tenant.update({
+      await getPrisma().tenant.update({
         where: { id: tenant.id },
         data: { unitId: toUnitId, startDate: date }
       });
     }
 
     // Vacate source unit, occupy destination unit
-    await prisma.unit.update({ where: { id }, data: { status: 'Vacant', currentTenantId: null } });
-    await prisma.unit.update({
+    await getPrisma().unit.update({ where: { id }, data: { status: 'Vacant', currentTenantId: null } });
+    await getPrisma().unit.update({
       where: { id: toUnitId },
       data: { status: 'Occupied', currentTenantId: residents[0]?.id ?? null }
     });
@@ -350,7 +358,7 @@ app.post('/api/units/:id/transfer', async (req, res) => {
 
 app.get('/api/maintenance', async (req, res) => {
   try {
-    const requests = await prisma.maintenanceRequest.findMany({
+    const requests = await getPrisma().maintenanceRequest.findMany({
       include: { unit: true },
       orderBy: { createdAt: 'desc' }
     });
@@ -362,7 +370,7 @@ app.get('/api/maintenance', async (req, res) => {
 
 app.post('/api/maintenance', async (req, res) => {
   const { title, description, status, priority, category, unitId, requestedBy } = req.body;
-  const request = await prisma.maintenanceRequest.create({
+  const request = await getPrisma().maintenanceRequest.create({
     data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy }
   });
   res.json(request);
@@ -370,7 +378,7 @@ app.post('/api/maintenance', async (req, res) => {
 
 app.put('/api/maintenance/:id', async (req, res) => {
   const { title, description, status, priority, category, unitId } = req.body;
-  const request = await prisma.maintenanceRequest.update({
+  const request = await getPrisma().maintenanceRequest.update({
     where: { id: req.params.id },
     data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId }
   });
@@ -378,7 +386,7 @@ app.put('/api/maintenance/:id', async (req, res) => {
 });
 
 app.delete('/api/maintenance/:id', async (req, res) => {
-  await prisma.maintenanceRequest.delete({ where: { id: req.params.id } });
+  await getPrisma().maintenanceRequest.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
@@ -460,7 +468,7 @@ app.post('/api/documents/upload', (req, res, next) => {
     const finalContent = `${summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]`;
 
     console.log('Creating database record...');
-    const document = await prisma.document.create({
+    const document = await getPrisma().document.create({
       data: {
         title: title || 'Untitled Document',
         category: category || 'General',
@@ -485,7 +493,7 @@ app.post('/api/documents/upload', (req, res, next) => {
 
 app.put('/api/documents/:id', async (req, res) => {
   const { title, category, tags, content } = req.body;
-  const document = await prisma.document.update({
+  const document = await getPrisma().document.update({
     where: { id: req.params.id },
     data: { title, category, tags, content }
   });
@@ -493,13 +501,13 @@ app.put('/api/documents/:id', async (req, res) => {
 });
 
 app.delete('/api/documents/:id', async (req, res) => {
-  await prisma.document.delete({ where: { id: req.params.id } });
+  await getPrisma().document.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
 app.get('/api/committees', async (req, res) => {
   try {
-    const committees = await prisma.committee.findMany({
+    const committees = await getPrisma().committee.findMany({
       include: { members: true }
     });
     // UI expects members as an array of name strings
@@ -512,7 +520,7 @@ app.get('/api/committees', async (req, res) => {
 });
 
 app.get('/api/events', async (req, res) => {
-  const events = await prisma.coopEvent.findMany({
+  const events = await getPrisma().coopEvent.findMany({
     include: { attendees: true },
     orderBy: { date: 'asc' }
   });
@@ -521,7 +529,7 @@ app.get('/api/events', async (req, res) => {
 
 app.post('/api/events', async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
-  const event = await prisma.coopEvent.create({
+  const event = await getPrisma().coopEvent.create({
     data: { title, description, date, time, location, category },
     include: { attendees: true }
   });
@@ -530,7 +538,7 @@ app.post('/api/events', async (req, res) => {
 
 app.put('/api/events/:id', async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
-  const event = await prisma.coopEvent.update({
+  const event = await getPrisma().coopEvent.update({
     where: { id: req.params.id },
     data: { title, description, date, time, location, category },
     include: { attendees: true }
@@ -543,10 +551,10 @@ app.post('/api/events/:id/attend', async (req, res) => {
   if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const tenant = await prisma.tenant.findUnique({ where: { email: user.email } });
+    const tenant = await getPrisma().tenant.findUnique({ where: { email: user.email } });
     if (!tenant) return res.status(404).json({ error: 'Tenant record not found for this user' });
 
-    const event = await prisma.coopEvent.update({
+    const event = await getPrisma().coopEvent.update({
       where: { id: req.params.id },
       data: {
         attendees: {
@@ -562,7 +570,7 @@ app.post('/api/events/:id/attend', async (req, res) => {
 });
 
 app.delete('/api/events/:id', async (req, res) => {
-  await prisma.coopEvent.delete({ where: { id: req.params.id } });
+  await getPrisma().coopEvent.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
