@@ -153,11 +153,11 @@ const Documents: React.FC<{
       clearInterval(interval);
       setUploadProgress(100);
       
-      if (!res.ok) {
-        throw new Error('Upload failed');
-      }
-      
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.details || data.error || 'Upload failed');
+      }
       
       setDocuments(prev => [data, ...prev]);
       setShowUpload(false);
@@ -169,9 +169,9 @@ const Documents: React.FC<{
       setSelectedFile(null);
       
       setReviewingDoc(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('File upload failed.');
+      alert(`File upload failed: ${err.message}`);
       clearInterval(interval);
     } finally {
       setIsUploading(false);
