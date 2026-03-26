@@ -210,14 +210,15 @@ const Documents: React.FC<{
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: reviewingDoc.title,
-            category: reviewingDoc.category,
-            tags: reviewingDoc.tags,
-            content: reviewingDoc.content,
-            committee: reviewingDoc.committee, // Ensure committee is included
-            isPrivate: reviewingDoc.isPrivate,
-          })
-        });
+                title: reviewingDoc.title,
+                category: reviewingDoc.category,
+                tags: reviewingDoc.tags,
+                content: reviewingDoc.content,
+                committee: reviewingDoc.committee, // Explicitly send committee
+                isPrivate: reviewingDoc.isPrivate, // Explicitly send isPrivate
+              })
+            });
+
 
           category: reviewingDoc.category,
           tags: reviewingDoc.tags,
