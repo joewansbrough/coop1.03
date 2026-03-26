@@ -96,9 +96,9 @@ model Document {
   tags      String[] @default([])
   isPrivate Boolean  @default(false)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-}
+  updatedAt   DateTime @updatedAt
+  }
+
 
 model CoopEvent {
   id          String   @id @default(uuid())
