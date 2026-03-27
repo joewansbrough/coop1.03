@@ -130,16 +130,6 @@ const Documents: React.FC<{
 
     setIsUploading(true);
 
-    // Read file as text to avoid multipart/form-data issues on Vercel
-    const readFileAsText = (file: File): Promise<string> => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
-    };
-
     // Simulate progress for UX
     let prog = 0;
     const interval = setInterval(() => {
@@ -148,52 +138,38 @@ const Documents: React.FC<{
     }, 200);
 
     try {
-      let fileContent = await readFileAsText(selectedFile);
+      // Use FormData to send the file directly to the blob upload endpoint
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('title', newDocTitle);
+      formData.append('category', newDocCategory);
+      formData.append('isPrivate', String(newDocIsPrivate));
+      formData.append('committee', newDocCommittee);
 
-      // Vercel has a 4.5MB request body limit. 
-      // We truncate content to ~1MB to be safe and ensure the JSON payload succeeds.
-      const MAX_CONTENT_LENGTH = 1024 * 1024;
-      if (fileContent.length > MAX_CONTENT_LENGTH) {
-        fileContent = fileContent.substring(0, MAX_CONTENT_LENGTH) + "\n\n[Content truncated for size...]";
-      }
-
-      const payload = {
-        title: newDocTitle,
-        category: newDocCategory,
-        isPrivate: newDocIsPrivate,
-        committee: newDocCommittee,
-        content: fileContent,
-        fileType: selectedFile.name.split('.').pop() || 'txt',
-        date: new Date().toISOString().split('T')[0]
-      };
-
-      const res = await fetch('/api/documents', {
+      const res = await fetch('/api/upload-to-blob', { // Call the dedicated blob upload endpoint
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload),
+        body: formData, // Send FormData directly
       });
 
       clearInterval(interval);
       setUploadProgress(100);
 
-      const data = await res.json();
+      const data = await res.json(); // Expected response: { url, name, size, document }
 
       if (!res.ok) {
-        throw new Error(data.details || data.error || 'Upload failed');
+        throw new Error(data.details || data.error || `Upload failed: ${res.status}`);
       }
 
-      setDocuments(prev => [data, ...prev]);
+      // Update documents list and reset form state
+      setDocuments(prev => [data.document, ...prev]); // Use the document object returned from backend
       setShowUpload(false);
-      // Reset form
       setNewDocTitle('');
       setNewDocCategory('Policy');
       setNewDocCommittee('');
       setNewDocIsPrivate(false);
       setSelectedFile(null);
 
-      setReviewingDoc(data);
+      setReviewingDoc(data.document); // Set the newly created document for review
     } catch (err: any) {
       console.error(err);
       alert(`File upload failed: ${err.message}`);
@@ -202,8 +178,7 @@ const Documents: React.FC<{
       setIsUploading(false);
       setUploadProgress(0);
     }
-  };
-  const handleSaveReview = async () => {
+  };  const handleSaveReview = async () => {
     if (isGuest || !reviewingDoc) return;
     try {
       const res = await fetch(`/api/documents/${reviewingDoc.id}`, {
