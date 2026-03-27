@@ -43,7 +43,8 @@ async function startServer() {
   });
 
   // Middleware
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
   
   app.use(cookieSession({
     name: 'session',
@@ -83,7 +84,10 @@ async function startServer() {
     return url;
   };
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+});
 
   // API Request Logger
   app.use('/api', (req, res, next) => {
@@ -343,36 +347,90 @@ const upload = multer({ storage: multer.memoryStorage() });
     }
   });
 
-  app.post('/api/documents/upload', upload.single('file'), async (req, res) => {
+  app.post('/api/documents/upload', (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        console.error('Multer Error:', err);
+        return res.status(400).json({ error: 'File upload error', details: err.message });
+      } else if (err) {
+        console.error('Unknown upload error:', err);
+        return res.status(500).json({ error: 'Server error during upload', details: err.message });
+      }
+      next();
+    });
+  }, async (req, res) => {
+    console.log('--- Document Upload Started ---');
     if (!req.file) {
+      console.error('Upload Error: No file in request');
       return res.status(400).json({ error: 'No file uploaded.' });
     }
+
+    console.log(`File received: ${req.file.originalname} (${req.file.mimetype}, ${req.file.size} bytes)`);
 
     try {
       let content = '';
       if (req.file.mimetype === 'application/pdf') {
-        const data = await pdf(req.file.buffer);
-        content = data.text;
+        console.log('Processing PDF file...');
+        try {
+          // pdf-parse can sometimes be exported as a default function or a property on the default export
+          const pdfParser = (pdf as any).default || pdf;
+          const data = await pdfParser(req.file.buffer);
+          content = data.text;
+          console.log(`PDF processed successfully. Extracted ${content.length} characters.`);
+        } catch (pdfErr: any) {
+          console.error('PDF parsing error:', pdfErr);
+          // Fallback to empty string or throw error
+          content = `[PDF content could not be extracted: ${pdfErr.message}]`;
+        }
       } else {
         content = req.file.buffer.toString('utf-8');
+        console.log(`Text/Generic file processed. Extracted ${content.length} characters.`);
       }
 
       const { title, category, isPrivate, committee } = req.body;
+      console.log(`Metadata: Title="${title}", Category="${category}", Committee="${committee}", Private=${isPrivate}`);
+      
       const currentYear = new Date().getFullYear().toString();
       
-      // Get AI summary
-      const aiResponse = await axios.post(`http://localhost:${PORT}/api/ai/summarize`, { content });
-      const { summary, tags: aiTags } = aiResponse.data;
+      // Get AI summary directly
+      let summary = "";
+      let aiTags: string[] = [];
+      try {
+        console.log('Requesting AI summary...');
+        const ai = getAI();
+        const aiResult = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+          contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                summary: { type: Type.STRING },
+                tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+              },
+              required: ['summary', 'tags']
+            }
+          }
+        });
+        const aiData = JSON.parse(aiResult.response.text() || '{}');
+        summary = aiData.summary || "";
+        aiTags = aiData.tags || [];
+        console.log('AI summary generated successfully.');
+      } catch (aiErr: any) {
+        console.error('AI summarization failed during upload:', aiErr.message);
+        summary = "Summary unavailable.";
+      }
 
       const committeeTags = committee ? [committee] : [];
       const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...(aiTags || [])]));
 
       const finalContent = `${summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]`;
 
+      console.log('Creating database record...');
       const document = await prisma.document.create({
         data: {
-          title,
-          category,
+          title: title || 'Untitled Document',
+          category: category || 'General',
           isPrivate: isPrivate === 'true',
           content: finalContent,
           tags: finalTags,
@@ -382,10 +440,13 @@ const upload = multer({ storage: multer.memoryStorage() });
           date: new Date().toISOString().split('T')[0],
         }
       });
+      console.log(`Document created successfully with ID: ${document.id}`);
       res.json(document);
     } catch (error: any) {
-      console.error('File upload error:', error);
+      console.error('CRITICAL: File upload process failed:', error);
       res.status(500).json({ error: 'Failed to process file upload.', details: error.message });
+    } finally {
+      console.log('--- Document Upload Finished ---');
     }
   });
 

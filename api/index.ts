@@ -8,7 +8,22 @@ import { GoogleGenAI, Type } from '@google/genai';
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient();
+
+// Helper to sanitize strings for PostgreSQL (removes null bytes and invalid UTF-8 sequences)
+const sanitizeUtf8 = (str: string): string => {
+  if (!str) return "";
+  // Remove null bytes (\u0000) and other non-printable control characters that Postgres rejects
+  return str.replace(/\0/g, '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g, "");
+};
+
+// Prisma singleton helper
+let prismaInstance: PrismaClient;
+const getPrisma = () => {
+  if (!prismaInstance) {
+    prismaInstance = new PrismaClient();
+  }
+  return prismaInstance;
+};
 
 // Trust proxy for secure cookies on Vercel
 app.set('trust proxy', true);
@@ -23,7 +38,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use((req, res, next) => {
   cookieSession({
     name: 'session',
@@ -38,7 +54,7 @@ app.use((req, res, next) => {
 });
 
 // Mock Data
-const ADMIN_EMAILS = ['joewcoupons@gmail.com'];
+const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com'];
 
 // Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
@@ -63,7 +79,7 @@ const authRouter = express.Router();
 authRouter.get('/url', (req, res) => {
   const baseUrl = getBaseUrl(req);
   const redirectUri = `${baseUrl}/auth/callback`;
-  
+
   if (!process.env.GOOGLE_CLIENT_ID) {
     return res.status(500).json({ error: 'GOOGLE_CLIENT_ID is not configured in Vercel environment variables' });
   }
@@ -91,7 +107,7 @@ app.get('/auth/callback', async (req, res) => {
   try {
     const baseUrl = getBaseUrl(req);
     const redirectUri = `${baseUrl}/auth/callback`;
-    
+
     const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -109,14 +125,14 @@ app.get('/auth/callback', async (req, res) => {
     const email = userData.email.toLowerCase();
 
     // Find or create user in database
-    let user = await prisma.tenant.findUnique({
+    let user = await getPrisma().tenant.findUnique({
       where: { email },
       include: { unit: true }
     });
 
     // For now, let's assume if they are in ADMIN_EMAILS, they are admins
     const isAdmin = ADMIN_EMAILS.includes(email);
-    
+
     // If not in DB but is admin, we might want to allow them anyway
     if (!user && !isAdmin) {
       return res.send(`<html><body><script>alert("Access denied for ${email}. You are not registered in the co-op database.");window.close();</script></body></html>`);
@@ -188,7 +204,7 @@ app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
 // --- Database API Routes ---
 
 app.get('/api/units', async (req, res) => {
-  const units = await prisma.unit.findMany({
+  const units = await getPrisma().unit.findMany({
     include: {
       currentTenant: true,
       occupancyHistory: {
@@ -201,14 +217,14 @@ app.get('/api/units', async (req, res) => {
 });
 
 app.get('/api/tenants', async (req, res) => {
-  const tenants = await prisma.tenant.findMany({
+  const tenants = await getPrisma().tenant.findMany({
     include: { unit: true }
   });
   res.json(tenants);
 });
 
 app.get('/api/tenants/:id/history', async (req, res) => {
-  const history = await prisma.tenantHistory.findMany({
+  const history = await getPrisma().tenantHistory.findMany({
     where: { tenantId: req.params.id },
     include: { unit: true },
     orderBy: { startDate: 'desc' }
@@ -223,28 +239,28 @@ app.post('/api/units/:id/move-out', async (req, res) => {
   const { date, reason } = req.body;
   try {
     // Find all current residents of this unit
-    const residents = await prisma.tenant.findMany({ where: { unitId: id, status: 'Current' } });
+    const residents = await getPrisma().tenant.findMany({ where: { unitId: id, status: 'Current' } });
 
     for (const tenant of residents) {
       // Close any open TenantHistory record for this unit
-      const openHistory = await prisma.tenantHistory.findFirst({
+      const openHistory = await getPrisma().tenantHistory.findFirst({
         where: { tenantId: tenant.id, unitId: id, endDate: null }
       });
       if (openHistory) {
-        await prisma.tenantHistory.update({
+        await getPrisma().tenantHistory.update({
           where: { id: openHistory.id },
           data: { endDate: new Date(date), moveReason: reason || 'Voluntary Household Departure' }
         });
       }
       // Mark tenant as Past and unlink from unit
-      await prisma.tenant.update({
+      await getPrisma().tenant.update({
         where: { id: tenant.id },
         data: { status: 'Past', unitId: null }
       });
     }
 
     // Mark unit as Vacant
-    await prisma.unit.update({
+    await getPrisma().unit.update({
       where: { id },
       data: { status: 'Vacant', currentTenantId: null }
     });
@@ -257,40 +273,40 @@ app.post('/api/units/:id/move-in', async (req, res) => {
   const { id } = req.params;
   const { tenantId, date } = req.body;
   try {
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const tenant = await getPrisma().tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
     // If internal transfer: close open history record on their previous unit
     if (tenant.unitId && tenant.unitId !== id) {
-      const openHistory = await prisma.tenantHistory.findFirst({
+      const openHistory = await getPrisma().tenantHistory.findFirst({
         where: { tenantId, unitId: tenant.unitId, endDate: null }
       });
       if (openHistory) {
-        await prisma.tenantHistory.update({
+        await getPrisma().tenantHistory.update({
           where: { id: openHistory.id },
           data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
         });
       }
       // Vacate previous unit
-      await prisma.unit.update({
+      await getPrisma().unit.update({
         where: { id: tenant.unitId },
         data: { status: 'Vacant', currentTenantId: null }
       });
     }
 
     // Create new TenantHistory record for the new unit
-    await prisma.tenantHistory.create({
+    await getPrisma().tenantHistory.create({
       data: { tenantId, unitId: id, startDate: new Date(date) }
     });
 
     // Update tenant
-    await prisma.tenant.update({
+    await getPrisma().tenant.update({
       where: { id: tenantId },
       data: { unitId: id, status: 'Current', startDate: date }
     });
 
     // Update unit
-    await prisma.unit.update({
+    await getPrisma().unit.update({
       where: { id },
       data: { status: 'Occupied', currentTenantId: tenantId }
     });
@@ -304,33 +320,33 @@ app.post('/api/units/:id/transfer', async (req, res) => {
   const { toUnitId, date } = req.body;
   try {
     // Find all residents of the source unit
-    const residents = await prisma.tenant.findMany({ where: { unitId: id, status: 'Current' } });
+    const residents = await getPrisma().tenant.findMany({ where: { unitId: id, status: 'Current' } });
 
     for (const tenant of residents) {
       // Close open history on source unit
-      const openHistory = await prisma.tenantHistory.findFirst({
+      const openHistory = await getPrisma().tenantHistory.findFirst({
         where: { tenantId: tenant.id, unitId: id, endDate: null }
       });
       if (openHistory) {
-        await prisma.tenantHistory.update({
+        await getPrisma().tenantHistory.update({
           where: { id: openHistory.id },
           data: { endDate: new Date(date), moveReason: 'Internal Unit Transfer' }
         });
       }
       // Open new history on destination unit
-      await prisma.tenantHistory.create({
+      await getPrisma().tenantHistory.create({
         data: { tenantId: tenant.id, unitId: toUnitId, startDate: new Date(date) }
       });
       // Update tenant's unit
-      await prisma.tenant.update({
+      await getPrisma().tenant.update({
         where: { id: tenant.id },
         data: { unitId: toUnitId, startDate: date }
       });
     }
 
     // Vacate source unit, occupy destination unit
-    await prisma.unit.update({ where: { id }, data: { status: 'Vacant', currentTenantId: null } });
-    await prisma.unit.update({
+    await getPrisma().unit.update({ where: { id }, data: { status: 'Vacant', currentTenantId: null } });
+    await getPrisma().unit.update({
       where: { id: toUnitId },
       data: { status: 'Occupied', currentTenantId: residents[0]?.id ?? null }
     });
@@ -341,7 +357,7 @@ app.post('/api/units/:id/transfer', async (req, res) => {
 
 app.get('/api/maintenance', async (req, res) => {
   try {
-    const requests = await prisma.maintenanceRequest.findMany({
+    const requests = await getPrisma().maintenanceRequest.findMany({
       include: { unit: true },
       orderBy: { createdAt: 'desc' }
     });
@@ -353,7 +369,7 @@ app.get('/api/maintenance', async (req, res) => {
 
 app.post('/api/maintenance', async (req, res) => {
   const { title, description, status, priority, category, unitId, requestedBy } = req.body;
-  const request = await prisma.maintenanceRequest.create({
+  const request = await getPrisma().maintenanceRequest.create({
     data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy }
   });
   res.json(request);
@@ -361,7 +377,7 @@ app.post('/api/maintenance', async (req, res) => {
 
 app.put('/api/maintenance/:id', async (req, res) => {
   const { title, description, status, priority, category, unitId } = req.body;
-  const request = await prisma.maintenanceRequest.update({
+  const request = await getPrisma().maintenanceRequest.update({
     where: { id: req.params.id },
     data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId }
   });
@@ -369,12 +385,12 @@ app.put('/api/maintenance/:id', async (req, res) => {
 });
 
 app.delete('/api/maintenance/:id', async (req, res) => {
-  await prisma.maintenanceRequest.delete({ where: { id: req.params.id } });
+  await getPrisma().maintenanceRequest.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
 app.get('/api/announcements', async (req, res) => {
-  const announcements = await prisma.announcement.findMany({
+  const announcements = await getPrisma().announcement.findMany({
     orderBy: { createdAt: 'desc' }
   });
   res.json(announcements);
@@ -382,7 +398,7 @@ app.get('/api/announcements', async (req, res) => {
 
 app.post('/api/announcements', async (req, res) => {
   const { title, content, type, priority, author, date } = req.body;
-  const announcement = await prisma.announcement.create({
+  const announcement = await getPrisma().announcement.create({
     data: { title, content, type, priority, author, date }
   });
   res.json(announcement);
@@ -390,7 +406,7 @@ app.post('/api/announcements', async (req, res) => {
 
 app.put('/api/announcements/:id', async (req, res) => {
   const { title, content, type, priority, date } = req.body;
-  const announcement = await prisma.announcement.update({
+  const announcement = await getPrisma().announcement.update({
     where: { id: req.params.id },
     data: { title, content, type, priority, date }
   });
@@ -398,42 +414,92 @@ app.put('/api/announcements/:id', async (req, res) => {
 });
 
 app.delete('/api/announcements/:id', async (req, res) => {
-  await prisma.announcement.delete({ where: { id: req.params.id } });
+  await getPrisma().announcement.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
 app.get('/api/documents', async (req, res) => {
-  const documents = await prisma.document.findMany({
+  const documents = await getPrisma().document.findMany({
     orderBy: { createdAt: 'desc' }
   });
   res.json(documents);
 });
 
 app.post('/api/documents', async (req, res) => {
-  const { title, category, url, fileType, author, date, tags, content } = req.body;
-  const document = await prisma.document.create({
-    data: { title, category, url, fileType, author, date, tags, content }
+  const { title, category, url, fileType, author, date, tags, content, committee, isPrivate } = req.body;
+  
+  let summary = "";
+  let aiTags: string[] = [];
+  
+  // Get AI summary if content is provided
+  if (content && content.length > 50) {
+    try {
+      const ai = getAI();
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              summary: { type: Type.STRING },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ['summary', 'tags']
+          }
+        }
+      });
+      const aiData = JSON.parse(response.text || '{}');
+      summary = aiData.summary || "";
+      aiTags = aiData.tags || [];
+    } catch (e: any) {
+      console.error('AI summarization failed during document creation:', e.message);
+    }
+  }
+
+  const currentYear = new Date().getFullYear().toString();
+  const committeeTags = committee ? [committee] : [];
+  const providedTags = Array.isArray(tags) ? tags : [];
+  const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags, ...aiTags]));
+  
+  const finalContent = summary 
+    ? `${summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]\n\n${content || ''}`
+    : content;
+
+  const document = await getPrisma().document.create({
+    data: { 
+      title: title || 'Untitled Document', 
+      category: category || 'General', 
+      url: url || '#', 
+      fileType: fileType || 'txt', 
+      author: author || ((req as any).session?.user?.name || 'System'), 
+      date: date || new Date().toISOString().split('T')[0], 
+      tags: finalTags, 
+      content: finalContent,
+      isPrivate: isPrivate === true
+    }
   });
   res.json(document);
 });
 
 app.put('/api/documents/:id', async (req, res) => {
-  const { title, category, tags, content } = req.body;
-  const document = await prisma.document.update({
+  const { title, category, tags, content, committee, isPrivate } = req.body;
+  const document = await getPrisma().document.update({
     where: { id: req.params.id },
-    data: { title, category, tags, content }
+    data: { title, category, tags, content, committee, isPrivate }
   });
   res.json(document);
 });
 
 app.delete('/api/documents/:id', async (req, res) => {
-  await prisma.document.delete({ where: { id: req.params.id } });
+  await getPrisma().document.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
 app.get('/api/committees', async (req, res) => {
   try {
-    const committees = await prisma.committee.findMany({
+    const committees = await getPrisma().committee.findMany({
       include: { members: true }
     });
     // UI expects members as an array of name strings
@@ -446,7 +512,7 @@ app.get('/api/committees', async (req, res) => {
 });
 
 app.get('/api/events', async (req, res) => {
-  const events = await prisma.coopEvent.findMany({
+  const events = await getPrisma().coopEvent.findMany({
     include: { attendees: true },
     orderBy: { date: 'asc' }
   });
@@ -455,7 +521,7 @@ app.get('/api/events', async (req, res) => {
 
 app.post('/api/events', async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
-  const event = await prisma.coopEvent.create({
+  const event = await getPrisma().coopEvent.create({
     data: { title, description, date, time, location, category },
     include: { attendees: true }
   });
@@ -464,7 +530,7 @@ app.post('/api/events', async (req, res) => {
 
 app.put('/api/events/:id', async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
-  const event = await prisma.coopEvent.update({
+  const event = await getPrisma().coopEvent.update({
     where: { id: req.params.id },
     data: { title, description, date, time, location, category },
     include: { attendees: true }
@@ -477,10 +543,10 @@ app.post('/api/events/:id/attend', async (req, res) => {
   if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const tenant = await prisma.tenant.findUnique({ where: { email: user.email } });
+    const tenant = await getPrisma().tenant.findUnique({ where: { email: user.email } });
     if (!tenant) return res.status(404).json({ error: 'Tenant record not found for this user' });
 
-    const event = await prisma.coopEvent.update({
+    const event = await getPrisma().coopEvent.update({
       where: { id: req.params.id },
       data: {
         attendees: {
@@ -496,7 +562,7 @@ app.post('/api/events/:id/attend', async (req, res) => {
 });
 
 app.delete('/api/events/:id', async (req, res) => {
-  await prisma.coopEvent.delete({ where: { id: req.params.id } });
+  await getPrisma().coopEvent.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
@@ -569,6 +635,309 @@ app.post('/api/ai/summarize', async (req, res) => {
   }
 });
 
+
+app.get('/api/migrate', async (req, res) => {
+  try {
+    const p = getPrisma();
+    
+    console.log('Running raw SQL migrations...');
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committee" TEXT DEFAULT '';`); // Add committee column
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "content" TEXT DEFAULT '';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "isPrivate" BOOLEAN NOT NULL DEFAULT false;`);
+    
+    // Check if seeding is needed
+    const unitCount = await p.unit.count();
+    let seeded = false;
+    
+    if (unitCount === 0) {
+      console.log('Database empty, triggering auto-seed...');
+      // We can't easily call the /api/seed endpoint internally, so we'll just 
+      // suggest the user visit it, or we could move the logic to a helper.
+      // For simplicity and speed, let's just make the message clear.
+      return res.json({ 
+        success: true, 
+        message: "Database schema updated. Please now visit /api/seed once to restore your data." 
+      });
+    }
+    
+    res.json({ 
+      success: true, 
+      message: "Database schema and data are synced." 
+    });
+  } catch (e: any) {
+    console.error('Migration error:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/seed', async (req, res) => {
+  try {
+    const p = getPrisma();
+    console.log('Clearing existing data...');
+    await p.tenantHistory.deleteMany();
+    await p.maintenanceRequest.deleteMany();
+    await p.announcement.deleteMany();
+    await p.document.deleteMany();
+    await p.committee.deleteMany();
+    await p.coopEvent.deleteMany();
+    await p.tenant.deleteMany();
+    await p.unit.deleteMany();
+
+    console.log('Seeding units...');
+    const unitDefs = [
+      { number: '101', type: '1BR', floor: 1, status: 'Occupied' },
+      { number: '102', type: '2BR', floor: 1, status: 'Occupied' },
+      { number: '103', type: '2BR', floor: 1, status: 'Occupied' },
+      { number: '104', type: '3BR', floor: 1, status: 'Occupied' },
+      { number: '105', type: '1BR', floor: 1, status: 'Vacant' },
+      { number: '106', type: '2BR', floor: 1, status: 'Occupied' },
+      { number: '107', type: '1BR', floor: 1, status: 'Occupied' },
+      { number: '108', type: '2BR', floor: 1, status: 'Occupied' },
+      { number: '109', type: '1BR', floor: 1, status: 'Occupied' },
+      { number: '201', type: '2BR', floor: 2, status: 'Occupied' },
+      { number: '202', type: '3BR', floor: 2, status: 'Occupied' },
+      { number: '203', type: '1BR', floor: 2, status: 'Occupied' },
+      { number: '204', type: '2BR', floor: 2, status: 'Maintenance' },
+      { number: '205', type: '3BR', floor: 2, status: 'Occupied' },
+      { number: '206', type: '2BR', floor: 2, status: 'Occupied' },
+      { number: '207', type: '1BR', floor: 2, status: 'Occupied' },
+      { number: '208', type: '1BR', floor: 2, status: 'Occupied' },
+      { number: '209', type: '2BR', floor: 2, status: 'Occupied' },
+      { number: '301', type: '3BR', floor: 3, status: 'Occupied' },
+      { number: '302', type: '2BR', floor: 3, status: 'Occupied' },
+      { number: '303', type: '1BR', floor: 3, status: 'Occupied' },
+      { number: '304', type: '2BR', floor: 3, status: 'Vacant' },
+      { number: '305', type: '3BR', floor: 3, status: 'Occupied' },
+      { number: '306', type: '4BR', floor: 3, status: 'Occupied' },
+      { number: '307', type: '2BR', floor: 3, status: 'Occupied' },
+      { number: '308', type: '1BR', floor: 3, status: 'Occupied' },
+      { number: '309', type: '2BR', floor: 3, status: 'Occupied' },
+      { number: '401', type: '2BR', floor: 4, status: 'Occupied' },
+      { number: '402', type: '1BR', floor: 4, status: 'Occupied' },
+      { number: '403', type: '2BR', floor: 4, status: 'Occupied' },
+      { number: '404', type: '1BR', floor: 4, status: 'Occupied' },
+      { number: '405', type: '2BR', floor: 4, status: 'Vacant' },
+      { number: '406', type: '1BR', floor: 4, status: 'Occupied' },
+      { number: '407', type: '2BR', floor: 4, status: 'Occupied' },
+    ];
+
+    const units: any[] = [];
+    for (const u of unitDefs) {
+      const unit = await p.unit.create({ data: u });
+      units.push(unit);
+    }
+
+    const unitMap: Record<string, string> = {};
+    units.forEach(u => { unitMap[u.number] = u.id; });
+
+    console.log('Seeding tenants...');
+    const tenantData = [
+      { firstName: 'Margaret', lastName: 'Chen', email: 'margaret.chen@email.com', phone: '250-555-0101', startDate: '2019-03-15', status: 'Current', unit: '101' },
+      { firstName: 'David', lastName: 'Okafor', email: 'david.okafor@email.com', phone: '250-555-0102', startDate: '2020-07-01', status: 'Current', unit: '102' },
+      { firstName: 'Priya', lastName: 'Sharma', email: 'priya.sharma@email.com', phone: '250-555-0103', startDate: '2021-01-10', status: 'Current', unit: '102' },
+      { firstName: 'Robert', lastName: 'Tremblay', email: 'robert.tremblay@email.com', phone: '250-555-0104', startDate: '2018-09-01', status: 'Current', unit: '103' },
+      { firstName: 'Susan', lastName: 'Tremblay', email: 'susan.tremblay@email.com', phone: '250-555-0105', startDate: '2018-09-01', status: 'Current', unit: '103' },
+      { firstName: 'James', lastName: 'Nakamura', email: 'james.nakamura@email.com', phone: '250-555-0106', startDate: '2017-05-20', status: 'Current', unit: '104' },
+      { firstName: 'Linda', lastName: 'Nakamura', email: 'linda.nakamura@email.com', phone: '250-555-0107', startDate: '2017-05-20', status: 'Current', unit: '104' },
+      { firstName: 'Carlos', lastName: 'Rivera', email: 'carlos.rivera@email.com', phone: '250-555-0108', startDate: '2022-02-14', status: 'Current', unit: '106' },
+      { firstName: 'Aisha', lastName: 'Mohammed', email: 'aisha.mohammed@email.com', phone: '250-555-0109', startDate: '2021-08-30', status: 'Current', unit: '201' },
+      { firstName: 'Thomas', lastName: 'Bergstrom', email: 'thomas.bergstrom@email.com', phone: '250-555-0110', startDate: '2016-11-01', status: 'Current', unit: '202' },
+      { firstName: 'Karen', lastName: 'Bergstrom', email: 'karen.bergstrom@email.com', phone: '250-555-0111', startDate: '2016-11-01', status: 'Current', unit: '202' },
+      { firstName: 'Wei', lastName: 'Liu', email: 'wei.liu@email.com', phone: '250-555-0112', startDate: '2023-04-01', status: 'Current', unit: '203' },
+      { firstName: 'Patricia', lastName: 'MacLeod', email: 'patricia.macleod@email.com', phone: '250-555-0113', startDate: '2019-06-15', status: 'Current', unit: '205' },
+      { firstName: 'Kevin', lastName: 'MacLeod', email: 'kevin.macleod@email.com', phone: '250-555-0114', startDate: '2019-06-15', status: 'Current', unit: '205' },
+      { firstName: 'Fatima', lastName: 'Al-Hassan', email: 'fatima.alhassan@email.com', phone: '250-555-0115', startDate: '2020-10-01', status: 'Current', unit: '206' },
+      { firstName: 'George', lastName: 'Papadopoulos', email: 'george.papadopoulos@email.com', phone: '250-555-0116', startDate: '2015-03-01', status: 'Current', unit: '301' },
+      { firstName: 'Helen', lastName: 'Papadopoulos', email: 'helen.papadopoulos@email.com', phone: '250-555-0117', startDate: '2015-03-01', status: 'Current', unit: '301' },
+      { firstName: 'Michael', lastName: 'Johansson', email: 'michael.johansson@email.com', phone: '250-555-0118', startDate: '2022-09-01', status: 'Current', unit: '302' },
+      { firstName: 'Yuki', lastName: 'Tanaka', email: 'yuki.tanaka@email.com', phone: '250-555-0119', startDate: '2023-01-15', status: 'Current', unit: '303' },
+      { firstName: 'Brian', lastName: 'Walsh', email: 'brian.walsh@email.com', phone: '250-555-0120', startDate: '2018-07-01', status: 'Current', unit: '305' },
+      { firstName: 'Catherine', lastName: 'Walsh', email: 'catherine.walsh@email.com', phone: '250-555-0121', startDate: '2018-07-01', status: 'Current', unit: '305' },
+      { firstName: 'Ahmed', lastName: 'Patel', email: 'ahmed.patel@email.com', phone: '250-555-0122', startDate: '2017-12-01', status: 'Current', unit: '306' },
+      { firstName: 'Nadia', lastName: 'Patel', email: 'nadia.patel@email.com', phone: '250-555-0123', startDate: '2017-12-01', status: 'Current', unit: '306' },
+      { firstName: 'Oliver', lastName: 'Grant', email: 'oliver.grant@email.com', phone: '250-555-0130', startDate: '2024-01-10', status: 'Waitlist', unit: undefined },
+      { firstName: 'Sophie', lastName: 'Dubois', email: 'sophie.dubois@email.com', phone: '250-555-0131', startDate: '2024-03-22', status: 'Waitlist', unit: undefined },
+      { firstName: 'Marcus', lastName: 'Williams', email: 'marcus.williams@email.com', phone: '250-555-0132', startDate: '2024-05-14', status: 'Waitlist', unit: undefined },
+      { firstName: 'Eleanor', lastName: 'Frost', email: 'eleanor.frost@email.com', phone: '250-555-0140', startDate: '2015-01-01', status: 'Past', unit: undefined },
+      { firstName: 'Raymond', lastName: 'Kim', email: 'raymond.kim@email.com', phone: '250-555-0141', startDate: '2016-06-01', status: 'Past', unit: undefined },
+      { firstName: 'Ingrid', lastName: 'Sorensen', email: 'ingrid.sorensen@email.com', phone: '250-555-0124', startDate: '2021-05-01', status: 'Current', unit: '107' },
+      { firstName: 'Paulo', lastName: 'Ferreira', email: 'paulo.ferreira@email.com', phone: '250-555-0125', startDate: '2022-11-15', status: 'Current', unit: '108' },
+      { firstName: 'Diana', lastName: 'Ferreira', email: 'diana.ferreira@email.com', phone: '250-555-0126', startDate: '2022-11-15', status: 'Current', unit: '108' },
+      { firstName: 'Lena', lastName: 'Kowalski', email: 'lena.kowalski@email.com', phone: '250-555-0127', startDate: '2023-08-01', status: 'Current', unit: '109' },
+      { firstName: 'Derek', lastName: 'Munroe', email: 'derek.munroe@email.com', phone: '250-555-0128', startDate: '2020-04-01', status: 'Current', unit: '207' },
+      { firstName: 'Amara', lastName: 'Diallo', email: 'amara.diallo@email.com', phone: '250-555-0129', startDate: '2024-02-01', status: 'Current', unit: '208' },
+      { firstName: 'Stefan', lastName: 'Novak', email: 'stefan.novak@email.com', phone: '250-555-0133', startDate: '2021-09-15', status: 'Current', unit: '209' },
+      { firstName: 'Jana', lastName: 'Novak', email: 'jana.novak@email.com', phone: '250-555-0134', startDate: '2021-09-15', status: 'Current', unit: '209' },
+      { firstName: 'Trevor', lastName: 'Osei', email: 'trevor.osei@email.com', phone: '250-555-0135', startDate: '2022-06-01', status: 'Current', unit: '307' },
+      { firstName: 'Miriam', lastName: 'Goldstein', email: 'miriam.goldstein@email.com', phone: '250-555-0136', startDate: '2023-03-15', status: 'Current', unit: '308' },
+      { firstName: 'Kenji', lastName: 'Watanabe', email: 'kenji.watanabe@email.com', phone: '250-555-0137', startDate: '2020-12-01', status: 'Current', unit: '309' },
+      { firstName: 'Yuna', lastName: 'Watanabe', email: 'yuna.watanabe@email.com', phone: '250-555-0138', startDate: '2020-12-01', status: 'Current', unit: '309' },
+      { firstName: 'Bernard', lastName: 'Lefebvre', email: 'bernard.lefebvre@email.com', phone: '250-555-0150', startDate: '2024-06-01', status: 'Current', unit: '401' },
+      { firstName: 'Claire', lastName: 'Lefebvre', email: 'claire.lefebvre@email.com', phone: '250-555-0151', startDate: '2024-06-01', status: 'Current', unit: '401' },
+      { firstName: 'Ravi', lastName: 'Krishnamurthy', email: 'ravi.krishnamurthy@email.com', phone: '250-555-0152', startDate: '2024-07-15', status: 'Current', unit: '402' },
+      { firstName: 'Elena', lastName: 'Vasquez', email: 'elena.vasquez@email.com', phone: '250-555-0153', startDate: '2024-08-01', status: 'Current', unit: '403' },
+      { firstName: 'Marco', lastName: 'Vasquez', email: 'marco.vasquez@email.com', phone: '250-555-0154', startDate: '2024-08-01', status: 'Current', unit: '403' },
+      { firstName: 'Hana', lastName: 'Becker', email: 'hana.becker@email.com', phone: '250-555-0155', startDate: '2024-09-01', status: 'Current', unit: '404' },
+      { firstName: 'Isaiah', lastName: 'Campbell', email: 'isaiah.campbell@email.com', phone: '250-555-0156', startDate: '2025-01-15', status: 'Current', unit: '406' },
+      { firstName: 'Natasha', lastName: 'Ivanova', email: 'natasha.ivanova@email.com', phone: '250-555-0157', startDate: '2025-02-01', status: 'Current', unit: '407' },
+      { firstName: 'Dmitri', lastName: 'Ivanov', email: 'dmitri.ivanov@email.com', phone: '250-555-0158', startDate: '2025-02-01', status: 'Current', unit: '407' },
+    ];
+
+    const tenants: Record<string, any> = {};
+    for (const t of tenantData) {
+      const tenant = await p.tenant.create({
+        data: {
+          firstName: t.firstName,
+          lastName: t.lastName,
+          email: t.email,
+          phone: t.phone,
+          startDate: t.startDate,
+          status: t.status,
+          unitId: t.unit ? unitMap[t.unit] : null,
+        },
+      });
+      tenants[t.email] = tenant;
+
+      if (t.unit && unitMap[t.unit]) {
+        await p.unit.update({
+          where: { id: unitMap[t.unit] },
+          data: { currentTenantId: tenant.id },
+        });
+        await p.tenantHistory.create({
+          data: {
+            tenantId: tenant.id,
+            unitId: unitMap[t.unit],
+            startDate: new Date(t.startDate),
+            moveReason: 'Initial occupancy',
+          },
+        });
+      }
+    }
+
+    console.log('Seeding maintenance requests...');
+    const maintenanceData = [
+      { title: 'Leaking kitchen faucet', description: 'The kitchen faucet has been dripping constantly for the past week. Water is pooling under the sink cabinet.', status: 'Pending', priority: 'Medium', category: 'Plumbing', unitNumber: '101', requestedBy: 'margaret.chen@email.com', createdAt: new Date('2026-02-28') },
+      { title: 'Bathroom exhaust fan not working', description: 'The exhaust fan in the main bathroom stopped working. There is condensation building up on the ceiling.', status: 'In Progress', priority: 'Medium', category: 'Electrical', unitNumber: '102', requestedBy: 'david.okafor@email.com', createdAt: new Date('2026-02-20') },
+      { title: 'Dishwasher not draining', description: 'The dishwasher fills with water but does not drain after cycle completes. Standing water remains at bottom.', status: 'Completed', priority: 'Medium', category: 'Appliance', unitNumber: '104', requestedBy: 'james.nakamura@email.com', createdAt: new Date('2026-01-15') },
+      { title: 'Broken window latch - balcony door', description: 'The latch on the balcony sliding door is broken. The door does not lock properly which is a security concern.', status: 'Pending', priority: 'High', category: 'Structural', unitNumber: '103', requestedBy: 'robert.tremblay@email.com', createdAt: new Date('2026-03-01') },
+      { title: 'Heating unit making loud noise', description: 'The baseboard heater in the living room is making a loud banging noise when it turns on. Happens every morning.', status: 'In Progress', priority: 'Low', category: 'HVAC', unitNumber: '106', requestedBy: 'carlos.rivera@email.com', createdAt: new Date('2026-02-10') },
+      { title: 'Water damage on ceiling', description: 'Brown water stain appearing on the bedroom ceiling. Appears to be coming from unit above. Getting larger over time.', status: 'Pending', priority: 'Urgent', category: 'Structural', unitNumber: '201', requestedBy: 'aisha.mohammed@email.com', createdAt: new Date('2026-03-05') },
+      { title: 'Unit 204 full renovation', description: 'Unit undergoing full renovation following previous tenant departure. Flooring, paint, kitchen fixtures all being replaced.', status: 'In Progress', priority: 'Medium', category: 'Structural', unitNumber: '204', requestedBy: null, createdAt: new Date('2026-02-01') },
+      { title: 'Stove burner not igniting', description: 'Front left burner on gas stove does not ignite. Clicking sound present but no flame. Other burners work fine.', status: 'Pending', priority: 'Medium', category: 'Appliance', unitNumber: '203', requestedBy: 'wei.liu@email.com', createdAt: new Date('2026-03-07') },
+      { title: 'Exterior parking lot light out', description: 'The lamp post nearest to stalls 12-15 is not working. Area is very dark at night, safety concern for residents.', status: 'Pending', priority: 'High', category: 'Electrical', unitNumber: '301', requestedBy: 'george.papadopoulos@email.com', createdAt: new Date('2026-03-03') },
+      { title: 'Bathroom tiles cracked', description: 'Several floor tiles in the main bathroom have cracked. One tile has a sharp edge that is a safety hazard.', status: 'Completed', priority: 'High', category: 'Structural', unitNumber: '302', requestedBy: 'michael.johansson@email.com', createdAt: new Date('2026-01-20') },
+      { title: 'Intercom not working', description: 'The intercom handset in the unit does not ring when visitors buzz from the front door. Cannot let guests in.', status: 'Pending', priority: 'Medium', category: 'Electrical', unitNumber: '303', requestedBy: 'yuki.tanaka@email.com', createdAt: new Date('2026-03-08') },
+      { title: 'Hallway carpet damage', description: 'Large section of hallway carpet near Unit 305 has come loose and is a tripping hazard for all residents on floor 3.', status: 'In Progress', priority: 'High', category: 'Safety', unitNumber: '305', requestedBy: null, createdAt: new Date('2026-02-25') },
+    ];
+    for (const m of maintenanceData) {
+      await p.maintenanceRequest.create({ 
+        data: { 
+          title: m.title, 
+          description: m.description, 
+          status: m.status, 
+          priority: m.priority, 
+          category: m.category, 
+          unitId: unitMap[m.unitNumber], 
+          requestedBy: m.requestedBy, 
+          createdAt: m.createdAt
+        } 
+      });
+    }
+
+    console.log('Seeding announcements...');
+    const announcementData = [
+      { title: 'Annual General Meeting — April 12th', content: 'The Oak Bay Housing Co-operative Annual General Meeting will be held on Saturday, April 12th at 2:00 PM in the Community Room. Agenda items include the 2025 financial review, election of board members, and proposed bylaw amendments. All members are encouraged to attend. Light refreshments will be provided. Please RSVP to admin@oakbaycoop.bc.ca by April 5th.', type: 'General', priority: 'High', author: 'Board Administration', date: '2026-03-08' },
+      { title: 'Water Shutoff — March 18th 9AM–1PM', content: 'A scheduled water shutoff is required to complete repairs to the main building supply line. The shutoff will affect all units and will take place on Tuesday March 18th from 9:00 AM to approximately 1:00 PM. Please store sufficient water in advance. We apologize for the inconvenience and thank you for your patience.', type: 'Maintenance', priority: 'Urgent', author: 'Maintenance Committee', date: '2026-03-06' },
+      { title: 'New Recycling Guidelines Effective April 1st', content: 'The City of Victoria has updated its recycling program. Starting April 1st, soft plastics must be deposited in the dedicated soft plastics bin in the recycling room rather than the blue bin. Glass bottles and jars should be rinsed before recycling. Updated sorting guides have been posted in the recycling room and laundry room.', type: 'General', priority: 'Normal', author: 'Board Administration', date: '2026-03-01' },
+      { title: 'Parking Lot Repaving — Weekend of March 22nd', content: 'The parking lot will be repaved over the weekend of March 22nd–23rd. All vehicles must be removed from the lot by 7:00 AM Saturday. Street parking is available on Foul Bay Road and Granite Street. Vehicles left in the lot may be towed at the owner\'s expense. The lot will reopen by Sunday evening.', type: 'Maintenance', priority: 'High', author: 'Maintenance Committee', date: '2026-02-28' },
+      { title: 'Spring Garden Volunteer Day — April 5th', content: 'Join your neighbours for the annual spring garden cleanup on Saturday April 5th starting at 10:00 AM. We\'ll be pruning, planting, and refreshing the communal garden beds. Tools and gloves provided. Lunch will be served at noon. This counts toward your annual participation hours.', type: 'General', priority: 'Normal', author: 'Garden Committee', date: '2026-02-20' },
+      { title: 'Housing Charge Increase — Effective July 1st', content: 'Following the board\'s annual financial review, housing charges will increase by 3.2% effective July 1st, 2026. This increase reflects rising municipal taxes, insurance premiums, and maintenance costs. Individual notice letters will be mailed to all members by April 15th.', type: 'General', priority: 'High', author: 'Finance Committee', date: '2026-02-15' },
+      { title: 'Fire Alarm System Test — March 14th', content: 'The building\'s fire alarm system will undergo its mandatory annual inspection on Friday March 14th between 10:00 AM and 3:00 PM. Expect brief alarm activations throughout the day. Please do not call 911 during testing periods.', type: 'Maintenance', priority: 'Normal', author: 'Board Administration', date: '2026-03-04' },
+    ];
+    for (const a of announcementData) {
+      await p.announcement.create({ data: a });
+    }
+
+    console.log('Seeding documents...');
+    const documentData = [
+      { title: 'Oak Bay Co-op Rules & Regulations 2024', category: 'Bylaws', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2024-01-15', tags: ['legal', 'governance', 'bylaws'] },
+      { title: 'Co-operative Housing Act — BC', category: 'Bylaws', url: '#', fileType: 'pdf', author: 'Legislative BC', date: '2023-06-01', tags: ['legal', 'provincial'] },
+      { title: 'Member Handbook 2025', category: 'Policies', url: '#', fileType: 'pdf', author: 'Membership Committee', date: '2025-01-01', tags: ['handbook', 'rules'] },
+      { title: 'Pet Policy', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2023-09-01', tags: ['pets', 'rules'] },
+      { title: 'Noise & Quiet Hours Policy', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2022-11-15', tags: ['noise', 'living'] },
+      { title: 'Parking Policy & Stall Assignment', category: 'Policies', url: '#', fileType: 'pdf', author: 'Maintenance Committee', date: '2024-03-01', tags: ['parking', 'vehicles'] },
+      { title: 'AGM Minutes — April 2025', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2025-04-20', tags: ['minutes', 'agm'] },
+      { title: 'Board Meeting Minutes — February 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-02-18', tags: ['minutes', 'board'] },
+      { title: 'Board Meeting Minutes — January 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-01-21', tags: ['minutes', 'board'] },
+      { title: '2025 Annual Financial Statements', category: 'Financials', url: '#', fileType: 'pdf', author: 'Finance Committee', date: '2026-02-01', tags: ['financial', 'audit'] },
+      { title: '2026 Operating Budget', category: 'Financials', url: '#', fileType: 'xls', author: 'Finance Committee', date: '2026-01-10', tags: ['budget', 'financial'] },
+      { title: 'Reserve Fund Study 2024', category: 'Financials', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2024-06-15', tags: ['reserve', 'future-planning'] },
+    ];
+    for (const d of documentData) {
+      await p.document.create({ data: d });
+    }
+
+    console.log('Seeding committees...');
+    const committeeData = [
+      { name: 'Board of Directors', description: 'Elected governing body responsible for overall co-op management, policy decisions, and financial oversight.', chair: 'George Papadopoulos', icon: 'fa-landmark', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com', 'patricia.macleod@email.com', 'james.nakamura@email.com', 'fatima.alhassan@email.com'] },
+      { name: 'Maintenance Committee', description: 'Oversees building upkeep, coordinates repairs, manages contractor relationships, and reviews maintenance requests.', chair: 'Thomas Bergstrom', icon: 'fa-wrench', members: ['thomas.bergstrom@email.com', 'brian.walsh@email.com', 'carlos.rivera@email.com', 'robert.tremblay@email.com'] },
+      { name: 'Finance Committee', description: 'Reviews financial statements, prepares budgets, monitors reserve fund, and recommends housing charge adjustments.', chair: 'Patricia MacLeod', icon: 'fa-dollar-sign', members: ['patricia.macleod@email.com', 'ahmed.patel@email.com', 'margaret.chen@email.com'] },
+      { name: 'Membership Committee', description: 'Reviews applications, manages the waitlist, conducts interviews, and facilitates member orientation.', chair: 'Fatima Al-Hassan', icon: 'fa-users', members: ['fatima.alhassan@email.com', 'aisha.mohammed@email.com', 'yuki.tanaka@email.com', 'michael.johansson@email.com'] },
+      { name: 'Garden Committee', description: 'Plans and maintains communal garden areas, organizes volunteer days, and manages the community composting program.', chair: 'Helen Papadopoulos', icon: 'fa-leaf', members: ['helen.papadopoulos@email.com', 'linda.nakamura@email.com', 'karen.bergstrom@email.com', 'wei.liu@email.com', 'catherine.walsh@email.com'] },
+      { name: 'Social Committee', description: 'Organizes community events, potlucks, seasonal celebrations, and fosters neighbourly connections among members.', chair: 'Susan Tremblay', icon: 'fa-calendar', members: ['susan.tremblay@email.com', 'priya.sharma@email.com', 'nadia.patel@email.com', 'david.okafor@email.com'] },
+    ];
+
+    for (const c of committeeData) {
+      await p.committee.create({
+        data: {
+          name: c.name,
+          description: c.description,
+          chair: c.chair,
+          icon: c.icon,
+          members: {
+            connect: c.members.map(email => ({ id: tenants[email].id })),
+          },
+        },
+      });
+    }
+
+    console.log('Seeding calendar events...');
+    const baseEvents = [
+      { title: 'Board of Directors Meeting', category: 'Board', location: 'Community Room', time: '19:00', description: 'Monthly governance review and policy discussion.' },
+      { title: 'Community Potluck', category: 'Social', location: 'Courtyard', time: '17:30', description: 'Bring a dish to share and meet your neighbours!' },
+      { title: 'Maintenance Committee Check', category: 'Maintenance', location: 'Basement/Roof', time: '10:00', description: 'Routine building system inspection.' },
+      { title: 'General Member Meeting', category: 'Meeting', location: 'Community Room', time: '19:30', description: 'Quarterly update for all co-op members.' },
+      { title: 'Garden Volunteer Day', category: 'Social', location: 'Garden Beds', time: '09:00', description: 'Helping keep our communal spaces green and clean.' },
+    ];
+
+    const startDate = new Date('2026-03-01');
+    const endDate = new Date('2026-12-31');
+    let currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      const numEvents = Math.floor(Math.random() * 2) + 2;
+      for (let i = 0; i < numEvents; i++) {
+        const baseEvent = baseEvents[Math.floor(Math.random() * baseEvents.length)];
+        const eventDate = new Date(currentDate);
+        eventDate.setDate(Math.floor(Math.random() * 28) + 1);
+        
+        await p.coopEvent.create({
+          data: {
+            ...baseEvent,
+            date: eventDate.toISOString().split('T')[0],
+          },
+        });
+      }
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+
+    res.json({ success: true, message: "Mock data seeded successfully." });
+  } catch (e: any) {
+    console.error('Seeding error:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 app.get(['/api/debug/config', '/debug/config'], (req, res) => {
   res.json({

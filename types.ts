@@ -97,11 +97,11 @@ export interface Announcement {
   createdAt?: string;
   updatedAt?: string;
 }
-
 export interface Document {
   id: string;
   title: string;
   category: string;
+  committee?: string;
   url: string;
   fileType: string;
   author: string;
