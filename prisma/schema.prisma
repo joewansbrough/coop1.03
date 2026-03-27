@@ -93,12 +93,11 @@ model Document {
   author    String   @default("Admin")
   date      String
   tags      String[] @default([])
-  members     Tenant[]     @relation("CommitteeMembers", onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
-  model CoopEvent {
+model CoopEvent {
   id          String   @id @default(uuid())
   title       String
   description String   @default("")
@@ -106,10 +105,10 @@ model Document {
   time        String
   location    String
   category    String   // "Meeting", "Social", "Maintenance", "Board"
-  attendees   Tenant[] @relation("EventAttendees", onDelete: Cascade)
+  attendees   Tenant[] @relation("EventAttendees")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  }
+}
 
 
 model Committee {
