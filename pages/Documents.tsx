@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { geminiService } from '../services/geminiService';
 import { Document, Committee } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -255,7 +255,7 @@ const Documents: React.FC<{
       setReviewingDoc(prev => prev ? {
         ...prev,
         tags: result.tags || [],
-        content: prev.content + (result.summary ? `\n\nSummary: ${result.summary}` : '')
+        content: result.summary || prev.content
       } : null);
     } catch (err) {
       console.error("Auto-tagging failed", err);
@@ -263,6 +263,16 @@ const Documents: React.FC<{
       setIsAnalyzing(false);
     }
   };
+
+  // Auto-run Gemini analysis when document is opened for review
+  useEffect(() => {
+    if (reviewingDoc && !isGuest && reviewingDoc.content && !isAnalyzing) {
+      // Only run if tags haven't been generated yet
+      if (!reviewingDoc.tags || reviewingDoc.tags.length === 0) {
+        handleAutoTag();
+      }
+    }
+  }, [reviewingDoc?.id]); // Run when a new document is opened
 
   return (
         <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12">
@@ -559,74 +569,75 @@ const Documents: React.FC<{
                   <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div className="space-y-6">
                       <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Extracted Content</label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            {isAnalyzing ? 'AI Summary (Generating...)' : 'AI Summary'}
+                          </label>
+                          {isAnalyzing && (
+                            <div className="flex items-center gap-2 text-emerald-500">
+                              <i className="fa-solid fa-wand-magic-sparkles animate-pulse"></i>
+                              <span className="text-[9px] font-black uppercase tracking-widest">Analyzing</span>
+                            </div>
+                          )}
+                        </div>
                         <textarea
                           value={reviewingDoc.content || ''}
                           onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, content: e.target.value })}
-                          readOnly={!isAdmin || isGuest}
-                          className="w-full h-[400px] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-2xl p-6 text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-                          placeholder="No content extracted..."
+                          readOnly={!isAdmin || isGuest || isAnalyzing}
+                          className="w-full h-[400px] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-2xl p-6 text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 resize-none disabled:opacity-50"
+                          placeholder={isAnalyzing ? "AI is analyzing the document..." : "No content extracted..."}
                         />
                       </div>
                     </div>
 
                     <div className="space-y-8">
-                      <div className="bg-emerald-50 dark:bg-emerald-900/10 p-6 rounded-3xl border border-emerald-100 dark:border-emerald-900/30">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                            <i className="fa-solid fa-wand-magic-sparkles"></i>
-                            <h4 className="text-[10px] font-black uppercase tracking-widest">AI Intelligence</h4>
-                          </div>
-                          {isAdmin && !isGuest && (
-                            <button
-                              onClick={handleAutoTag}
-                              disabled={isAnalyzing}
-                              className="text-[9px] font-black bg-emerald-600 text-white px-3 py-1.5 rounded-lg uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50"
-                            >
-                              {isAnalyzing ? 'Analyzing...' : 'Auto-Tag & Summarize'}
-                            </button>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-emerald-800/70 dark:text-emerald-400/70 leading-relaxed font-medium">
-                          {(isAdmin && !isGuest)
-                            ? "Use Gemini to automatically categorize this document, extract key policies, and suggest relevant search tags."
-                            : "This document has been indexed by Gemini to provide instant answers in the Resource Search."}
-                        </p>
-                      </div>
-
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Document Metadata</label>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                            Document Metadata
+                            {isAdmin && !isGuest && (
+                              <span className="ml-2 text-emerald-500">
+                                <i className="fa-solid fa-pencil text-[8px]"></i> Editable
+                              </span>
+                            )}
+                          </label>
                           <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5">
-                              <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Title</p>
+                            <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors">
+                              <p className="text-[8px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1">
+                                <i className="fa-solid fa-file-lines text-emerald-500"></i> Title
+                              </p>
                               <input
                                 type="text"
                                 value={reviewingDoc.title}
                                 readOnly={!isAdmin || isGuest}
                                 onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, title: e.target.value })}
-                                className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none"
+                                className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none placeholder-slate-300"
+                                placeholder={isAdmin && !isGuest ? "Click to edit title..." : ""}
                               />
                             </div>
-                            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5">
-                              <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Category</p>
+                            <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors">
+                              <p className="text-[8px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1">
+                                <i className="fa-solid fa-folder text-emerald-500"></i> Category
+                              </p>
                               <select
                                 value={reviewingDoc.category}
                                 disabled={!isAdmin || isGuest}
                                 onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, category: e.target.value as Document['category'] })}
-                                className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none appearance-none"
+                                className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none appearance-none cursor-pointer"
                               >
                                 {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
                               </select>
                             </div>
                           </div>
-                          <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5">
-                            <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Committee</p>
+                          <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors">
+                            <p className="text-[8px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1">
+                              <i className="fa-solid fa-users text-emerald-500"></i> Committee
+                            </p>
                             <select
                               value={reviewingDoc.committee || ''}
                               disabled={!isAdmin || isGuest}
                               onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, committee: e.target.value })}
-                              className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none appearance-none"
+                              className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none appearance-none cursor-pointer"
                             >
                               <option value="">None</option>
                               {committees.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
@@ -635,7 +646,14 @@ const Documents: React.FC<{
                         </div>
 
                         <div>
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Semantic Tags</label>
+                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                            Semantic Tags
+                            {isAnalyzing && (
+                              <span className="ml-2 text-emerald-500">
+                                <i className="fa-solid fa-spinner animate-spin text-[8px]"></i> Generating tags...
+                              </span>
+                            )}
+                          </label>
                           <div className="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 min-h-[100px]">
                             {reviewingDoc.tags?.map((tag, i) => (
                               <div key={i} className="flex items-center gap-2 bg-white dark:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-white/10">
@@ -643,7 +661,7 @@ const Documents: React.FC<{
                                 {isAdmin && !isGuest && (
                                   <button
                                     onClick={() => setReviewingDoc({ ...reviewingDoc, tags: reviewingDoc.tags?.filter((_, index) => index !== i) })}
-                                    className="text-slate-400 hover:text-red-500"
+                                    className="text-slate-400 hover:text-red-500 transition-colors"
                                   >
                                     <i className="fa-solid fa-xmark text-[10px]"></i>
                                   </button>
@@ -651,20 +669,26 @@ const Documents: React.FC<{
                               </div>
                             ))}
                             {isAdmin && !isGuest && (
-                              <input
-                                type="text"
-                                placeholder="+ Add tag..."
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    const val = (e.target as HTMLInputElement).value.trim();
-                                    if (val && !reviewingDoc.tags?.includes(val)) {
-                                      setReviewingDoc({ ...reviewingDoc, tags: [...(reviewingDoc.tags || []), val] });
-                                      (e.target as HTMLInputElement).value = '';
+                              <div className="relative flex-1 min-w-[200px]">
+                                <input
+                                  type="text"
+                                  id="tag-input"
+                                  placeholder="Type tag name and press Enter"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      const val = (e.target as HTMLInputElement).value.trim();
+                                      if (val && !reviewingDoc.tags?.includes(val)) {
+                                        setReviewingDoc({ ...reviewingDoc, tags: [...(reviewingDoc.tags || []), val] });
+                                        (e.target as HTMLInputElement).value = '';
+                                      }
                                     }
-                                  }
-                                }}
-                                className="flex-1 bg-transparent text-[10px] font-black uppercase outline-none min-w-[100px]"
-                              />
+                                  }}
+                                  className="w-full bg-white dark:bg-slate-700 border-2 border-emerald-400 dark:border-emerald-500 rounded-xl px-4 py-2 text-[10px] font-black text-slate-800 dark:text-white uppercase outline-none focus:ring-2 focus:ring-emerald-500 placeholder-slate-400"
+                                />
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                  <i className="fa-solid fa-plus text-emerald-500"></i>
+                                </div>
+                              </div>
                             )}
                           </div>
                         </div>
