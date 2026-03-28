@@ -21,7 +21,7 @@ const PORT = 3000;
 const prisma = new PrismaClient();
 
 // Mock Data (In a real app, these would be in a database)
-const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'joewansbrough@gmail.com'];
+const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'joewansbrough@gmail.com', 'wwansbro@gmail.com', 'samisaeed123@gmail.com'];
 
 async function startServer() {
   const app = express();
