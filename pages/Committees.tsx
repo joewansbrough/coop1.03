@@ -107,8 +107,8 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
     <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white uppercase tracking-tight">Member Committees</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Empowering our community through collective action and self-governance.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Member Committees</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Empowering our community through collective action and self-governance.</p>
         </div>
         {isAdmin && !isGuest && !selectedId && (
           <button 

@@ -67,7 +67,7 @@ const Reports: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Board Insight Center</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Strategic operational data for governance and long-term planning.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium font-medium">Strategic operational data for governance and long-term planning.</p>
         </div>
         <button 
           onClick={() => {
