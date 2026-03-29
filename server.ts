@@ -711,73 +711,84 @@ const upload = multer({
   });
 
   app.post('/api/units/:id/transfer', async (req, res) => {
-    const { fromUnitId, toUnitId, date } = req.body;
+    const { fromUnitId, toUnitId, date, tenantIds } = req.body;
     try {
-      // 1. Find all residents in the source unit
-      const residents = await prisma.tenant.findMany({
-        where: { unitId: fromUnitId }
-      });
-
-      if (residents.length === 0) {
-        return res.status(400).json({ error: 'No residents found in source unit' });
-      }
-
-      // 2. Vacate old unit
-      await prisma.unit.update({
-        where: { id: fromUnitId },
-        data: { status: 'Vacant', currentTenantId: null }
-      });
-
-      // 3. Occupy new unit (Assign first resident as primary for the relation)
-      await prisma.unit.update({
-        where: { id: toUnitId },
-        data: { status: 'Occupied', currentTenantId: residents[0].id }
-      });
-
-      // 4. Update all residents and their history
-      for (const resident of residents) {
-        await prisma.tenant.update({
-          where: { id: resident.id },
-          data: { unitId: toUnitId, startDate: date }
+      await prisma.$transaction(async (tx) => {
+        // 1. Validate target unit availability
+        const targetUnit = await tx.unit.findUnique({
+          where: { id: toUnitId },
+          include: { currentTenant: true }
         });
 
-        // Close old history
-        const oldHistory = await prisma.tenantHistory.findFirst({
-          where: { tenantId: resident.id, unitId: fromUnitId, endDate: null },
-          orderBy: { startDate: 'desc' }
+        if (!targetUnit) throw new Error('Target unit not found');
+        if (targetUnit.status === 'Occupied' || targetUnit.currentTenantId) {
+          throw new Error(`Target unit ${targetUnit.number} is currently occupied.`);
+        }
+
+        // 2. Identify residents to transfer
+        // If tenantIds are provided, only move those individuals. Otherwise, move everyone in the unit.
+        const residents = await tx.tenant.findMany({
+          where: tenantIds ? { id: { in: tenantIds }, unitId: fromUnitId } : { unitId: fromUnitId }
         });
-        
-        if (oldHistory) {
-          await prisma.tenantHistory.update({
-            where: { id: oldHistory.id },
-            data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
-          });
-        } else {
-          // Backfill: Create record for old unit
-          await prisma.tenantHistory.create({
-            data: {
-              tenantId: resident.id,
-              unitId: fromUnitId,
-              startDate: new Date(resident.startDate || date),
-              endDate: new Date(date),
-              moveReason: 'Internal Transfer (Archived)'
-            }
+
+        if (residents.length === 0) {
+          throw new Error('No residents found in source unit to transfer.');
+        }
+
+        // 3. Update source unit status if its primary tenant is moving or if all residents are moving
+        const remainingResidents = await tx.tenant.count({ 
+          where: { unitId: fromUnitId, NOT: { id: { in: residents.map(r => r.id) } } } 
+        });
+
+        if (remainingResidents === 0) {
+          await tx.unit.update({
+            where: { id: fromUnitId },
+            data: { status: 'Vacant', currentTenantId: null }
           });
         }
 
-        // Create new history
-        await prisma.tenantHistory.create({
-          data: {
-            tenantId: resident.id,
-            unitId: toUnitId,
-            startDate: new Date(date),
-            moveReason: 'Internal Transfer'
-          }
+        // 4. Update target unit status
+        await tx.unit.update({
+          where: { id: toUnitId },
+          data: { status: 'Occupied', currentTenantId: residents[0].id }
         });
-      }
+
+        // 5. Update each resident and their historical records
+        for (const resident of residents) {
+          await tx.tenant.update({
+            where: { id: resident.id },
+            data: { unitId: toUnitId, startDate: date }
+          });
+
+          // Terminate active history for the old unit
+          const activeHistory = await tx.tenantHistory.findFirst({
+            where: { tenantId: resident.id, unitId: fromUnitId, endDate: null },
+            orderBy: { startDate: 'desc' }
+          });
+          
+          if (activeHistory) {
+            await tx.tenantHistory.update({
+              where: { id: activeHistory.id },
+              data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
+            });
+          }
+
+          // Initialize new history for the target unit
+          await tx.tenantHistory.create({
+            data: {
+              tenantId: resident.id,
+              unitId: toUnitId,
+              startDate: new Date(date),
+              moveReason: 'Internal Transfer'
+            }
+          });
+        }
+      });
 
       res.json({ success: true });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+    } catch (e: any) { 
+      res.status(400).json({ error: e.message }); 
+    }
   });
 
   // API 404 handler
