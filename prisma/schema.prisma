@@ -33,6 +33,7 @@ model Tenant {
   phone         String?
   startDate     String          // Renamed from moveInDate to match UI
   status        String          @default("Current") // e.g., "Current", "Past", "Waitlist"
+  role          String          @default("MEMBER")  // "ADMIN" or "MEMBER"
   unitId        String?
   unit          Unit?           @relation("CurrentResident")
   committees    Committee[]     @relation("CommitteeMembers")

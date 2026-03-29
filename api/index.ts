@@ -130,13 +130,8 @@ app.get('/auth/callback', async (req, res) => {
       include: { unit: true }
     });
 
-    // For now, let's assume if they are in ADMIN_EMAILS, they are admins
-    const isAdmin = ADMIN_EMAILS.includes(email);
-
-    // If not in DB but is admin, we might want to allow them anyway
-    if (!user && !isAdmin) {
-      return res.send(`<html><body><script>alert("Access denied for ${email}. You are not registered in the co-op database.");window.close();</script></body></html>`);
-    }
+    // Check both DB role and legacy list for now
+    const isAdmin = user?.role === 'ADMIN' || ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'].includes(email);
 
     (req as any).session.user = {
       email,
@@ -144,7 +139,8 @@ app.get('/auth/callback', async (req, res) => {
       picture: userData.picture,
       isAdmin,
       tenantId: user?.id || null,
-      unitNumber: user?.unit?.number || null
+      unitNumber: user?.unit?.number || null,
+      role: user?.role || 'MEMBER'
     };
 
     res.send(`
@@ -426,46 +422,13 @@ app.get('/api/documents', async (req, res) => {
 });
 
 app.post('/api/documents', async (req, res) => {
-  const { title, category, url, fileType, author, date, tags, content, committee, isPrivate } = req.body;
+  const { title, category, url, fileType, author, date, tags, committee } = req.body;
   
-  let summary = "";
-  let aiTags: string[] = [];
-  
-  // Get AI summary if content is provided
-  if (content && content.length > 50) {
-    try {
-      const ai = getAI();
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
-        contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              summary: { type: Type.STRING },
-              tags: { type: Type.ARRAY, items: { type: Type.STRING } }
-            },
-            required: ['summary', 'tags']
-          }
-        }
-      });
-      const aiData = JSON.parse(response.text || '{}');
-      summary = aiData.summary || "";
-      aiTags = aiData.tags || [];
-    } catch (e: any) {
-      console.error('AI summarization failed during document creation:', e.message);
-    }
-  }
-
+  // Tag generation temporarily disabled for basic metadata sync
   const currentYear = new Date().getFullYear().toString();
   const committeeTags = committee ? [committee] : [];
   const providedTags = Array.isArray(tags) ? tags : [];
-  const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags, ...aiTags]));
-  
-  const finalContent = summary 
-    ? `${summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]\n\n${content || ''}`
-    : content;
+  const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
 
   const document = await getPrisma().document.create({
     data: { 
@@ -476,18 +439,16 @@ app.post('/api/documents', async (req, res) => {
       author: author || ((req as any).session?.user?.name || 'System'), 
       date: date || new Date().toISOString().split('T')[0], 
       tags: finalTags, 
-      content: finalContent,
-      isPrivate: isPrivate === true
     }
   });
   res.json(document);
 });
 
 app.put('/api/documents/:id', async (req, res) => {
-  const { title, category, tags, content, committee, isPrivate } = req.body;
+  const { title, category, tags, committee } = req.body;
   const document = await getPrisma().document.update({
     where: { id: req.params.id },
-    data: { title, category, tags, content, committee, isPrivate }
+    data: { title, category, tags, committee }
   });
   res.json(document);
 });
@@ -641,10 +602,13 @@ app.get('/api/migrate', async (req, res) => {
     const p = getPrisma();
     
     console.log('Running raw SQL migrations...');
-    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committee" TEXT DEFAULT '';`); // Add committee column
-    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "content" TEXT DEFAULT '';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT 'MEMBER';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committee" TEXT DEFAULT '';`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
-    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "isPrivate" BOOLEAN NOT NULL DEFAULT false;`);
+    
+    // Explicitly DROP columns if they exist to match metadata-only goal
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "content";`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "isPrivate";`);
     
     // Check if seeding is needed
     const unitCount = await p.unit.count();
@@ -785,6 +749,7 @@ app.get('/api/seed', async (req, res) => {
     ];
 
     const tenants: Record<string, any> = {};
+    const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
     for (const t of tenantData) {
       const tenant = await p.tenant.create({
         data: {
@@ -795,6 +760,7 @@ app.get('/api/seed', async (req, res) => {
           startDate: t.startDate,
           status: t.status,
           unitId: t.unit ? unitMap[t.unit] : null,
+          role: adminEmails.includes(t.email.toLowerCase()) ? 'ADMIN' : 'MEMBER'
         },
       });
       tenants[t.email] = tenant;

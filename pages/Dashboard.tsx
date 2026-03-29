@@ -1,9 +1,10 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import StatCard from '../components/StatCard';
-import { RequestStatus, Announcement, Unit, Tenant, MaintenanceRequest, CoopEvent } from '../types';
+import { RequestStatus, Unit } from '../types';
+import { useUnits, useTenants, useMaintenance, useAnnouncements, useEvents } from '../hooks/useCoopData';
+import { MOCK_ANNOUNCEMENTS, MOCK_DOCS, MOCK_UNITS, MOCK_TENANTS, MOCK_REQUESTS, MOCK_EVENTS, MOCK_COMMITTEES } from '../constants';
 
 interface DashboardProps {
   isAdmin: boolean;
@@ -12,14 +13,14 @@ interface DashboardProps {
     name: string;
     [key: string]: any;
   };
-  announcements: Announcement[];
-  units: Unit[];
-  tenants: Tenant[];
-  requests: MaintenanceRequest[];
-  events: CoopEvent[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user, announcements, units, tenants, requests, events }) => {
+const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
+  const { data: units = MOCK_UNITS } = useUnits();
+  const { data: tenants = MOCK_TENANTS } = useTenants();
+  const { data: requests = MOCK_REQUESTS } = useMaintenance();
+  const { data: announcements = MOCK_ANNOUNCEMENTS } = useAnnouncements();
+  const { data: events = MOCK_EVENTS } = useEvents();
   const navigate = useNavigate();
 
   const firstName = user?.name ? user.name.split(' ')[0] : '';

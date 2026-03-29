@@ -11,6 +11,9 @@ import { GoogleGenAI, Type } from '@google/genai';
 import multer from 'multer';
 import pdf from 'pdf-parse';
 
+import { z } from 'zod';
+import { maintenanceSchema, documentSchema, announcementSchema } from './api/validation.js';
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,8 +23,22 @@ const PORT = 3000;
 // Database client
 const prisma = new PrismaClient();
 
-// Mock Data (In a real app, these would be in a database)
+// Legacy Admin List (Fallback during migration)
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'joewansbrough@gmail.com', 'wwansbro@gmail.com', 'samisaeed123@gmail.com'];
+
+// Validation Middleware
+const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    schema.parse(req.body);
+    next();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation failed', details: error.errors });
+    } else {
+      next(error);
+    }
+  }
+};
 
 async function startServer() {
   const app = express();
@@ -148,13 +165,15 @@ const upload = multer({
       const userData = userResponse.data;
       const email = userData.email.toLowerCase();
 
-      // Check permissions
+      // Check permissions (Hybrid DB Role + Legacy List)
       let userInDb = await prisma.tenant.findUnique({
         where: { email },
         include: { unit: true }
       });
 
-      const isAdmin = ADMIN_EMAILS.includes(email);
+      const isAdminByList = ADMIN_EMAILS.includes(email);
+      const isAdminByRole = userInDb?.role === 'ADMIN';
+      const isAdmin = isAdminByList || isAdminByRole;
       
       if (!userInDb && !isAdmin) {
         return res.send(`<html><body><script>alert("Access denied for ${email}. You are not registered in the co-op database.");window.close();</script></body></html>`);
@@ -166,6 +185,7 @@ const upload = multer({
         name: userData.name,
         picture: userData.picture,
         isAdmin,
+        role: userInDb?.role || (isAdminByList ? 'ADMIN' : 'MEMBER'),
         tenantId: userInDb?.id || null,
         unitNumber: userInDb?.unit?.number || null
       };
@@ -268,7 +288,7 @@ const upload = multer({
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/maintenance', async (req, res) => {
+  app.post('/api/maintenance', validateRequest(maintenanceSchema), async (req, res) => {
     const { title, description, status, priority, category, unitId, requestedBy } = req.body;
     const request = await prisma.maintenanceRequest.create({
       data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy }
@@ -276,7 +296,7 @@ const upload = multer({
     res.json(request);
   });
 
-  app.put('/api/maintenance/:id', async (req, res) => {
+  app.put('/api/maintenance/:id', validateRequest(maintenanceSchema.partial()), async (req, res) => {
     const { title, description, status, priority, category, unitId, notes, expenses } = req.body;
     try {
       const request = await prisma.maintenanceRequest.update({
@@ -284,9 +304,9 @@ const upload = multer({
         data: { 
           title, 
           description, 
-          status, 
-          priority, 
-          category: Array.isArray(category) ? category[0] : category, 
+          status: status as any, 
+          priority: priority as any, 
+          category: (Array.isArray(category) ? category[0] : category) as string, 
           unitId,
           notes: notes ? (Array.isArray(notes) ? notes : [notes]) : undefined,
           expenses: expenses ? (Array.isArray(expenses) ? expenses : [expenses]) : undefined
@@ -314,7 +334,7 @@ const upload = multer({
     }
   });
 
-  app.post('/api/announcements', async (req, res) => {
+  app.post('/api/announcements', validateRequest(announcementSchema), async (req, res) => {
     const { title, content, type, priority, author, date } = req.body;
     const announcement = await prisma.announcement.create({
       data: { title, content, type, priority, author, date }
@@ -322,11 +342,17 @@ const upload = multer({
     res.json(announcement);
   });
 
-  app.put('/api/announcements/:id', async (req, res) => {
+  app.put('/api/announcements/:id', validateRequest(announcementSchema.partial()), async (req, res) => {
     const { title, content, type, priority, date } = req.body;
     const announcement = await prisma.announcement.update({
       where: { id: req.params.id },
-      data: { title, content, type, priority, date }
+      data: { 
+        title, 
+        content, 
+        type: type as string, 
+        priority: priority as string, 
+        date 
+      }
     });
     res.json(announcement);
   });
@@ -387,52 +413,43 @@ const upload = multer({
         console.log(`Text/Generic file processed. Extracted ${content.length} characters.`);
       }
 
-      const { title, category, isPrivate, committee } = req.body;
-      console.log(`Metadata: Title="${title}", Category="${category}", Committee="${committee}", Private=${isPrivate}`);
+      const { title, category, committee } = req.body;
+      console.log(`Metadata: Title="${title}", Category="${category}", Committee="${committee}"`);
       
       const currentYear = new Date().getFullYear().toString();
       
-      // Get AI summary directly
-      let summary = "";
+      // Get AI tags directly
       let aiTags: string[] = [];
       try {
-        console.log('Requesting AI summary...');
+        console.log('Requesting AI tags...');
         const ai = getAI();
         const aiResult = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
-          contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
+          contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
           generationConfig: {
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
               properties: {
-                summary: { type: Type.STRING },
                 tags: { type: Type.ARRAY, items: { type: Type.STRING } }
               },
-              required: ['summary', 'tags']
+              required: ['tags']
             }
           }
         });
         const aiData = JSON.parse(aiResult.response.text() || '{}');
-        summary = aiData.summary || "";
         aiTags = aiData.tags || [];
-        console.log('AI summary generated successfully.');
+        console.log('AI tags generated successfully.');
       } catch (aiErr: any) {
-        console.error('AI summarization failed during upload:', aiErr.message);
-        summary = "Summary unavailable.";
+        console.error('AI tagging failed during upload:', aiErr.message);
       }
-
       const committeeTags = committee ? [committee] : [];
       const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...(aiTags || [])]));
-
-      const finalContent = `${summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]`;
 
       console.log('Creating database record...');
       const document = await prisma.document.create({
         data: {
           title: title || 'Untitled Document',
           category: category || 'General',
-          isPrivate: isPrivate === 'true',
-          content: finalContent,
           tags: finalTags,
           url: '#', // Placeholder, in a real app this would be a file storage URL
           fileType: req.file.mimetype.split('/')[1] || 'unknown',
@@ -451,10 +468,10 @@ const upload = multer({
   });
 
   app.put('/api/documents/:id', async (req, res) => {
-    const { title, category, tags, content } = req.body;
+    const { title, category, tags } = req.body;
     const document = await prisma.document.update({
       where: { id: req.params.id },
-      data: { title, category, tags, content }
+      data: { title, category, tags }
     });
     res.json(document);
   });

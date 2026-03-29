@@ -125,6 +125,7 @@ async function main() {
   ];
 
   const tenants: Record<string, any> = {};
+  const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
   for (const t of tenantData) {
     const tenant = await prisma.tenant.create({
       data: {
@@ -135,6 +136,7 @@ async function main() {
         startDate: t.startDate,
         status: t.status,
         unitId: t.unit ? unitMap[t.unit] : null,
+        role: adminEmails.includes(t.email.toLowerCase()) ? 'ADMIN' : 'MEMBER',
       },
     });
     tenants[t.email] = tenant;

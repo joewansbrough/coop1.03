@@ -29,7 +29,6 @@ const Documents: React.FC<{
   const [newDocTitle, setNewDocTitle] = useState('');
   const [newDocCategory, setNewDocCategory] = useState<Document['category']>('Policy');
   const [newDocCommittee, setNewDocCommittee] = useState<string>('');
-  const [newDocIsPrivate, setNewDocIsPrivate] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,13 +55,11 @@ const Documents: React.FC<{
 
   const handleDownload = (doc: Document, e: React.MouseEvent) => {
     e.stopPropagation();
-    const blob = new Blob([doc.content || ''], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = window.document.createElement('a');
-    a.href = url;
-    a.download = `${doc.title}.txt`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    if (doc.url && doc.url !== '#') {
+      window.open(doc.url, '_blank');
+    } else {
+      alert("This document is stored in the secure association vault. Please click to view.");
+    }
   };
 
   const handleViewDoc = (doc: Document) => {
@@ -79,12 +76,7 @@ const Documents: React.FC<{
     setLoading(true);
     setAiResponse('');
 
-    const context = Array.isArray(documents)
-      ? documents
-        .filter(d => d.category === 'Policy' || d.category === 'Bylaws')
-        .map(d => `Document: ${d.title}\nContent: ${d.content || 'No content'}`)
-        .join('\n\n')
-      : '';
+    const context = "Association policies and bylaws are stored in the secure archive.";
 
     try {
       const answer = await geminiService.askPolicyQuestion(question, context);
@@ -143,7 +135,6 @@ const Documents: React.FC<{
       formData.append('file', selectedFile);
       formData.append('title', newDocTitle);
       formData.append('category', newDocCategory);
-      formData.append('isPrivate', String(newDocIsPrivate));
       formData.append('committee', newDocCommittee);
 
       const res = await fetch('/api/upload-to-blob', { // Call the dedicated blob upload endpoint
@@ -166,7 +157,6 @@ const Documents: React.FC<{
       setNewDocTitle('');
       setNewDocCategory('Policy');
       setNewDocCommittee('');
-      setNewDocIsPrivate(false);
       setSelectedFile(null);
 
       setReviewingDoc(data.document); // Set the newly created document for review
@@ -188,9 +178,7 @@ const Documents: React.FC<{
           title: reviewingDoc.title,
           category: reviewingDoc.category,
           tags: reviewingDoc.tags,
-          content: reviewingDoc.content,
           committee: reviewingDoc.committee ?? '',
-          isPrivate: reviewingDoc.isPrivate ?? false,
         }),
       });
 
@@ -222,30 +210,10 @@ const Documents: React.FC<{
     }
   };
 
-  const handleAutoTag = async () => {
-    if (isGuest || !reviewingDoc?.content) return;
-    setIsAnalyzing(true);
-    try {
-      const result = await geminiService.summarizeAndTag(reviewingDoc.content);
-      setReviewingDoc(prev => prev ? {
-        ...prev,
-        tags: result.tags || [],
-        content: result.summary || prev.content
-      } : null);
-    } catch (err) {
-      console.error("Auto-tagging failed", err);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  // Auto-run Gemini analysis when document is opened for review
+  // Auto-analysis temporarily disabled during Blob migration
   useEffect(() => {
-    if (reviewingDoc && !isGuest && reviewingDoc.content && !isAnalyzing) {
-      // Only run if tags haven't been generated yet
-      if (!reviewingDoc.tags || reviewingDoc.tags.length === 0) {
-        handleAutoTag();
-      }
+    if (reviewingDoc && !isGuest && !isAnalyzing) {
+      // Future: Trigger Blob analysis
     }
   }, [reviewingDoc?.id]); // Run when a new document is opened
 
@@ -391,16 +359,6 @@ const Documents: React.FC<{
                           </select>
                         </div>
                       )}
-                      <div className="flex items-center gap-3 py-2">
-                        <input
-                          type="checkbox"
-                          id="isPrivate"
-                          checked={newDocIsPrivate}
-                          onChange={(e) => setNewDocIsPrivate(e.target.checked)}
-                          className="w-4 h-4 accent-emerald-500"
-                        />
-                        <label htmlFor="isPrivate" className="text-xs font-bold text-slate-600 dark:text-slate-400 cursor-pointer">Private (Admin Only)</label>
-                      </div>
                       <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
                         <p className="text-[10px] text-amber-800 dark:text-amber-500 font-bold leading-relaxed">
                           <i className="fa-solid fa-shield-halved mr-1"></i>
@@ -452,7 +410,6 @@ const Documents: React.FC<{
                       </div>
                       <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">{doc.date} • {doc.author}</p>
                     </div>
-                    {doc.isPrivate && <div className="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg text-amber-500 dark:text-amber-400"><i className="fa-solid fa-lock text-[10px]"></i></div>}
                   </div>
 
                   {doc.tags && doc.tags.length > 0 && (
@@ -543,25 +500,19 @@ const Documents: React.FC<{
 
                   <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div className="space-y-6">
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            {isAnalyzing ? 'AI Summary (Generating...)' : 'AI Summary'}
-                          </label>
-                          {isAnalyzing && (
-                            <div className="flex items-center gap-2 text-emerald-500">
-                              <i className="fa-solid fa-wand-magic-sparkles animate-pulse"></i>
-                              <span className="text-[9px] font-black uppercase tracking-widest">Analyzing</span>
-                            </div>
-                          )}
+                      <div className="h-[400px] bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-white/10 rounded-[2rem] flex flex-col items-center justify-center text-center p-12">
+                        <div className="w-20 h-20 bg-emerald-500/10 rounded-3xl flex items-center justify-center text-emerald-500 mb-6">
+                           <i className="fa-solid fa-file-shield text-3xl"></i>
                         </div>
-                        <textarea
-                          value={reviewingDoc.content || ''}
-                          onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, content: e.target.value })}
-                          readOnly={!isAdmin || isGuest || isAnalyzing}
-                          className="w-full h-[400px] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-2xl p-6 text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300 outline-none focus:ring-2 focus:ring-emerald-500 resize-none disabled:opacity-50"
-                          placeholder={isAnalyzing ? "AI is analyzing the document..." : "No content extracted..."}
-                        />
+                        <h4 className="text-lg font-black text-slate-800 dark:text-white mb-2 uppercase tracking-tight">Streamlined Metadata View</h4>
+                        <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-xs">Association documents are now stored externally. Managing metadata below will update the searchable archive.</p>
+                        <button 
+                          onClick={() => handleViewDoc(reviewingDoc)}
+                          className="mt-8 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:scale-105 transition-all"
+                        >
+                          <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                          Launch Original File
+                        </button>
                       </div>
                     </div>
 

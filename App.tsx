@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
@@ -21,91 +20,42 @@ import Waitlist from './pages/Waitlist';
 import PolicyAssistant from './pages/PolicyAssistant';
 import Login from './pages/Login';
 import { MOCK_ANNOUNCEMENTS, MOCK_DOCS, MOCK_UNITS, MOCK_TENANTS, MOCK_REQUESTS, MOCK_EVENTS, MOCK_COMMITTEES } from './constants';
-import { Announcement, Document, Unit, Tenant, MaintenanceRequest, CoopEvent, Committee } from './types';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useUser, useUnits, useTenants, useMaintenance, useAnnouncements, useDocuments, useCommittees, useEvents } from './hooks/useCoopData';
 
-interface User {
-  email: string;
-  name: string;
-  picture: string;
-  isAdmin: boolean;
-  isGuest?: boolean;
-}
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      retry: 1,
+    },
+  },
+});
 
-const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [coopName, setCoopName] = useState('Your Housing Co-op');
-  
-  // Shared state
-  const [announcements, setAnnouncements] = useState<Announcement[]>(MOCK_ANNOUNCEMENTS);
+const AppContent: React.FC = () => {
   const [isAdminOverride, setIsAdminOverride] = useState(false);
-  const [documents, setDocuments] = useState<Document[]>(MOCK_DOCS);
-  const [units, setUnits] = useState<Unit[]>(MOCK_UNITS);
-  const [tenants, setTenants] = useState<Tenant[]>(MOCK_TENANTS);
-  const [requests, setRequests] = useState<MaintenanceRequest[]>(MOCK_REQUESTS);
-  const [events, setEvents] = useState<CoopEvent[]>(MOCK_EVENTS);
-  const [committees, setCommittees] = useState<Committee[]>(MOCK_COMMITTEES);
+  const [coopName] = useState('Your Housing Co-op');
+  
+  // React Query hooks replace manual fetch/useEffect
+  const { data: user, isLoading: isUserLoading, refetch: fetchUser } = useUser();
+  const { data: units = MOCK_UNITS } = useUnits();
+  const { data: tenants = MOCK_TENANTS } = useTenants();
+  const { data: requests = MOCK_REQUESTS } = useMaintenance();
+  const { data: announcements = MOCK_ANNOUNCEMENTS } = useAnnouncements();
+  const { data: documents = MOCK_DOCS } = useDocuments();
+  const { data: committees = MOCK_COMMITTEES } = useCommittees();
+  const { data: events = MOCK_EVENTS } = useEvents();
 
-  const fetchUser = async () => {
-    console.log('Fetching user session...');
-    setIsLoading(true);
-    try {
-      const response = await fetch('/api/auth/me', { credentials: 'include' });
-      const data = await response.json();
-      console.log('User session data:', data.user);
-      setUser(data.user);
-    } catch (error) {
-      console.error('Failed to fetch user:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Placeholder setters for backward compatibility during transition
+  const setUnits = () => {};
+  const setTenants = () => {};
+  const setRequests = () => {};
+  const setAnnouncements = () => {};
+  const setDocuments = () => {};
+  const setCommittees = () => {};
+  const setEvents = () => {};
 
-  const fetchAllData = async () => {
-    try {
-      const [unitsRes, tenantsRes, requestsRes, announcementsRes, docsRes, committeesRes, eventsRes] = await Promise.all([
-        fetch('/api/units'),
-        fetch('/api/tenants'),
-        fetch('/api/maintenance'),
-        fetch('/api/announcements'),
-        fetch('/api/documents'),
-        fetch('/api/committees'),
-        fetch('/api/events')
-      ]);
-
-      const [unitsData, tenantsData, requestsData, announcementsData, docsData, committeesData, eventsData] = await Promise.all([
-        unitsRes.json(),
-        tenantsRes.json(),
-        requestsRes.json(),
-        announcementsRes.json(),
-        docsRes.json(),
-        committeesRes.json(),
-        eventsRes.json()
-      ]);
-
-      setUnits(Array.isArray(unitsData) ? unitsData : []);
-      setTenants(Array.isArray(tenantsData) ? tenantsData : []);
-      setRequests(Array.isArray(requestsData) ? requestsData : []);
-      setAnnouncements(Array.isArray(announcementsData) ? announcementsData : []);
-      setDocuments(Array.isArray(docsData) ? docsData : []);
-      setCommittees(Array.isArray(committeesData) ? committeesData : []);
-      setEvents(Array.isArray(eventsData) ? eventsData : []);
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchAllData();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchUser();
-  }, []);
-
-  if (isLoading) {
+  if (isUserLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-4">
@@ -117,7 +67,7 @@ const App: React.FC = () => {
   }
 
   if (!user) {
-    return <Login onLoginSuccess={fetchUser} />;
+    return <Login onLoginSuccess={() => fetchUser()} />;
   }
 
   const effectiveIsAdmin = user.isAdmin && !isAdminOverride;
@@ -166,5 +116,11 @@ const App: React.FC = () => {
     </HashRouter>
   );
 };
+
+const App: React.FC = () => (
+  <QueryClientProvider client={queryClient}>
+    <AppContent />
+  </QueryClientProvider>
+);
 
 export default App;

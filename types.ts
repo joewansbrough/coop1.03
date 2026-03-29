@@ -56,6 +56,7 @@ export interface Tenant {
   phone?: string;
   startDate: string;
   status: string;
+  role: string;
   unitId?: string;
   unit?: Unit;
   committees?: Committee[];
@@ -106,9 +107,7 @@ export interface Document {
   fileType: string;
   author: string;
   date: string;
-  content?: string;
   tags?: string[];
-  isPrivate?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
