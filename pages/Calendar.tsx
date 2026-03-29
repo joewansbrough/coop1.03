@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { CoopEvent } from '../types';
-import { useNavigate } from 'react-router-dom';
 
 interface CalendarProps {
   isAdmin?: boolean;
@@ -93,11 +93,19 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
 
   const monthName = viewDate.toLocaleString('default', { month: 'long' });
 
+  // Robust date parsing to ensure consistent sorting across browsers
+  const parseEventDate = (e: CoopEvent) => {
+    if (!e.date || !e.time) return new Date(0);
+    const [year, month, day] = e.date.split('-').map(Number);
+    const [hour, minute] = e.time.split(':').map(Number);
+    return new Date(year, month - 1, day, hour, minute);
+  };
+
   // Find closest upcoming event
   const now = new Date();
   const nextEvent = [...events]
-    .filter(e => new Date(e.date + 'T' + e.time) >= now)
-    .sort((a, b) => new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime())[0];
+    .filter(e => parseEventDate(e) >= now)
+    .sort((a, b) => parseEventDate(a).getTime() - parseEventDate(b).getTime())[0];
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12">
@@ -222,9 +230,9 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
 
         <div className="space-y-6">
           {nextEvent && (
-            <div 
-              onClick={() => navigate(`/calendar/${nextEvent.id}`)}
-              className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-emerald-500 transition-all group cursor-pointer relative overflow-hidden active:scale-95"
+            <Link 
+              to={`/calendar/${nextEvent.id}`}
+              className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-emerald-500 transition-all group cursor-pointer relative overflow-hidden block active:scale-95"
             >
               <div className="absolute -top-10 -right-10 opacity-5 text-9xl text-emerald-900 dark:text-emerald-100 pointer-events-none group-hover:scale-110 transition-transform">
                 <i className="fa-solid fa-calendar-day"></i>
@@ -255,7 +263,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                   </p>
                 </div>
               </div>
-            </div>
+            </Link>
           )}
 
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors duration-200">
