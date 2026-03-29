@@ -96,8 +96,8 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     <div className="space-y-6 max-w-7xl mx-auto pb-12 transition-colors duration-200">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-slate-800 dark:text-white">{isAdmin ? 'Maintenance Operations' : 'My Service Requests'}</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{isAdmin ? 'Maintenance Operations' : 'My Service Requests'}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
             {isAdmin ? 'Managing building longevity and member comfort.' : 'Track and report issues for your residence.'}
           </p>
         </div>

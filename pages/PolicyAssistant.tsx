@@ -79,8 +79,8 @@ const PolicyAssistant: React.FC<{ documents: Document[] }> = ({ documents }) => 
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Policy Assistant</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">AI-powered guidance for BC Housing Co-operative regulations.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Policy Assistant</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">AI-powered guidance for BC Housing Co-operative regulations.</p>
         </div>
         <div className="flex items-center gap-2 px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest">
           <Sparkles className="w-3 h-3" />

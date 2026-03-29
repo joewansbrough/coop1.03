@@ -149,7 +149,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-                <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Interactive Association Map</h3>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Interactive Association Map</h3>
               </div>
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
                 <span className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Occupied</span>
@@ -196,7 +196,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
           </div>
 
           <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
-            <h3 className="text-base font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight flex items-center gap-2">
+            <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
               <i className="fa-solid fa-bolt text-amber-500"></i>
               Quick Actions
             </h3>

@@ -63,8 +63,8 @@ const Communications: React.FC<{
     <div className="h-full flex flex-col space-y-4 lg:space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl lg:text-2xl font-bold text-slate-800">Communication Hub</h2>
-          <p className="text-slate-500 text-sm hidden sm:block">Association news and direct messaging.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Communication Hub</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Association news and direct messaging.</p>
         </div>
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl w-full sm:w-auto">
           <button

@@ -264,8 +264,8 @@ const Documents: React.FC<{
           <div className="flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex flex-col">
-                <h3 className="text-2xl font-black text-slate-800 dark:text-white">Resource Library</h3>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Centralized association archives</p>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Resource Library</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Centralized association archives and governance records.</p>
               </div>
               {isAdmin && !isGuest && (
                 <button

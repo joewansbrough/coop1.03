@@ -53,7 +53,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Unit Inventory</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Managing building envelope and unit assignments.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Managing building envelope and unit assignments.</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}

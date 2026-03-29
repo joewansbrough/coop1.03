@@ -31,10 +31,11 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
       email,
       phone,
       status: 'Waitlist',
+      role: 'MEMBER',
       startDate: new Date().toISOString().split('T')[0],
       balance: 0,
       shareCapital: 0,
-      residencyHistory: []
+      history: []
     };
     setTenants([...tenants, newApplicant]);
     setShowAddModal(false);
@@ -49,8 +50,8 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
     <div className="space-y-6 pb-12 transition-colors duration-200">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white uppercase tracking-tight">Prospective Member Waitlist</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Managing the future of our community through fair assessment.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Prospective Member Waitlist</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Managing the future of our community through fair assessment.</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}

@@ -37,7 +37,8 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
         id: `h${Date.now()}`, tenantId: newId, unitId,
         unit: { number: units.find(u => u.id === unitId)?.number || '' } as any,
         startDate: new Date().toISOString().split('T')[0],
-      }] : []
+      }] : [],
+      role: 'MEMBER'
     };
     setTenants([...tenants, newTenant]);
     setShowAddForm(false);
@@ -71,7 +72,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
             {isAdmin ? 'Member Registry' : 'Community Directory'}
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
             {isAdmin ? 'Protected community records and historical data.' : 'Connecting neighbors while respecting privacy.'}
           </p>
         </div>
