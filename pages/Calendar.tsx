@@ -93,6 +93,12 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
 
   const monthName = viewDate.toLocaleString('default', { month: 'long' });
 
+  // Find closest upcoming event
+  const now = new Date();
+  const nextEvent = [...events]
+    .filter(e => new Date(e.date + 'T' + e.time) >= now)
+    .sort((a, b) => new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime())[0];
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -215,6 +221,43 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
         </div>
 
         <div className="space-y-6">
+          {nextEvent && (
+            <div 
+              onClick={() => navigate(`/calendar/${nextEvent.id}`)}
+              className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-emerald-500 transition-all group cursor-pointer relative overflow-hidden active:scale-95"
+            >
+              <div className="absolute -top-10 -right-10 opacity-5 text-9xl text-emerald-900 dark:text-emerald-100 pointer-events-none group-hover:scale-110 transition-transform">
+                <i className="fa-solid fa-calendar-day"></i>
+              </div>
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <p className={`text-[10px] font-black uppercase tracking-widest mb-4 ${
+                  nextEvent.category === 'Meeting' ? 'text-amber-500' :
+                  nextEvent.category === 'Social' ? 'text-emerald-500' : 'text-blue-500'
+                }`}>
+                  Next Upcoming Event
+                </p>
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 border ${
+                  nextEvent.category === 'Meeting' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                  nextEvent.category === 'Social' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
+                  'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                }`}>
+                  <i className="fa-solid fa-calendar-star text-2xl"></i>
+                </div>
+                <p className="text-3xl font-black text-slate-900 dark:text-white mb-2">
+                  {new Date(nextEvent.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                </p>
+                <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight line-clamp-2 max-w-[200px] mb-6">
+                  {nextEvent.title}
+                </h4>
+                <div className="w-full pt-6 border-t border-slate-100 dark:border-white/5">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none flex items-center justify-center gap-2">
+                    <i className="fa-solid fa-clock opacity-50"></i> {nextEvent.time} • {nextEvent.location}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors duration-200">
             <h3 className="text-base font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2 border-b border-slate-50 dark:border-white/5 pb-4">
                <i className="fa-solid fa-clock-rotate-left text-emerald-500"></i>
