@@ -634,80 +634,86 @@ const upload = multer({
   app.post('/api/units/:id/move-out', async (req, res) => {
     const { date, reason } = req.body;
     try {
-      // 1. Find all members currently in this unit
-      const residents = await prisma.tenant.findMany({
-        where: { unitId: req.params.id }
-      });
-
-      // 2. Update Unit status
-      await prisma.unit.update({
-        where: { id: req.params.id },
-        data: { status: 'Vacant', currentTenantId: null }
-      });
-
-      // 3. Update all residents
-      for (const resident of residents) {
-        await prisma.tenant.update({
-          where: { id: resident.id },
-          data: { status: 'Past', unitId: null }
+      await prisma.$transaction(async (tx) => {
+        // 1. Identify all residents currently in the unit
+        const residents = await tx.tenant.findMany({
+          where: { unitId: req.params.id }
         });
 
-        // Close history record for each resident
-        const history = await prisma.tenantHistory.findFirst({
-          where: { tenantId: resident.id, unitId: req.params.id, endDate: null },
-          orderBy: { startDate: 'desc' }
+        // 2. Clear unit's current occupancy status
+        await tx.unit.update({
+          where: { id: req.params.id },
+          data: { status: 'Vacant', currentTenantId: null }
         });
 
-        if (history) {
-          await prisma.tenantHistory.update({
-            where: { id: history.id },
-            data: { endDate: new Date(date), moveReason: reason || 'Household Move-out' }
+        // 3. Process each resident for departure
+        for (const resident of residents) {
+          await tx.tenant.update({
+            where: { id: resident.id },
+            data: { status: 'Past', unitId: null }
           });
-        } else {
-          // Backfill: Create record if missing
-          await prisma.tenantHistory.create({
-            data: {
-              tenantId: resident.id,
-              unitId: req.params.id,
-              startDate: new Date(resident.startDate || date),
-              endDate: new Date(date),
-              moveReason: reason || 'Household Move-out (Archived)'
-            }
+
+          // Terminate active history record for this unit
+          const activeHistory = await tx.tenantHistory.findFirst({
+            where: { tenantId: resident.id, unitId: req.params.id, endDate: null },
+            orderBy: { startDate: 'desc' }
           });
+
+          if (activeHistory) {
+            await tx.tenantHistory.update({
+              where: { id: activeHistory.id },
+              data: { endDate: new Date(date), moveReason: reason || 'Household Move-out' }
+            });
+          } else {
+            // Create archived history record if none existed (backfill)
+            await tx.tenantHistory.create({
+              data: {
+                tenantId: resident.id,
+                unitId: req.params.id,
+                startDate: new Date(resident.startDate || date),
+                endDate: new Date(date),
+                moveReason: reason || 'Household Move-out (Archived)'
+              }
+            });
+          }
         }
-      }
-
+      });
       res.json({ success: true });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+    } catch (e: any) { 
+      res.status(400).json({ error: e.message }); 
+    }
   });
 
   app.post('/api/units/:id/move-in', async (req, res) => {
     const { tenantId, date } = req.body;
     try {
-      // 1. Update Unit status
-      await prisma.unit.update({
-        where: { id: req.params.id },
-        data: { status: 'Occupied', currentTenantId: tenantId }
-      });
+      await prisma.$transaction(async (tx) => {
+        // 1. Mark unit as occupied by the new tenant
+        await tx.unit.update({
+          where: { id: req.params.id },
+          data: { status: 'Occupied', currentTenantId: tenantId }
+        });
 
-      // 2. Update Tenant status
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: { status: 'Current', unitId: req.params.id, startDate: date }
-      });
+        // 2. Update tenant's current residency details
+        await tx.tenant.update({
+          where: { id: tenantId },
+          data: { status: 'Current', unitId: req.params.id, startDate: date }
+        });
 
-      // 3. Create new History record
-      await prisma.tenantHistory.create({
-        data: {
-          tenantId,
-          unitId: req.params.id,
-          startDate: new Date(date),
-          moveReason: 'Move-in'
-        }
+        // 3. Create a new residency history entry
+        await tx.tenantHistory.create({
+          data: {
+            tenantId,
+            unitId: req.params.id,
+            startDate: new Date(date),
+            moveReason: 'Move-in'
+          }
+        });
       });
-
       res.json({ success: true });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+    } catch (e: any) { 
+      res.status(400).json({ error: e.message }); 
+    }
   });
 
   app.post('/api/units/:id/transfer', async (req, res) => {
