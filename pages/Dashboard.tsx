@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import StatCard from '../components/StatCard';
-import { RequestStatus, Unit } from '../types';
+import { RequestStatus, Unit, MaintenancePriority } from '../types';
 import { useUnits, useTenants, useMaintenance, useAnnouncements, useEvents } from '../hooks/useCoopData';
 import { MOCK_ANNOUNCEMENTS, MOCK_DOCS, MOCK_UNITS, MOCK_TENANTS, MOCK_REQUESTS, MOCK_EVENTS, MOCK_COMMITTEES } from '../constants';
 
@@ -353,10 +353,10 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
                   >
                     <div className="flex justify-between items-start mb-3">
                       <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
-                        req.urgency === 'Emergency' ? 'bg-rose-100 text-rose-700' :
-                        req.urgency === 'High' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                        req.priority === MaintenancePriority.EMERGENCY ? 'bg-rose-100 text-rose-700' :
+                        req.priority === MaintenancePriority.HIGH ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
                       }`}>
-                        {req.urgency}
+                        {req.priority}
                       </span>
                       <span className="text-[9px] font-black text-slate-400 uppercase">{req.status}</span>
                     </div>

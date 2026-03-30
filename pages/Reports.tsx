@@ -3,14 +3,14 @@ import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import StatCard from '../components/StatCard';
 import { MOCK_UNITS, MOCK_REQUESTS } from '../constants';
-import { MaintenanceCategory } from '../types';
+import { MaintenanceCategory, MaintenancePriority } from '../types';
 import { Link } from 'react-router-dom';
 
 const Reports: React.FC = () => {
   // Maintenance Expenditure States
   const [maintCategory, setMaintCategory] = useState<string>('All');
   const [maintUnit, setMaintUnit] = useState<string>('All');
-  const [maintUrgency, setMaintUrgency] = useState<string>('All');
+  const [maintPriority, setMaintPriority] = useState<string>('All');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
@@ -23,13 +23,13 @@ const Reports: React.FC = () => {
     return MOCK_REQUESTS.filter(req => {
       const matchCat = maintCategory === 'All' || req.category.includes(maintCategory as MaintenanceCategory);
       const matchUnit = maintUnit === 'All' || req.unitId === maintUnit;
-      const matchUrgency = maintUrgency === 'All' || req.urgency === maintUrgency;
+      const matchPriority = maintPriority === 'All' || req.priority === maintPriority;
       const date = new Date(req.createdAt).getTime();
       const matchStart = !startDate || date >= new Date(startDate).getTime();
       const matchEnd = !endDate || date <= new Date(endDate).getTime();
-      return matchCat && matchUnit && matchUrgency && matchStart && matchEnd;
+      return matchCat && matchUnit && matchPriority && matchStart && matchEnd;
     });
-  }, [maintCategory, maintUnit, maintUrgency, startDate, endDate]);
+  }, [maintCategory, maintUnit, maintPriority, startDate, endDate]);
 
   const totalSpend = useMemo(() => {
     return filteredMaintData.reduce((acc, req) => 
