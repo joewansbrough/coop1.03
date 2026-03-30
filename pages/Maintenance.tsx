@@ -249,7 +249,12 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${req.status === RequestStatus.COMPLETED ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          req.status === RequestStatus.COMPLETED ? 'bg-emerald-500' : 
+                          req.status === RequestStatus.IN_PROGRESS ? 'bg-blue-500' :
+                          req.status === RequestStatus.CANCELLED ? 'bg-rose-500' :
+                          'bg-amber-500'
+                        }`}></div>
                         <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">{req.status}</span>
                       </div>
                     </td>

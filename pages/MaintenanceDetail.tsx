@@ -171,7 +171,12 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 onClick={() => isAdmin && handleStatusChange(status)}
                 className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                   isActive 
-                    ? `bg-emerald-600 text-white scale-105 z-10` 
+                    ? `${
+                        status === RequestStatus.COMPLETED ? 'bg-emerald-600' :
+                        status === RequestStatus.PENDING ? 'bg-amber-500' :
+                        status === RequestStatus.CANCELLED ? 'bg-rose-600' :
+                        'bg-blue-600'
+                      } text-white scale-105 z-10` 
                     : isAdmin 
                       ? 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 opacity-60 hover:opacity-100'
                       : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-700 opacity-30 cursor-not-allowed'
