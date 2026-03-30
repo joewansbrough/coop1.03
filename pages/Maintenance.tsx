@@ -77,7 +77,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       tenantId: 't1', 
       category: category,
       description,
-      priority: priority,
+      priority: priority as MaintenancePriority,
       status: RequestStatus.PENDING,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
