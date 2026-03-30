@@ -68,12 +68,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   const [showSettings, setShowSettings] = useState(false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   
-  // Unit Activity Log States
-  const [internalNotes, setInternalNotes] = useState<Array<{ id: string, author: string, timestamp: string, content: string }>>([]);
-  const [newInternalNote, setNewInternalNote] = useState('');
-  const [isSavingInternalNote, setIsSavingInternalNote] = useState(false);
-  const [showAllInternalNotes, setShowAllInternalNotes] = useState(false);
-  
   // Turnover State
   const [showMoveInModal, setShowMoveInModal] = useState(false);
   const [showMoveOutModal, setShowMoveOutModal] = useState(false);
@@ -547,8 +541,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
           { id: 'schedule', label: 'Preventative' },
           { id: 'occupancy', label: 'Members' },
           { id: 'history', label: 'Tenant History' },
-          { id: 'layout', label: 'Layout' },
-          { id: 'unit-log', label: 'Unit Log' }
+          { id: 'layout', label: 'Layout' }
         ].map(tab => (
           <button 
             key={tab.id}
