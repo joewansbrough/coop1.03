@@ -260,8 +260,8 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                 </div>
 
                 {/* Glass Date Badge */}
-                <div className="absolute bottom-4 right-4 bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-2xl p-3 text-center min-w-[60px]">
-                  <p className="text-[10px] font-black uppercase text-white/60 tracking-tighter leading-none">
+                <div className="absolute bottom-4 right-4 bg-black/40 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-3 text-center min-w-[60px] shadow-lg">
+                  <p className="text-[10px] font-black uppercase text-white/90 tracking-tighter leading-none">
                     {parseEventDate(nextEvent).toLocaleDateString([], { month: 'short' })}
                   </p>
                   <p className="text-xl font-black text-white leading-none mt-1">
