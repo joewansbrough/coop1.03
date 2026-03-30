@@ -252,7 +252,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                   <i className="fa-solid fa-calendar-star text-2xl"></i>
                 </div>
                 <p className="text-3xl font-black text-slate-900 dark:text-white mb-2">
-                  {new Date(nextEvent.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                  {parseEventDate(nextEvent).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                 </p>
                 <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight line-clamp-2 max-w-[200px] mb-6">
                   {nextEvent.title}
