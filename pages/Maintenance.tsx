@@ -5,6 +5,7 @@ import { MOCK_REQUESTS, MOCK_UNITS, MOCK_QUOTES } from '../constants';
 import { geminiService } from '../services/geminiService';
 import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface MaintenanceProps {
   isAdmin?: boolean;
@@ -15,6 +16,7 @@ interface MaintenanceProps {
 
 const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, setRequests, units }) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const userUnitId = units.length > 0 ? units[0].id : 'u1';
   
   const [quotes, setQuotes] = useState<RepairQuote[]>([]);
@@ -24,6 +26,8 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false);
+  const [pendingRequest, setPendingRequest] = useState<{id: string, status: RequestStatus} | null>(null);
   
   // Filter requests based on user role, search, and status filter
   const displayedRequests = (Array.isArray(requests) ? requests : [])
@@ -57,9 +61,15 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!category || category.length === 0) {
+      alert("At least one category is required.");
+      return;
+    }
+
     const newRequest: MaintenanceRequest = {
       id: `r${Date.now()}`,
-      title: description.substring(0, 30) + '...',
+      title: description.substring(0, 30) + (description.length > 30 ? '...' : ''),
       unitId,
       tenantId: 't1', 
       category: category,
@@ -70,17 +80,52 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       updatedAt: new Date().toISOString(),
       notes: [],
       expenses: [],
-      attachments: []
+      attachments: [],
+      urgency // also set urgency field if present
     };
+    
+    // Optimistic local update (though ideally this would be a mutation)
     setRequests([newRequest, ...requests]);
     setShowForm(false);
     setDescription('');
+    setCategory(['Other']);
     if (isAdmin) setUnitId('');
     alert("Maintenance request submitted successfully! Our maintenance committee will review it shortly.");
   };
 
+  const confirmRequestStatus = async () => {
+    if (!pendingRequest) return;
+    const { id, status } = pendingRequest;
+    const target = requests.find(r => r.id === id);
+    if (!target) return;
+
+    try {
+      const res = await fetch(`/api/maintenance/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...target,
+          status,
+          updatedAt: new Date().toISOString()
+        })
+      });
+      const data = await res.json();
+      await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      
+      if (setRequests) {
+        setRequests(prev => prev.map(r => r.id === id ? { ...data, category: Array.isArray(data.category) ? data.category : (data.category ? data.category.split(', ') : []) } : r));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setShowStatusConfirm(false);
+      setPendingRequest(null);
+    }
+  };
+
   const updateRequestStatus = (id: string, status: RequestStatus) => {
-    setRequests(requests.map(r => r.id === id ? { ...r, status, updatedAt: new Date().toISOString() } : r));
+    setPendingRequest({ id, status });
+    setShowStatusConfirm(true);
   };
 
   const approveQuote = (quoteId: string) => {
@@ -177,12 +222,17 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
               </div>
               <div className="grid grid-cols-2 gap-4">
                  <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Category</label>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</label>
+                    <span className="text-[8px] text-slate-400 font-bold uppercase italic">(Ctrl+Click to multi-select)</span>
+                  </div>
                   <select 
                     multiple
+                    size={4}
                     className="w-full border border-slate-200 dark:border-white/5 rounded-xl p-3 text-sm outline-none bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200" 
                     value={category} 
                     onChange={(e) => setCategory(Array.from(e.target.selectedOptions, (option: HTMLOptionElement) => option.value as MaintenanceCategory))}
+                    required
                   >
                     <option>Plumbing</option><option>Electrical</option><option>Appliance</option><option>Structural</option><option>HVAC</option><option>Exterior</option><option>Safety</option><option>Other</option>
                   </select>
@@ -323,6 +373,43 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      {showStatusConfirm && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 animate-in zoom-in-95 duration-200 text-center">
+            <div className={`w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center text-2xl ${
+              pendingRequest?.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-600' :
+              pendingRequest?.status === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-600' :
+              pendingRequest?.status === RequestStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-600' :
+              'bg-amber-100 text-amber-600'
+            }`}>
+              <i className="fa-solid fa-circle-question"></i>
+            </div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Update Status?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 font-medium">
+              Are you sure you want to move this request to <span className="font-black text-slate-700 dark:text-slate-300 uppercase">{pendingRequest?.status}</span>?
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => { setShowStatusConfirm(false); setPendingRequest(null); }} 
+                className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl"
+              >
+                Go Back
+              </button>
+              <button 
+                onClick={confirmRequestStatus} 
+                className={`flex-1 py-3 text-white rounded-xl text-xs font-black uppercase shadow-lg transition-all active:scale-95 ${
+                  pendingRequest?.status === RequestStatus.COMPLETED ? 'bg-emerald-600 shadow-emerald-500/20' :
+                  pendingRequest?.status === RequestStatus.CANCELLED ? 'bg-rose-600 shadow-rose-500/20' :
+                  pendingRequest?.status === RequestStatus.IN_PROGRESS ? 'bg-blue-600 shadow-blue-500/20' :
+                  'bg-amber-100 text-amber-600'
+                }`}
+              >
+                Confirm Update
+              </button>
+            </div>
           </div>
         </div>
       )}

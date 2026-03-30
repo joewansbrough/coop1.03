@@ -402,9 +402,10 @@ app.post('/api/maintenance', async (req, res) => {
 
 app.put('/api/maintenance/:id', async (req, res) => {
   const { title, description, status, priority, category, unitId, notes } = req.body; // Destructure notes
+  const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.update({
     where: { id: req.params.id },
-    data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, notes: notes || [] } // Save notes
+    data: { title, description, status, priority, category: categoryString, unitId, notes: notes || [] } // Save notes
   });
   res.json(request);
 });

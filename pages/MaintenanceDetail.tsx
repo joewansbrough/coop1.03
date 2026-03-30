@@ -45,6 +45,8 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const [newCost, setNewCost] = useState('');
   const [isEditingCategories, setIsEditingCategories] = useState(false);
   const [showReopenModal, setShowReopenModal] = useState(false);
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<RequestStatus | null>(null);
   const [reopenReason, setReopenReason] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [showAllNotes, setShowAllNotes] = useState(false);
@@ -60,7 +62,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...updated,
-          category: updated.category[0] // API expects string for category
+          category: updated.category // Send full array, backend now joins it
         })
       });
       const data = await res.json();
@@ -69,21 +71,40 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
       await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
       
       if (setRequests) {
-        setRequests(prev => prev.map(r => r.id === data.id ? { ...data, category: [data.category] } : r));
+        setRequests(prev => prev.map(r => r.id === data.id ? { ...data, category: Array.isArray(data.category) ? data.category : (data.category ? data.category.split(', ') : []) } : r));
       }
     } catch (err) {
       console.error(err);
     }
   };
 
+  const confirmStatusChange = () => {
+    if (pendingStatus) {
+      persistUpdate({ ...request, status: pendingStatus, updatedAt: new Date().toISOString() });
+      setPendingStatus(null);
+      setShowStatusConfirm(false);
+    }
+  };
+
   const handleStatusChange = (status: RequestStatus) => {
     if (isLocked && status !== RequestStatus.IN_PROGRESS) return;
-    persistUpdate({ ...request, status, updatedAt: new Date().toISOString() });
+    if (status === request.status) return;
+    
+    setPendingStatus(status);
+    setShowStatusConfirm(true);
   };
 
   const toggleCategory = (cat: MaintenanceCategory) => {
     const current = request.category;
-    const next = current.includes(cat) ? current.filter(c => c !== cat) : [...current, cat];
+    const isSelected = current.includes(cat);
+    
+    // Requirement: at least one category required
+    if (isSelected && current.length <= 1) {
+      alert("At least one category is required.");
+      return;
+    }
+    
+    const next = isSelected ? current.filter(c => c !== cat) : [...current, cat];
     persistUpdate({ ...request, category: next, updatedAt: new Date().toISOString() });
   };
 
@@ -412,6 +433,44 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 <button type="submit" className="flex-1 py-3 bg-amber-500 text-white rounded-xl text-xs font-black uppercase hover:bg-amber-600">Confirm Reopen</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showStatusConfirm && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 animate-in zoom-in-95 duration-200 text-center">
+            <div className={`w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center text-2xl ${
+              pendingStatus === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-600' :
+              pendingStatus === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-600' :
+              pendingStatus === RequestStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-600' :
+              'bg-amber-100 text-amber-600'
+            }`}>
+              <i className="fa-solid fa-circle-question"></i>
+            </div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Update Status?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 font-medium">
+              Are you sure you want to move this request from <span className="font-black text-slate-700 dark:text-slate-300 uppercase">{request.status}</span> to <span className="font-black text-slate-700 dark:text-slate-300 uppercase">{pendingStatus}</span>?
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => { setShowStatusConfirm(false); setPendingStatus(null); }} 
+                className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl"
+              >
+                Go Back
+              </button>
+              <button 
+                onClick={confirmStatusChange} 
+                className={`flex-1 py-3 text-white rounded-xl text-xs font-black uppercase shadow-lg transition-all active:scale-95 ${
+                  pendingStatus === RequestStatus.COMPLETED ? 'bg-emerald-600 shadow-emerald-500/20' :
+                  pendingStatus === RequestStatus.CANCELLED ? 'bg-rose-600 shadow-rose-500/20' :
+                  pendingStatus === RequestStatus.IN_PROGRESS ? 'bg-blue-600 shadow-blue-500/20' :
+                  'bg-amber-500 shadow-amber-500/20'
+                }`}
+              >
+                Confirm Update
+              </button>
+            </div>
           </div>
         </div>
       )}
