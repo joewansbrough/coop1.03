@@ -57,12 +57,15 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
 
   const persistUpdate = async (updated: MaintenanceRequest) => {
     try {
+      // Force uniqueness of categories before persistence
+      const uniqueCategories = Array.from(new Set(updated.category));
+      
       const res = await fetch(`/api/maintenance/${updated.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...updated,
-          category: updated.category // Send full array, backend joins it
+          category: uniqueCategories // Send unique array, backend joins it
         })
       });
       const data = await res.json();
@@ -98,7 +101,8 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   };
 
   const toggleCategory = (cat: MaintenanceCategory) => {
-    const current = request.category;
+    // Force uniqueness first to handle any legacy duplicates
+    const current = Array.from(new Set(request.category));
     const isSelected = current.includes(cat);
     
     // Requirement: at least one category required
@@ -107,7 +111,10 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
       return;
     }
     
-    const next = isSelected ? current.filter(c => c !== cat) : [...current, cat];
+    const next = isSelected 
+      ? current.filter(c => c !== cat) 
+      : [...current, cat];
+      
     persistUpdate({ ...request, category: next, updatedAt: new Date().toISOString() });
   };
 
