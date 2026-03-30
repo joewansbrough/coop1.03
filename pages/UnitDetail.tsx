@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { RequestStatus, Unit, Tenant, MaintenanceRequest } from '../types';
+import { RequestStatus, Unit, Tenant, MaintenanceRequest, MaintenancePriority } from '../types';
 
 interface UnitDetailProps {
   isAdmin?: boolean;
