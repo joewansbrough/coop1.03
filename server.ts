@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenAI, Type } from '@google/genai';
 import multer from 'multer';
-import pdf from 'pdf-parse';
+import * as pdf from 'pdf-parse';
 
 import { z } from 'zod';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './api/validation.js';
@@ -37,6 +37,20 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
     return res.status(401).json({ error: 'Unauthorized' });
   }
   return next();
+};
+
+type BodyValue = string | string[] | undefined;
+
+const firstString = (value?: BodyValue): string | undefined => {
+  if (Array.isArray(value)) return value[0];
+  return value;
+};
+
+const ensureString = (value: BodyValue, fallback = ''): string => firstString(value) ?? fallback;
+const optionalString = (value: BodyValue): string | undefined => firstString(value);
+const ensureArray = (value: BodyValue): string[] => {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 };
 
 // Validation Middleware
@@ -314,24 +328,39 @@ const upload = multer({
   });
 
   app.post('/api/maintenance', requireAuth, validateRequest(maintenanceSchema), async (req, res) => {
-    const { title, description, status, priority, category, unitId, requestedBy } = req.body;
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const description = ensureString(body.description) as string;
+    const status = ensureString(body.status, 'Pending') as string;
+    const priority = ensureString(body.priority, 'Medium') as string;
+    const category = ensureString(body.category, 'General') as string;
+    const unitId = ensureString(body.unitId) as string;
+    const requestedBy = optionalString(body.requestedBy);
     const request = await prisma.maintenanceRequest.create({
-      data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy }
+      data: { title, description, status, priority, category, unitId, requestedBy }
     });
     res.json(request);
   });
 
   app.put('/api/maintenance/:id', requireAuth, validateRequest(maintenanceSchema.partial()), async (req, res) => {
-    const { title, description, status, priority, category, unitId, notes, expenses } = req.body;
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const description = ensureString(body.description) as string;
+    const status = ensureString(body.status, 'Pending') as string;
+    const priority = ensureString(body.priority, 'Medium') as string;
+    const category = ensureString(body.category, 'General') as string;
+    const unitId = ensureString(body.unitId) as string;
+    const notes = body.notes;
+    const expenses = body.expenses;
     try {
       const request = await prisma.maintenanceRequest.update({
         where: { id: req.params.id },
         data: { 
           title, 
           description, 
-          status: status as any, 
-          priority: priority as any, 
-          category: (Array.isArray(category) ? category[0] : category) as string, 
+          status, 
+          priority, 
+          category, 
           unitId,
           notes: notes ? (Array.isArray(notes) ? notes : [notes]) : undefined,
           expenses: expenses ? (Array.isArray(expenses) ? expenses : [expenses]) : undefined
@@ -360,7 +389,13 @@ const upload = multer({
   });
 
   app.post('/api/announcements', requireAuth, validateRequest(announcementSchema), async (req, res) => {
-    const { title, content, type, priority, author, date } = req.body;
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const content = ensureString(body.content) as string;
+    const type = ensureString(body.type, 'General') as string;
+    const priority = ensureString(body.priority, 'Normal') as string;
+    const author = ensureString(body.author) as string;
+    const date = ensureString(body.date) as string;
     const announcement = await prisma.announcement.create({
       data: { title, content, type, priority, author, date }
     });
@@ -368,7 +403,12 @@ const upload = multer({
   });
 
   app.put('/api/announcements/:id', requireAuth, validateRequest(announcementSchema.partial()), async (req, res) => {
-    const { title, content, type, priority, date } = req.body;
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const content = ensureString(body.content) as string;
+    const type = ensureString(body.type, 'General') as string;
+    const priority = ensureString(body.priority, 'Normal') as string;
+    const date = ensureString(body.date) as string;
     const announcement = await prisma.announcement.update({
       where: { id: req.params.id },
       data: { 
@@ -438,7 +478,10 @@ const upload = multer({
         console.log(`Text/Generic file processed. Extracted ${content.length} characters.`);
       }
 
-      const { title, category, committee } = req.body;
+      const body = req.body as Record<string, BodyValue>;
+      const title = ensureString(body.title, 'Untitled Document') as string;
+      const category = ensureString(body.category, 'General') as string;
+      const committee = optionalString(body.committee);
       console.log(`Metadata: Title="${title}", Category="${category}", Committee="${committee}"`);
       
       const currentYear = new Date().getFullYear().toString();
@@ -448,9 +491,10 @@ const upload = multer({
       try {
         console.log('Requesting AI tags...');
         const ai = getAI();
-        const aiResult = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+        const aiResult = await ai.models.generateContent({
+          model: 'gemini-2.0-flash-lite',
           contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
-          generationConfig: {
+          config: {
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
@@ -461,7 +505,7 @@ const upload = multer({
             }
           }
         });
-        const aiData = JSON.parse(aiResult.response.text() || '{}');
+        const aiData = JSON.parse(aiResult.text || '{}');
         aiTags = aiData.tags || [];
         console.log('AI tags generated successfully.');
       } catch (aiErr: any) {
@@ -472,11 +516,11 @@ const upload = multer({
 
       console.log('Creating database record...');
       const document = await prisma.document.create({
-        data: {
-          title: title || 'Untitled Document',
-          category: category || 'General',
-          tags: finalTags,
-          url: '#', // Placeholder, in a real app this would be a file storage URL
+          data: {
+            title,
+            category,
+            tags: finalTags,
+            url: '#', // Placeholder, in a real app this would be a file storage URL
           fileType: req.file.mimetype.split('/')[1] || 'unknown',
           author: (req as any).session?.user?.name || 'System',
           date: new Date().toISOString().split('T')[0],
@@ -493,7 +537,10 @@ const upload = multer({
   });
 
   app.put('/api/documents/:id', requireAuth, async (req, res) => {
-    const { title, category, tags } = req.body;
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const category = ensureString(body.category, 'General') as string;
+    const tags = ensureArray(body.tags);
     const document = await prisma.document.update({
       where: { id: req.params.id },
       data: { title, category, tags }
@@ -534,7 +581,13 @@ const upload = multer({
   });
 
   app.post('/api/events', requireAuth, async (req, res) => {
-    const { title, description, date, time, location, category } = req.body;
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const description = ensureString(body.description) as string;
+    const date = ensureString(body.date) as string;
+    const time = ensureString(body.time) as string;
+    const location = ensureString(body.location) as string;
+    const category = ensureString(body.category, 'General') as string;
     const event = await prisma.coopEvent.create({
       data: { title, description, date, time, location, category },
       include: { attendees: true }
@@ -543,7 +596,13 @@ const upload = multer({
   });
 
   app.put('/api/events/:id', requireAuth, async (req, res) => {
-    const { title, description, date, time, location, category } = req.body;
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const description = ensureString(body.description) as string;
+    const date = ensureString(body.date) as string;
+    const time = ensureString(body.time) as string;
+    const location = ensureString(body.location) as string;
+    const category = ensureString(body.category, 'General') as string;
     const event = await prisma.coopEvent.update({
       where: { id: req.params.id },
       data: { title, description, date, time, location, category },
@@ -581,15 +640,17 @@ const upload = multer({
   });
 
   // --- AI Routes ---
-  const getAI = () => new GoogleGenAI(process.env.API_KEY || '');
+  const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
   app.post('/api/ai/triage', requireAuth, async (req, res) => {
     try {
       const ai = getAI();
-      const { description } = req.body;
-      const response = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+      const body = req.body as Record<string, BodyValue>;
+      const description = ensureString(body.description) as string;
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-lite',
         contents: [{ role: 'user', parts: [{ text: `Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"` }] }],
-        generationConfig: {
+        config: {
           responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,
@@ -602,7 +663,8 @@ const upload = multer({
           }
         }
       });
-      res.json(JSON.parse(response.response.text() || '{}'));
+      const aiData = JSON.parse(response.text || '{}');
+      res.json(aiData);
     } catch (e: any) {
       res.status(500).json({ urgency: 'Medium', category: 'Other', error: e.message });
     }
@@ -611,11 +673,14 @@ const upload = multer({
   app.post('/api/ai/policy', requireAuth, async (req, res) => {
     try {
       const ai = getAI();
-      const { question, context } = req.body;
-      const response = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+      const body = req.body as Record<string, BodyValue>;
+      const question = ensureString(body.question) as string;
+      const context = ensureString(body.context) as string;
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-lite',
         contents: [{ role: 'user', parts: [{ text: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}` }] }]
       });
-      res.json({ answer: response.response.text() });
+      res.json({ answer: response.text || '' });
     } catch (e: any) {
       res.status(500).json({ answer: 'Unable to answer at this time. Please contact the board.', error: e.message });
     }
@@ -624,10 +689,12 @@ const upload = multer({
   app.post('/api/ai/summarize', requireAuth, async (req, res) => {
     try {
       const ai = getAI();
-      const { content } = req.body;
-      const response = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+      const body = req.body as Record<string, BodyValue>;
+      const content = ensureString(body.content) as string;
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-lite',
         contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
-        generationConfig: {
+        config: {
           responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,
@@ -639,7 +706,7 @@ const upload = multer({
           }
         }
       });
-      res.json(JSON.parse(response.response.text() || '{}'));
+      res.json(JSON.parse(response.text || '{}'));
     } catch (e: any) {
       res.status(500).json({ summary: '', tags: [], error: e.message });
     }
@@ -674,7 +741,9 @@ const upload = multer({
   });
 
   app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
-    const { date, reason } = req.body;
+    const body = req.body as Record<string, BodyValue>;
+    const date = ensureString(body.date) as string;
+    const reason = optionalString(body.reason);
     try {
       await prisma.$transaction(async (tx) => {
         // 1. Identify all residents currently in the unit
@@ -727,7 +796,9 @@ const upload = multer({
   });
 
   app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
-    const { tenantId, date } = req.body;
+    const body = req.body as Record<string, BodyValue>;
+    const tenantId = ensureString(body.tenantId) as string;
+    const date = ensureString(body.date) as string;
     try {
       await prisma.$transaction(async (tx) => {
         // 1. Mark unit as occupied by the new tenant
@@ -759,7 +830,11 @@ const upload = multer({
   });
 
   app.post('/api/units/:id/transfer', requireAuth, async (req, res) => {
-    const { fromUnitId, toUnitId, date, tenantIds } = req.body;
+    const body = req.body as Record<string, BodyValue>;
+    const fromUnitId = ensureString(body.fromUnitId) as string;
+    const toUnitId = ensureString(body.toUnitId) as string;
+    const date = ensureString(body.date) as string;
+    const tenantIds = ensureArray(body.tenantIds);
     try {
       await prisma.$transaction(async (tx) => {
         // 1. Validate target unit availability

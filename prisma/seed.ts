@@ -321,14 +321,14 @@ async function main() {
     currentDate.setMonth(currentDate.getMonth() + 1);
   }
 
-console.log('✅ Seeding complete!');
-console.log(`  • ${units.length} units`);
-console.log(`  • ${Object.keys(tenants).length} tenants`);
-console.log('  • 12 maintenance requests');
-console.log('  • 7 announcements');
-console.log('  • 12 documents');
-console.log('  • 6 committees');
-console.log('  • Monthly calendar events through end of 2026');
+  console.log('Seeding complete!');
+  console.log(`  - ${units.length} units`);
+  console.log(`  - ${Object.keys(tenants).length} tenants`);
+  console.log('  - 12 maintenance requests');
+  console.log('  - 7 announcements');
+  console.log('  - 12 documents');
+  console.log('  - 6 committees');
+  console.log('  - Monthly calendar events through end of 2026');
 }
 
 main()

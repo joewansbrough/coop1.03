@@ -28,6 +28,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [filter, setFilter] = useState('All');
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<{id: string, status: RequestStatus} | null>(null);
+  const [urgency, setUrgency] = useState<string>('Medium');
   
   // Filter requests based on user role, search, and status filter
   const allFilteredRequests = (Array.isArray(requests) ? requests : [])
@@ -53,8 +54,9 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     setLoading(true);
     try {
       const result = await geminiService.triageMaintenanceRequest(description);
-      if (result.category) setCategory([result.category as MaintenanceCategory]);
-      if (result.priority) setPriority(result.priority as MaintenancePriority);
+    if (result.category) setCategory([result.category as MaintenanceCategory]);
+    if (result.priority) setPriority(result.priority as MaintenancePriority);
+    if (result.urgency) setUrgency(result.urgency);
     } catch (err) {
       console.error(err);
     } finally {
@@ -84,7 +86,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       notes: [],
       expenses: [],
       attachments: [],
-      urgency // also set urgency field if present
+      urgency,
     };
     
     // Optimistic local update (though ideally this would be a mutation)
@@ -92,6 +94,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     setShowForm(false);
     setDescription('');
     setCategory(['Other']);
+    setUrgency('Medium');
     if (isAdmin) setUnitId('');
     alert("Maintenance request submitted successfully! Our maintenance committee will review it shortly.");
   };
