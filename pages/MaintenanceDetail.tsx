@@ -47,6 +47,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [showAllNotes, setShowAllNotes] = useState(false);
 
   if (!request) return <div className="p-12 text-center text-slate-500 font-bold">Ticket not found in archive.</div>;
 
@@ -246,8 +247,8 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
               <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Activity Log & Dispatch Feed</h3>
             </div>
             <div className="p-6 space-y-6">
-              {(request.notes || []).map((note) => (
-                <div key={note.id} className="flex gap-4">
+              {(showAllNotes ? (request.notes || []) : (request.notes || []).slice(-3)).map((note) => (
+                <div key={note.id} className="flex gap-4 animate-in fade-in slide-in-from-top-1 duration-300">
                   <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
                     {note.author[0]}
                   </div>
@@ -262,6 +263,25 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                   </div>
                 </div>
               ))}
+
+              {(request.notes || []).length > 3 && !showAllNotes && (
+                <button 
+                  onClick={() => setShowAllNotes(true)}
+                  className="w-full py-3 border-y border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                >
+                  <i className="fa-solid fa-clock-rotate-left mr-2"></i>
+                  Show Older Messages ({(request.notes || []).length - 3} hidden)
+                </button>
+              )}
+
+              {showAllNotes && (request.notes || []).length > 3 && (
+                <button 
+                  onClick={() => setShowAllNotes(false)}
+                  className="w-full py-3 border-y border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                >
+                  Collapse Log
+                </button>
+              )}
               {!isLocked && (
                 <form onSubmit={addNote} className="pt-4">
                   <textarea
