@@ -79,17 +79,73 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
     persistUpdate({ ...request, category: next, updatedAt: new Date().toISOString() });
   };
 
-  const addNote = (e: React.FormEvent) => {
+  const [isSavingNote, setIsSavingNote] = useState(false);
+
+  const persistUpdate = (updated: Partial<MaintenanceRequest>) => {
+    try {
+      const res = await fetch(`/api/maintenance/${updated.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...updated,
+          // Ensure notes are passed correctly, potentially as JSON string if backend expects it, or array if already parsed
+          // Assuming the backend expects the full notes array for PUT
+          notes: updated.notes, 
+          category: updated.category[0] // API expects string for category
+        })
+      });
+      const data = await res.json();
+      if (setRequests) {
+        setRequests(prev => prev.map(r => r.id === data.id ? { ...data, category: [data.category] } : r));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleStatusChange = (status: RequestStatus) => {
+    if (isLocked && status !== RequestStatus.IN_PROGRESS) return;
+    persistUpdate({ ...request, status, updatedAt: new Date().toISOString() });
+  };
+
+  const toggleCategory = (cat: MaintenanceCategory) => {
+    const current = request.category;
+    const next = current.includes(cat) ? current.filter(c => c !== cat) : [...current, cat];
+    persistUpdate({ ...request, category: next, updatedAt: new Date().toISOString() });
+  };
+
+  const addNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim() || isLocked) return;
+
+    setIsSavingNote(true); // Start loading indicator
+
     const note: MaintenanceNote = {
       id: `n${Date.now()}`,
       author: isAdmin ? 'Board Admin' : 'Member Note',
       date: new Date().toISOString(),
       content: newNote.trim()
     };
-    persistUpdate({ ...request, notes: [...(request.notes || []), note], updatedAt: new Date().toISOString() });
-    setNewNote('');
+
+    try {
+      // Update the local state immediately for better UX
+      const updatedRequest = { 
+        ...request, 
+        notes: [...(request.notes || []), note], 
+        updatedAt: new Date().toISOString() 
+      };
+      
+      // Persist the update to the backend
+      await persistUpdate(updatedRequest); 
+      setNewNote(''); // Clear input only on success
+      
+    } catch (error) {
+      console.error("Failed to add note:", error);
+      alert("Failed to save note. Please try again.");
+      // Optionally: revert local state if backend fails
+    } finally {
+      setIsSavingNote(false); // Stop loading indicator
+    }
   };
 
   const addExpense = (e: React.FormEvent) => {
