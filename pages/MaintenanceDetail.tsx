@@ -247,6 +247,16 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
               <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Activity Log & Dispatch Feed</h3>
             </div>
             <div className="p-6 space-y-6">
+              {(request.notes || []).length > 3 && !showAllNotes && (
+                <button 
+                  onClick={() => setShowAllNotes(true)}
+                  className="w-full py-3 border-b border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:bg-slate-50 dark:hover:bg-white/5 transition-all mb-4"
+                >
+                  <i className="fa-solid fa-clock-rotate-left mr-2"></i>
+                  Show Older Messages ({(request.notes || []).length - 3} hidden)
+                </button>
+              )}
+
               {(showAllNotes ? (request.notes || []) : (request.notes || []).slice(-3)).map((note) => (
                 <div key={note.id} className="flex gap-4 animate-in fade-in slide-in-from-top-1 duration-300">
                   <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
@@ -255,7 +265,9 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                   <div className="flex-1 pb-4 border-b border-slate-50 dark:border-white/5">
                     <div className="flex justify-between items-start mb-1">
                       <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
-                      <p className="text-[10px] text-slate-400 font-bold">{new Date(note.date).toLocaleDateString()}</p>
+                      <p className="text-[10px] text-slate-400 font-bold">
+                        {new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
                     <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
                       {note.content}
@@ -264,20 +276,10 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 </div>
               ))}
 
-              {(request.notes || []).length > 3 && !showAllNotes && (
-                <button 
-                  onClick={() => setShowAllNotes(true)}
-                  className="w-full py-3 border-y border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
-                >
-                  <i className="fa-solid fa-clock-rotate-left mr-2"></i>
-                  Show Older Messages ({(request.notes || []).length - 3} hidden)
-                </button>
-              )}
-
               {showAllNotes && (request.notes || []).length > 3 && (
                 <button 
                   onClick={() => setShowAllNotes(false)}
-                  className="w-full py-3 border-y border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
+                  className="w-full py-3 border-t border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
                 >
                   Collapse Log
                 </button>
