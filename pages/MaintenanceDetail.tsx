@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { RequestStatus, MaintenanceNote, MaintenanceExpense, MaintenanceCategory, MaintenanceRequest, Unit, Tenant } from '../types';
+import { RequestStatus, MaintenanceNote, MaintenanceExpense, MaintenanceCategory, MaintenanceRequest, Unit, Tenant, MaintenancePriority } from '../types';
 
 interface MaintenanceDetailProps {
   isAdmin?: boolean;

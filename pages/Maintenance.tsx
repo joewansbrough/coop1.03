@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MaintenanceRequest, RequestStatus, RepairQuote, MaintenanceCategory, Unit } from '../types';
+import { MaintenanceRequest, RequestStatus, RepairQuote, MaintenanceCategory, Unit, MaintenancePriority } from '../types';
 import { MOCK_REQUESTS, MOCK_UNITS, MOCK_QUOTES } from '../constants';
 import { geminiService } from '../services/geminiService';
 import { useNavigate } from 'react-router-dom';
