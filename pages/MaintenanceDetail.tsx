@@ -44,6 +44,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const [isEditingCategories, setIsEditingCategories] = useState(false);
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   if (!request) return <div className="p-12 text-center text-slate-500 font-bold">Ticket not found in archive.</div>;
 
@@ -56,41 +57,6 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...updated,
-          category: updated.category[0] // API expects string for category
-        })
-      });
-      const data = await res.json();
-      if (setRequests) {
-        setRequests(prev => prev.map(r => r.id === data.id ? { ...data, category: [data.category] } : r));
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleStatusChange = (status: RequestStatus) => {
-    if (isLocked && status !== RequestStatus.IN_PROGRESS) return;
-    persistUpdate({ ...request, status, updatedAt: new Date().toISOString() });
-  };
-
-  const toggleCategory = (cat: MaintenanceCategory) => {
-    const current = request.category;
-    const next = current.includes(cat) ? current.filter(c => c !== cat) : [...current, cat];
-    persistUpdate({ ...request, category: next, updatedAt: new Date().toISOString() });
-  };
-
-  const [isSavingNote, setIsSavingNote] = useState(false);
-
-  const persistUpdate = (updated: Partial<MaintenanceRequest>) => {
-    try {
-      const res = await fetch(`/api/maintenance/${updated.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...updated,
-          // Ensure notes are passed correctly, potentially as JSON string if backend expects it, or array if already parsed
-          // Assuming the backend expects the full notes array for PUT
-          notes: updated.notes, 
           category: updated.category[0] // API expects string for category
         })
       });
