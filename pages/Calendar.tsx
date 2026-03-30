@@ -232,35 +232,63 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
           {nextEvent && (
             <Link 
               to={`/calendar/${nextEvent.id}`}
-              className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-emerald-500 transition-all group cursor-pointer relative overflow-hidden block active:scale-95"
+              className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 hover:border-emerald-500 transition-all group cursor-pointer relative overflow-hidden block active:scale-[0.98] shadow-sm hover:shadow-2xl hover:shadow-emerald-500/10"
             >
-              <div className="absolute -top-10 -right-10 opacity-5 text-9xl text-emerald-900 dark:text-emerald-100 pointer-events-none group-hover:scale-110 transition-transform">
-                <i className="fa-solid fa-calendar-day"></i>
-              </div>
-              <div className="relative z-10 flex flex-col items-center text-center">
-                <p className={`text-[10px] font-black uppercase tracking-widest mb-4 ${
-                  nextEvent.category === 'Meeting' ? 'text-amber-500' :
-                  nextEvent.category === 'Social' ? 'text-emerald-500' : 'text-blue-500'
-                }`}>
-                  Next Upcoming Event
-                </p>
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 border ${
-                  nextEvent.category === 'Meeting' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
-                  nextEvent.category === 'Social' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                  'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                }`}>
-                  <i className="fa-solid fa-calendar-star text-2xl"></i>
+              {/* Image Banner */}
+              <div className="h-40 relative overflow-hidden">
+                <img 
+                  src={
+                    nextEvent.category === 'Meeting' ? 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=400' :
+                    nextEvent.category === 'Social' ? 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=400' :
+                    nextEvent.category === 'Maintenance' ? 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=400' :
+                    'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=400'
+                  }
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  alt=""
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 via-transparent to-transparent"></div>
+                
+                {/* Floating Category Badge */}
+                <div className="absolute top-4 left-4">
+                  <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md border ${
+                    nextEvent.category === 'Meeting' ? 'bg-amber-500/80 text-white border-white/20' :
+                    nextEvent.category === 'Social' ? 'bg-emerald-500/80 text-white border-white/20' :
+                    'bg-slate-800/80 text-white border-white/20'
+                  }`}>
+                    {nextEvent.category}
+                  </span>
                 </div>
-                <p className="text-3xl font-black text-slate-900 dark:text-white mb-2">
-                  {parseEventDate(nextEvent).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                </p>
-                <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight line-clamp-2 max-w-[200px] mb-6">
+
+                {/* Glass Date Badge */}
+                <div className="absolute bottom-4 right-4 bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-2xl p-3 text-center min-w-[60px]">
+                  <p className="text-[10px] font-black uppercase text-white/60 tracking-tighter leading-none">
+                    {parseEventDate(nextEvent).toLocaleDateString([], { month: 'short' })}
+                  </p>
+                  <p className="text-xl font-black text-white leading-none mt-1">
+                    {parseEventDate(nextEvent).toLocaleDateString([], { day: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-8 relative">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-3">Next Upcoming Event</p>
+                <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-2 leading-tight group-hover:text-emerald-500 transition-colors">
                   {nextEvent.title}
                 </h4>
-                <div className="w-full pt-6 border-t border-slate-100 dark:border-white/5">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none flex items-center justify-center gap-2">
-                    <i className="fa-solid fa-clock opacity-50"></i> {nextEvent.time} • {nextEvent.location}
-                  </p>
+                
+                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5 flex flex-col gap-2">
+                  <div className="flex items-center gap-3 text-slate-500">
+                    <div className="w-6 h-6 rounded-lg bg-slate-50 dark:bg-white/5 flex items-center justify-center">
+                      <i className="fa-solid fa-clock text-[10px]"></i>
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider">{nextEvent.time}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-500">
+                    <div className="w-6 h-6 rounded-lg bg-slate-50 dark:bg-white/5 flex items-center justify-center">
+                      <i className="fa-solid fa-location-dot text-[10px]"></i>
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider line-clamp-1">{nextEvent.location}</span>
+                  </div>
                 </div>
               </div>
             </Link>
