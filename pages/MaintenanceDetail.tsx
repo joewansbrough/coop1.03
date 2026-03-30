@@ -250,32 +250,61 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
               {(request.notes || []).length > 3 && (
                 <button 
                   onClick={() => setShowAllNotes(!showAllNotes)}
-                  className="w-full py-2 mb-6 border-b border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-500 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2 mb-4 border-b border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-500 transition-colors flex items-center justify-center gap-2"
                 >
-                  <i className={`fa-solid ${showAllNotes ? 'fa-chevron-up' : 'fa-clock-rotate-left'}`}></i>
+                  <i className={`fa-solid ${showAllNotes ? 'fa-chevron-up' : 'fa-clock-rotate-left'} transition-transform duration-300 ${showAllNotes ? 'rotate-0' : ''}`}></i>
                   {showAllNotes ? 'Collapse Older History' : `Show Older Messages (${(request.notes || []).length - 3} hidden)`}
                 </button>
               )}
 
-              <div className="space-y-6">
-                {(showAllNotes ? (request.notes || []) : (request.notes || []).slice(-3)).map((note) => (
-                  <div key={note.id} className="flex gap-4 animate-in fade-in slide-in-from-top-1 duration-300">
-                    <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
-                      {note.author[0]}
-                    </div>
-                    <div className="flex-1 pb-4 border-b border-slate-50 dark:border-white/5 last:border-0 last:pb-0">
-                      <div className="flex justify-between items-start mb-1">
-                        <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
-                        <p className="text-[10px] text-slate-400 font-bold">
-                          {new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
-                        {note.content}
-                      </p>
+              <div className="flex flex-col">
+                {/* Older Messages (Animated Container) */}
+                <div className={`grid transition-all duration-500 ease-in-out ${showAllNotes ? 'grid-rows-[1fr] opacity-100 mb-6' : 'grid-rows-[0fr] opacity-0'}`}>
+                  <div className="overflow-hidden">
+                    <div className="space-y-6">
+                      {(request.notes || []).slice(0, -3).map((note) => (
+                        <div key={note.id} className="flex gap-4">
+                          <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
+                            {note.author[0]}
+                          </div>
+                          <div className="flex-1 pb-4 border-b border-slate-50 dark:border-white/5 last:border-0 last:pb-0">
+                            <div className="flex justify-between items-start mb-1">
+                              <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
+                              <p className="text-[10px] text-slate-400 font-bold">
+                                {new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
+                              {note.content}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                </div>
+
+                {/* Always Visible Recent Messages */}
+                <div className="space-y-6">
+                  {(request.notes || []).slice(-3).map((note) => (
+                    <div key={note.id} className="flex gap-4">
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
+                        {note.author[0]}
+                      </div>
+                      <div className="flex-1 pb-4 border-b border-slate-50 dark:border-white/5 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-start mb-1">
+                          <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
+                          <p className="text-[10px] text-slate-400 font-bold">
+                            {new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
+                          {note.content}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
               {!isLocked && (
                 <form onSubmit={addNote} className="pt-4">
