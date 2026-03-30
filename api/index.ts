@@ -4,10 +4,26 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenAI, Type } from '@google/genai';
+import { z } from 'zod';
+import { tenantSchema } from './validation.js';
 
 dotenv.config();
 
 const app = express();
+
+// Validation Middleware
+const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    schema.parse(req.body);
+    next();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation failed', details: error.errors });
+    } else {
+      next(error);
+    }
+  }
+};
 
 // Helper to sanitize strings for PostgreSQL (removes null bytes and invalid UTF-8 sequences)
 const sanitizeUtf8 = (str: string): string => {
@@ -210,6 +226,19 @@ app.get('/api/units', async (req, res) => {
     }
   });
   res.json(units);
+});
+
+app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {
+  try {
+    const tenant = await getPrisma().tenant.create({
+      data: req.body,
+      include: { unit: true }
+    });
+    res.json(tenant);
+  } catch (error: any) {
+    console.error('Failed to create tenant:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.get('/api/tenants', async (req, res) => {
@@ -423,7 +452,7 @@ app.get('/api/documents', async (req, res) => {
 
 app.post('/api/documents', async (req, res) => {
   const { title, category, url, fileType, author, date, tags, committee } = req.body;
-  
+
   // Tag generation temporarily disabled for basic metadata sync
   const currentYear = new Date().getFullYear().toString();
   const committeeTags = committee ? [committee] : [];
@@ -431,14 +460,14 @@ app.post('/api/documents', async (req, res) => {
   const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
 
   const document = await getPrisma().document.create({
-    data: { 
-      title: title || 'Untitled Document', 
-      category: category || 'General', 
-      url: url || '#', 
-      fileType: fileType || 'txt', 
-      author: author || ((req as any).session?.user?.name || 'System'), 
-      date: date || new Date().toISOString().split('T')[0], 
-      tags: finalTags, 
+    data: {
+      title: title || 'Untitled Document',
+      category: category || 'General',
+      url: url || '#',
+      fileType: fileType || 'txt',
+      author: author || ((req as any).session?.user?.name || 'System'),
+      date: date || new Date().toISOString().split('T')[0],
+      tags: finalTags,
     }
   });
   res.json(document);
@@ -600,34 +629,34 @@ app.post('/api/ai/summarize', async (req, res) => {
 app.get('/api/migrate', async (req, res) => {
   try {
     const p = getPrisma();
-    
+
     console.log('Running raw SQL migrations...');
     await p.$executeRawUnsafe(`ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT 'MEMBER';`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committee" TEXT DEFAULT '';`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
-    
+
     // Explicitly DROP columns if they exist to match metadata-only goal
     await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "content";`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "isPrivate";`);
-    
+
     // Check if seeding is needed
     const unitCount = await p.unit.count();
     let seeded = false;
-    
+
     if (unitCount === 0) {
       console.log('Database empty, triggering auto-seed...');
       // We can't easily call the /api/seed endpoint internally, so we'll just 
       // suggest the user visit it, or we could move the logic to a helper.
       // For simplicity and speed, let's just make the message clear.
-      return res.json({ 
-        success: true, 
-        message: "Database schema updated. Please now visit /api/seed once to restore your data." 
+      return res.json({
+        success: true,
+        message: "Database schema updated. Please now visit /api/seed once to restore your data."
       });
     }
-    
-    res.json({ 
-      success: true, 
-      message: "Database schema and data are synced." 
+
+    res.json({
+      success: true,
+      message: "Database schema and data are synced."
     });
   } catch (e: any) {
     console.error('Migration error:', e);
@@ -797,17 +826,17 @@ app.get('/api/seed', async (req, res) => {
       { title: 'Hallway carpet damage', description: 'Large section of hallway carpet near Unit 305 has come loose and is a tripping hazard for all residents on floor 3.', status: 'In Progress', priority: 'High', category: 'Safety', unitNumber: '305', requestedBy: null, createdAt: new Date('2026-02-25') },
     ];
     for (const m of maintenanceData) {
-      await p.maintenanceRequest.create({ 
-        data: { 
-          title: m.title, 
-          description: m.description, 
-          status: m.status, 
-          priority: m.priority, 
-          category: m.category, 
-          unitId: unitMap[m.unitNumber], 
-          requestedBy: m.requestedBy, 
+      await p.maintenanceRequest.create({
+        data: {
+          title: m.title,
+          description: m.description,
+          status: m.status,
+          priority: m.priority,
+          category: m.category,
+          unitId: unitMap[m.unitNumber],
+          requestedBy: m.requestedBy,
           createdAt: m.createdAt
-        } 
+        }
       });
     }
 
@@ -887,7 +916,7 @@ app.get('/api/seed', async (req, res) => {
         const baseEvent = baseEvents[Math.floor(Math.random() * baseEvents.length)];
         const eventDate = new Date(currentDate);
         eventDate.setDate(Math.floor(Math.random() * 28) + 1);
-        
+
         await p.coopEvent.create({
           data: {
             ...baseEvent,
