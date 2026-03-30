@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { Tenant } from '../types';
 import FilterBar from '../components/FilterBar';
+import axios from 'axios';
 
 const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.SetStateAction<Tenant[]>> }> = ({ tenants, setTenants }) => {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -22,28 +22,33 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
     return matchesFilter && matchesSearch;
   });
 
-  const handleAddApplication = (e: React.FormEvent) => {
+  const handleAddApplication = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newApplicant: Tenant = {
-      id: `w${Date.now()}`,
-      firstName,
-      lastName,
-      email,
-      phone,
-      status: 'Waitlist',
-      role: 'MEMBER',
-      startDate: new Date().toISOString().split('T')[0],
-      balance: 0,
-      shareCapital: 0,
-      history: []
-    };
-    setTenants([...tenants, newApplicant]);
-    setShowAddModal(false);
-    setFirstName('');
-    setLastName('');
-    setEmail('');
-    setPhone('');
-    alert("New application successfully added to the waitlist.");
+    try {
+      const payload = {
+        firstName,
+        lastName,
+        email,
+        phone,
+        status: 'Waitlist',
+        role: 'MEMBER',
+        startDate: new Date().toISOString().split('T')[0]
+      };
+      
+      const response = await axios.post('/api/tenants', payload);
+      const newApplicant = response.data;
+      
+      setTenants([...tenants, newApplicant]);
+      setShowAddModal(false);
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      setPhone('');
+      alert("New application successfully added to the waitlist.");
+    } catch (error: any) {
+      console.error('Failed to add application:', error);
+      alert("Error adding application: " + (error.response?.data?.error || error.message));
+    }
   };
 
   return (

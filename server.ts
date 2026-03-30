@@ -12,7 +12,7 @@ import multer from 'multer';
 import pdf from 'pdf-parse';
 
 import { z } from 'zod';
-import { maintenanceSchema, documentSchema, announcementSchema } from './api/validation.js';
+import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './api/validation.js';
 
 dotenv.config();
 
@@ -257,6 +257,18 @@ const upload = multer({
       res.json(units);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch units' });
+    }
+  });
+
+  app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {
+    try {
+      const tenant = await prisma.tenant.create({
+        data: req.body,
+        include: { unit: true }
+      });
+      res.json(tenant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

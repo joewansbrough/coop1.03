@@ -25,3 +25,13 @@ export const announcementSchema = z.object({
   author: z.string().email("Invalid email"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
 });
+export const tenantSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(10, "Valid phone number is required"),
+  status: z.enum(['Current', 'Waitlist', 'Past']),
+  role: z.enum(['ADMIN', 'MEMBER']).default('MEMBER'),
+  unitId: z.string().uuid().optional().nullable(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+});
