@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { RequestStatus, MaintenanceNote, MaintenanceExpense, MaintenanceCategory, MaintenanceRequest, Unit, Tenant } from '../types';
 
 interface MaintenanceDetailProps {
@@ -20,6 +21,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
 }) => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
   const userUnitId = units.length > 0 ? units[0].id : null;
   const request = requests.find(r => r.id === requestId);
@@ -61,6 +63,10 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
         })
       });
       const data = await res.json();
+      
+      // Invalidate the maintenance query to trigger a re-fetch and UI update
+      await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      
       if (setRequests) {
         setRequests(prev => prev.map(r => r.id === data.id ? { ...data, category: [data.category] } : r));
       }
