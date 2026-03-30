@@ -68,20 +68,26 @@ export interface Tenant {
   updatedAt?: string;
 }
 
+export enum MaintenancePriority {
+  LOW = 'Low',
+  MEDIUM = 'Medium',
+  HIGH = 'High',
+  EMERGENCY = 'Emergency'
+}
+
 export interface MaintenanceRequest {
   id: string;
   title: string;
   description: string;
-  status: string;
-  priority: string;
-  category: any;
+  status: RequestStatus;
+  priority: MaintenancePriority;
+  category: MaintenanceCategory[];
   unitId: string;
   unit?: Unit;
   tenantId?: string;
   requestedBy?: string;
-  urgency?: string;
-  notes?: any[];
-  expenses?: any[];
+  notes?: MaintenanceNote[];
+  expenses?: MaintenanceExpense[];
   attachments?: any[];
   createdAt?: string;
   updatedAt?: string;

@@ -191,32 +191,72 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
         )}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5">
-        <div className="grid grid-cols-2 sm:grid-cols-4 w-full gap-3">
-          {(Object.values(RequestStatus)).map((status) => {
-            const isActive = request.status === status;
-            return (
-              <button
-                key={status}
-                disabled={(isLocked || !isAdmin) && !isActive}
-                onClick={() => isAdmin && handleStatusChange(status)}
-                className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                  isActive 
-                    ? `${
-                        status === RequestStatus.COMPLETED ? 'bg-emerald-600' :
-                        status === RequestStatus.PENDING ? 'bg-amber-500' :
-                        status === RequestStatus.CANCELLED ? 'bg-rose-600' :
-                        'bg-blue-600'
-                      } text-white scale-105 z-10` 
-                    : isAdmin 
-                      ? 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 opacity-60 hover:opacity-100'
-                      : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-700 opacity-30 cursor-not-allowed'
-                }`}
-              >
-                {status}
-              </button>
-            );
-          })}
+      <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-8">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 mb-1">
+              <i className="fa-solid fa-list-check text-[10px] text-slate-400"></i>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Workflow Stage</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 w-full gap-3">
+              {(Object.values(RequestStatus)).map((status) => {
+                const isActive = request.status === status;
+                return (
+                  <button
+                    key={status}
+                    disabled={(isLocked || !isAdmin) && !isActive}
+                    onClick={() => isAdmin && handleStatusChange(status)}
+                    className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                      isActive 
+                        ? `${
+                            status === RequestStatus.COMPLETED ? 'bg-emerald-600' :
+                            status === RequestStatus.PENDING ? 'bg-amber-500' :
+                            status === RequestStatus.CANCELLED ? 'bg-rose-600' :
+                            'bg-blue-600'
+                          } text-white scale-105 z-10 shadow-lg` 
+                        : isAdmin 
+                          ? 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 opacity-60 hover:opacity-100'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-700 opacity-30 cursor-not-allowed'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {isAdmin && (
+            <div className="flex flex-col gap-3 pt-6 border-t border-slate-50 dark:border-white/5">
+              <div className="flex items-center gap-2 mb-1">
+                <i className="fa-solid fa-bolt text-[10px] text-slate-400"></i>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority Ranking</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 w-full gap-3">
+                {(Object.values(MaintenancePriority)).map((p) => {
+                  const isActive = request.priority === p;
+                  return (
+                    <button 
+                      key={p}
+                      onClick={() => persistUpdate({ ...request, priority: p, updatedAt: new Date().toISOString() })}
+                      className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        isActive 
+                          ? `${
+                              p === MaintenancePriority.EMERGENCY ? 'bg-rose-500' :
+                              p === MaintenancePriority.HIGH ? 'bg-amber-500' :
+                              p === MaintenancePriority.MEDIUM ? 'bg-blue-500' :
+                              'bg-slate-600'
+                            } text-white scale-105 z-10 shadow-lg` 
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

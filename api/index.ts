@@ -389,7 +389,7 @@ app.get('/api/maintenance', async (req, res) => {
     // UI expects category as an array. Split the comma-separated string from DB.
     const mapped = requests.map(r => ({ 
       ...r, 
-      category: r.category ? r.category.split(', ') : [] 
+      category: r.category ? r.category.split(', ') : []
     }));
     res.json(mapped);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -414,11 +414,19 @@ app.post('/api/maintenance', async (req, res) => {
 });
 
 app.put('/api/maintenance/:id', async (req, res) => {
-  const { title, description, status, priority, category, unitId, notes } = req.body; // Destructure notes
+  const { title, description, status, priority, category, unitId, notes } = req.body;
   const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.update({
     where: { id: req.params.id },
-    data: { title, description, status, priority, category: categoryString, unitId, notes: notes || [] } // Save notes
+    data: { 
+      title, 
+      description, 
+      status, 
+      priority, 
+      category: categoryString, 
+      unitId, 
+      notes: notes || [] 
+    }
   });
   res.json(request);
 });
@@ -586,17 +594,17 @@ app.post('/api/ai/triage', async (req, res) => {
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            urgency: { type: Type.STRING },
+            priority: { type: Type.STRING }, // Consolidation: use priority field
             category: { type: Type.STRING },
             reasoning: { type: Type.STRING }
           },
-          required: ['urgency', 'category']
+          required: ['priority', 'category']
         }
       }
     });
     res.json(JSON.parse(response.text || '{}'));
   } catch (e: any) {
-    res.status(500).json({ urgency: 'Medium', category: 'Other', error: e.message });
+    res.status(500).json({ priority: 'Medium', category: 'Other', error: e.message });
   }
 });
 
@@ -832,7 +840,8 @@ app.get('/api/seed', async (req, res) => {
       { title: 'Dishwasher not draining', description: 'The dishwasher fills with water but does not drain after cycle completes. Standing water remains at bottom.', status: 'Completed', priority: 'Medium', category: 'Appliance', unitNumber: '104', requestedBy: 'james.nakamura@email.com', createdAt: new Date('2026-01-15') },
       { title: 'Broken window latch - balcony door', description: 'The latch on the balcony sliding door is broken. The door does not lock properly which is a security concern.', status: 'Pending', priority: 'High', category: 'Structural', unitNumber: '103', requestedBy: 'robert.tremblay@email.com', createdAt: new Date('2026-03-01') },
       { title: 'Heating unit making loud noise', description: 'The baseboard heater in the living room is making a loud banging noise when it turns on. Happens every morning.', status: 'In Progress', priority: 'Low', category: 'HVAC', unitNumber: '106', requestedBy: 'carlos.rivera@email.com', createdAt: new Date('2026-02-10') },
-      { title: 'Water damage on ceiling', description: 'Brown water stain appearing on the bedroom ceiling. Appears to be coming from unit above. Getting larger over time.', status: 'Pending', priority: 'Urgent', category: 'Structural', unitNumber: '201', requestedBy: 'aisha.mohammed@email.com', createdAt: new Date('2026-03-05') },
+      { title: 'Water damage on ceiling', description: 'Brown water stain appearing on the bedroom ceiling. Appears to be coming from unit above. Getting larger over time.', status: 'Pending', priority: MaintenancePriority.EMERGENCY, category: 'Structural', unitNumber: '201', requestedBy: 'aisha.mohammed@email.com', createdAt: new Date('2026-03-05') },
+
       { title: 'Unit 204 full renovation', description: 'Unit undergoing full renovation following previous tenant departure. Flooring, paint, kitchen fixtures all being replaced.', status: 'In Progress', priority: 'Medium', category: 'Structural', unitNumber: '204', requestedBy: null, createdAt: new Date('2026-02-01') },
       { title: 'Stove burner not igniting', description: 'Front left burner on gas stove does not ignite. Clicking sound present but no flame. Other burners work fine.', status: 'Pending', priority: 'Medium', category: 'Appliance', unitNumber: '203', requestedBy: 'wei.liu@email.com', createdAt: new Date('2026-03-07') },
       { title: 'Exterior parking lot light out', description: 'The lamp post nearest to stalls 12-15 is not working. Area is very dark at night, safety concern for residents.', status: 'Pending', priority: 'High', category: 'Electrical', unitNumber: '301', requestedBy: 'george.papadopoulos@email.com', createdAt: new Date('2026-03-03') },
