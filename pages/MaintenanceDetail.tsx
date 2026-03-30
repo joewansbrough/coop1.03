@@ -62,7 +62,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...updated,
-          category: updated.category // Send full array, backend now joins it
+          category: updated.category // Send full array, backend joins it
         })
       });
       const data = await res.json();
@@ -71,7 +71,10 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
       await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
       
       if (setRequests) {
-        setRequests(prev => prev.map(r => r.id === data.id ? { ...data, category: Array.isArray(data.category) ? data.category : (data.category ? data.category.split(', ') : []) } : r));
+        setRequests(prev => prev.map(r => r.id === data.id ? { 
+          ...data, 
+          category: Array.isArray(data.category) ? data.category : (data.category ? data.category.split(', ') : []) 
+        } : r));
       }
     } catch (err) {
       console.error(err);

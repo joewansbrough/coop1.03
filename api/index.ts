@@ -386,16 +386,29 @@ app.get('/api/maintenance', async (req, res) => {
       include: { unit: true },
       orderBy: { createdAt: 'desc' }
     });
-    // UI expects category as an array
-    const mapped = requests.map(r => ({ ...r, category: [r.category] }));
+    // UI expects category as an array. Split the comma-separated string from DB.
+    const mapped = requests.map(r => ({ 
+      ...r, 
+      category: r.category ? r.category.split(', ') : [] 
+    }));
     res.json(mapped);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/maintenance', async (req, res) => {
   const { title, description, status, priority, category, unitId, requestedBy, notes } = req.body;
+  const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.create({
-    data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy, notes: notes || [] } // Save notes
+    data: { 
+      title, 
+      description, 
+      status, 
+      priority, 
+      category: categoryString, 
+      unitId, 
+      requestedBy, 
+      notes: notes || [] 
+    } 
   });
   res.json(request);
 });
