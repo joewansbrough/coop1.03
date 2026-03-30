@@ -393,21 +393,22 @@ app.get('/api/maintenance', async (req, res) => {
 });
 
 app.post('/api/maintenance', async (req, res) => {
-  const { title, description, status, priority, category, unitId, requestedBy } = req.body;
+  const { title, description, status, priority, category, unitId, requestedBy, notes } = req.body;
   const request = await getPrisma().maintenanceRequest.create({
-    data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy }
+    data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy, notes: notes || [] } // Save notes
   });
   res.json(request);
 });
 
 app.put('/api/maintenance/:id', async (req, res) => {
-  const { title, description, status, priority, category, unitId } = req.body;
+  const { title, description, status, priority, category, unitId, notes } = req.body; // Destructure notes
   const request = await getPrisma().maintenanceRequest.update({
     where: { id: req.params.id },
-    data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId }
+    data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, notes: notes || [] } // Save notes
   });
   res.json(request);
 });
+
 
 app.delete('/api/maintenance/:id', async (req, res) => {
   await getPrisma().maintenanceRequest.delete({ where: { id: req.params.id } });
