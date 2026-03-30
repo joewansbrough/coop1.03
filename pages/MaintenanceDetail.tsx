@@ -246,44 +246,37 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
             <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50">
               <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Activity Log & Dispatch Feed</h3>
             </div>
-            <div className="p-6 space-y-6">
-              {(request.notes || []).length > 3 && !showAllNotes && (
+            <div className="p-6">
+              {(request.notes || []).length > 3 && (
                 <button 
-                  onClick={() => setShowAllNotes(true)}
-                  className="w-full py-3 border-b border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:bg-slate-50 dark:hover:bg-white/5 transition-all mb-4"
+                  onClick={() => setShowAllNotes(!showAllNotes)}
+                  className="w-full py-2 mb-6 border-b border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-500 transition-colors flex items-center justify-center gap-2"
                 >
-                  <i className="fa-solid fa-clock-rotate-left mr-2"></i>
-                  Show Older Messages ({(request.notes || []).length - 3} hidden)
+                  <i className={`fa-solid ${showAllNotes ? 'fa-chevron-up' : 'fa-clock-rotate-left'}`}></i>
+                  {showAllNotes ? 'Collapse Older History' : `Show Older Messages (${(request.notes || []).length - 3} hidden)`}
                 </button>
               )}
 
-              {(showAllNotes ? (request.notes || []) : (request.notes || []).slice(-3)).map((note) => (
-                <div key={note.id} className="flex gap-4 animate-in fade-in slide-in-from-top-1 duration-300">
-                  <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
-                    {note.author[0]}
-                  </div>
-                  <div className="flex-1 pb-4 border-b border-slate-50 dark:border-white/5">
-                    <div className="flex justify-between items-start mb-1">
-                      <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
-                      <p className="text-[10px] text-slate-400 font-bold">
-                        {new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              <div className="space-y-6">
+                {(showAllNotes ? (request.notes || []) : (request.notes || []).slice(-3)).map((note) => (
+                  <div key={note.id} className="flex gap-4 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
+                      {note.author[0]}
+                    </div>
+                    <div className="flex-1 pb-4 border-b border-slate-50 dark:border-white/5 last:border-0 last:pb-0">
+                      <div className="flex justify-between items-start mb-1">
+                        <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
+                        <p className="text-[10px] text-slate-400 font-bold">
+                          {new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
+                        {note.content}
                       </p>
                     </div>
-                    <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
-                      {note.content}
-                    </p>
                   </div>
-                </div>
-              ))}
-
-              {showAllNotes && (request.notes || []).length > 3 && (
-                <button 
-                  onClick={() => setShowAllNotes(false)}
-                  className="w-full py-3 border-t border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 transition-all"
-                >
-                  Collapse Log
-                </button>
-              )}
+                ))}
+              </div>
               {!isLocked && (
                 <form onSubmit={addNote} className="pt-4">
                   <textarea
