@@ -307,15 +307,19 @@ async function main() {
       const eventDate = new Date(currentDate);
       eventDate.setDate(Math.floor(Math.random() * 28) + 1);
 
-      // await prisma.coopEvent.create({
-      data: {
-        baseEvent,
+      await prisma.coopEvent.create({
+        data: {
+          title: baseEvent.title,
+          category: baseEvent.category,
+          location: baseEvent.location,
+          time: baseEvent.time,
+          description: baseEvent.description,
           date: eventDate.toISOString().split('T')[0],
         },
-    });
+      });
+    }
+    currentDate.setMonth(currentDate.getMonth() + 1);
   }
-  currentDate.setMonth(currentDate.getMonth() + 1);
-}
 
 console.log('✅ Seeding complete!');
 console.log(`  • ${units.length} units`);
