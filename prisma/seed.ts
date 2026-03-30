@@ -10,7 +10,7 @@ async function main() {
   await prisma.announcement.deleteMany();
   await prisma.document.deleteMany();
   await prisma.committee.deleteMany();
-  await prisma.coopEvent.deleteMany();
+  // await prisma.coopEvent.deleteMany();
   await prisma.tenant.deleteMany();
   await prisma.unit.deleteMany();
 
@@ -159,41 +159,41 @@ async function main() {
 
   console.log('Seeding maintenance requests...');
   const maintenanceData = [
-    { 
-      title: 'Leaking kitchen faucet', 
-      description: 'The kitchen faucet has been dripping constantly for the past week. Water is pooling under the sink cabinet.', 
-      status: 'Pending', 
-      priority: 'Medium', 
-      category: 'Plumbing', 
-      unitNumber: '101', 
-      requestedBy: 'margaret.chen@email.com', 
+    {
+      title: 'Leaking kitchen faucet',
+      description: 'The kitchen faucet has been dripping constantly for the past week. Water is pooling under the sink cabinet.',
+      status: 'Pending',
+      priority: 'Medium',
+      category: 'Plumbing',
+      unitNumber: '101',
+      requestedBy: 'margaret.chen@email.com',
       createdAt: new Date('2026-02-28'),
       notes: [
         { id: 'n1', author: 'Member Note', date: '2026-03-01T10:00:00Z', content: 'Drip is getting worse, please prioritize.' },
         { id: 'n2', author: 'Board Admin', date: '2026-03-02T09:00:00Z', content: 'Maintenance committee notified. Plumber scheduled for Thursday.' }
       ]
     },
-    { 
-      title: 'Bathroom exhaust fan not working', 
-      description: 'The exhaust fan in the main bathroom stopped working. There is condensation building up on the ceiling.', 
-      status: 'In Progress', 
-      priority: 'Medium', 
-      category: 'Electrical', 
-      unitNumber: '102', 
-      requestedBy: 'david.okafor@email.com', 
+    {
+      title: 'Bathroom exhaust fan not working',
+      description: 'The exhaust fan in the main bathroom stopped working. There is condensation building up on the ceiling.',
+      status: 'In Progress',
+      priority: 'Medium',
+      category: 'Electrical',
+      unitNumber: '102',
+      requestedBy: 'david.okafor@email.com',
       createdAt: new Date('2026-02-20'),
       notes: [
         { id: 'n3', author: 'Board Admin', date: '2026-02-22T14:00:00Z', content: 'Contractor assigned. Part ordered.' }
       ]
     },
-    { 
-      title: 'Dishwasher not draining', 
-      description: 'The dishwasher fills with water but does not drain after cycle completes. Standing water remains at bottom.', 
-      status: 'Completed', 
-      priority: 'Medium', 
-      category: 'Appliance', 
-      unitNumber: '104', 
-      requestedBy: 'james.nakamura@email.com', 
+    {
+      title: 'Dishwasher not draining',
+      description: 'The dishwasher fills with water but does not drain after cycle completes. Standing water remains at bottom.',
+      status: 'Completed',
+      priority: 'Medium',
+      category: 'Appliance',
+      unitNumber: '104',
+      requestedBy: 'james.nakamura@email.com',
       createdAt: new Date('2026-01-15'),
       expenses: [
         { id: 'ex1', item: 'Drain pump replacement', cost: 145.50, date: '2026-01-20' },
@@ -214,19 +214,19 @@ async function main() {
     { title: 'Hallway carpet damage', description: 'Large section of hallway carpet near Unit 305 has come loose and is a tripping hazard for all residents on floor 3.', status: 'In Progress', priority: 'High', category: 'Safety', unitNumber: '305', requestedBy: null, createdAt: new Date('2026-02-25') },
   ];
   for (const m of maintenanceData) {
-    await prisma.maintenanceRequest.create({ 
-      data: { 
-        title: m.title, 
-        description: m.description, 
-        status: m.status, 
-        priority: m.priority, 
-        category: m.category, 
-        unitId: unitMap[m.unitNumber], 
-        requestedBy: m.requestedBy, 
+    await prisma.maintenanceRequest.create({
+      data: {
+        title: m.title,
+        description: m.description,
+        status: m.status,
+        priority: m.priority,
+        category: m.category,
+        unitId: unitMap[m.unitNumber],
+        requestedBy: m.requestedBy,
         createdAt: m.createdAt,
         notes: m.notes || null,
         expenses: m.expenses || null
-      } 
+      }
     });
   }
 
@@ -306,25 +306,25 @@ async function main() {
       const baseEvent = baseEvents[Math.floor(Math.random() * baseEvents.length)];
       const eventDate = new Date(currentDate);
       eventDate.setDate(Math.floor(Math.random() * 28) + 1);
-      
-      await prisma.coopEvent.create({
-        data: {
-          ...baseEvent,
+
+      // await prisma.coopEvent.create({
+      data: {
+        baseEvent,
           date: eventDate.toISOString().split('T')[0],
         },
-      });
-    }
-    currentDate.setMonth(currentDate.getMonth() + 1);
+    });
   }
+  currentDate.setMonth(currentDate.getMonth() + 1);
+}
 
-  console.log('✅ Seeding complete!');
-  console.log(`  • ${units.length} units`);
-  console.log(`  • ${Object.keys(tenants).length} tenants`);
-  console.log('  • 12 maintenance requests');
-  console.log('  • 7 announcements');
-  console.log('  • 12 documents');
-  console.log('  • 6 committees');
-  console.log('  • Monthly calendar events through end of 2026');
+console.log('✅ Seeding complete!');
+console.log(`  • ${units.length} units`);
+console.log(`  • ${Object.keys(tenants).length} tenants`);
+console.log('  • 12 maintenance requests');
+console.log('  • 7 announcements');
+console.log('  • 12 documents');
+console.log('  • 6 committees');
+console.log('  • Monthly calendar events through end of 2026');
 }
 
 main()
