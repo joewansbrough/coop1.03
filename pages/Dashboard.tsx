@@ -26,7 +26,9 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
   const firstName = user?.name ? user.name.split(' ')[0] : '';
 
   // For members, only show stats for their unit (if they have one)
-  const userUnitId = units.length > 0 ? units[0].id : null;
+  const userTenantId = user?.tenantId ?? null;
+  const userUnit = units.find(u => u.currentTenantId === userTenantId);
+  const userUnitId = userUnit?.id ?? null;
   
   const userOpenRequests = (userUnitId && Array.isArray(requests)) 
     ? requests.filter(r => r.unitId === userUnitId && r.status !== RequestStatus.COMPLETED && r.status !== RequestStatus.CANCELLED)
@@ -274,9 +276,9 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
                     <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
                       <i className="fa-solid fa-house-user text-2xl"></i>
                     </div>
-                    <p className="text-3xl font-black mb-1">Unit {units.find(u => u.id === userUnitId)?.number}</p>
+                    <p className="text-3xl font-black mb-1">Unit {userUnit?.number ?? '—'}</p>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">
-                      {units.find(u => u.id === userUnitId)?.type} • Floor {units.find(u => u.id === userUnitId)?.floor}
+                      {userUnit?.type ?? 'Unit'} • Floor {userUnit?.floor ?? '—'}
                     </p>
                     <div className="mt-6 pt-6 border-t border-white/5 w-full">
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">

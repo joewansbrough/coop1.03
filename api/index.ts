@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenAI, Type } from '@google/genai';
 import { z } from 'zod';
+import { MaintenancePriority } from '../types.js';
 import { tenantSchema } from './validation.js';
 
 dotenv.config();

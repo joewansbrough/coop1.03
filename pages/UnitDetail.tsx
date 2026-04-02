@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { RequestStatus, Unit, Tenant, MaintenanceRequest, MaintenancePriority } from '../types';
+import { RequestStatus, Unit, Tenant, MaintenanceRequest } from '../types';
 
 interface UnitDetailProps {
   isAdmin?: boolean;
@@ -354,12 +354,12 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 </td>
                 <td className="px-6 py-4 text-right">
                   <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase whitespace-nowrap ${
-                    req.priority === MaintenancePriority.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                    req.priority === MaintenancePriority.PENDING ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                    req.priority === MaintenancePriority.CANCELLED ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                    req.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                    req.status === RequestStatus.PENDING ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                    req.status === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
                     'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                   }`}>
-                    {req.priority}
+                    {req.status}
                   </span>
 
                 </td>
