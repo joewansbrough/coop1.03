@@ -914,6 +914,13 @@ const upload = multer({
     }
   });
 
+  app.get('/api/config', requireAuth, (req, res) => {
+    res.json({
+      googleClientId: process.env.GOOGLE_CLIENT_ID,
+      googleApiKey: process.env.PICKER_API_KEY,
+    });
+  });
+
   // API 404 handler
   app.use('/api', (req, res) => {
     res.status(404).json({ error: 'API route not found' });

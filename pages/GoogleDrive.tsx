@@ -16,21 +16,30 @@ const GoogleDrive: React.FC = () => {
   const [config, setConfig] = useState<{ googleClientId: string; googleApiKey: string } | null>(null);
 
   useEffect(() => {
+    console.log('GoogleDrive: Fetching config...');
     // 1. Fetch configuration from server
     fetch('/api/config')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
+        console.log('GoogleDrive: Config received:', { 
+          hasClientId: !!data.googleClientId, 
+          hasApiKey: !!data.googleApiKey 
+        });
         setConfig(data);
         setIsInitializing(false);
       })
       .catch(err => {
-        console.error('Failed to load config:', err);
+        console.error('GoogleDrive: Failed to load config:', err);
         setIsInitializing(false);
       });
 
     // 2. Poll for Google Scripts readiness
     const checkScripts = setInterval(() => {
       if (window.google?.accounts?.oauth2 && window.gapi) {
+        console.log('GoogleDrive: Google scripts ready.');
         setIsScriptsReady(true);
         clearInterval(checkScripts);
       }
@@ -41,7 +50,8 @@ const GoogleDrive: React.FC = () => {
 
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {
-      alert('Missing Google Configuration. Check your .env file for PICKER_API_KEY and GOOGLE_CLIENT_ID.');
+      console.error('GoogleDrive: Missing credentials in config:', config);
+      alert(`Missing Google Configuration.\n\nRequired:\n- PICKER_API_KEY: ${config?.googleApiKey ? 'OK' : 'MISSING'}\n- GOOGLE_CLIENT_ID: ${config?.googleClientId ? 'OK' : 'MISSING'}\n\nPlease check your .env file.`);
       return;
     }
 
@@ -56,16 +66,17 @@ const GoogleDrive: React.FC = () => {
         scope: 'https://www.googleapis.com/auth/drive.readonly',
         callback: (response: any) => {
           if (response.error !== undefined) {
-            console.error('GIS Error:', response);
+            console.error('GoogleDrive: GIS Error:', response);
             return;
           }
+          console.log('GoogleDrive: Access token received, creating picker...');
           createPicker(response.access_token);
         },
       });
 
       tokenClient.requestAccessToken({ prompt: 'consent' });
     } catch (err) {
-      console.error('Token client initialization failed:', err);
+      console.error('GoogleDrive: Token client initialization failed:', err);
       alert('Failed to initialize Google authorization. Check your Client ID in .env.');
     }
   };
@@ -88,6 +99,7 @@ const GoogleDrive: React.FC = () => {
   const pickerCallback = (data: any) => {
     if (data.action === window.google.picker.Action.PICKED) {
       const doc = data.docs[0];
+      console.log('GoogleDrive: File picked:', doc.name);
       setFiles(prev => [
         { 
           id: doc.id, 
