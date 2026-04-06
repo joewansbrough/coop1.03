@@ -73,6 +73,14 @@ app.use((req, res, next) => {
 // Mock Data
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com'];
 
+const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const hasUser = !!(req as any).session?.user;
+  if (!hasUser) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  return next();
+};
+
 // Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
   const host = req.get('x-forwarded-host') || req.get('host') || '';
@@ -88,6 +96,14 @@ const getBaseUrl = (req: express.Request) => {
 app.use('/api', (req, res, next) => {
   console.log(`API Request: ${req.method} ${req.originalUrl}`);
   next();
+});
+
+// App Configuration Route
+app.get('/api/config', requireAuth, (req, res) => {
+  res.json({
+    googleClientId: process.env.GOOGLE_CLIENT_ID,
+    googleApiKey: process.env.PICKER_API_KEY,
+  });
 });
 
 // Auth Routes
@@ -963,6 +979,7 @@ app.get(['/api/debug/config', '/debug/config'], (req, res) => {
   res.json({
     hasClientId: !!process.env.GOOGLE_CLIENT_ID,
     hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+    hasPickerApiKey: !!process.env.PICKER_API_KEY,
     hasSessionSecret: !!process.env.SESSION_SECRET,
     baseUrl: getBaseUrl(req),
     isSecure: req.secure,
