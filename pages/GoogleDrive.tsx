@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { HardDrive, ExternalLink, FileText, FolderOpen, ShieldAlert, Loader2 } from 'lucide-react';
+import { HardDrive, ExternalLink, FileText, FolderOpen, ShieldAlert, Loader2, Trash2 } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -16,9 +16,10 @@ const GoogleDrive: React.FC = () => {
   const [config, setConfig] = useState<{ googleClientId: string; googleApiKey: string } | null>(null);
 
   useEffect(() => {
-    console.log('GoogleDrive: Fetching config...');
+    console.log('GoogleDrive: Fetching config and existing docs...');
+    
     // 1. Fetch configuration from server
-    fetch('/api/config')
+    const fetchConfig = fetch('/api/config')
       .then(res => {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.json();
@@ -29,14 +30,21 @@ const GoogleDrive: React.FC = () => {
           hasApiKey: !!data.googleApiKey 
         });
         setConfig(data);
-        setIsInitializing(false);
-      })
-      .catch(err => {
-        console.error('GoogleDrive: Failed to load config:', err);
-        setIsInitializing(false);
       });
 
-    // 2. Poll for Google Scripts readiness
+    // 2. Fetch existing documents from database
+    const fetchDocs = fetch('/api/documents')
+      .then(res => res.json())
+      .then(data => {
+        // Only show documents that appear to be Google Drive links (have 'drive.google.com' in URL)
+        const driveFiles = data.filter((doc: any) => doc.url && doc.url.includes('drive.google.com'));
+        setFiles(driveFiles);
+      });
+
+    Promise.all([fetchConfig, fetchDocs])
+      .finally(() => setIsInitializing(false));
+
+    // 3. Poll for Google Scripts readiness
     const checkScripts = setInterval(() => {
       if (window.google?.accounts?.oauth2 && window.gapi) {
         console.log('GoogleDrive: Google scripts ready.');
@@ -96,20 +104,56 @@ const GoogleDrive: React.FC = () => {
     });
   };
 
-  const pickerCallback = (data: any) => {
+  const pickerCallback = async (data: any) => {
     if (data.action === window.google.picker.Action.PICKED) {
       const doc = data.docs[0];
-      console.log('GoogleDrive: File picked:', doc.name);
-      setFiles(prev => [
-        { 
-          id: doc.id, 
-          name: doc.name, 
-          size: doc.sizeBytes ? `${(doc.sizeBytes / 1024).toFixed(0)} KB` : 'N/A', 
-          modified: 'Recently Selected',
-          url: doc.url
-        },
-        ...prev
-      ]);
+      console.log('GoogleDrive: File picked, saving to database:', doc.name);
+      
+      const newDoc = {
+        title: doc.name,
+        category: 'Cloud',
+        url: doc.url,
+        fileType: doc.type || 'gdoc',
+        author: 'Google Drive',
+        date: new Date().toISOString().split('T')[0],
+        tags: ['Google Drive', 'Linked']
+      };
+
+      try {
+        const response = await fetch('/api/documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newDoc)
+        });
+
+        if (!response.ok) throw new Error('Failed to save document to database');
+        
+        const savedDoc = await response.json();
+        setFiles(prev => [savedDoc, ...prev]);
+      } catch (err) {
+        console.error('GoogleDrive: Error saving document:', err);
+        alert('Failed to save the linked file. Please try again.');
+      }
+    }
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to un-link this document?')) return;
+
+    try {
+      const response = await fetch(`/api/documents/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setFiles(prev => prev.filter(f => f.id !== id));
+      } else {
+        throw new Error('Failed to delete');
+      }
+    } catch (err) {
+      console.error('GoogleDrive: Error deleting:', err);
+      alert('Failed to un-link the document.');
     }
   };
 
@@ -175,18 +219,26 @@ const GoogleDrive: React.FC = () => {
                 <div className="w-12 h-12 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center group-hover:bg-blue-500 transition-colors">
                   <FileText className="w-6 h-6 text-slate-400 dark:text-slate-500 group-hover:text-white" />
                 </div>
-                <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-blue-500">
-                  <ExternalLink className="w-4 h-4" />
-                </a>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={(e) => handleDelete(file.id, e)}
+                    className="text-slate-300 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-blue-500" onClick={(e) => e.stopPropagation()}>
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
               </div>
-              <h4 className="font-black text-slate-800 dark:text-white truncate uppercase tracking-tight text-sm mb-1">{file.name}</h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{file.size} • {file.modified}</p>
+              <h4 className="font-black text-slate-800 dark:text-white truncate uppercase tracking-tight text-sm mb-1">{file.title}</h4>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{file.date} • {file.author}</p>
             </div>
           ))}
           
           <button 
             onClick={handleOpenPicker}
-            className="bg-slate-50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-white/5 p-6 rounded-3xl flex flex-col items-center justify-center gap-4 hover:border-blue-500 hover:bg-white dark:hover:bg-slate-900 transition-all group group"
+            className="bg-slate-50 dark:bg-slate-900/50 border-2 border-dashed border-slate-200 dark:border-white/5 p-6 rounded-3xl flex flex-col items-center justify-center gap-4 hover:border-blue-500 hover:bg-white dark:hover:hover:bg-slate-900 transition-all group group"
           >
             <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
               <FolderOpen className="w-6 h-6 text-slate-400" />
