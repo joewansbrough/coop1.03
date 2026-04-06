@@ -5,7 +5,7 @@ import ScrollToTop from './components/ScrollToTop';
 import Dashboard from './pages/Dashboard';
 import Maintenance from './pages/Maintenance';
 import MaintenanceDetail from './pages/MaintenanceDetail';
-import Documents from './pages/Documents';
+import ResourceLibrary from './pages/ResourceLibrary';
 import AdminUnits from './pages/AdminUnits';
 import UnitDetail from './pages/UnitDetail';
 import Communications from './pages/Communications';
@@ -17,7 +17,6 @@ import Reports from './pages/Reports';
 import Tenants from './pages/Tenants';
 import TenantDetail from './pages/TenantDetail';
 import Waitlist from './pages/Waitlist';
-import GoogleDrive from './pages/GoogleDrive';
 import PolicyAssistant from './pages/PolicyAssistant';
 import Login from './pages/Login';
 import { MOCK_ANNOUNCEMENTS, MOCK_DOCS, MOCK_UNITS, MOCK_TENANTS, MOCK_REQUESTS, MOCK_EVENTS, MOCK_COMMITTEES } from './constants';
@@ -93,11 +92,10 @@ const AppContent: React.FC = () => {
           <Route path="/committees" element={<Committees isAdmin={effectiveIsAdmin} isGuest={isGuest} committees={committees} setCommittees={setCommittees} tenants={tenants} documents={documents} />} />
           <Route path="/maintenance" element={<Maintenance isAdmin={effectiveIsAdmin} isGuest={isGuest} requests={requests} setRequests={setRequests} units={units} />} />
           <Route path="/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
-          <Route path="/documents" element={<Documents isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} committees={committees} />} />
+          <Route path="/documents" element={<ResourceLibrary isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} committees={committees} />} />
           <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} />} />
           <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} isGuest={isGuest} announcements={announcements} setAnnouncements={setAnnouncements} />} />
           <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isGuest={isGuest} tenants={tenants} setTenants={setTenants} units={units} />} />
-          <Route path="/drive" element={<GoogleDrive isAdmin={effectiveIsAdmin} isGuest={isGuest} />} />
           <Route path="/admin/units/:unitId" element={<UnitDetail isAdmin={effectiveIsAdmin} units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} setRequests={setRequests} />} />
           
           {/* Admin Routes */}
