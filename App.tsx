@@ -17,6 +17,7 @@ import Reports from './pages/Reports';
 import Tenants from './pages/Tenants';
 import TenantDetail from './pages/TenantDetail';
 import Waitlist from './pages/Waitlist';
+import GoogleDrive from './pages/GoogleDrive';
 import PolicyAssistant from './pages/PolicyAssistant';
 import Login from './pages/Login';
 import { MOCK_ANNOUNCEMENTS, MOCK_DOCS, MOCK_UNITS, MOCK_TENANTS, MOCK_REQUESTS, MOCK_EVENTS, MOCK_COMMITTEES } from './constants';
