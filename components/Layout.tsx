@@ -96,6 +96,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     { label: 'Committees', path: '/committees', icon: 'fa-users-gear' },
     { label: 'Maintenance', path: '/maintenance', icon: 'fa-tools' },
     { label: 'Documents', path: '/documents', icon: 'fa-file-lines' },
+    { label: 'Cloud Storage', path: '/drive', icon: 'fa-hard-drive' },
     { label: 'Policy Assistant', path: '/policy-assistant', icon: 'fa-robot' },
     // { label: 'Finances', path: '/finances', icon: 'fa-wallet' }, // Hidden at launch
     { label: 'Communications', path: '/communications', icon: 'fa-comments' },

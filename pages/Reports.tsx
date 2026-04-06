@@ -3,14 +3,14 @@ import React, { useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import StatCard from '../components/StatCard';
 import { MOCK_UNITS, MOCK_REQUESTS } from '../constants';
-import { MaintenanceCategory } from '../types';
+import { MaintenanceCategory, MaintenancePriority } from '../types';
 import { Link } from 'react-router-dom';
 
 const Reports: React.FC = () => {
   // Maintenance Expenditure States
   const [maintCategory, setMaintCategory] = useState<string>('All');
   const [maintUnit, setMaintUnit] = useState<string>('All');
-  const [maintUrgency, setMaintUrgency] = useState<string>('All');
+  const [maintPriority, setMaintPriority] = useState<string>('All');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
@@ -23,13 +23,13 @@ const Reports: React.FC = () => {
     return MOCK_REQUESTS.filter(req => {
       const matchCat = maintCategory === 'All' || req.category.includes(maintCategory as MaintenanceCategory);
       const matchUnit = maintUnit === 'All' || req.unitId === maintUnit;
-      const matchUrgency = maintUrgency === 'All' || req.urgency === maintUrgency;
+      const matchPriority = maintPriority === 'All' || req.priority === maintPriority;
       const date = new Date(req.createdAt).getTime();
       const matchStart = !startDate || date >= new Date(startDate).getTime();
       const matchEnd = !endDate || date <= new Date(endDate).getTime();
-      return matchCat && matchUnit && matchUrgency && matchStart && matchEnd;
+      return matchCat && matchUnit && matchPriority && matchStart && matchEnd;
     });
-  }, [maintCategory, maintUnit, maintUrgency, startDate, endDate]);
+  }, [maintCategory, maintUnit, maintPriority, startDate, endDate]);
 
   const totalSpend = useMemo(() => {
     return filteredMaintData.reduce((acc, req) => 
@@ -67,7 +67,7 @@ const Reports: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Board Insight Center</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Strategic operational data for governance and long-term planning.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium font-medium">Strategic operational data for governance and long-term planning.</p>
         </div>
         <button 
           onClick={() => {

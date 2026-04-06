@@ -1,9 +1,10 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import StatCard from '../components/StatCard';
-import { RequestStatus, Announcement, Unit, Tenant, MaintenanceRequest, CoopEvent } from '../types';
+import { RequestStatus, Unit, MaintenancePriority } from '../types';
+import { useUnits, useTenants, useMaintenance, useAnnouncements, useEvents } from '../hooks/useCoopData';
+import { MOCK_ANNOUNCEMENTS, MOCK_DOCS, MOCK_UNITS, MOCK_TENANTS, MOCK_REQUESTS, MOCK_EVENTS, MOCK_COMMITTEES } from '../constants';
 
 interface DashboardProps {
   isAdmin: boolean;
@@ -12,20 +13,22 @@ interface DashboardProps {
     name: string;
     [key: string]: any;
   };
-  announcements: Announcement[];
-  units: Unit[];
-  tenants: Tenant[];
-  requests: MaintenanceRequest[];
-  events: CoopEvent[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user, announcements, units, tenants, requests, events }) => {
+const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
+  const { data: units = MOCK_UNITS } = useUnits();
+  const { data: tenants = MOCK_TENANTS } = useTenants();
+  const { data: requests = MOCK_REQUESTS } = useMaintenance();
+  const { data: announcements = MOCK_ANNOUNCEMENTS } = useAnnouncements();
+  const { data: events = MOCK_EVENTS } = useEvents();
   const navigate = useNavigate();
 
   const firstName = user?.name ? user.name.split(' ')[0] : '';
 
   // For members, only show stats for their unit (if they have one)
-  const userUnitId = units.length > 0 ? units[0].id : null;
+  const userTenantId = user?.tenantId ?? null;
+  const userUnit = units.find(u => u.currentTenantId === userTenantId);
+  const userUnitId = userUnit?.id ?? null;
   
   const userOpenRequests = (userUnitId && Array.isArray(requests)) 
     ? requests.filter(r => r.unitId === userUnitId && r.status !== RequestStatus.COMPLETED && r.status !== RequestStatus.CANCELLED)
@@ -148,7 +151,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user, announcem
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-                <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Interactive Association Map</h3>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Interactive Association Map</h3>
               </div>
               <div className="flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
                 <span className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div> Occupied</span>
@@ -195,7 +198,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user, announcem
           </div>
 
           <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
-            <h3 className="text-base font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight flex items-center gap-2">
+            <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
               <i className="fa-solid fa-bolt text-amber-500"></i>
               Quick Actions
             </h3>
@@ -273,9 +276,9 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user, announcem
                     <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
                       <i className="fa-solid fa-house-user text-2xl"></i>
                     </div>
-                    <p className="text-3xl font-black mb-1">Unit {units.find(u => u.id === userUnitId)?.number}</p>
+                    <p className="text-3xl font-black mb-1">Unit {userUnit?.number ?? '—'}</p>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">
-                      {units.find(u => u.id === userUnitId)?.type} • Floor {units.find(u => u.id === userUnitId)?.floor}
+                      {userUnit?.type ?? 'Unit'} • Floor {userUnit?.floor ?? '—'}
                     </p>
                     <div className="mt-6 pt-6 border-t border-white/5 w-full">
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -352,10 +355,10 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user, announcem
                   >
                     <div className="flex justify-between items-start mb-3">
                       <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
-                        req.urgency === 'Emergency' ? 'bg-rose-100 text-rose-700' :
-                        req.urgency === 'High' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                        req.priority === MaintenancePriority.EMERGENCY ? 'bg-rose-100 text-rose-700' :
+                        req.priority === MaintenancePriority.HIGH ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
                       }`}>
-                        {req.urgency}
+                        {req.priority}
                       </span>
                       <span className="text-[9px] font-black text-slate-400 uppercase">{req.status}</span>
                     </div>

@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { Tenant, Unit } from '../types';
 import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
+import axios from 'axios';
 
 interface TenantsProps {
   isAdmin?: boolean;
@@ -24,25 +24,31 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
   const [unitId, setUnitId] = useState('');
   const [status, setStatus] = useState<'Current' | 'Waitlist'>('Current');
 
-  const handleAddTenant = (e: React.FormEvent) => {
+  const handleAddTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newId = `t${Date.now()}`;
-    const newTenant: Tenant = {
-      id: newId, firstName, lastName, email, phone,
-      unitId: unitId || undefined,
-      startDate: new Date().toISOString().split('T')[0],
-      status: status as any,
-      balance: 0, shareCapital: 0,
-      history: unitId ? [{
-        id: `h${Date.now()}`, tenantId: newId, unitId,
-        unit: { number: units.find(u => u.id === unitId)?.number || '' } as any,
-        startDate: new Date().toISOString().split('T')[0],
-      }] : []
-    };
-    setTenants([...tenants, newTenant]);
-    setShowAddForm(false);
-    setFirstName(''); setLastName(''); setEmail(''); setPhone(''); setUnitId('');
-    alert("New member registered in association directory.");
+    try {
+      const payload = {
+        firstName,
+        lastName,
+        email,
+        phone,
+        unitId: unitId || null,
+        status,
+        role: 'MEMBER',
+        startDate: new Date().toISOString().split('T')[0]
+      };
+      
+      const response = await axios.post('/api/tenants', payload);
+      const newTenant = response.data;
+      
+      setTenants([...tenants, newTenant]);
+      setShowAddForm(false);
+      setFirstName(''); setLastName(''); setEmail(''); setPhone(''); setUnitId('');
+      alert("New member registered in association directory.");
+    } catch (error: any) {
+      console.error('Failed to add member:', error);
+      alert("Error registering member: " + (error.response?.data?.error || error.message));
+    }
   };
 
   const filteredTenants = tenants.filter(t => {
@@ -71,7 +77,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
             {isAdmin ? 'Member Registry' : 'Community Directory'}
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
             {isAdmin ? 'Protected community records and historical data.' : 'Connecting neighbors while respecting privacy.'}
           </p>
         </div>

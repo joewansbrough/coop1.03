@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { RequestStatus, MaintenanceNote, MaintenanceExpense, MaintenanceCategory, MaintenanceRequest, Unit, Tenant } from '../types';
+import { useQueryClient } from '@tanstack/react-query';
+import { RequestStatus, MaintenanceNote, MaintenanceExpense, MaintenanceCategory, MaintenanceRequest, Unit, Tenant, MaintenancePriority } from '../types';
 
 interface MaintenanceDetailProps {
   isAdmin?: boolean;
@@ -20,6 +21,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
 }) => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
   const userUnitId = units.length > 0 ? units[0].id : null;
   const request = requests.find(r => r.id === requestId);
@@ -43,7 +45,11 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const [newCost, setNewCost] = useState('');
   const [isEditingCategories, setIsEditingCategories] = useState(false);
   const [showReopenModal, setShowReopenModal] = useState(false);
+  const [showStatusConfirm, setShowStatusConfirm] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<RequestStatus | null>(null);
   const [reopenReason, setReopenReason] = useState('');
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [showAllNotes, setShowAllNotes] = useState(false);
 
   if (!request) return <div className="p-12 text-center text-slate-500 font-bold">Ticket not found in archive.</div>;
 
@@ -51,45 +57,99 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
 
   const persistUpdate = async (updated: MaintenanceRequest) => {
     try {
+      // Force uniqueness of categories before persistence
+      const uniqueCategories = Array.from(new Set(updated.category));
+      
       const res = await fetch(`/api/maintenance/${updated.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...updated,
-          category: updated.category[0] // API expects string for category
+          category: uniqueCategories // Send unique array, backend joins it
         })
       });
       const data = await res.json();
+      
+      // Invalidate the maintenance query to trigger a re-fetch and UI update
+      await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+      
       if (setRequests) {
-        setRequests(prev => prev.map(r => r.id === data.id ? { ...data, category: [data.category] } : r));
+        setRequests(prev => prev.map(r => r.id === data.id ? { 
+          ...data, 
+          category: Array.isArray(data.category) ? data.category : (data.category ? data.category.split(', ') : []) 
+        } : r));
       }
     } catch (err) {
       console.error(err);
     }
   };
 
+  const confirmStatusChange = () => {
+    if (pendingStatus) {
+      persistUpdate({ ...request, status: pendingStatus, updatedAt: new Date().toISOString() });
+      setPendingStatus(null);
+      setShowStatusConfirm(false);
+    }
+  };
+
   const handleStatusChange = (status: RequestStatus) => {
     if (isLocked && status !== RequestStatus.IN_PROGRESS) return;
-    persistUpdate({ ...request, status, updatedAt: new Date().toISOString() });
+    if (status === request.status) return;
+    
+    setPendingStatus(status);
+    setShowStatusConfirm(true);
   };
 
   const toggleCategory = (cat: MaintenanceCategory) => {
-    const current = request.category;
-    const next = current.includes(cat) ? current.filter(c => c !== cat) : [...current, cat];
+    // Force uniqueness first to handle any legacy duplicates
+    const current = Array.from(new Set(request.category));
+    const isSelected = current.includes(cat);
+    
+    // Requirement: at least one category required
+    if (isSelected && current.length <= 1) {
+      alert("At least one category is required.");
+      return;
+    }
+    
+    const next = isSelected 
+      ? current.filter(c => c !== cat) 
+      : [...current, cat];
+      
     persistUpdate({ ...request, category: next, updatedAt: new Date().toISOString() });
   };
 
-  const addNote = (e: React.FormEvent) => {
+  const addNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim() || isLocked) return;
+
+    setIsSavingNote(true); // Start loading indicator
+
     const note: MaintenanceNote = {
       id: `n${Date.now()}`,
       author: isAdmin ? 'Board Admin' : 'Member Note',
       date: new Date().toISOString(),
       content: newNote.trim()
     };
-    persistUpdate({ ...request, notes: [...(request.notes || []), note], updatedAt: new Date().toISOString() });
-    setNewNote('');
+
+    try {
+      // Update the local state immediately for better UX
+      const updatedRequest = { 
+        ...request, 
+        notes: [...(request.notes || []), note], 
+        updatedAt: new Date().toISOString() 
+      };
+      
+      // Persist the update to the backend
+      await persistUpdate(updatedRequest); 
+      setNewNote(''); // Clear input only on success
+      
+    } catch (error) {
+      console.error("Failed to add note:", error);
+      alert("Failed to save note. Please try again.");
+      // Optionally: revert local state if backend fails
+    } finally {
+      setIsSavingNote(false); // Stop loading indicator
+    }
   };
 
   const addExpense = (e: React.FormEvent) => {
@@ -131,27 +191,72 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
         )}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5">
-        <div className="grid grid-cols-2 sm:grid-cols-4 w-full gap-3">
-          {(Object.values(RequestStatus)).map((status) => {
-            const isActive = request.status === status;
-            return (
-              <button
-                key={status}
-                disabled={(isLocked || !isAdmin) && !isActive}
-                onClick={() => isAdmin && handleStatusChange(status)}
-                className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                  isActive 
-                    ? `bg-emerald-600 text-white scale-105 z-10` 
-                    : isAdmin 
-                      ? 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 opacity-60 hover:opacity-100'
-                      : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-700 opacity-30 cursor-not-allowed'
-                }`}
-              >
-                {status}
-              </button>
-            );
-          })}
+      <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-8">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 mb-1">
+              <i className="fa-solid fa-list-check text-[10px] text-slate-400"></i>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Workflow Stage</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 w-full gap-3">
+              {(Object.values(RequestStatus)).map((status) => {
+                const isActive = request.status === status;
+                return (
+                  <button
+                    key={status}
+                    disabled={(isLocked || !isAdmin) && !isActive}
+                    onClick={() => isAdmin && handleStatusChange(status)}
+                    className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                      isActive 
+                        ? `${
+                            status === RequestStatus.COMPLETED ? 'bg-emerald-600' :
+                            status === RequestStatus.PENDING ? 'bg-amber-500' :
+                            status === RequestStatus.CANCELLED ? 'bg-rose-600' :
+                            'bg-blue-600'
+                          } text-white scale-105 z-10 shadow-lg` 
+                        : isAdmin 
+                          ? 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 opacity-60 hover:opacity-100'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-700 opacity-30 cursor-not-allowed'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {isAdmin && (
+            <div className="flex flex-col gap-3 pt-6 border-t border-slate-50 dark:border-white/5">
+              <div className="flex items-center gap-2 mb-1">
+                <i className="fa-solid fa-bolt text-[10px] text-slate-400"></i>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority Ranking</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 w-full gap-3">
+                {(Object.values(MaintenancePriority)).map((p) => {
+                  const isActive = request.priority === p;
+                  return (
+                    <button 
+                      key={p}
+                      onClick={() => persistUpdate({ ...request, priority: p, updatedAt: new Date().toISOString() })}
+                      className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        isActive 
+                          ? `${
+                              p === MaintenancePriority.EMERGENCY ? 'bg-rose-500' :
+                              p === MaintenancePriority.HIGH ? 'bg-amber-500' :
+                              p === MaintenancePriority.MEDIUM ? 'bg-blue-500' :
+                              'bg-slate-600'
+                            } text-white scale-105 z-10 shadow-lg` 
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-600 opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -217,23 +322,66 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
             <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50">
               <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Activity Log & Dispatch Feed</h3>
             </div>
-            <div className="p-6 space-y-6">
-              {(request.notes || []).map((note) => (
-                <div key={note.id} className="flex gap-4">
-                  <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
-                    {note.author[0]}
-                  </div>
-                  <div className="flex-1 pb-4 border-b border-slate-50 dark:border-white/5">
-                    <div className="flex justify-between items-start mb-1">
-                      <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
-                      <p className="text-[10px] text-slate-400 font-bold">{new Date(note.date).toLocaleDateString()}</p>
+            <div className="p-6">
+              {(request.notes || []).length > 3 && (
+                <button 
+                  onClick={() => setShowAllNotes(!showAllNotes)}
+                  className="w-full py-2 mb-4 border-b border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-500 transition-colors flex items-center justify-center gap-2"
+                >
+                  <i className={`fa-solid ${showAllNotes ? 'fa-chevron-up' : 'fa-clock-rotate-left'} transition-transform duration-300 ${showAllNotes ? 'rotate-0' : ''}`}></i>
+                  {showAllNotes ? 'Collapse Older History' : `Show Older Messages (${(request.notes || []).length - 3} hidden)`}
+                </button>
+              )}
+
+              <div className="flex flex-col">
+                {/* Older Messages (Animated Container) */}
+                <div className={`grid transition-all duration-500 ease-in-out ${showAllNotes ? 'grid-rows-[1fr] opacity-100 mb-6' : 'grid-rows-[0fr] opacity-0'}`}>
+                  <div className="overflow-hidden">
+                    <div className="space-y-6">
+                      {(request.notes || []).slice(0, -3).map((note) => (
+                        <div key={note.id} className="flex gap-4">
+                          <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
+                            {note.author[0]}
+                          </div>
+                          <div className="flex-1 pb-4 border-b border-slate-50 dark:border-white/5 last:border-0 last:pb-0">
+                            <div className="flex justify-between items-start mb-1">
+                              <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
+                              <p className="text-[10px] text-slate-400 font-bold">
+                                {new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
+                              {note.content}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
-                      {note.content}
-                    </p>
                   </div>
                 </div>
-              ))}
+
+                {/* Always Visible Recent Messages */}
+                <div className="space-y-6">
+                  {(request.notes || []).slice(-3).map((note) => (
+                    <div key={note.id} className="flex gap-4">
+                      <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0 uppercase">
+                        {note.author[0]}
+                      </div>
+                      <div className="flex-1 pb-4 border-b border-slate-50 dark:border-white/5 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-start mb-1">
+                          <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
+                          <p className="text-[10px] text-slate-400 font-bold">
+                            {new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
+                          {note.content}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               {!isLocked && (
                 <form onSubmit={addNote} className="pt-4">
                   <textarea
@@ -335,6 +483,44 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 <button type="submit" className="flex-1 py-3 bg-amber-500 text-white rounded-xl text-xs font-black uppercase hover:bg-amber-600">Confirm Reopen</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showStatusConfirm && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 animate-in zoom-in-95 duration-200 text-center">
+            <div className={`w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center text-2xl ${
+              pendingStatus === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-600' :
+              pendingStatus === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-600' :
+              pendingStatus === RequestStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-600' :
+              'bg-amber-100 text-amber-600'
+            }`}>
+              <i className="fa-solid fa-circle-question"></i>
+            </div>
+            <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Update Status?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 font-medium">
+              Are you sure you want to move this request from <span className="font-black text-slate-700 dark:text-slate-300 uppercase">{request.status}</span> to <span className="font-black text-slate-700 dark:text-slate-300 uppercase">{pendingStatus}</span>?
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => { setShowStatusConfirm(false); setPendingStatus(null); }} 
+                className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl"
+              >
+                Go Back
+              </button>
+              <button 
+                onClick={confirmStatusChange} 
+                className={`flex-1 py-3 text-white rounded-xl text-xs font-black uppercase shadow-lg transition-all active:scale-95 ${
+                  pendingStatus === RequestStatus.COMPLETED ? 'bg-emerald-600 shadow-emerald-500/20' :
+                  pendingStatus === RequestStatus.CANCELLED ? 'bg-rose-600 shadow-rose-500/20' :
+                  pendingStatus === RequestStatus.IN_PROGRESS ? 'bg-blue-600 shadow-blue-500/20' :
+                  'bg-amber-500 shadow-amber-500/20'
+                }`}
+              >
+                Confirm Update
+              </button>
+            </div>
           </div>
         </div>
       )}

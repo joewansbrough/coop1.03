@@ -56,6 +56,7 @@ export interface Tenant {
   phone?: string;
   startDate: string;
   status: string;
+  role: string;
   unitId?: string;
   unit?: Unit;
   committees?: Committee[];
@@ -67,23 +68,30 @@ export interface Tenant {
   updatedAt?: string;
 }
 
+export enum MaintenancePriority {
+  LOW = 'Low',
+  MEDIUM = 'Medium',
+  HIGH = 'High',
+  EMERGENCY = 'Emergency'
+}
+
 export interface MaintenanceRequest {
   id: string;
   title: string;
   description: string;
-  status: string;
-  priority: string;
-  category: any;
+  status: RequestStatus;
+  priority: MaintenancePriority;
+  category: MaintenanceCategory[];
   unitId: string;
   unit?: Unit;
   tenantId?: string;
   requestedBy?: string;
-  urgency?: string;
-  notes?: any[];
-  expenses?: any[];
+  notes?: MaintenanceNote[];
+  expenses?: MaintenanceExpense[];
   attachments?: any[];
   createdAt?: string;
   updatedAt?: string;
+  urgency?: string;
 }
 
 export interface Announcement {
@@ -106,11 +114,10 @@ export interface Document {
   fileType: string;
   author: string;
   date: string;
-  content?: string;
   tags?: string[];
-  isPrivate?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  content?: string;
 }
 
 export interface Committee {

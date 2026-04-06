@@ -36,7 +36,7 @@ const Finances: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Association Ledger</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Secure financial tracking for {isAdmin ? 'the co-operative' : 'your residence'}.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Secure financial tracking for {isAdmin ? 'the co-operative' : 'your residence'}.</p>
         </div>
         <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
           {isAdmin && (

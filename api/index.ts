@@ -4,10 +4,27 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenAI, Type } from '@google/genai';
+import { z } from 'zod';
+import { MaintenancePriority } from '../types.js';
+import { tenantSchema } from './validation.js';
 
 dotenv.config();
 
 const app = express();
+
+// Validation Middleware
+const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    schema.parse(req.body);
+    next();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation failed', details: error.errors });
+    } else {
+      next(error);
+    }
+  }
+};
 
 // Helper to sanitize strings for PostgreSQL (removes null bytes and invalid UTF-8 sequences)
 const sanitizeUtf8 = (str: string): string => {
@@ -56,6 +73,14 @@ app.use((req, res, next) => {
 // Mock Data
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com'];
 
+const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const hasUser = !!(req as any).session?.user;
+  if (!hasUser) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  return next();
+};
+
 // Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
   const host = req.get('x-forwarded-host') || req.get('host') || '';
@@ -71,6 +96,14 @@ const getBaseUrl = (req: express.Request) => {
 app.use('/api', (req, res, next) => {
   console.log(`API Request: ${req.method} ${req.originalUrl}`);
   next();
+});
+
+// App Configuration Route
+app.get('/api/config', requireAuth, (req, res) => {
+  res.json({
+    googleClientId: process.env.GOOGLE_CLIENT_ID,
+    googleApiKey: process.env.PICKER_API_KEY,
+  });
 });
 
 // Auth Routes
@@ -130,13 +163,8 @@ app.get('/auth/callback', async (req, res) => {
       include: { unit: true }
     });
 
-    // For now, let's assume if they are in ADMIN_EMAILS, they are admins
-    const isAdmin = ADMIN_EMAILS.includes(email);
-
-    // If not in DB but is admin, we might want to allow them anyway
-    if (!user && !isAdmin) {
-      return res.send(`<html><body><script>alert("Access denied for ${email}. You are not registered in the co-op database.");window.close();</script></body></html>`);
-    }
+    // Check both DB role and legacy list for now
+    const isAdmin = user?.role === 'ADMIN' || ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'].includes(email);
 
     (req as any).session.user = {
       email,
@@ -144,7 +172,8 @@ app.get('/auth/callback', async (req, res) => {
       picture: userData.picture,
       isAdmin,
       tenantId: user?.id || null,
-      unitNumber: user?.unit?.number || null
+      unitNumber: user?.unit?.number || null,
+      role: user?.role || 'MEMBER'
     };
 
     res.send(`
@@ -214,6 +243,19 @@ app.get('/api/units', async (req, res) => {
     }
   });
   res.json(units);
+});
+
+app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {
+  try {
+    const tenant = await getPrisma().tenant.create({
+      data: req.body,
+      include: { unit: true }
+    });
+    res.json(tenant);
+  } catch (error: any) {
+    console.error('Failed to create tenant:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.get('/api/tenants', async (req, res) => {
@@ -361,28 +403,51 @@ app.get('/api/maintenance', async (req, res) => {
       include: { unit: true },
       orderBy: { createdAt: 'desc' }
     });
-    // UI expects category as an array
-    const mapped = requests.map(r => ({ ...r, category: [r.category] }));
+    // UI expects category as an array. Split the comma-separated string from DB.
+    const mapped = requests.map(r => ({ 
+      ...r, 
+      category: r.category ? r.category.split(', ') : []
+    }));
     res.json(mapped);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/maintenance', async (req, res) => {
-  const { title, description, status, priority, category, unitId, requestedBy } = req.body;
+  const { title, description, status, priority, category, unitId, requestedBy, notes } = req.body;
+  const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.create({
-    data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy }
+    data: { 
+      title, 
+      description, 
+      status, 
+      priority, 
+      category: categoryString, 
+      unitId, 
+      requestedBy, 
+      notes: notes || [] 
+    } 
   });
   res.json(request);
 });
 
 app.put('/api/maintenance/:id', async (req, res) => {
-  const { title, description, status, priority, category, unitId } = req.body;
+  const { title, description, status, priority, category, unitId, notes } = req.body;
+  const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.update({
     where: { id: req.params.id },
-    data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId }
+    data: { 
+      title, 
+      description, 
+      status, 
+      priority, 
+      category: categoryString, 
+      unitId, 
+      notes: notes || [] 
+    }
   });
   res.json(request);
 });
+
 
 app.delete('/api/maintenance/:id', async (req, res) => {
   await getPrisma().maintenanceRequest.delete({ where: { id: req.params.id } });
@@ -426,68 +491,33 @@ app.get('/api/documents', async (req, res) => {
 });
 
 app.post('/api/documents', async (req, res) => {
-  const { title, category, url, fileType, author, date, tags, content, committee, isPrivate } = req.body;
-  
-  let summary = "";
-  let aiTags: string[] = [];
-  
-  // Get AI summary if content is provided
-  if (content && content.length > 50) {
-    try {
-      const ai = getAI();
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
-        contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`,
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              summary: { type: Type.STRING },
-              tags: { type: Type.ARRAY, items: { type: Type.STRING } }
-            },
-            required: ['summary', 'tags']
-          }
-        }
-      });
-      const aiData = JSON.parse(response.text || '{}');
-      summary = aiData.summary || "";
-      aiTags = aiData.tags || [];
-    } catch (e: any) {
-      console.error('AI summarization failed during document creation:', e.message);
-    }
-  }
+  const { title, category, url, fileType, author, date, tags, committee } = req.body;
 
+  // Tag generation temporarily disabled for basic metadata sync
   const currentYear = new Date().getFullYear().toString();
   const committeeTags = committee ? [committee] : [];
   const providedTags = Array.isArray(tags) ? tags : [];
-  const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags, ...aiTags]));
-  
-  const finalContent = summary 
-    ? `${summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]\n\n${content || ''}`
-    : content;
+  const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
 
   const document = await getPrisma().document.create({
-    data: { 
-      title: title || 'Untitled Document', 
-      category: category || 'General', 
-      url: url || '#', 
-      fileType: fileType || 'txt', 
-      author: author || ((req as any).session?.user?.name || 'System'), 
-      date: date || new Date().toISOString().split('T')[0], 
-      tags: finalTags, 
-      content: finalContent,
-      isPrivate: isPrivate === true
+    data: {
+      title: title || 'Untitled Document',
+      category: category || 'General',
+      url: url || '#',
+      fileType: fileType || 'txt',
+      author: author || ((req as any).session?.user?.name || 'System'),
+      date: date || new Date().toISOString().split('T')[0],
+      tags: finalTags,
     }
   });
   res.json(document);
 });
 
 app.put('/api/documents/:id', async (req, res) => {
-  const { title, category, tags, content, committee, isPrivate } = req.body;
+  const { title, category, tags, committee } = req.body;
   const document = await getPrisma().document.update({
     where: { id: req.params.id },
-    data: { title, category, tags, content, committee, isPrivate }
+    data: { title, category, tags, committee }
   });
   res.json(document);
 });
@@ -581,17 +611,17 @@ app.post('/api/ai/triage', async (req, res) => {
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            urgency: { type: Type.STRING },
+            priority: { type: Type.STRING }, // Consolidation: use priority field
             category: { type: Type.STRING },
             reasoning: { type: Type.STRING }
           },
-          required: ['urgency', 'category']
+          required: ['priority', 'category']
         }
       }
     });
     res.json(JSON.parse(response.text || '{}'));
   } catch (e: any) {
-    res.status(500).json({ urgency: 'Medium', category: 'Other', error: e.message });
+    res.status(500).json({ priority: 'Medium', category: 'Other', error: e.message });
   }
 });
 
@@ -639,31 +669,34 @@ app.post('/api/ai/summarize', async (req, res) => {
 app.get('/api/migrate', async (req, res) => {
   try {
     const p = getPrisma();
-    
+
     console.log('Running raw SQL migrations...');
-    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committee" TEXT DEFAULT '';`); // Add committee column
-    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "content" TEXT DEFAULT '';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT 'MEMBER';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committee" TEXT DEFAULT '';`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
-    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "isPrivate" BOOLEAN NOT NULL DEFAULT false;`);
-    
+
+    // Explicitly DROP columns if they exist to match metadata-only goal
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "content";`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "isPrivate";`);
+
     // Check if seeding is needed
     const unitCount = await p.unit.count();
     let seeded = false;
-    
+
     if (unitCount === 0) {
       console.log('Database empty, triggering auto-seed...');
       // We can't easily call the /api/seed endpoint internally, so we'll just 
       // suggest the user visit it, or we could move the logic to a helper.
       // For simplicity and speed, let's just make the message clear.
-      return res.json({ 
-        success: true, 
-        message: "Database schema updated. Please now visit /api/seed once to restore your data." 
+      return res.json({
+        success: true,
+        message: "Database schema updated. Please now visit /api/seed once to restore your data."
       });
     }
-    
-    res.json({ 
-      success: true, 
-      message: "Database schema and data are synced." 
+
+    res.json({
+      success: true,
+      message: "Database schema and data are synced."
     });
   } catch (e: any) {
     console.error('Migration error:', e);
@@ -785,6 +818,7 @@ app.get('/api/seed', async (req, res) => {
     ];
 
     const tenants: Record<string, any> = {};
+    const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
     for (const t of tenantData) {
       const tenant = await p.tenant.create({
         data: {
@@ -795,6 +829,7 @@ app.get('/api/seed', async (req, res) => {
           startDate: t.startDate,
           status: t.status,
           unitId: t.unit ? unitMap[t.unit] : null,
+          role: adminEmails.includes(t.email.toLowerCase()) ? 'ADMIN' : 'MEMBER'
         },
       });
       tenants[t.email] = tenant;
@@ -822,7 +857,8 @@ app.get('/api/seed', async (req, res) => {
       { title: 'Dishwasher not draining', description: 'The dishwasher fills with water but does not drain after cycle completes. Standing water remains at bottom.', status: 'Completed', priority: 'Medium', category: 'Appliance', unitNumber: '104', requestedBy: 'james.nakamura@email.com', createdAt: new Date('2026-01-15') },
       { title: 'Broken window latch - balcony door', description: 'The latch on the balcony sliding door is broken. The door does not lock properly which is a security concern.', status: 'Pending', priority: 'High', category: 'Structural', unitNumber: '103', requestedBy: 'robert.tremblay@email.com', createdAt: new Date('2026-03-01') },
       { title: 'Heating unit making loud noise', description: 'The baseboard heater in the living room is making a loud banging noise when it turns on. Happens every morning.', status: 'In Progress', priority: 'Low', category: 'HVAC', unitNumber: '106', requestedBy: 'carlos.rivera@email.com', createdAt: new Date('2026-02-10') },
-      { title: 'Water damage on ceiling', description: 'Brown water stain appearing on the bedroom ceiling. Appears to be coming from unit above. Getting larger over time.', status: 'Pending', priority: 'Urgent', category: 'Structural', unitNumber: '201', requestedBy: 'aisha.mohammed@email.com', createdAt: new Date('2026-03-05') },
+      { title: 'Water damage on ceiling', description: 'Brown water stain appearing on the bedroom ceiling. Appears to be coming from unit above. Getting larger over time.', status: 'Pending', priority: MaintenancePriority.EMERGENCY, category: 'Structural', unitNumber: '201', requestedBy: 'aisha.mohammed@email.com', createdAt: new Date('2026-03-05') },
+
       { title: 'Unit 204 full renovation', description: 'Unit undergoing full renovation following previous tenant departure. Flooring, paint, kitchen fixtures all being replaced.', status: 'In Progress', priority: 'Medium', category: 'Structural', unitNumber: '204', requestedBy: null, createdAt: new Date('2026-02-01') },
       { title: 'Stove burner not igniting', description: 'Front left burner on gas stove does not ignite. Clicking sound present but no flame. Other burners work fine.', status: 'Pending', priority: 'Medium', category: 'Appliance', unitNumber: '203', requestedBy: 'wei.liu@email.com', createdAt: new Date('2026-03-07') },
       { title: 'Exterior parking lot light out', description: 'The lamp post nearest to stalls 12-15 is not working. Area is very dark at night, safety concern for residents.', status: 'Pending', priority: 'High', category: 'Electrical', unitNumber: '301', requestedBy: 'george.papadopoulos@email.com', createdAt: new Date('2026-03-03') },
@@ -831,17 +867,17 @@ app.get('/api/seed', async (req, res) => {
       { title: 'Hallway carpet damage', description: 'Large section of hallway carpet near Unit 305 has come loose and is a tripping hazard for all residents on floor 3.', status: 'In Progress', priority: 'High', category: 'Safety', unitNumber: '305', requestedBy: null, createdAt: new Date('2026-02-25') },
     ];
     for (const m of maintenanceData) {
-      await p.maintenanceRequest.create({ 
-        data: { 
-          title: m.title, 
-          description: m.description, 
-          status: m.status, 
-          priority: m.priority, 
-          category: m.category, 
-          unitId: unitMap[m.unitNumber], 
-          requestedBy: m.requestedBy, 
+      await p.maintenanceRequest.create({
+        data: {
+          title: m.title,
+          description: m.description,
+          status: m.status,
+          priority: m.priority,
+          category: m.category,
+          unitId: unitMap[m.unitNumber],
+          requestedBy: m.requestedBy,
           createdAt: m.createdAt
-        } 
+        }
       });
     }
 
@@ -921,7 +957,7 @@ app.get('/api/seed', async (req, res) => {
         const baseEvent = baseEvents[Math.floor(Math.random() * baseEvents.length)];
         const eventDate = new Date(currentDate);
         eventDate.setDate(Math.floor(Math.random() * 28) + 1);
-        
+
         await p.coopEvent.create({
           data: {
             ...baseEvent,
@@ -943,6 +979,7 @@ app.get(['/api/debug/config', '/debug/config'], (req, res) => {
   res.json({
     hasClientId: !!process.env.GOOGLE_CLIENT_ID,
     hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+    hasPickerApiKey: !!process.env.PICKER_API_KEY,
     hasSessionSecret: !!process.env.SESSION_SECRET,
     baseUrl: getBaseUrl(req),
     isSecure: req.secure,

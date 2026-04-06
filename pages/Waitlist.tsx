@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { Tenant } from '../types';
 import FilterBar from '../components/FilterBar';
+import axios from 'axios';
 
 const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.SetStateAction<Tenant[]>> }> = ({ tenants, setTenants }) => {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -22,35 +22,41 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
     return matchesFilter && matchesSearch;
   });
 
-  const handleAddApplication = (e: React.FormEvent) => {
+  const handleAddApplication = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newApplicant: Tenant = {
-      id: `w${Date.now()}`,
-      firstName,
-      lastName,
-      email,
-      phone,
-      status: 'Waitlist',
-      startDate: new Date().toISOString().split('T')[0],
-      balance: 0,
-      shareCapital: 0,
-      residencyHistory: []
-    };
-    setTenants([...tenants, newApplicant]);
-    setShowAddModal(false);
-    setFirstName('');
-    setLastName('');
-    setEmail('');
-    setPhone('');
-    alert("New application successfully added to the waitlist.");
+    try {
+      const payload = {
+        firstName,
+        lastName,
+        email,
+        phone,
+        status: 'Waitlist',
+        role: 'MEMBER',
+        startDate: new Date().toISOString().split('T')[0]
+      };
+      
+      const response = await axios.post('/api/tenants', payload);
+      const newApplicant = response.data;
+      
+      setTenants([...tenants, newApplicant]);
+      setShowAddModal(false);
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      setPhone('');
+      alert("New application successfully added to the waitlist.");
+    } catch (error: any) {
+      console.error('Failed to add application:', error);
+      alert("Error adding application: " + (error.response?.data?.error || error.message));
+    }
   };
 
   return (
     <div className="space-y-6 pb-12 transition-colors duration-200">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white uppercase tracking-tight">Prospective Member Waitlist</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Managing the future of our community through fair assessment.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Prospective Member Waitlist</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Managing the future of our community through fair assessment.</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}

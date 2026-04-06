@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { CoopEvent } from '../types';
-import { useNavigate } from 'react-router-dom';
 
 interface CalendarProps {
   isAdmin?: boolean;
@@ -93,12 +93,26 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
 
   const monthName = viewDate.toLocaleString('default', { month: 'long' });
 
+  // Robust date parsing to ensure consistent sorting across browsers
+  const parseEventDate = (e: CoopEvent) => {
+    if (!e.date || !e.time) return new Date(0);
+    const [year, month, day] = e.date.split('-').map(Number);
+    const [hour, minute] = e.time.split(':').map(Number);
+    return new Date(year, month - 1, day, hour, minute);
+  };
+
+  // Find closest upcoming event
+  const now = new Date();
+  const nextEvent = [...events]
+    .filter(e => parseEventDate(e) >= now)
+    .sort((a, b) => parseEventDate(a).getTime() - parseEventDate(b).getTime())[0];
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white">Community Calendar</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Co-op meetings, social gatherings, and building maintenance events.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Community Calendar</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium font-medium">Co-op meetings, social gatherings, and building maintenance events.</p>
         </div>
         {isAdmin && !isGuest && (
           <button 
@@ -215,6 +229,71 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
         </div>
 
         <div className="space-y-6">
+          {nextEvent && (
+            <Link 
+              to={`/calendar/${nextEvent.id}`}
+              className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 hover:border-emerald-500 transition-all group cursor-pointer relative overflow-hidden block active:scale-[0.98] shadow-sm hover:shadow-2xl hover:shadow-emerald-500/10"
+            >
+              {/* Image Banner */}
+              <div className="h-40 relative overflow-hidden">
+                <img 
+                  src={
+                    nextEvent.category === 'Meeting' ? 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=400' :
+                    nextEvent.category === 'Social' ? 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&q=80&w=400' :
+                    nextEvent.category === 'Maintenance' ? 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=400' :
+                    'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=400'
+                  }
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  alt=""
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-slate-900 via-transparent to-transparent"></div>
+                
+                {/* Floating Category Badge */}
+                <div className="absolute top-4 left-4">
+                  <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md border ${
+                    nextEvent.category === 'Meeting' ? 'bg-amber-500/80 text-white border-white/20' :
+                    nextEvent.category === 'Social' ? 'bg-emerald-500/80 text-white border-white/20' :
+                    'bg-slate-800/80 text-white border-white/20'
+                  }`}>
+                    {nextEvent.category}
+                  </span>
+                </div>
+
+                {/* Glass Date Badge */}
+                <div className="absolute bottom-4 right-4 bg-black/40 backdrop-blur-xl border border-white/30 dark:border-white/10 rounded-2xl p-3 text-center min-w-[60px] shadow-lg">
+                  <p className="text-[10px] font-black uppercase text-white/90 tracking-tighter leading-none">
+                    {parseEventDate(nextEvent).toLocaleDateString([], { month: 'short' })}
+                  </p>
+                  <p className="text-xl font-black text-white leading-none mt-1">
+                    {parseEventDate(nextEvent).toLocaleDateString([], { day: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-8 relative">
+                <p className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-3">Next Upcoming Event</p>
+                <h4 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-2 leading-tight group-hover:text-emerald-500 transition-colors">
+                  {nextEvent.title}
+                </h4>
+                
+                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5 flex flex-col gap-2">
+                  <div className="flex items-center gap-3 text-slate-500">
+                    <div className="w-6 h-6 rounded-lg bg-slate-50 dark:bg-white/5 flex items-center justify-center">
+                      <i className="fa-solid fa-clock text-[10px]"></i>
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider">{nextEvent.time}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-500">
+                    <div className="w-6 h-6 rounded-lg bg-slate-50 dark:bg-white/5 flex items-center justify-center">
+                      <i className="fa-solid fa-location-dot text-[10px]"></i>
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider line-clamp-1">{nextEvent.location}</span>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          )}
+
           <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors duration-200">
             <h3 className="text-base font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2 border-b border-slate-50 dark:border-white/5 pb-4">
                <i className="fa-solid fa-clock-rotate-left text-emerald-500"></i>

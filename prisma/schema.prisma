@@ -23,6 +23,7 @@ model Unit {
   occupancyHistory   TenantHistory[]
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
+  scheduledTasks ScheduledMaintenance[] @relation("ScheduledTasks")
 }
 
 model Tenant {
@@ -33,6 +34,7 @@ model Tenant {
   phone         String?
   startDate     String          // Renamed from moveInDate to match UI
   status        String          @default("Current") // e.g., "Current", "Past", "Waitlist"
+  role          String          @default("MEMBER")  // "ADMIN" or "MEMBER"
   unitId        String?
   unit          Unit?           @relation("CurrentResident")
   committees    Committee[]     @relation("CommitteeMembers")
@@ -120,4 +122,20 @@ model Committee {
   members     Tenant[] @relation("CommitteeMembers")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ScheduledMaintenance {
+  id            String   @id @default(uuid())
+  unitId        String
+  unit          Unit     @relation("ScheduledTasks", fields: [unitId], references: [id], onDelete: Cascade)
+  task          String
+  description   String?
+  frequency     String
+  dueDate       String
+  lastCompleted String?
+  assignedTo    String
+  isCompleted   Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

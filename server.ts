@@ -9,9 +9,17 @@ import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenAI, Type } from '@google/genai';
 import multer from 'multer';
-import pdf from 'pdf-parse';
+import * as pdf from 'pdf-parse';
+
+import { z } from 'zod';
+import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './api/validation.js';
 
 dotenv.config();
+
+const SESSION_SECRET = process.env.SESSION_SECRET;
+if (!SESSION_SECRET) {
+  throw new Error('SESSION_SECRET must be set before starting the server');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,8 +28,44 @@ const PORT = 3000;
 // Database client
 const prisma = new PrismaClient();
 
-// Mock Data (In a real app, these would be in a database)
+// Legacy Admin List (Fallback during migration)
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'joewansbrough@gmail.com', 'wwansbro@gmail.com', 'samisaeed123@gmail.com'];
+
+const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const hasUser = !!(req as any).session?.user;
+  if (!hasUser) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  return next();
+};
+
+type BodyValue = string | string[] | undefined;
+
+const firstString = (value?: BodyValue): string | undefined => {
+  if (Array.isArray(value)) return value[0];
+  return value;
+};
+
+const ensureString = (value: BodyValue, fallback = ''): string => firstString(value) ?? fallback;
+const optionalString = (value: BodyValue): string | undefined => firstString(value);
+const ensureArray = (value: BodyValue): string[] => {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+};
+
+// Validation Middleware
+const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    schema.parse(req.body);
+    next();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation failed', details: error.errors });
+    } else {
+      next(error);
+    }
+  }
+};
 
 async function startServer() {
   const app = express();
@@ -48,7 +92,7 @@ async function startServer() {
   
   app.use(cookieSession({
     name: 'session',
-    keys: [process.env.SESSION_SECRET || 'default_secret'],
+    keys: [SESSION_SECRET],
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     secure: true, // Always true because we force https in the previous middleware
     sameSite: 'none',
@@ -148,13 +192,15 @@ const upload = multer({
       const userData = userResponse.data;
       const email = userData.email.toLowerCase();
 
-      // Check permissions
+      // Check permissions (Hybrid DB Role + Legacy List)
       let userInDb = await prisma.tenant.findUnique({
         where: { email },
         include: { unit: true }
       });
 
-      const isAdmin = ADMIN_EMAILS.includes(email);
+      const isAdminByList = ADMIN_EMAILS.includes(email);
+      const isAdminByRole = userInDb?.role === 'ADMIN';
+      const isAdmin = isAdminByList || isAdminByRole;
       
       if (!userInDb && !isAdmin) {
         return res.send(`<html><body><script>alert("Access denied for ${email}. You are not registered in the co-op database.");window.close();</script></body></html>`);
@@ -166,6 +212,7 @@ const upload = multer({
         name: userData.name,
         picture: userData.picture,
         isAdmin,
+        role: userInDb?.role || (isAdminByList ? 'ADMIN' : 'MEMBER'),
         tenantId: userInDb?.id || null,
         unitNumber: userInDb?.unit?.number || null
       };
@@ -224,7 +271,7 @@ const upload = multer({
 
   // --- Database API Routes ---
 
-  app.get('/api/units', async (req, res) => {
+  app.get('/api/units', requireAuth, async (req, res) => {
     try {
       const units = await prisma.unit.findMany({
         include: { 
@@ -240,7 +287,19 @@ const upload = multer({
     }
   });
 
-  app.get('/api/tenants', async (req, res) => {
+  app.post('/api/tenants', requireAuth, validateRequest(tenantSchema), async (req, res) => {
+    try {
+      const tenant = await prisma.tenant.create({
+        data: req.body,
+        include: { unit: true }
+      });
+      res.json(tenant);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/tenants', requireAuth, async (req, res) => {
     try {
       const tenants = await prisma.tenant.findMany({
         include: { 
@@ -256,7 +315,7 @@ const upload = multer({
     }
   });
 
-  app.get('/api/maintenance', async (req, res) => {
+  app.get('/api/maintenance', requireAuth, async (req, res) => {
     try {
       const requests = await prisma.maintenanceRequest.findMany({
         include: { unit: true },
@@ -268,16 +327,31 @@ const upload = multer({
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/maintenance', async (req, res) => {
-    const { title, description, status, priority, category, unitId, requestedBy } = req.body;
+  app.post('/api/maintenance', requireAuth, validateRequest(maintenanceSchema), async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const description = ensureString(body.description) as string;
+    const status = ensureString(body.status, 'Pending') as string;
+    const priority = ensureString(body.priority, 'Medium') as string;
+    const category = ensureString(body.category, 'General') as string;
+    const unitId = ensureString(body.unitId) as string;
+    const requestedBy = optionalString(body.requestedBy);
     const request = await prisma.maintenanceRequest.create({
-      data: { title, description, status, priority, category: Array.isArray(category) ? category[0] : category, unitId, requestedBy }
+      data: { title, description, status, priority, category, unitId, requestedBy }
     });
     res.json(request);
   });
 
-  app.put('/api/maintenance/:id', async (req, res) => {
-    const { title, description, status, priority, category, unitId, notes, expenses } = req.body;
+  app.put('/api/maintenance/:id', requireAuth, validateRequest(maintenanceSchema.partial()), async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const description = ensureString(body.description) as string;
+    const status = ensureString(body.status, 'Pending') as string;
+    const priority = ensureString(body.priority, 'Medium') as string;
+    const category = ensureString(body.category, 'General') as string;
+    const unitId = ensureString(body.unitId) as string;
+    const notes = body.notes;
+    const expenses = body.expenses;
     try {
       const request = await prisma.maintenanceRequest.update({
         where: { id: req.params.id },
@@ -286,7 +360,7 @@ const upload = multer({
           description, 
           status, 
           priority, 
-          category: Array.isArray(category) ? category[0] : category, 
+          category, 
           unitId,
           notes: notes ? (Array.isArray(notes) ? notes : [notes]) : undefined,
           expenses: expenses ? (Array.isArray(expenses) ? expenses : [expenses]) : undefined
@@ -298,12 +372,12 @@ const upload = multer({
     }
   });
 
-  app.delete('/api/maintenance/:id', async (req, res) => {
+  app.delete('/api/maintenance/:id', requireAuth, async (req, res) => {
     await prisma.maintenanceRequest.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   });
 
-  app.get('/api/announcements', async (req, res) => {
+  app.get('/api/announcements', requireAuth, async (req, res) => {
     try {
       const announcements = await prisma.announcement.findMany({
         orderBy: { createdAt: 'desc' }
@@ -314,29 +388,46 @@ const upload = multer({
     }
   });
 
-  app.post('/api/announcements', async (req, res) => {
-    const { title, content, type, priority, author, date } = req.body;
+  app.post('/api/announcements', requireAuth, validateRequest(announcementSchema), async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const content = ensureString(body.content) as string;
+    const type = ensureString(body.type, 'General') as string;
+    const priority = ensureString(body.priority, 'Normal') as string;
+    const author = ensureString(body.author) as string;
+    const date = ensureString(body.date) as string;
     const announcement = await prisma.announcement.create({
       data: { title, content, type, priority, author, date }
     });
     res.json(announcement);
   });
 
-  app.put('/api/announcements/:id', async (req, res) => {
-    const { title, content, type, priority, date } = req.body;
+  app.put('/api/announcements/:id', requireAuth, validateRequest(announcementSchema.partial()), async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const content = ensureString(body.content) as string;
+    const type = ensureString(body.type, 'General') as string;
+    const priority = ensureString(body.priority, 'Normal') as string;
+    const date = ensureString(body.date) as string;
     const announcement = await prisma.announcement.update({
       where: { id: req.params.id },
-      data: { title, content, type, priority, date }
+      data: { 
+        title, 
+        content, 
+        type: type as string, 
+        priority: priority as string, 
+        date 
+      }
     });
     res.json(announcement);
   });
 
-  app.delete('/api/announcements/:id', async (req, res) => {
+  app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
     await prisma.announcement.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   });
 
-  app.get('/api/documents', async (req, res) => {
+  app.get('/api/documents', requireAuth, async (req, res) => {
     try {
       const documents = await prisma.document.findMany({
         orderBy: { createdAt: 'desc' }
@@ -347,7 +438,7 @@ const upload = multer({
     }
   });
 
-  app.post('/api/documents/upload', (req, res, next) => {
+  app.post('/api/documents/upload', requireAuth, (req, res, next) => {
     upload.single('file')(req, res, (err) => {
       if (err instanceof multer.MulterError) {
         console.error('Multer Error:', err);
@@ -387,54 +478,49 @@ const upload = multer({
         console.log(`Text/Generic file processed. Extracted ${content.length} characters.`);
       }
 
-      const { title, category, isPrivate, committee } = req.body;
-      console.log(`Metadata: Title="${title}", Category="${category}", Committee="${committee}", Private=${isPrivate}`);
+      const body = req.body as Record<string, BodyValue>;
+      const title = ensureString(body.title, 'Untitled Document') as string;
+      const category = ensureString(body.category, 'General') as string;
+      const committee = optionalString(body.committee);
+      console.log(`Metadata: Title="${title}", Category="${category}", Committee="${committee}"`);
       
       const currentYear = new Date().getFullYear().toString();
       
-      // Get AI summary directly
-      let summary = "";
+      // Get AI tags directly
       let aiTags: string[] = [];
       try {
-        console.log('Requesting AI summary...');
+        console.log('Requesting AI tags...');
         const ai = getAI();
-        const aiResult = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
-          contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
-          generationConfig: {
+        const aiResult = await ai.models.generateContent({
+          model: 'gemini-2.0-flash-lite',
+          contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
+          config: {
             responseMimeType: 'application/json',
             responseSchema: {
               type: Type.OBJECT,
               properties: {
-                summary: { type: Type.STRING },
                 tags: { type: Type.ARRAY, items: { type: Type.STRING } }
               },
-              required: ['summary', 'tags']
+              required: ['tags']
             }
           }
         });
-        const aiData = JSON.parse(aiResult.response.text() || '{}');
-        summary = aiData.summary || "";
+        const aiData = JSON.parse(aiResult.text || '{}');
         aiTags = aiData.tags || [];
-        console.log('AI summary generated successfully.');
+        console.log('AI tags generated successfully.');
       } catch (aiErr: any) {
-        console.error('AI summarization failed during upload:', aiErr.message);
-        summary = "Summary unavailable.";
+        console.error('AI tagging failed during upload:', aiErr.message);
       }
-
       const committeeTags = committee ? [committee] : [];
       const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...(aiTags || [])]));
 
-      const finalContent = `${summary}\n\n[Uploaded on: ${new Date().toLocaleDateString()}]`;
-
       console.log('Creating database record...');
       const document = await prisma.document.create({
-        data: {
-          title: title || 'Untitled Document',
-          category: category || 'General',
-          isPrivate: isPrivate === 'true',
-          content: finalContent,
-          tags: finalTags,
-          url: '#', // Placeholder, in a real app this would be a file storage URL
+          data: {
+            title,
+            category,
+            tags: finalTags,
+            url: '#', // Placeholder, in a real app this would be a file storage URL
           fileType: req.file.mimetype.split('/')[1] || 'unknown',
           author: (req as any).session?.user?.name || 'System',
           date: new Date().toISOString().split('T')[0],
@@ -450,21 +536,24 @@ const upload = multer({
     }
   });
 
-  app.put('/api/documents/:id', async (req, res) => {
-    const { title, category, tags, content } = req.body;
+  app.put('/api/documents/:id', requireAuth, async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const category = ensureString(body.category, 'General') as string;
+    const tags = ensureArray(body.tags);
     const document = await prisma.document.update({
       where: { id: req.params.id },
-      data: { title, category, tags, content }
+      data: { title, category, tags }
     });
     res.json(document);
   });
 
-  app.delete('/api/documents/:id', async (req, res) => {
+  app.delete('/api/documents/:id', requireAuth, async (req, res) => {
     await prisma.document.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   });
 
-  app.get('/api/committees', async (req, res) => {
+  app.get('/api/committees', requireAuth, async (req, res) => {
     try {
       const committees = await prisma.committee.findMany({
         include: { members: true }
@@ -479,7 +568,7 @@ const upload = multer({
     }
   });
 
-  app.get('/api/events', async (req, res) => {
+  app.get('/api/events', requireAuth, async (req, res) => {
     try {
       const events = await prisma.coopEvent.findMany({
         include: { attendees: true },
@@ -491,8 +580,14 @@ const upload = multer({
     }
   });
 
-  app.post('/api/events', async (req, res) => {
-    const { title, description, date, time, location, category } = req.body;
+  app.post('/api/events', requireAuth, async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const description = ensureString(body.description) as string;
+    const date = ensureString(body.date) as string;
+    const time = ensureString(body.time) as string;
+    const location = ensureString(body.location) as string;
+    const category = ensureString(body.category, 'General') as string;
     const event = await prisma.coopEvent.create({
       data: { title, description, date, time, location, category },
       include: { attendees: true }
@@ -500,8 +595,14 @@ const upload = multer({
     res.json(event);
   });
 
-  app.put('/api/events/:id', async (req, res) => {
-    const { title, description, date, time, location, category } = req.body;
+  app.put('/api/events/:id', requireAuth, async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title) as string;
+    const description = ensureString(body.description) as string;
+    const date = ensureString(body.date) as string;
+    const time = ensureString(body.time) as string;
+    const location = ensureString(body.location) as string;
+    const category = ensureString(body.category, 'General') as string;
     const event = await prisma.coopEvent.update({
       where: { id: req.params.id },
       data: { title, description, date, time, location, category },
@@ -510,7 +611,7 @@ const upload = multer({
     res.json(event);
   });
 
-  app.post('/api/events/:id/attend', async (req, res) => {
+  app.post('/api/events/:id/attend', requireAuth, async (req, res) => {
     const user = (req as any).session?.user;
     if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -533,21 +634,23 @@ const upload = multer({
     }
   });
 
-  app.delete('/api/events/:id', async (req, res) => {
+  app.delete('/api/events/:id', requireAuth, async (req, res) => {
     await prisma.coopEvent.delete({ where: { id: req.params.id } });
     res.json({ success: true });
   });
 
   // --- AI Routes ---
-  const getAI = () => new GoogleGenAI(process.env.API_KEY || '');
+  const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
-  app.post('/api/ai/triage', async (req, res) => {
+  app.post('/api/ai/triage', requireAuth, async (req, res) => {
     try {
       const ai = getAI();
-      const { description } = req.body;
-      const response = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+      const body = req.body as Record<string, BodyValue>;
+      const description = ensureString(body.description) as string;
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-lite',
         contents: [{ role: 'user', parts: [{ text: `Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"` }] }],
-        generationConfig: {
+        config: {
           responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,
@@ -560,32 +663,38 @@ const upload = multer({
           }
         }
       });
-      res.json(JSON.parse(response.response.text() || '{}'));
+      const aiData = JSON.parse(response.text || '{}');
+      res.json(aiData);
     } catch (e: any) {
       res.status(500).json({ urgency: 'Medium', category: 'Other', error: e.message });
     }
   });
 
-  app.post('/api/ai/policy', async (req, res) => {
+  app.post('/api/ai/policy', requireAuth, async (req, res) => {
     try {
       const ai = getAI();
-      const { question, context } = req.body;
-      const response = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+      const body = req.body as Record<string, BodyValue>;
+      const question = ensureString(body.question) as string;
+      const context = ensureString(body.context) as string;
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-lite',
         contents: [{ role: 'user', parts: [{ text: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}` }] }]
       });
-      res.json({ answer: response.response.text() });
+      res.json({ answer: response.text || '' });
     } catch (e: any) {
       res.status(500).json({ answer: 'Unable to answer at this time. Please contact the board.', error: e.message });
     }
   });
 
-  app.post('/api/ai/summarize', async (req, res) => {
+  app.post('/api/ai/summarize', requireAuth, async (req, res) => {
     try {
       const ai = getAI();
-      const { content } = req.body;
-      const response = await ai.getGenerativeModel({ model: 'gemini-2.0-flash-lite' }).generateContent({
+      const body = req.body as Record<string, BodyValue>;
+      const content = ensureString(body.content) as string;
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-lite',
         contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
-        generationConfig: {
+        config: {
           responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,
@@ -597,13 +706,13 @@ const upload = multer({
           }
         }
       });
-      res.json(JSON.parse(response.response.text() || '{}'));
+      res.json(JSON.parse(response.text || '{}'));
     } catch (e: any) {
       res.status(500).json({ summary: '', tags: [], error: e.message });
     }
   });
 
-  app.get('/api/debug/config', (req, res) => {
+  app.get('/api/debug/config', requireAuth, (req, res) => {
     const host = req.get('x-forwarded-host') || req.get('host') || '';
     res.json({
       hasClientId: !!process.env.GOOGLE_CLIENT_ID,
@@ -620,7 +729,7 @@ const upload = multer({
     });
   });
 
-  app.get('/api/tenants/:id/history', async (req, res) => {
+  app.get('/api/tenants/:id/history', requireAuth, async (req, res) => {
     try {
       const history = await prisma.tenantHistory.findMany({
         where: { tenantId: req.params.id },
@@ -631,153 +740,185 @@ const upload = multer({
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/units/:id/move-out', async (req, res) => {
-    const { date, reason } = req.body;
+  app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const date = ensureString(body.date) as string;
+    const reason = optionalString(body.reason);
     try {
-      // 1. Find all members currently in this unit
-      const residents = await prisma.tenant.findMany({
-        where: { unitId: req.params.id }
-      });
-
-      // 2. Update Unit status
-      await prisma.unit.update({
-        where: { id: req.params.id },
-        data: { status: 'Vacant', currentTenantId: null }
-      });
-
-      // 3. Update all residents
-      for (const resident of residents) {
-        await prisma.tenant.update({
-          where: { id: resident.id },
-          data: { status: 'Past', unitId: null }
+      await prisma.$transaction(async (tx) => {
+        // 1. Identify all residents currently in the unit
+        const residents = await tx.tenant.findMany({
+          where: { unitId: req.params.id }
         });
 
-        // Close history record for each resident
-        const history = await prisma.tenantHistory.findFirst({
-          where: { tenantId: resident.id, unitId: req.params.id, endDate: null },
-          orderBy: { startDate: 'desc' }
+        // 2. Clear unit's current occupancy status
+        await tx.unit.update({
+          where: { id: req.params.id },
+          data: { status: 'Vacant', currentTenantId: null }
         });
 
-        if (history) {
-          await prisma.tenantHistory.update({
-            where: { id: history.id },
-            data: { endDate: new Date(date), moveReason: reason || 'Household Move-out' }
+        // 3. Process each resident for departure
+        for (const resident of residents) {
+          await tx.tenant.update({
+            where: { id: resident.id },
+            data: { status: 'Past', unitId: null }
           });
-        } else {
-          // Backfill: Create record if missing
-          await prisma.tenantHistory.create({
-            data: {
-              tenantId: resident.id,
-              unitId: req.params.id,
-              startDate: new Date(resident.startDate || date),
-              endDate: new Date(date),
-              moveReason: reason || 'Household Move-out (Archived)'
-            }
+
+          // Terminate active history record for this unit
+          const activeHistory = await tx.tenantHistory.findFirst({
+            where: { tenantId: resident.id, unitId: req.params.id, endDate: null },
+            orderBy: { startDate: 'desc' }
           });
+
+          if (activeHistory) {
+            await tx.tenantHistory.update({
+              where: { id: activeHistory.id },
+              data: { endDate: new Date(date), moveReason: reason || 'Household Move-out' }
+            });
+          } else {
+            // Create archived history record if none existed (backfill)
+            await tx.tenantHistory.create({
+              data: {
+                tenantId: resident.id,
+                unitId: req.params.id,
+                startDate: new Date(resident.startDate || date),
+                endDate: new Date(date),
+                moveReason: reason || 'Household Move-out (Archived)'
+              }
+            });
+          }
         }
-      }
-
+      });
       res.json({ success: true });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+    } catch (e: any) { 
+      res.status(400).json({ error: e.message }); 
+    }
   });
 
-  app.post('/api/units/:id/move-in', async (req, res) => {
-    const { tenantId, date } = req.body;
+  app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const tenantId = ensureString(body.tenantId) as string;
+    const date = ensureString(body.date) as string;
     try {
-      // 1. Update Unit status
-      await prisma.unit.update({
-        where: { id: req.params.id },
-        data: { status: 'Occupied', currentTenantId: tenantId }
-      });
-
-      // 2. Update Tenant status
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: { status: 'Current', unitId: req.params.id, startDate: date }
-      });
-
-      // 3. Create new History record
-      await prisma.tenantHistory.create({
-        data: {
-          tenantId,
-          unitId: req.params.id,
-          startDate: new Date(date),
-          moveReason: 'Move-in'
-        }
-      });
-
-      res.json({ success: true });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
-  });
-
-  app.post('/api/units/:id/transfer', async (req, res) => {
-    const { fromUnitId, toUnitId, date } = req.body;
-    try {
-      // 1. Find all residents in the source unit
-      const residents = await prisma.tenant.findMany({
-        where: { unitId: fromUnitId }
-      });
-
-      if (residents.length === 0) {
-        return res.status(400).json({ error: 'No residents found in source unit' });
-      }
-
-      // 2. Vacate old unit
-      await prisma.unit.update({
-        where: { id: fromUnitId },
-        data: { status: 'Vacant', currentTenantId: null }
-      });
-
-      // 3. Occupy new unit (Assign first resident as primary for the relation)
-      await prisma.unit.update({
-        where: { id: toUnitId },
-        data: { status: 'Occupied', currentTenantId: residents[0].id }
-      });
-
-      // 4. Update all residents and their history
-      for (const resident of residents) {
-        await prisma.tenant.update({
-          where: { id: resident.id },
-          data: { unitId: toUnitId, startDate: date }
+      await prisma.$transaction(async (tx) => {
+        // 1. Mark unit as occupied by the new tenant
+        await tx.unit.update({
+          where: { id: req.params.id },
+          data: { status: 'Occupied', currentTenantId: tenantId }
         });
 
-        // Close old history
-        const oldHistory = await prisma.tenantHistory.findFirst({
-          where: { tenantId: resident.id, unitId: fromUnitId, endDate: null },
-          orderBy: { startDate: 'desc' }
+        // 2. Update tenant's current residency details
+        await tx.tenant.update({
+          where: { id: tenantId },
+          data: { status: 'Current', unitId: req.params.id, startDate: date }
         });
-        
-        if (oldHistory) {
-          await prisma.tenantHistory.update({
-            where: { id: oldHistory.id },
-            data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
-          });
-        } else {
-          // Backfill: Create record for old unit
-          await prisma.tenantHistory.create({
-            data: {
-              tenantId: resident.id,
-              unitId: fromUnitId,
-              startDate: new Date(resident.startDate || date),
-              endDate: new Date(date),
-              moveReason: 'Internal Transfer (Archived)'
-            }
-          });
-        }
 
-        // Create new history
-        await prisma.tenantHistory.create({
+        // 3. Create a new residency history entry
+        await tx.tenantHistory.create({
           data: {
-            tenantId: resident.id,
-            unitId: toUnitId,
+            tenantId,
+            unitId: req.params.id,
             startDate: new Date(date),
-            moveReason: 'Internal Transfer'
+            moveReason: 'Move-in'
           }
         });
-      }
+      });
+      res.json({ success: true });
+    } catch (e: any) { 
+      res.status(400).json({ error: e.message }); 
+    }
+  });
+
+  app.post('/api/units/:id/transfer', requireAuth, async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const fromUnitId = ensureString(body.fromUnitId) as string;
+    const toUnitId = ensureString(body.toUnitId) as string;
+    const date = ensureString(body.date) as string;
+    const tenantIds = ensureArray(body.tenantIds);
+    try {
+      await prisma.$transaction(async (tx) => {
+        // 1. Validate target unit availability
+        const targetUnit = await tx.unit.findUnique({
+          where: { id: toUnitId },
+          include: { currentTenant: true }
+        });
+
+        if (!targetUnit) throw new Error('Target unit not found');
+        if (targetUnit.status === 'Occupied' || targetUnit.currentTenantId) {
+          throw new Error(`Target unit ${targetUnit.number} is currently occupied.`);
+        }
+
+        // 2. Identify residents to transfer
+        // If tenantIds are provided, only move those individuals. Otherwise, move everyone in the unit.
+        const residents = await tx.tenant.findMany({
+          where: tenantIds ? { id: { in: tenantIds }, unitId: fromUnitId } : { unitId: fromUnitId }
+        });
+
+        if (residents.length === 0) {
+          throw new Error('No residents found in source unit to transfer.');
+        }
+
+        // 3. Update source unit status if its primary tenant is moving or if all residents are moving
+        const remainingResidents = await tx.tenant.count({ 
+          where: { unitId: fromUnitId, NOT: { id: { in: residents.map(r => r.id) } } } 
+        });
+
+        if (remainingResidents === 0) {
+          await tx.unit.update({
+            where: { id: fromUnitId },
+            data: { status: 'Vacant', currentTenantId: null }
+          });
+        }
+
+        // 4. Update target unit status
+        await tx.unit.update({
+          where: { id: toUnitId },
+          data: { status: 'Occupied', currentTenantId: residents[0].id }
+        });
+
+        // 5. Update each resident and their historical records
+        for (const resident of residents) {
+          await tx.tenant.update({
+            where: { id: resident.id },
+            data: { unitId: toUnitId, startDate: date }
+          });
+
+          // Terminate active history for the old unit
+          const activeHistory = await tx.tenantHistory.findFirst({
+            where: { tenantId: resident.id, unitId: fromUnitId, endDate: null },
+            orderBy: { startDate: 'desc' }
+          });
+          
+          if (activeHistory) {
+            await tx.tenantHistory.update({
+              where: { id: activeHistory.id },
+              data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
+            });
+          }
+
+          // Initialize new history for the target unit
+          await tx.tenantHistory.create({
+            data: {
+              tenantId: resident.id,
+              unitId: toUnitId,
+              startDate: new Date(date),
+              moveReason: 'Internal Transfer'
+            }
+          });
+        }
+      });
 
       res.json({ success: true });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+    } catch (e: any) { 
+      res.status(400).json({ error: e.message }); 
+    }
+  });
+
+  app.get('/api/config', requireAuth, (req, res) => {
+    res.json({
+      googleClientId: process.env.GOOGLE_CLIENT_ID,
+      googleApiKey: process.env.PICKER_API_KEY,
+    });
   });
 
   // API 404 handler
