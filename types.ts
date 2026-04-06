@@ -91,6 +91,7 @@ export interface MaintenanceRequest {
   attachments?: any[];
   createdAt?: string;
   updatedAt?: string;
+  urgency?: string;
 }
 
 export interface Announcement {
@@ -116,6 +117,7 @@ export interface Document {
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;
+  content?: string;
 }
 
 export interface Committee {
