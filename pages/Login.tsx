@@ -18,8 +18,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const handleMessage = (event: MessageEvent) => {
       console.log('Received message from origin:', event.origin, 'Data:', event.data);
       const origin = event.origin;
-      if (!origin.endsWith('.run.app') && !origin.includes('localhost') && !origin.includes('vercel.app')) {
-        console.warn('Message origin rejected:', origin);
+      if (origin !== window.location.origin) {
+        console.warn('Message origin rejected:', origin, 'Expected:', window.location.origin);
         return;
       }
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {

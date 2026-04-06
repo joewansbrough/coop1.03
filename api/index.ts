@@ -71,7 +71,7 @@ app.use((req, res, next) => {
 });
 
 // Mock Data
-const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com'];
+const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com'];
 
 // Helper to get base URL
 const getBaseUrl = (req: express.Request) => {

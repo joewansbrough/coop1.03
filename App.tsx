@@ -16,6 +16,7 @@ import Committees from './pages/Committees';
 import Reports from './pages/Reports';
 import Tenants from './pages/Tenants';
 import TenantDetail from './pages/TenantDetail';
+import GoogleDrive from './pages/GoogleDrive';
 import Waitlist from './pages/Waitlist';
 import PolicyAssistant from './pages/PolicyAssistant';
 import Login from './pages/Login';
@@ -96,6 +97,7 @@ const AppContent: React.FC = () => {
           <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} />} />
           <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} isGuest={isGuest} announcements={announcements} setAnnouncements={setAnnouncements} />} />
           <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isGuest={isGuest} tenants={tenants} setTenants={setTenants} units={units} />} />
+          <Route path="/drive" element={<GoogleDrive />} />
           <Route path="/admin/units/:unitId" element={<UnitDetail isAdmin={effectiveIsAdmin} units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} setRequests={setRequests} />} />
           
           {/* Admin Routes */}

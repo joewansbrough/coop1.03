@@ -153,12 +153,15 @@ const upload = multer({
       return res.status(500).json({ error: 'GOOGLE_CLIENT_ID is not configured' });
     }
 
+    const state = Math.random().toString(36).substring(7);
+    (req as any).session.oauthState = state;
+
     const params = new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID,
       redirect_uri: redirectUri,
       response_type: 'code',
       scope: 'openid email profile',
-      access_type: 'offline',
+      state: state,
       prompt: 'select_account',
     });
 
@@ -167,9 +170,17 @@ const upload = multer({
   });
 
   app.get('/auth/callback', async (req, res) => {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code) {
       return res.status(400).send('No code provided');
+    }
+
+    const savedState = (req as any).session.oauthState;
+    (req as any).session.oauthState = null; // Clear state after use
+
+    if (!state || state !== savedState) {
+      console.warn('OAuth state mismatch:', { received: state, expected: savedState });
+      return res.status(403).send('Invalid state parameter. This could be a CSRF attempt.');
     }
 
     try {
@@ -912,6 +923,13 @@ const upload = multer({
     } catch (e: any) { 
       res.status(400).json({ error: e.message }); 
     }
+  });
+
+  app.get('/api/config', requireAuth, (req, res) => {
+    res.json({
+      googleClientId: process.env.GOOGLE_CLIENT_ID,
+      googleApiKey: process.env.PICKER_API_KEY,
+    });
   });
 
   // API 404 handler
