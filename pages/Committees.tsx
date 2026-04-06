@@ -36,8 +36,13 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
   }, [location.search, committees]);
 
   const selectedCommittee = Array.isArray(committees) ? committees.find(c => c.id === selectedId) : null;
-  const committeeDocs = Array.isArray(documents) 
-    ? documents.filter(d => d.category === 'Committee' || (selectedCommittee && d.title.toLowerCase().includes(selectedCommittee.name.toLowerCase())))
+  const committeeDocs = Array.isArray(documents) && selectedCommittee
+    ? documents.filter(d => 
+        d.committee === selectedCommittee.name || 
+        (d.tags && d.tags.some(tag => tag.toLowerCase() === selectedCommittee.name.toLowerCase())) ||
+        d.category === selectedCommittee.name ||
+        d.title.toLowerCase().includes(selectedCommittee.name.toLowerCase())
+      )
     : [];
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -319,17 +324,21 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
                  </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {committeeDocs.length > 0 ? committeeDocs.map(doc => (
-                      <div key={doc.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:bg-white dark:hover:bg-slate-800 transition-all group cursor-pointer">
+                      <div 
+                        key={doc.id} 
+                        onClick={() => doc.url && doc.url !== '#' && window.open(doc.url, '_blank')}
+                        className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-emerald-300 dark:hover:border-emerald-500/50 hover:bg-white dark:hover:bg-slate-800 transition-all group cursor-pointer"
+                      >
                         <div className="flex items-center gap-4">
                            <div className="w-10 h-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-rose-500 group-hover:bg-rose-50 transition-colors">
-                             <i className="fa-solid fa-file-pdf text-xl"></i>
+                             <i className={`fa-solid ${doc.fileType === 'pdf' ? 'fa-file-pdf' : doc.url.includes('drive.google.com') ? 'fa-file-word text-blue-500' : 'fa-file-lines text-slate-400'} text-xl`}></i>
                            </div>
                            <div className="overflow-hidden">
-                              <p className="text-sm font-bold text-slate-800 dark:text-200 truncate pr-2">{doc.title}</p>
+                              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{doc.title}</p>
                               <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{doc.date} • {doc.author}</p>
                            </div>
                         </div>
-                        <i className="fa-solid fa-download text-slate-300 group-hover:text-emerald-500 group-hover:scale-110 transition-all p-2"></i>
+                        <i className="fa-solid fa-arrow-up-right-from-square text-slate-300 group-hover:text-emerald-500 group-hover:scale-110 transition-all p-2"></i>
                       </div>
                     )) : (
                       <p className="col-span-2 text-center py-12 text-slate-300 italic text-sm border-2 border-dashed border-slate-100 dark:border-white/5 rounded-2xl">No archived records found.</p>
