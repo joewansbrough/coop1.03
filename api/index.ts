@@ -5,8 +5,10 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
+import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import { MaintenancePriority } from '../types.js';
-import { tenantSchema } from './validation.js';
+
+
 
 dotenv.config();
 
