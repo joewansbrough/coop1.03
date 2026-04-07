@@ -110,6 +110,7 @@ model Document {
   author    String   @default("Admin")
   date      String
   tags      String[] @default([])
+  content   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

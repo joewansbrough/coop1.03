@@ -79,7 +79,7 @@ const ResourceLibrary: React.FC<{
   };
 
   const createPicker = (accessToken: string) => {
-    (window as any).gapi.load('picker', () => {
+    (window as any).gapi.load('picker', async () => {
       const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
       view.setIncludeFolders(true);
       
@@ -90,6 +90,34 @@ const ResourceLibrary: React.FC<{
         .setCallback(async (data: any) => {
           if (data.action === (window as any).google.picker.Action.PICKED) {
             const driveDoc = data.docs[0];
+            let extractedContent = '';
+
+            // Attempt to extract text from Google Docs or small text files
+            if (driveDoc.mimeType === 'application/vnd.google-apps.document' || driveDoc.mimeType === 'application/pdf') {
+              try {
+                const exportUrl = driveDoc.mimeType === 'application/vnd.google-apps.document'
+                  ? `https://www.googleapis.com/drive/v3/files/${driveDoc.id}/export?mimeType=text/plain`
+                  : `https://www.googleapis.com/drive/v3/files/${driveDoc.id}?alt=media`;
+                
+                const response = await fetch(exportUrl, {
+                  headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                  if (driveDoc.mimeType === 'application/pdf') {
+                    // PDFs are binary; for now we'll just note they are cloud PDFs 
+                    // To truly parse PDF text client-side, we'd need pdf.js. 
+                    // Better to let the Policy Assistant know it's a cloud PDF.
+                    extractedContent = "[Content is in a Cloud PDF. AI indexing suggested for full support.]";
+                  } else {
+                    extractedContent = await response.text();
+                  }
+                }
+              } catch (err) {
+                console.warn('Could not extract content from Drive file:', err);
+              }
+            }
+
             const newDoc = {
               title: driveDoc.name,
               category: 'Cloud' as any,
@@ -97,7 +125,8 @@ const ResourceLibrary: React.FC<{
               fileType: driveDoc.type || 'gdoc',
               author: 'Google Drive',
               date: new Date().toISOString().split('T')[0],
-              tags: ['Google Drive', 'Linked']
+              tags: ['Google Drive', 'Linked'],
+              content: extractedContent
             };
 
             try {

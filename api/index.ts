@@ -611,7 +611,7 @@ app.get('/api/documents', async (req, res) => {
 });
 
 app.post('/api/documents', async (req, res) => {
-  const { title, category, url, fileType, author, date, tags, committee } = req.body;
+  const { title, category, url, fileType, author, date, tags, committee, content } = req.body;
 
   // Tag generation temporarily disabled for basic metadata sync
   const currentYear = new Date().getFullYear().toString();
@@ -628,6 +628,7 @@ app.post('/api/documents', async (req, res) => {
       author: author || ((req as any).session?.user?.name || 'System'),
       date: date || new Date().toISOString().split('T')[0],
       tags: finalTags,
+      content: content || null,
     }
   });
   res.json(document);
@@ -796,7 +797,6 @@ app.get('/api/migrate', async (req, res) => {
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
 
     // Explicitly DROP columns if they exist to match metadata-only goal
-    await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "content";`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "isPrivate";`);
 
     // Check if seeding is needed

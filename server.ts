@@ -617,6 +617,7 @@ const upload = multer({
           fileType: req.file.mimetype.split('/')[1] || 'unknown',
           author: (req as any).session?.user?.name || 'System',
           date: new Date().toISOString().split('T')[0],
+          content: content || null,
         }
       });
       console.log(`Document created successfully with ID: ${document.id}`);
