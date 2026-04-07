@@ -130,7 +130,7 @@ model ScheduledMaintenance {
   unit          Unit     @relation("ScheduledTasks", fields: [unitId], references: [id], onDelete: Cascade)
   task          String
   description   String?
-  frequency     String
+  frequency     "Monthly" | "Quarterly" | "Annual"
   dueDate       String
   lastCompleted String?
   assignedTo    String
@@ -138,4 +138,5 @@ model ScheduledMaintenance {
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  category    "Plumbing" | "Electrical" | "HVAC" | "Safety" | "General" | "Other"
 }
