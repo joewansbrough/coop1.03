@@ -168,6 +168,32 @@ app.get('/auth/callback', async (req, res) => {
     // Check both DB role and legacy list for now
     const isAdmin = user?.role === 'ADMIN' || ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'].includes(email);
 
+    // Dynamically resolve the best available Gemini model once at login
+    let resolvedModel = 'gemini-2.0-flash'; // safe fallback
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.API_KEY || '');
+      const { models } = await genAI.listModels();
+      const contentModels = models.filter(m =>
+        m.supportedGenerationMethods?.includes('generateContent') &&
+        m.name.toLowerCase().includes('gemini')
+      );
+      const ranked = contentModels.sort((a, b) => {
+        const score = (name: string) => {
+          if (name.includes('flash-lite') || name.includes('flash_lite')) return 3;
+          if (name.includes('flash')) return 2;
+          if (name.includes('pro')) return 1;
+          return 0;
+        };
+        return score(b.name.toLowerCase()) - score(a.name.toLowerCase());
+      });
+      if (ranked[0]?.name) {
+        resolvedModel = ranked[0].name.replace('models/', '');
+        console.log(`[ModelResolver] Selected model for ${email}: ${resolvedModel}`);
+      }
+    } catch (err) {
+      console.warn('[ModelResolver] Model listing failed, using fallback:', err);
+    }
+
     (req as any).session.user = {
       email,
       name: userData.name,
@@ -175,7 +201,8 @@ app.get('/auth/callback', async (req, res) => {
       isAdmin,
       tenantId: user?.id || null,
       unitNumber: user?.unit?.number || null,
-      role: user?.role || 'MEMBER'
+      role: user?.role || 'MEMBER',
+      geminiModel: resolvedModel,
     };
 
     res.send(`
@@ -736,8 +763,9 @@ const getAI = () => {
 app.post('/api/ai/triage', async (req, res) => {
   try {
     const genAI = getAI();
+    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.0-flash';
     const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: resolvedModel,
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: {
@@ -764,7 +792,8 @@ app.post('/api/ai/triage', async (req, res) => {
 app.post('/api/ai/policy', async (req, res) => {
   try {
     const genAI = getAI();
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.0-flash';
+    const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { question, context } = req.body;
     
     const result = await model.generateContent(`You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}`);
@@ -782,7 +811,8 @@ app.post('/api/ai/policy', async (req, res) => {
 app.post('/api/ai/summarize', async (req, res) => {
   try {
     const genAI = getAI();
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.0-flash';
+    const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { content } = req.body;
     
     const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`);
