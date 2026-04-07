@@ -781,7 +781,13 @@ const upload = multer({
   });
 
   // --- AI Routes ---
-  const getAI = () => new GoogleGenerativeAI(process.env.API_KEY || '');
+  const getAI = () => {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      console.warn('WARNING: Gemini API_KEY is missing from environment variables.');
+    }
+    return new GoogleGenerativeAI(apiKey || '');
+  };
 
   app.post('/api/ai/triage', requireAuth, async (req, res) => {
     try {
@@ -824,7 +830,12 @@ const upload = multer({
       const response = await result.response;
       res.json({ answer: response.text() || '' });
     } catch (e: any) {
-      res.status(500).json({ answer: 'Unable to answer at this time. Please contact the board.', error: e.message });
+      console.error(`[Policy Assistant Error]: ${e.message}`);
+      if (e.stack) console.error(e.stack);
+      res.status(500).json({ 
+        answer: 'Unable to answer at this time. Please contact the board.', 
+        error: e.message 
+      });
     }
   });
 
