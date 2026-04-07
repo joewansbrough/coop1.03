@@ -169,26 +169,42 @@ app.get('/auth/callback', async (req, res) => {
     const isAdmin = user?.role === 'ADMIN' || ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'].includes(email);
 
     // Dynamically resolve the best available Gemini model once at login
-    let resolvedModel = 'gemini-2.0-flash'; // safe fallback
+    let resolvedModel = 'gemini-2.5-flash-lite'; // safe fallback
     try {
       const genAI = new GoogleGenerativeAI(process.env.API_KEY || '');
       const { models } = await genAI.listModels();
-      const contentModels = models.filter(m =>
-        m.supportedGenerationMethods?.includes('generateContent') &&
-        m.name.toLowerCase().includes('gemini')
-      );
-      const ranked = contentModels.sort((a, b) => {
-        const score = (name: string) => {
-          if (name.includes('flash-lite') || name.includes('flash_lite')) return 3;
-          if (name.includes('flash')) return 2;
-          if (name.includes('pro')) return 1;
-          return 0;
-        };
-        return score(b.name.toLowerCase()) - score(a.name.toLowerCase());
+
+      // Skip known deprecated/unavailable model families
+      const DEPRECATED = ['gemini-1.0', 'gemini-1.5', 'gemini-2.0', 'gemini-pro', 'aqa', 'embedding'];
+
+      const contentModels = models.filter(m => {
+        const name = m.name.toLowerCase();
+        return (
+          m.supportedGenerationMethods?.includes('generateContent') &&
+          name.includes('gemini') &&
+          !DEPRECATED.some(d => name.includes(d))
+        );
       });
+
+      // Score: prefer flash-lite > flash > pro, boosted by version number
+      const score = (name: string): number => {
+        let s = 0;
+        if (name.includes('flash-lite') || name.includes('flash_lite')) s += 30;
+        else if (name.includes('flash')) s += 20;
+        else if (name.includes('pro')) s += 10;
+        const versionMatch = name.match(/(\d+\.\d+)/);
+        if (versionMatch) s += parseFloat(versionMatch[0]) * 2;
+        return s;
+      };
+
+      const ranked = contentModels.sort((a, b) => score(b.name.toLowerCase()) - score(a.name.toLowerCase()));
+      console.log(`[ModelResolver] Candidates:`, contentModels.map(m => m.name));
+
       if (ranked[0]?.name) {
         resolvedModel = ranked[0].name.replace('models/', '');
         console.log(`[ModelResolver] Selected model for ${email}: ${resolvedModel}`);
+      } else {
+        console.warn('[ModelResolver] No non-deprecated models found, using fallback:', resolvedModel);
       }
     } catch (err) {
       console.warn('[ModelResolver] Model listing failed, using fallback:', err);
@@ -763,7 +779,7 @@ const getAI = () => {
 app.post('/api/ai/triage', async (req, res) => {
   try {
     const genAI = getAI();
-    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.0-flash';
+    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
     const model = genAI.getGenerativeModel({
       model: resolvedModel,
       generationConfig: {
@@ -792,7 +808,7 @@ app.post('/api/ai/triage', async (req, res) => {
 app.post('/api/ai/policy', async (req, res) => {
   try {
     const genAI = getAI();
-    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.0-flash';
+    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { question, context } = req.body;
     
@@ -811,7 +827,7 @@ app.post('/api/ai/policy', async (req, res) => {
 app.post('/api/ai/summarize', async (req, res) => {
   try {
     const genAI = getAI();
-    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.0-flash';
+    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { content } = req.body;
     
