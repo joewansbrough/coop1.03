@@ -71,7 +71,7 @@ app.use((req, res, next) => {
 });
 
 // Mock Data
-const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com'];
+const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com'];
 
 const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const hasUser = !!(req as any).session?.user;
@@ -208,6 +208,105 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
   (req as any).session = null;
   res.json({ success: true });
 });
+
+app.get('/api/seed/preventative', async (req, res) => {
+try {
+const p = getPrisma();
+const units = await p.unit.findMany(); // Fetch all units to get their IDs
+
+// Create a map for quick lookup of existing scheduled maintenance tasks
+const existingTasks = await p.scheduledMaintenance.findMany();
+const existingTaskMap = new Map<string, ScheduledMaintenance>(); // Key: unitId-taskName
+
+existingTasks.forEach(task => {
+// Create a unique key for each task (adjust if task names can be identical for the same unit)
+existingTaskMap.set(`${task.unitId}-${task.task}`, task);
+});
+
+console.log('Seeding preventative maintenance tasks...');
+
+const tasksToSeed: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>[] = [];
+
+// Generate mock tasks for each unit, ensuring variety
+units.forEach(unit => {
+// Add 1-3 tasks per unit, varying frequency and category
+const numTasks = Math.floor(Math.random() * 3) + 1; // 1 to 3 tasks per unit
+
+for (let i = 0; i < numTasks; i++) {
+let taskDetails: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>;
+         const today = new Date();
+
+         switch (i) {
+           case 0: // First task: HVAC related, monthly/quarterly
+             taskDetails = {
+               unitId: unit.id,
+               task: 'HVAC Filter Replacement',
+               dueDate: new Date(today.setMonth(today.getMonth() + 1)).toISOString().split('T')[0],
+               frequency: Math.random() > 0.5 ? 'Monthly' : 'Quarterly',
+               assignedTo: 'Building Management',
+               category: 'HVAC',
+             };
+             break;
+           case 1: // Second task: Plumbing or Electrical, quarterly/annual
+             taskDetails = {
+              unitId: unit.id,
+               task: Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel',
+               dueDate: new Date(today.setMonth(today.getMonth() + (Math.random() > 0.5 ? 3 :
+       6))).toISOString().split('T')[0],
+               frequency: Math.random() > 0.5 ? 'Quarterly' : 'Annual',
+               assignedTo: Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician',
+               category: Math.random() > 0.5 ? 'Plumbing' : 'Electrical',
+             };
+             break;
+           default: // Third task: Safety or General, annual
+             taskDetails = {
+               unitId: unit.id,
+               task: Math.random() > 0.5 ? 'Annual Fire Alarm Test' : 'Inspect Balcony Sealant',
+               dueDate: new Date(today.setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0],
+               frequency: 'Annual',
+               assignedTo: Math.random() > 0.5 ? 'Safety Officer' : 'Exterior Maintenance',
+               category: Math.random() > 0.5 ? 'Safety' : 'General',
+             };
+             break;
+         }
+         tasksToSeed.push(taskDetails);
+       }
+     });
+
+     let addedCount = 0;
+     for (const task of tasksToSeed) {
+       const key = `${task.unitId}-${task.task}`;
+       if (!existingTaskMap.has(key)) {
+         await p.scheduledMaintenance.create({
+           data: {
+             ...task,
+             isCompleted: false, // Default to not completed
+           },
+         });
+         addedCount++;
+       }
+     }
+
+     res.json({
+       success: true,
+       message: `Preventative maintenance tasks seeded. ${addedCount} new tasks added.`
+     });
+
+   } catch (e: any) {
+    console.error('Preventative seeding error:', e);
+    res.status(500).json({ success: false, error: e.message });
+   }
+ });
+
+app.delete('/api/seed/preventative', async (req, res) => {
+   try {
+     await getPrisma().scheduledMaintenance.deleteMany();
+     res.json({ success: true, message: "Preventative maintenance tasks cleared." });
+   } catch (e: any) {
+     console.error('Clear preventative tasks error:', e);
+     res.status(500).json({ success: false, error: e.message });
+   }
+ });
 
 // Development Bypass Login
 app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
