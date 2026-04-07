@@ -16,18 +16,17 @@ export const geminiService = {
   },
 
   async askPolicyQuestion(question: string, context: string) {
-    try {
-      const res = await fetch('/api/ai/policy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, context }),
-      });
-      if (!res.ok) return 'Unable to answer at this time. Please contact the board.';
-      const data = await res.json();
-      return data.answer;
-    } catch {
-      return 'Unable to answer at this time. Please contact the board.';
+    const res = await fetch('/api/ai/policy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, context }),
+    });
+    
+    const data = await res.json();
+    if (!res.ok) {
+        throw new Error(data.error || 'Failed to get answer from AI');
     }
+    return data.answer;
   },
 
   async summarizeAndTag(content: string) {
