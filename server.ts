@@ -790,7 +790,61 @@ const upload = multer({
     res.json({ success: true });
   });
 
-  // --- AI Routes ---
+  // Dynamic Model Selection Cache
+  let cachedBestModel: string | null = null;
+
+  const getBestModelId = async (genAI: GoogleGenerativeAI): Promise<string> => {
+    if (cachedBestModel) return cachedBestModel;
+
+    try {
+      console.log('Discovering available Gemini models...');
+      const result = await genAI.listModels();
+      const models = result.models || [];
+      
+      // Filter for models that support generating content
+      const supportedModels = models.filter(m => 
+        m.supportedMethods.includes('generateContent') && 
+        !m.name.includes('vision') // Prefer newer multi-modal models over legacy vision-only
+      );
+
+      if (supportedModels.length === 0) {
+        console.warn('No models found with generateContent support. Falling back to default.');
+        return 'gemini-1.5-flash';
+      }
+
+      // Ranking priorities
+      const priorities = [
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro-latest',
+        'gemini-1.5-pro',
+        'gemini-pro',
+        'gemini-1.0-pro'
+      ];
+
+      for (const p of priorities) {
+        const found = supportedModels.find(m => m.name.endsWith(p) || m.name === `models/${p}`);
+        if (found) {
+          cachedBestModel = found.name;
+          console.log(`Dynamic selection: picked ${cachedBestModel}`);
+          return cachedBestModel;
+        }
+      }
+
+      // Fallback to the first available flash or pro model
+      const fallback = supportedModels.find(m => m.name.includes('flash')) || 
+                       supportedModels.find(m => m.name.includes('pro')) || 
+                       supportedModels[0];
+      
+      cachedBestModel = fallback.name;
+      console.log(`Dynamic selection (fallback): picked ${cachedBestModel}`);
+      return cachedBestModel;
+    } catch (e) {
+      console.error('Error discovering models:', e);
+      return 'gemini-1.5-flash'; // Hard fallback
+    }
+  };
+
   const getAI = () => {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
