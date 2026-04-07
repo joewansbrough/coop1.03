@@ -46,6 +46,14 @@ const ResourceLibrary: React.FC<{
       .then(data => setConfig(data))
       .catch(err => console.error('Failed to load Google config:', err));
 
+    // Load pdf.js if not already present
+    if (!(window as any).pdfjsLib) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+
     // Poll for Google Scripts
     const checkScripts = setInterval(() => {
       if ((window as any).google?.accounts?.oauth2 && (window as any).gapi) {
@@ -92,23 +100,41 @@ const ResourceLibrary: React.FC<{
             const driveDoc = data.docs[0];
             let extractedContent = '';
 
-            // Attempt to extract text from Google Docs or small text files
+            // Attempt to extract text from Google Docs or PDFs
             if (driveDoc.mimeType === 'application/vnd.google-apps.document' || driveDoc.mimeType === 'application/pdf') {
               try {
                 const exportUrl = driveDoc.mimeType === 'application/vnd.google-apps.document'
                   ? `https://www.googleapis.com/drive/v3/files/${driveDoc.id}/export?mimeType=text/plain`
                   : `https://www.googleapis.com/drive/v3/files/${driveDoc.id}?alt=media`;
-                
+
                 const response = await fetch(exportUrl, {
                   headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
-                
+
                 if (response.ok) {
                   if (driveDoc.mimeType === 'application/pdf') {
-                    // PDFs are binary; for now we'll just note they are cloud PDFs 
-                    // To truly parse PDF text client-side, we'd need pdf.js. 
-                    // Better to let the Policy Assistant know it's a cloud PDF.
-                    extractedContent = "[Content is in a Cloud PDF. AI indexing suggested for full support.]";
+                    // Extract text from PDF using pdf.js
+                    try {
+                      const pdfBytes = await response.arrayBuffer();
+                      const pdfjsLib = (window as any).pdfjsLib;
+                      if (pdfjsLib) {
+                        pdfjsLib.GlobalWorkerOptions.workerSrc =
+                          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                        const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+                        const textPages: string[] = [];
+                        for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+                          const page = await pdf.getPage(i);
+                          const textContent = await page.getTextContent();
+                          textPages.push(textContent.items.map((item: any) => item.str).join(' '));
+                        }
+                        extractedContent = textPages.join('\n\n');
+                      } else {
+                        extractedContent = '[PDF content could not be extracted: pdf.js not loaded]';
+                      }
+                    } catch (pdfErr) {
+                      console.warn('PDF text extraction failed:', pdfErr);
+                      extractedContent = '[PDF content extraction failed]';
+                    }
                   } else {
                     extractedContent = await response.text();
                   }
@@ -146,6 +172,33 @@ const ResourceLibrary: React.FC<{
               setShowUpload(false);
               setUploadMode(null);
               setReviewingDoc(saved);
+
+              // Auto-extract: if we have content, summarize + generate tags and persist them
+              if (extractedContent && extractedContent.trim().length > 0 &&
+                  !extractedContent.includes('[Content is in a Cloud PDF')) {
+                try {
+                  const aiResult = await geminiService.summarizeAndTag(extractedContent);
+                  const aiTags = Array.isArray(aiResult.tags) ? aiResult.tags : [];
+                  const mergedTags = Array.from(new Set([...(saved.tags || []), ...aiTags]));
+
+                  await fetch(`/api/documents/${saved.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      title: saved.title,
+                      category: saved.category,
+                      tags: mergedTags,
+                      content: extractedContent,
+                    }),
+                  });
+
+                  const updatedDoc = { ...saved, tags: mergedTags, content: extractedContent };
+                  setDocuments(prev => prev.map(d => d.id === saved.id ? updatedDoc : d));
+                  setReviewingDoc(updatedDoc);
+                } catch (aiErr) {
+                  console.warn('[AI Extract] Failed to auto-summarize document:', aiErr);
+                }
+              }
             } catch (err: any) {
               console.error('Failed to save drive doc:', err);
               alert(err.message || 'Failed to link document. Please try again.');
@@ -198,7 +251,14 @@ const ResourceLibrary: React.FC<{
     setLoading(true);
     setAiResponse('');
 
-    const context = "Association policies and bylaws are stored in the secure archive.";
+    const docContext = documents.length > 0
+      ? documents.map(d =>
+          `[Document] Title: ${d.title} | Category: ${d.category}` +
+          (d.tags?.length ? ` | Tags: ${d.tags.join(', ')}` : '') +
+          (d.content?.trim() ? `\nContent: ${d.content.substring(0, 3000)}` : ' | (no extracted text)')
+        ).join('\n\n')
+      : 'No documents in the library.';
+    const context = `DOCUMENT CONTEXT:\n${docContext}`;
 
     try {
       const answer = await geminiService.askPolicyQuestion(question, context);
@@ -303,6 +363,7 @@ const ResourceLibrary: React.FC<{
           category: reviewingDoc.category,
           tags: reviewingDoc.tags,
           committee: reviewingDoc.committee ?? '',
+          content: reviewingDoc.content ?? null,
         }),
       });
 
