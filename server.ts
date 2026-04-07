@@ -287,6 +287,98 @@ const upload = multer({
     }
   });
 
+  app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) => {
+    try {
+      const tasks = await prisma.scheduledMaintenance.findMany({
+        where: { unitId: req.params.id },
+        orderBy: { dueDate: 'asc' }
+      });
+      res.json(tasks);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/seed/preventative', requireAuth, async (req, res) => {
+    try {
+      const units = await prisma.unit.findMany();
+      const existingTasks = await prisma.scheduledMaintenance.findMany();
+      const existingTaskMap = new Map();
+      existingTasks.forEach(task => existingTaskMap.set(`${task.unitId}-${task.task}`, task));
+
+      console.log('Seeding preventative maintenance tasks...');
+      const tasksToSeed = [];
+
+      units.forEach(unit => {
+        const numTasks = Math.floor(Math.random() * 4) + 1; // 1 to 4 tasks
+
+        for (let i = 0; i < numTasks; i++) {
+          const today = new Date();
+          let taskDetails;
+
+          switch (i) {
+            case 0:
+              taskDetails = {
+                unitId: unit.id,
+                task: 'HVAC Filter Replacement',
+                dueDate: new Date(today.setMonth(today.getMonth() + 1)).toISOString().split('T')[0],
+                frequency: Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY',
+                assignedTo: 'Building Management',
+                category: 'HVAC',
+              };
+              break;
+            case 1:
+              taskDetails = {
+                unitId: unit.id,
+                task: Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel',
+                dueDate: new Date(today.setMonth(today.getMonth() + (Math.random() > 0.5 ? 3 : 6))).toISOString().split('T')[0],
+                frequency: Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL',
+                assignedTo: Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician',
+                category: Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL',
+              };
+              break;
+            case 2:
+              taskDetails = {
+                unitId: unit.id,
+                task: Math.random() > 0.5 ? 'Annual Fire Alarm Test' : 'Inspect Balcony Sealant',
+                dueDate: new Date(today.setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0],
+                frequency: 'ANNUAL',
+                assignedTo: Math.random() > 0.5 ? 'Safety Officer' : 'Exterior Maintenance',
+                category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
+              };
+              break;
+            default:
+              taskDetails = {
+                unitId: unit.id,
+                task: Math.random() > 0.5 ? 'Test Smoke Detectors' : 'Dryer Vent Cleaning',
+                dueDate: new Date(today.setMonth(today.getMonth() + 2)).toISOString().split('T')[0],
+                frequency: 'ANNUAL',
+                assignedTo: 'In-House Staff',
+                category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
+              };
+              break;
+          }
+          tasksToSeed.push(taskDetails);
+        }
+      });
+
+      let addedCount = 0;
+      for (const task of tasksToSeed) {
+        if (!existingTaskMap.has(`${task.unitId}-${task.task}`)) {
+          await prisma.scheduledMaintenance.create({
+            data: { ...task, isCompleted: false }
+          });
+          addedCount++;
+        }
+      }
+
+      res.json({ success: true, message: `Preventative tasks seeded. ${addedCount} new tasks added.` });
+    } catch (e: any) {
+      console.error('Preventative seeding error:', e);
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   app.post('/api/tenants', requireAuth, validateRequest(tenantSchema), async (req, res) => {
     try {
       const tenant = await prisma.tenant.create({

@@ -227,51 +227,60 @@ console.log('Seeding preventative maintenance tasks...');
 
 const tasksToSeed: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>[] = [];
 
-// Generate mock tasks for each unit, ensuring variety
-units.forEach(unit => {
-// Add 1-3 tasks per unit, varying frequency and category
-const numTasks = Math.floor(Math.random() * 3) + 1; // 1 to 3 tasks per unit
+    // Generate mock tasks for each unit, ensuring variety
+    units.forEach(unit => {
+      // Add 1-4 tasks per unit, varying frequency and category
+      const numTasks = Math.floor(Math.random() * 4) + 1; // 1 to 4 tasks per unit
 
-for (let i = 0; i < numTasks; i++) {
-let taskDetails: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>;
-         const today = new Date();
+      for (let i = 0; i < numTasks; i++) {
+        let taskDetails: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>;
+        const today = new Date();
 
-         switch (i) {
-           case 0: // First task: HVAC related, monthly/quarterly
-             taskDetails = {
-               unitId: unit.id,
-               task: 'HVAC Filter Replacement',
-               dueDate: new Date(today.setMonth(today.getMonth() + 1)).toISOString().split('T')[0],
-               frequency: Math.random() > 0.5 ? 'Monthly' : 'Quarterly',
-               assignedTo: 'Building Management',
-               category: 'HVAC',
-             };
-             break;
-           case 1: // Second task: Plumbing or Electrical, quarterly/annual
-             taskDetails = {
+        switch (i) {
+          case 0: // First task: HVAC related, monthly/quarterly
+            taskDetails = {
               unitId: unit.id,
-               task: Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel',
-               dueDate: new Date(today.setMonth(today.getMonth() + (Math.random() > 0.5 ? 3 :
-       6))).toISOString().split('T')[0],
-               frequency: Math.random() > 0.5 ? 'Quarterly' : 'Annual',
-               assignedTo: Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician',
-               category: Math.random() > 0.5 ? 'Plumbing' : 'Electrical',
-             };
-             break;
-           default: // Third task: Safety or General, annual
-             taskDetails = {
-               unitId: unit.id,
-               task: Math.random() > 0.5 ? 'Annual Fire Alarm Test' : 'Inspect Balcony Sealant',
-               dueDate: new Date(today.setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0],
-               frequency: 'Annual',
-               assignedTo: Math.random() > 0.5 ? 'Safety Officer' : 'Exterior Maintenance',
-               category: Math.random() > 0.5 ? 'Safety' : 'General',
-             };
-             break;
-         }
-         tasksToSeed.push(taskDetails);
-       }
-     });
+              task: 'HVAC Filter Replacement',
+              dueDate: new Date(today.setMonth(today.getMonth() + 1)).toISOString().split('T')[0],
+              frequency: Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY',
+              assignedTo: 'Building Management',
+              category: 'HVAC',
+            };
+            break;
+          case 1: // Second task: Plumbing or Electrical, quarterly/annual
+            taskDetails = {
+              unitId: unit.id,
+              task: Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel',
+              dueDate: new Date(today.setMonth(today.getMonth() + (Math.random() > 0.5 ? 3 : 6))).toISOString().split('T')[0],
+              frequency: Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL',
+              assignedTo: Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician',
+              category: Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL',
+            };
+            break;
+          case 2: // Third task: Safety or General, annual
+            taskDetails = {
+              unitId: unit.id,
+              task: Math.random() > 0.5 ? 'Annual Fire Alarm Test' : 'Inspect Balcony Sealant',
+              dueDate: new Date(today.setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0],
+              frequency: 'ANNUAL',
+              assignedTo: Math.random() > 0.5 ? 'Safety Officer' : 'Exterior Maintenance',
+              category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
+            };
+            break;
+          default: // Fourth task: Appliance or Other, annual
+            taskDetails = {
+              unitId: unit.id,
+              task: Math.random() > 0.5 ? 'Test Smoke Detectors' : 'Dryer Vent Cleaning',
+              dueDate: new Date(today.setMonth(today.getMonth() + 2)).toISOString().split('T')[0],
+              frequency: 'ANNUAL',
+              assignedTo: 'In-House Staff',
+              category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
+            };
+            break;
+        }
+        tasksToSeed.push(taskDetails);
+      }
+    });
 
      let addedCount = 0;
      for (const task of tasksToSeed) {
@@ -342,6 +351,18 @@ app.get('/api/units', async (req, res) => {
     }
   });
   res.json(units);
+});
+
+app.get('/api/units/:id/scheduled-maintenance', async (req, res) => {
+  try {
+    const tasks = await getPrisma().scheduledMaintenance.findMany({
+      where: { unitId: req.params.id },
+      orderBy: { dueDate: 'asc' }
+    });
+    res.json(tasks);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {

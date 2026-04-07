@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { RequestStatus, Unit, Tenant, MaintenanceRequest, Document } from '../types';
+import { RequestStatus, Unit, Tenant, MaintenanceRequest, Document, ScheduledMaintenance } from '../types';
 
 interface UnitDetailProps {
   isAdmin?: boolean;
@@ -30,6 +30,14 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
     ]);
     setUnits(freshUnits);
     setTenants(freshTenants);
+
+    if (unitId) {
+      const tasksRes = await fetch(`/api/units/${unitId}/scheduled-maintenance`);
+      if (tasksRes.ok) {
+        const freshTasks = await tasksRes.json();
+        setScheduledTasks(freshTasks);
+      }
+    }
   };
   const unit = units.find(u => u.id === unitId);
   const currentResidents = tenants.filter(t => t.unitId === unitId && t.status === 'Current');
@@ -63,7 +71,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   const activeRequests = requests.filter(r => r.status === RequestStatus.PENDING || r.status === RequestStatus.IN_PROGRESS);
   const historicalRequests = requests.filter(r => r.status === RequestStatus.COMPLETED || r.status === RequestStatus.CANCELLED);
   
-  const scheduledTasks: any[] = []; // Scheduled tasks not yet in shared state
+  const [scheduledTasks, setScheduledTasks] = useState<ScheduledMaintenance[]>([]);
   
   const unitDocs = documents.filter(doc => doc.tags?.includes(`Unit ${unit?.number}`));
   
@@ -93,6 +101,15 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
 
     return () => clearInterval(checkScripts);
   }, []);
+
+  useEffect(() => {
+    if (unitId) {
+      fetch(`/api/units/${unitId}/scheduled-maintenance`)
+        .then(res => res.ok ? res.json() : [])
+        .then(data => setScheduledTasks(data))
+        .catch(err => console.error('Failed to load scheduled tasks:', err));
+    }
+  }, [unitId]);
 
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {
@@ -303,6 +320,28 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
     } catch (err) {
       console.error(err);
       alert("Failed to process move-in.");
+    }
+  };
+
+  const handleSeedPreventative = async () => {
+    try {
+      const res = await fetch('/api/seed/preventative');
+      if (res.ok) {
+        setNotification({ message: 'Preventative maintenance tasks seeded for all units.', type: 'success' });
+        setTimeout(() => setNotification(null), 5000);
+        // Reload tasks for current unit
+        const tasksRes = await fetch(`/api/units/${unitId}/scheduled-maintenance`);
+        if (tasksRes.ok) {
+          const freshTasks = await tasksRes.json();
+          setScheduledTasks(freshTasks);
+        }
+      } else {
+        throw new Error('Failed to seed tasks');
+      }
+    } catch (err) {
+      console.error(err);
+      setNotification({ message: 'Failed to seed preventative tasks.', type: 'error' });
+      setTimeout(() => setNotification(null), 5000);
     }
   };
 
@@ -909,6 +948,86 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 <div className="absolute top-4 right-4 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded">North Facing</div>
              </div>
              <p className="mt-8 text-sm text-slate-500 font-medium">Standard {unit.type} floorplan orientation within the building envelope.</p>
+          </div>
+        )}
+
+        {activeTab === 'schedule' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center px-2">
+              <div className="flex flex-col">
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Scheduled Preventative Maintenance</h3>
+                <p className="text-[10px] text-slate-500 font-medium">Routine system inspections and recurring unit safety checks.</p>
+              </div>
+              {isAdmin && (
+                <button 
+                  onClick={handleSeedPreventative}
+                  className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95 flex items-center gap-2"
+                >
+                  <i className="fa-solid fa-seedling"></i> Seed Unit Tasks
+                </button>
+              )}
+            </div>
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50/50 dark:bg-slate-950/30 border-b border-slate-100 dark:border-white/5">
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Next Due Date</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Maintenance Task</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Frequency</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+                  {scheduledTasks.length > 0 ? scheduledTasks.map(task => (
+                    <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                      <td className="px-6 py-4 text-xs font-bold text-slate-500">
+                        {new Date(task.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400">
+                            <i className={`fa-solid ${
+                              task.category === 'HVAC' ? 'fa-wind' :
+                              task.category === 'PLUMBING' ? 'fa-droplet' :
+                              task.category === 'ELECTRICAL' ? 'fa-bolt' :
+                              task.category === 'SAFETY' ? 'fa-shield-halved' :
+                              'fa-toolbox'
+                            } text-[10px]`}></i>
+                          </div>
+                          {task.task}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-[9px] font-black px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg uppercase tracking-tight">
+                          {task.frequency.charAt(0) + task.frequency.slice(1).toLowerCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest ${
+                          task.isCompleted ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                        }`}>
+                          {task.isCompleted ? 'Completed' : 'Upcoming'}
+                        </span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-24 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                           <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-[1.5rem] flex items-center justify-center text-slate-200 dark:text-slate-800 text-3xl mb-6">
+                              <i className="fa-solid fa-calendar-check"></i>
+                           </div>
+                           <h4 className="text-slate-400 font-bold mb-2">No preventative tasks found for this unit</h4>
+                           <p className="text-[10px] text-slate-400/60 uppercase tracking-widest max-w-[240px] leading-relaxed mx-auto">
+                             Click the seed button above to generate a standard schedule based on building protocols.
+                           </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
