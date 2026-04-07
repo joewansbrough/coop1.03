@@ -295,6 +295,7 @@ const upload = multer({
       });
       res.json(tasks);
     } catch (error: any) {
+      console.error('Scheduled Maintenance error:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -322,9 +323,9 @@ const upload = multer({
                 unitId: unit.id,
                 task: 'HVAC Filter Replacement',
                 dueDate: new Date(today.setMonth(today.getMonth() + 1)).toISOString().split('T')[0],
-                frequency: Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY',
+                frequency: Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY' as const,
                 assignedTo: 'Building Management',
-                category: 'HVAC',
+                category: 'HVAC' as const,
               };
               break;
             case 1:
@@ -332,9 +333,9 @@ const upload = multer({
                 unitId: unit.id,
                 task: Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel',
                 dueDate: new Date(today.setMonth(today.getMonth() + (Math.random() > 0.5 ? 3 : 6))).toISOString().split('T')[0],
-                frequency: Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL',
+                frequency: Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL' as const,
                 assignedTo: Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician',
-                category: Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL',
+                category: Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL' as const,
               };
               break;
             case 2:
@@ -342,9 +343,9 @@ const upload = multer({
                 unitId: unit.id,
                 task: Math.random() > 0.5 ? 'Annual Fire Alarm Test' : 'Inspect Balcony Sealant',
                 dueDate: new Date(today.setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0],
-                frequency: 'ANNUAL',
+                frequency: 'ANNUAL' as const,
                 assignedTo: Math.random() > 0.5 ? 'Safety Officer' : 'Exterior Maintenance',
-                category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
+                category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL' as const,
               };
               break;
             default:
@@ -352,9 +353,9 @@ const upload = multer({
                 unitId: unit.id,
                 task: Math.random() > 0.5 ? 'Test Smoke Detectors' : 'Dryer Vent Cleaning',
                 dueDate: new Date(today.setMonth(today.getMonth() + 2)).toISOString().split('T')[0],
-                frequency: 'ANNUAL',
+                frequency: 'ANNUAL' as const,
                 assignedTo: 'In-House Staff',
-                category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
+                category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL' as const,
               };
               break;
           }
@@ -366,7 +367,7 @@ const upload = multer({
       for (const task of tasksToSeed) {
         if (!existingTaskMap.has(`${task.unitId}-${task.task}`)) {
           await prisma.scheduledMaintenance.create({
-            data: { ...task, isCompleted: false }
+            data: { ...task, isCompleted: false, isActive: true }
           });
           addedCount++;
         }
