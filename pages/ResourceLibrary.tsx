@@ -66,7 +66,7 @@ const ResourceLibrary: React.FC<{
     try {
       const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: config.googleClientId,
-        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
         callback: (response: any) => {
           if (response.error !== undefined) return;
           createPicker(response.access_token);
@@ -135,13 +135,20 @@ const ResourceLibrary: React.FC<{
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newDoc)
               });
+              
               const saved = await res.json();
+              
+              if (!res.ok) {
+                throw new Error(saved.error || saved.details || `Failed to save document: ${res.status}`);
+              }
+
               setDocuments(prev => [saved, ...prev]);
               setShowUpload(false);
               setUploadMode(null);
               setReviewingDoc(saved);
-            } catch (err) {
+            } catch (err: any) {
               console.error('Failed to save drive doc:', err);
+              alert(err.message || 'Failed to link document. Please try again.');
             }
           }
         })
