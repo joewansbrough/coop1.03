@@ -90,16 +90,21 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   
-  app.use(cookieSession({
-    name: 'session',
-    keys: [SESSION_SECRET],
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    secure: true, // Always true because we force https in the previous middleware
-    sameSite: 'none',
-    httpOnly: true,
-    signed: true,
-    overwrite: true,
-  }));
+  app.use((req, res, next) => {
+    const host = req.get('x-forwarded-host') || req.get('host') || '';
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+
+    cookieSession({
+      name: 'session',
+      keys: [SESSION_SECRET],
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: !isLocal, // Disable secure on localhost to allow development without HTTPS
+      sameSite: isLocal ? 'lax' : 'none',
+      httpOnly: true,
+      signed: true,
+      overwrite: true,
+    })(req, res, next);
+  });
 
   // Helper to get base URL
   const getBaseUrl = (req: express.Request) => {
@@ -640,12 +645,40 @@ const upload = multer({
     const title = optionalString(body.title);
     const category = optionalString(body.category);
     const tags = body.tags ? ensureArray(body.tags) : undefined;
+    const content = optionalString(body.content);
     
     const document = await prisma.document.update({
       where: { id: req.params.id },
-      data: { title, category, tags: tags ? { set: tags } : undefined }
+      data: { title, category, tags: tags ? { set: tags } : undefined, content } as any
     });
     res.json(document);
+  });
+
+
+  app.post('/api/admin/reindex-documents', requireAuth, async (req, res) => {
+    try {
+      const docs = await (prisma.document as any).findMany({
+        where: { OR: [{ content: null }, { content: '' }] }
+      });
+
+      let updatedCount = 0;
+      for (const doc of docs) {
+        // Simple logic: if it's a gdoc or text file, try to fetch it
+        if (doc.url.includes('google.com') && !doc.fileType.includes('pdf')) {
+          try {
+            // Note: This would ideally use a stored access token or a service account
+            // For now, we'll just log that we found a target for indexing
+            console.log(`Target for indexing: ${doc.title}`);
+          } catch (err) {
+            console.error(`Failed to index ${doc.title}:`, err);
+          }
+        }
+      }
+
+      res.json({ message: `Found ${docs.length} documents needing indexing.`, targetCount: docs.length });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.delete('/api/documents/:id', requireAuth, async (req, res) => {

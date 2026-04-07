@@ -33,13 +33,17 @@ const PolicyAssistant: React.FC<{ documents: Document[] }> = ({ documents }) => 
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
-    // Prepare context from policy documents - match both 'Policy' and 'Policies' categories
+    // Prepare context from policy documents - match local categories and Cloud-linked docs
     const policyDocs = documents.filter(d =>
-      d.category === 'Policy' || d.category === 'Policies' || d.category === 'Bylaws'
+      d.category === 'Policy' || 
+      d.category === 'Policies' || 
+      d.category === 'Bylaws' || 
+      d.category === 'Cloud' || 
+      d.tags?.includes('Linked')
     );
     const docContext = policyDocs.length > 0
-      ? policyDocs.map(d => 'Document: ' + d.title + '\nContent: ' + (d.content || '(Full text not available)')).join('\n\n')
-      : 'No local policy documents currently have extracted text content.';
+      ? policyDocs.map(d => `Document: ${d.title}\nContent: ${d.content || '(No text content available)'}`).join('\n\n')
+      : 'No policy documents currently have extracted text content.';
 
     const generalContext = [
       'BC Co-op Housing Context:',

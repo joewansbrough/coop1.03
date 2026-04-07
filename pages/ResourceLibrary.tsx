@@ -120,13 +120,13 @@ const ResourceLibrary: React.FC<{
 
             const newDoc = {
               title: driveDoc.name,
-              category: 'Cloud' as any,
+              category: reviewingDoc?.category || 'Cloud', // Favor user-selected category if available
               url: driveDoc.url,
               fileType: driveDoc.type || 'gdoc',
               author: 'Google Drive',
               date: new Date().toISOString().split('T')[0],
               tags: ['Google Drive', 'Linked'],
-              content: extractedContent
+              content: extractedContent || ''
             };
 
             try {

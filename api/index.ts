@@ -629,16 +629,21 @@ app.post('/api/documents', async (req, res) => {
       date: date || new Date().toISOString().split('T')[0],
       tags: finalTags,
       content: content || null,
-    }
+    } as any
   });
   res.json(document);
 });
 
 app.put('/api/documents/:id', async (req, res) => {
-  const { title, category, tags, committee } = req.body;
+  const { title, category, tags, content } = req.body;
   const document = await getPrisma().document.update({
     where: { id: req.params.id },
-    data: { title, category, tags, committee }
+    data: { 
+      title, 
+      category, 
+      tags: tags ? { set: tags } : undefined,
+      content 
+    } as any
   });
   res.json(document);
 });
