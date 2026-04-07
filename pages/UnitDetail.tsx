@@ -640,6 +640,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
           { id: 'overview', label: 'Overview' },
           { id: 'maintenance', label: 'Service History' },
           { id: 'schedule', label: 'Preventative' },
+          { id: 'schedule', label: 'Preventative' },
           { id: 'occupancy', label: 'Members' },
           { id: 'history', label: 'Tenant History' },
           { id: 'documents', label: 'Documents' },

@@ -196,4 +196,5 @@ export interface ScheduledMaintenance {
   frequency: 'Monthly' | 'Quarterly' | 'Annual';
   assignedTo: string;
   isCompleted?: boolean;
+  category: 'Plumbing' | 'Electrical' | 'HVAC' | 'Safety' | 'General'; // Added category field
 }
