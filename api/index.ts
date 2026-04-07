@@ -3,7 +3,7 @@ import cookieSession from 'cookie-session';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import { MaintenancePriority } from '../types.js';
 import { tenantSchema } from './validation.js';
@@ -718,29 +718,31 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // --- AI Routes ---
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+const getAI = () => new GoogleGenerativeAI(process.env.API_KEY || '');
 
 app.post('/api/ai/triage', async (req, res) => {
   try {
-    const ai = getAI();
-    const { description } = req.body;
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: `Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`,
-      config: {
+    const genAI = getAI();
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: {
-          type: Type.OBJECT,
+          type: SchemaType.OBJECT,
           properties: {
-            priority: { type: Type.STRING }, // Consolidation: use priority field
-            category: { type: Type.STRING },
-            reasoning: { type: Type.STRING }
+            priority: { type: SchemaType.STRING },
+            category: { type: SchemaType.STRING },
+            reasoning: { type: SchemaType.STRING }
           },
           required: ['priority', 'category']
         }
       }
     });
-    res.json(JSON.parse(response.text || '{}'));
+    
+    const { description } = req.body;
+    const result = await model.generateContent(`Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`);
+    const response = await result.response;
+    res.json(JSON.parse(response.text() || '{}'));
   } catch (e: any) {
     res.status(500).json({ priority: 'Medium', category: 'Other', error: e.message });
   }
@@ -748,14 +750,13 @@ app.post('/api/ai/triage', async (req, res) => {
 
 app.post('/api/ai/policy', async (req, res) => {
   try {
-    const ai = getAI();
+    const genAI = getAI();
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const { question, context } = req.body;
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}`,
-      config: { temperature: 0.2 }
-    });
-    res.json({ answer: response.text });
+    
+    const result = await model.generateContent(`You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}`);
+    const response = await result.response;
+    res.json({ answer: response.text() || '' });
   } catch (e: any) {
     res.status(500).json({ answer: 'Unable to answer at this time. Please contact the board.', error: e.message });
   }
@@ -763,24 +764,13 @@ app.post('/api/ai/policy', async (req, res) => {
 
 app.post('/api/ai/summarize', async (req, res) => {
   try {
-    const ai = getAI();
+    const genAI = getAI();
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const { content } = req.body;
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            summary: { type: Type.STRING },
-            tags: { type: Type.ARRAY, items: { type: Type.STRING } }
-          },
-          required: ['summary', 'tags']
-        }
-      }
-    });
-    res.json(JSON.parse(response.text || '{}'));
+    
+    const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`);
+    const response = await result.response;
+    res.json(JSON.parse(response.text() || '{"summary": "", "tags": []}'));
   } catch (e: any) {
     res.status(500).json({ summary: '', tags: [], error: e.message });
   }

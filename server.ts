@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import multer from 'multer';
 import * as pdf from 'pdf-parse';
 
@@ -290,7 +290,10 @@ const upload = multer({
   app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) => {
     try {
       const tasks = await prisma.scheduledMaintenance.findMany({
-        where: { unitId: req.params.id },
+        where: {
+          unitId: req.params.id,
+          type: typeof req.query.type === 'string' ? req.query.type : undefined
+        },
         orderBy: { dueDate: 'asc' }
       });
       res.json(tasks);
@@ -454,9 +457,9 @@ const upload = multer({
           status, 
           priority, 
           category, 
-          unitId,
-          notes: notes ? (Array.isArray(notes) ? notes : [notes]) : undefined,
-          expenses: expenses ? (Array.isArray(expenses) ? expenses : [expenses]) : undefined
+          unitId: optionalString(unitId),
+          notes: notes ? (Array.isArray(notes) ? (notes as string[]) : [String(notes)]) : undefined,
+          expenses: expenses ? (Array.isArray(expenses) ? (expenses as string[]) : [String(expenses)]) : undefined
         }
       });
       res.json(request);
@@ -497,18 +500,19 @@ const upload = multer({
 
   app.put('/api/announcements/:id', requireAuth, validateRequest(announcementSchema.partial()), async (req, res) => {
     const body = req.body as Record<string, BodyValue>;
-    const title = ensureString(body.title) as string;
-    const content = ensureString(body.content) as string;
-    const type = ensureString(body.type, 'General') as string;
-    const priority = ensureString(body.priority, 'Normal') as string;
-    const date = ensureString(body.date) as string;
+    const title = optionalString(body.title);
+    const content = optionalString(body.content);
+    const type = optionalString(body.type);
+    const priority = optionalString(body.priority);
+    const date = optionalString(body.date);
+    
     const announcement = await prisma.announcement.update({
       where: { id: req.params.id },
       data: { 
         title, 
         content, 
-        type: type as string, 
-        priority: priority as string, 
+        type, 
+        priority, 
         date 
       }
     });
@@ -583,22 +587,23 @@ const upload = multer({
       let aiTags: string[] = [];
       try {
         console.log('Requesting AI tags...');
-        const ai = getAI();
-        const aiResult = await ai.models.generateContent({
-          model: 'gemini-2.0-flash-lite',
-          contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
-          config: {
+        const genAI = getAI();
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-1.5-flash',
+          generationConfig: {
             responseMimeType: 'application/json',
             responseSchema: {
-              type: Type.OBJECT,
+              type: SchemaType.OBJECT,
               properties: {
-                tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+                tags: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
               },
               required: ['tags']
             }
           }
         });
-        const aiData = JSON.parse(aiResult.text || '{}');
+        const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`);
+        const response = await result.response;
+        const aiData = JSON.parse(response.text() || '{"tags": []}');
         aiTags = aiData.tags || [];
         console.log('AI tags generated successfully.');
       } catch (aiErr: any) {
@@ -632,12 +637,13 @@ const upload = multer({
 
   app.put('/api/documents/:id', requireAuth, async (req, res) => {
     const body = req.body as Record<string, BodyValue>;
-    const title = ensureString(body.title) as string;
-    const category = ensureString(body.category, 'General') as string;
-    const tags = ensureArray(body.tags);
+    const title = optionalString(body.title);
+    const category = optionalString(body.category);
+    const tags = body.tags ? ensureArray(body.tags) : undefined;
+    
     const document = await prisma.document.update({
       where: { id: req.params.id },
-      data: { title, category, tags }
+      data: { title, category, tags: tags ? { set: tags } : undefined }
     });
     res.json(document);
   });
@@ -682,6 +688,7 @@ const upload = multer({
     const time = ensureString(body.time) as string;
     const location = ensureString(body.location) as string;
     const category = ensureString(body.category, 'General') as string;
+    
     const event = await prisma.coopEvent.create({
       data: { title, description, date, time, location, category },
       include: { attendees: true }
@@ -699,7 +706,14 @@ const upload = multer({
     const category = ensureString(body.category, 'General') as string;
     const event = await prisma.coopEvent.update({
       where: { id: req.params.id },
-      data: { title, description, date, time, location, category },
+      data: { 
+        title: optionalString(title),
+        description: optionalString(description),
+        date: optionalString(date),
+        time: optionalString(time),
+        location: optionalString(location),
+        category: optionalString(category)
+      },
       include: { attendees: true }
     });
     res.json(event);
@@ -734,31 +748,32 @@ const upload = multer({
   });
 
   // --- AI Routes ---
-  const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  const getAI = () => new GoogleGenerativeAI(process.env.API_KEY || '');
 
   app.post('/api/ai/triage', requireAuth, async (req, res) => {
     try {
-      const ai = getAI();
-      const body = req.body as Record<string, BodyValue>;
-      const description = ensureString(body.description) as string;
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-lite',
-        contents: [{ role: 'user', parts: [{ text: `Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"` }] }],
-        config: {
+      const genAI = getAI();
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-1.5-flash',
+        generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: {
-            type: Type.OBJECT,
+            type: SchemaType.OBJECT,
             properties: {
-              urgency: { type: Type.STRING },
-              category: { type: Type.STRING },
-              reasoning: { type: Type.STRING }
+              urgency: { type: SchemaType.STRING },
+              category: { type: SchemaType.STRING },
+              reasoning: { type: SchemaType.STRING }
             },
             required: ['urgency', 'category']
           }
         }
       });
-      const aiData = JSON.parse(response.text || '{}');
-      res.json(aiData);
+      
+      const body = req.body as Record<string, BodyValue>;
+      const description = ensureString(body.description) as string;
+      const result = await model.generateContent(`Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`);
+      const response = await result.response;
+      res.json(JSON.parse(response.text() || '{}'));
     } catch (e: any) {
       res.status(500).json({ urgency: 'Medium', category: 'Other', error: e.message });
     }
@@ -766,15 +781,15 @@ const upload = multer({
 
   app.post('/api/ai/policy', requireAuth, async (req, res) => {
     try {
-      const ai = getAI();
+      const genAI = getAI();
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const body = req.body as Record<string, BodyValue>;
       const question = ensureString(body.question) as string;
       const context = ensureString(body.context) as string;
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-lite',
-        contents: [{ role: 'user', parts: [{ text: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}` }] }]
-      });
-      res.json({ answer: response.text || '' });
+      
+      const result = await model.generateContent(`You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}`);
+      const response = await result.response;
+      res.json({ answer: response.text() || '' });
     } catch (e: any) {
       res.status(500).json({ answer: 'Unable to answer at this time. Please contact the board.', error: e.message });
     }
@@ -782,26 +797,16 @@ const upload = multer({
 
   app.post('/api/ai/summarize', requireAuth, async (req, res) => {
     try {
-      const ai = getAI();
+      const genAI = getAI();
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const body = req.body as Record<string, BodyValue>;
       const content = ensureString(body.content) as string;
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-lite',
-        contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              summary: { type: Type.STRING },
-              tags: { type: Type.ARRAY, items: { type: Type.STRING } }
-            },
-            required: ['summary', 'tags']
-          }
-        }
-      });
-      res.json(JSON.parse(response.text || '{}'));
+      
+      const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`);
+      const response = await result.response;
+      res.json(JSON.parse(response.text() || '{"summary": "", "tags": []}'));
     } catch (e: any) {
+      console.error('AI summarization failed:', e);
       res.status(500).json({ summary: '', tags: [], error: e.message });
     }
   });
