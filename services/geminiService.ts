@@ -15,18 +15,50 @@ export const geminiService = {
     }
   },
 
-  async askPolicyQuestion(question: string, context: string) {
-    const res = await fetch('/api/ai/policy', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, context }),
-    });
-    
-    const data = await res.json();
-    if (!res.ok) {
-        throw new Error(data.error || 'Failed to get answer from AI');
+  async askPolicyQuestion(question: string, context: string): Promise<string> {
+    try {
+      const res = await fetch('/api/ai/policy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, context }),
+      });
+      if (!res.ok) return 'Unable to answer at this time. Please contact the board.';
+      const data = await res.json();
+      return data.answer;
+    } catch {
+      return 'Unable to answer at this time. Please contact the board.';
     }
-    return data.answer;
+  },
+
+  /**
+   * RAG-powered policy search.
+   * Embeds the question, retrieves top-K chunks from Supabase pgvector,
+   * then calls Gemini with the retrieved context.
+   */
+  async askPolicyRAG(
+    question: string,
+    coopId: string = 'default',
+    topK: number = 5
+  ): Promise<{ answer: string; sources: { documentId: string; title: string; excerpt: string }[] }> {
+    try {
+      const res = await fetch('/api/policy/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, coopId, topK }),
+      });
+      if (!res.ok) {
+        return {
+          answer: 'Unable to search policy documents at this time. Please contact the board.',
+          sources: [],
+        };
+      }
+      return await res.json();
+    } catch {
+      return {
+        answer: 'Unable to search policy documents at this time. Please contact the board.',
+        sources: [],
+      };
+    }
   },
 
   async summarizeAndTag(content: string) {

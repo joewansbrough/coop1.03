@@ -87,10 +87,12 @@ const ResourceLibrary: React.FC<{
   };
 
   const createPicker = (accessToken: string) => {
-    (window as any).gapi.load('picker', async () => {
-      const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
+    (window as any).gapi.load('picker', () => {
+      const view = new (window as any).google.picker.DocsView(
+        (window as any).google.picker.ViewId.DOCS
+      );
       view.setIncludeFolders(true);
-      
+
       const picker = new (window as any).google.picker.PickerBuilder()
         .addView(view)
         .setOAuthToken(accessToken)
@@ -98,110 +100,53 @@ const ResourceLibrary: React.FC<{
         .setCallback(async (data: any) => {
           if (data.action === (window as any).google.picker.Action.PICKED) {
             const driveDoc = data.docs[0];
-            let extractedContent = '';
 
-            // Attempt to extract text from Google Docs or PDFs
-            if (driveDoc.mimeType === 'application/vnd.google-apps.document' || driveDoc.mimeType === 'application/pdf') {
-              try {
-                const exportUrl = driveDoc.mimeType === 'application/vnd.google-apps.document'
-                  ? `https://www.googleapis.com/drive/v3/files/${driveDoc.id}/export?mimeType=text/plain`
-                  : `https://www.googleapis.com/drive/v3/files/${driveDoc.id}?alt=media`;
-
-                const response = await fetch(exportUrl, {
-                  headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-
-                if (response.ok) {
-                  if (driveDoc.mimeType === 'application/pdf') {
-                    // Extract text from PDF using pdf.js
-                    try {
-                      const pdfBytes = await response.arrayBuffer();
-                      const pdfjsLib = (window as any).pdfjsLib;
-                      if (pdfjsLib) {
-                        pdfjsLib.GlobalWorkerOptions.workerSrc =
-                          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                        const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
-                        const textPages: string[] = [];
-                        for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
-                          const page = await pdf.getPage(i);
-                          const textContent = await page.getTextContent();
-                          textPages.push(textContent.items.map((item: any) => item.str).join(' '));
-                        }
-                        extractedContent = textPages.join('\n\n');
-                      } else {
-                        extractedContent = '[PDF content could not be extracted: pdf.js not loaded]';
-                      }
-                    } catch (pdfErr) {
-                      console.warn('PDF text extraction failed:', pdfErr);
-                      extractedContent = '[PDF content extraction failed]';
-                    }
-                  } else {
-                    extractedContent = await response.text();
-                  }
-                }
-              } catch (err) {
-                console.warn('Could not extract content from Drive file:', err);
-              }
-            }
-
+            // 1. Save document metadata as before
             const newDoc = {
               title: driveDoc.name,
-              category: reviewingDoc?.category || 'Cloud', // Favor user-selected category if available
+              category: 'Cloud' as any,
               url: driveDoc.url,
               fileType: driveDoc.type || 'gdoc',
               author: 'Google Drive',
               date: new Date().toISOString().split('T')[0],
               tags: ['Google Drive', 'Linked'],
-              content: extractedContent || ''
             };
 
             try {
               const res = await fetch('/api/documents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newDoc)
+                body: JSON.stringify(newDoc),
               });
-              
               const saved = await res.json();
-              
-              if (!res.ok) {
-                throw new Error(saved.error || saved.details || `Failed to save document: ${res.status}`);
-              }
-
-              setDocuments(prev => [saved, ...prev]);
+              setDocuments((prev) => [saved, ...prev]);
               setShowUpload(false);
               setUploadMode(null);
               setReviewingDoc(saved);
 
-              // Auto-extract: if we have content, summarize + generate tags and persist them
-              if (extractedContent && extractedContent.trim().length > 0 &&
-                  !extractedContent.includes('[Content is in a Cloud PDF')) {
-                try {
-                  const aiResult = await geminiService.summarizeAndTag(extractedContent);
-                  const aiTags = Array.isArray(aiResult.tags) ? aiResult.tags : [];
-                  const mergedTags = Array.from(new Set([...(saved.tags || []), ...aiTags]));
-
-                  await fetch(`/api/documents/${saved.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      title: saved.title,
-                      category: saved.category,
-                      tags: mergedTags,
-                      content: extractedContent,
-                    }),
-                  });
-
-                  const updatedDoc = { ...saved, tags: mergedTags, content: extractedContent };
-                  setDocuments(prev => prev.map(d => d.id === saved.id ? updatedDoc : d));
-                  setReviewingDoc(updatedDoc);
-                } catch (aiErr) {
-                  console.warn('[AI Extract] Failed to auto-summarize document:', aiErr);
-                }
-              }
-            } catch (err: any) {
+              // 2. Kick off background RAG ingest
+              console.log('[picker] Starting RAG ingest for:', driveDoc.id);
+              fetch('/api/documents/ingest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  fileId: driveDoc.id,
+                  accessToken,
+                  fileName: driveDoc.name,
+                  coopId: 'default',
+                }),
+              })
+                .then((r) => r.json())
+                .then((result) => {
+                  console.log(
+                    `[picker] Ingest complete: ${result.chunksEmbedded}/${result.chunksTotal} chunks embedded`
+                  );
+                })
+                .catch((err) => {
+                  console.error('[picker] Ingest failed (non-blocking):', err);
+                });
+            } catch (err) {
               console.error('Failed to save drive doc:', err);
-              alert(err.message || 'Failed to link document. Please try again.');
             }
           }
         })
@@ -253,10 +198,10 @@ const ResourceLibrary: React.FC<{
 
     const docContext = documents.length > 0
       ? documents.map(d =>
-          `[Document] Title: ${d.title} | Category: ${d.category}` +
-          (d.tags?.length ? ` | Tags: ${d.tags.join(', ')}` : '') +
-          (d.content?.trim() ? `\nContent: ${d.content.substring(0, 3000)}` : ' | (no extracted text)')
-        ).join('\n\n')
+        `[Document] Title: ${d.title} | Category: ${d.category}` +
+        (d.tags?.length ? ` | Tags: ${d.tags.join(', ')}` : '') +
+        (d.content?.trim() ? `\nContent: ${d.content.substring(0, 3000)}` : ' | (no extracted text)')
+      ).join('\n\n')
       : 'No documents in the library.';
     const context = `DOCUMENT CONTEXT:\n${docContext}`;
 
@@ -500,8 +445,8 @@ const ResourceLibrary: React.FC<{
                         key={tag}
                         onClick={(e) => handleTagClick(tag, e)}
                         className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter transition-all ${filter === tag
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-600'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-600'
                           }`}
                       >
                         #{tag}
@@ -514,8 +459,8 @@ const ResourceLibrary: React.FC<{
                   <button
                     onClick={(e) => handleCategoryClick(doc.category, e)}
                     className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest border transition-all ${filter === doc.category
-                        ? 'bg-emerald-600 text-white border-emerald-600'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-white/5 hover:border-emerald-300'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-white/5 hover:border-emerald-300'
                       }`}
                   >
                     {doc.category}
@@ -585,11 +530,11 @@ const ResourceLibrary: React.FC<{
                 <div className="space-y-6">
                   <div className="h-[400px] bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-white/10 rounded-[2rem] flex flex-col items-center justify-center text-center p-12">
                     <div className={`w-20 h-20 ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-500/10 text-blue-500' : 'bg-emerald-500/10 text-emerald-500'} rounded-3xl flex items-center justify-center mb-6`}>
-                       <i className={`fa-solid ${reviewingDoc.url?.includes('drive.google.com') ? 'fa-brands fa-google-drive' : 'fa-file-shield'} text-3xl`}></i>
+                      <i className={`fa-solid ${reviewingDoc.url?.includes('drive.google.com') ? 'fa-brands fa-google-drive' : 'fa-file-shield'} text-3xl`}></i>
                     </div>
                     <h4 className="text-lg font-black text-slate-800 dark:text-white mb-2 uppercase tracking-tight">Streamlined Metadata View</h4>
                     <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-xs">Association documents are now stored externally. Managing metadata below will update the searchable archive.</p>
-                    <button 
+                    <button
                       onClick={() => handleViewDoc(reviewingDoc)}
                       className={`mt-8 ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-black'} px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all`}
                     >

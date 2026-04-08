@@ -25,6 +25,7 @@ export const announcementSchema = z.object({
   author: z.string().email("Invalid email"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
 });
+
 export const tenantSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
@@ -34,4 +35,19 @@ export const tenantSchema = z.object({
   role: z.enum(['ADMIN', 'MEMBER']).default('MEMBER'),
   unitId: z.string().uuid().optional().nullable(),
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+});
+
+// --- RAG / Document Ingest ---
+
+export const ingestDocumentSchema = z.object({
+  fileId: z.string().min(1, "Google Drive fileId is required"),
+  accessToken: z.string().min(1, "OAuth access token is required"),
+  fileName: z.string().optional(),
+  coopId: z.string().optional().default("default"),
+});
+
+export const policySearchSchema = z.object({
+  question: z.string().min(3, "Question must be at least 3 characters"),
+  coopId: z.string().optional().default("default"),
+  topK: z.number().int().min(1).max(20).optional().default(5),
 });

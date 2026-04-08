@@ -1,89 +1,73 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
 }
-
-enum MaintenanceFrequency {
-       MONTHLY
-       QUARTERLY
-       ANNUAL
-     }
-
-     enum MaintenanceCategory {
-       PLUMBING
-       ELECTRICAL
-       HVAC
-       SAFETY
-       GENERAL
-       OTHER // Added 'Other' to match the error message's suggestion
-     }
 
 model Unit {
   id                String               @id @default(uuid())
   number            String               @unique
-  type              String               // e.g., "1BR", "2BR", "3BR"
+  type              String
   floor             Int                  @default(1)
-  status            String               // e.g., "Occupied", "Vacant", "Maintenance"
+  status            String
   currentTenantId   String?              @unique
   currentTenant     Tenant?              @relation("CurrentResident", fields: [currentTenantId], references: [id])
   maintenanceHistory MaintenanceRequest[]
   occupancyHistory   TenantHistory[]
+  scheduledTasks     ScheduledMaintenance[] @relation("ScheduledTasks")
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
-  scheduledTasks ScheduledMaintenance[] @relation("ScheduledTasks")
 }
 
 model Tenant {
-  id            String          @id @default(uuid())
-  firstName     String
-  lastName      String
-  email         String          @unique
-  phone         String?
-  startDate     String          // Renamed from moveInDate to match UI
-  status        String          @default("Current") // e.g., "Current", "Past", "Waitlist"
-  role          String          @default("MEMBER")  // "ADMIN" or "MEMBER"
-  unitId        String?
-  unit          Unit?           @relation("CurrentResident")
-  committees    Committee[]     @relation("CommitteeMembers")
-  events        CoopEvent[]     @relation("EventAttendees")
-  history       TenantHistory[]
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id        String          @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String          @unique
+  phone     String?
+  startDate String
+  status    String          @default("Current")
+  role      String          @default("MEMBER")
+  unitId    String?
+  unit      Unit?           @relation("CurrentResident")
+  committees Committee[]    @relation("CommitteeMembers")
+  events    CoopEvent[]     @relation("EventAttendees")
+  history   TenantHistory[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 }
 
 model TenantHistory {
-  id          String   @id @default(uuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  unitId      String
-  unit        Unit     @relation(fields: [unitId], references: [id])
-  startDate   DateTime
-  endDate     DateTime?
-  moveReason  String?
-  createdAt   DateTime @default(now())
+  id         String    @id @default(uuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+  unitId     String
+  unit       Unit      @relation(fields: [unitId], references: [id])
+  startDate  DateTime
+  endDate    DateTime?
+  moveReason String?
+  createdAt  DateTime  @default(now())
 }
 
 model MaintenanceRequest {
   id          String   @id @default(uuid())
   title       String
   description String
-  status      String   // "Pending", "In Progress", "Completed"
-  priority    String   // "Low", "Medium", "High", "Urgent"
+  status      String
+  priority    String
   category    String   @default("General")
   unitId      String
   unit        Unit     @relation(fields: [unitId], references: [id])
-  tenantId    String?  // Added to match UI
-  requestedBy String?  // Email of the tenant who requested
-  notes       Json?    // Array of MaintenanceNote
-  expenses    Json?    // Array of MaintenanceExpense
+  tenantId    String?
+  requestedBy String?
+  notes       Json?
+  expenses    Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -92,27 +76,40 @@ model Announcement {
   id        String   @id @default(uuid())
   title     String
   content   String
-  type      String   // "General", "Urgent", "Maintenance"
+  type      String
   priority  String   @default("Normal")
-  author    String   // Email of the admin
-  date      String   // Added to match UI
+  author    String
+  date      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Document {
-  id        String   @id @default(uuid())
+  id        String          @id @default(uuid())
   title     String
   category  String
-  committee String?  @default("")
+  committee String?         @default("")
   url       String
   fileType  String
-  author    String   @default("Admin")
+  author    String          @default("Admin")
   date      String
-  tags      String[] @default([])
-  content   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  tags      String[]        @default([])
+  chunks    DocumentChunk[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+/// One semantic chunk from a Document, stored with its embedding vector
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  coopId     String   @default("default")
+  content    String
+  chunkIndex Int
+  /// 768-dimensional embedding from text-embedding-004
+  embedding  Unsupported("vector(768)")?
+  createdAt  DateTime @default(now())
 }
 
 model CoopEvent {
@@ -122,12 +119,11 @@ model CoopEvent {
   date        String
   time        String
   location    String
-  category    String   // "Meeting", "Social", "Maintenance", "Board"
+  category    String
   attendees   Tenant[] @relation("EventAttendees")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
-
 
 model Committee {
   id          String   @id @default(uuid())
@@ -146,7 +142,7 @@ model ScheduledMaintenance {
   unit          Unit     @relation("ScheduledTasks", fields: [unitId], references: [id], onDelete: Cascade)
   task          String
   description   String?
-  frequency     MaintenanceFrequency //use the defined enum
+  frequency     String
   dueDate       String
   lastCompleted String?
   assignedTo    String
@@ -154,5 +150,4 @@ model ScheduledMaintenance {
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  category      MaintenanceCategory //use the defined enum
 }
