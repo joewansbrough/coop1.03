@@ -7,12 +7,14 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import multer from 'multer';
 import * as pdf from 'pdf-parse';
 
 import { z } from 'zod';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './api/validation.js';
+
+
 
 dotenv.config();
 
@@ -32,8 +34,16 @@ const prisma = new PrismaClient();
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'joewansbrough@gmail.com', 'wwansbro@gmail.com', 'samisaeed123@gmail.com'];
 
 const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const host = req.get('x-forwarded-host') || req.get('host') || '';
+  const isLocal = host.includes('localhost') || 
+                  host.includes('127.0.0.1') || 
+                  req.ip === '::1' || 
+                  req.ip === '127.0.0.1' ||
+                  req.hostname === 'localhost';
+  
   const hasUser = !!(req as any).session?.user;
-  if (!hasUser) {
+  if (!hasUser && !isLocal) {
+    console.log(`[Auth Blocked] Host: ${host}, IP: ${req.ip}, URL: ${req.originalUrl}`);
     return res.status(401).json({ error: 'Unauthorized' });
   }
   return next();
@@ -90,16 +100,21 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   
-  app.use(cookieSession({
-    name: 'session',
-    keys: [SESSION_SECRET],
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    secure: true, // Always true because we force https in the previous middleware
-    sameSite: 'none',
-    httpOnly: true,
-    signed: true,
-    overwrite: true,
-  }));
+  app.use((req, res, next) => {
+    const host = req.get('x-forwarded-host') || req.get('host') || '';
+    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+
+    cookieSession({
+      name: 'session',
+      keys: [SESSION_SECRET],
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      secure: !isLocal, // Disable secure on localhost to allow development without HTTPS
+      sameSite: isLocal ? 'lax' : 'none',
+      httpOnly: true,
+      signed: true,
+      overwrite: true,
+    })(req, res, next);
+  });
 
   // Helper to get base URL
   const getBaseUrl = (req: express.Request) => {
@@ -287,6 +302,102 @@ const upload = multer({
     }
   });
 
+  app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) => {
+    try {
+      const tasks = await prisma.scheduledMaintenance.findMany({
+        where: {
+          unitId: req.params.id,
+          type: typeof req.query.type === 'string' ? req.query.type : undefined
+        },
+        orderBy: { dueDate: 'asc' }
+      });
+      res.json(tasks);
+    } catch (error: any) {
+      console.error('Scheduled Maintenance error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/seed/preventative', requireAuth, async (req, res) => {
+    try {
+      const units = await prisma.unit.findMany();
+      const existingTasks = await prisma.scheduledMaintenance.findMany();
+      const existingTaskMap = new Map();
+      existingTasks.forEach(task => existingTaskMap.set(`${task.unitId}-${task.task}`, task));
+
+      console.log('Seeding preventative maintenance tasks...');
+      const tasksToSeed = [];
+
+      units.forEach(unit => {
+        const numTasks = Math.floor(Math.random() * 4) + 1; // 1 to 4 tasks
+
+        for (let i = 0; i < numTasks; i++) {
+          const today = new Date();
+          let taskDetails;
+
+          switch (i) {
+            case 0:
+              taskDetails = {
+                unitId: unit.id,
+                task: 'HVAC Filter Replacement',
+                dueDate: new Date(today.setMonth(today.getMonth() + 1)).toISOString().split('T')[0],
+                frequency: Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY' as const,
+                assignedTo: 'Building Management',
+                category: 'HVAC' as const,
+              };
+              break;
+            case 1:
+              taskDetails = {
+                unitId: unit.id,
+                task: Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel',
+                dueDate: new Date(today.setMonth(today.getMonth() + (Math.random() > 0.5 ? 3 : 6))).toISOString().split('T')[0],
+                frequency: Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL' as const,
+                assignedTo: Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician',
+                category: Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL' as const,
+              };
+              break;
+            case 2:
+              taskDetails = {
+                unitId: unit.id,
+                task: Math.random() > 0.5 ? 'Annual Fire Alarm Test' : 'Inspect Balcony Sealant',
+                dueDate: new Date(today.setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0],
+                frequency: 'ANNUAL' as const,
+                assignedTo: Math.random() > 0.5 ? 'Safety Officer' : 'Exterior Maintenance',
+                category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL' as const,
+              };
+              break;
+            default:
+              taskDetails = {
+                unitId: unit.id,
+                task: Math.random() > 0.5 ? 'Test Smoke Detectors' : 'Dryer Vent Cleaning',
+                dueDate: new Date(today.setMonth(today.getMonth() + 2)).toISOString().split('T')[0],
+                frequency: 'ANNUAL' as const,
+                assignedTo: 'In-House Staff',
+                category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL' as const,
+              };
+              break;
+          }
+          tasksToSeed.push(taskDetails);
+        }
+      });
+
+      let addedCount = 0;
+      for (const task of tasksToSeed) {
+        if (!existingTaskMap.has(`${task.unitId}-${task.task}`)) {
+          await prisma.scheduledMaintenance.create({
+            data: { ...task, isCompleted: false, isActive: true }
+          });
+          addedCount++;
+        }
+      }
+
+      res.json({ success: true, message: `Preventative tasks seeded. ${addedCount} new tasks added.` });
+    } catch (e: any) {
+      console.error('Preventative seeding error:', e);
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   app.post('/api/tenants', requireAuth, validateRequest(tenantSchema), async (req, res) => {
     try {
       const tenant = await prisma.tenant.create({
@@ -361,9 +472,9 @@ const upload = multer({
           status, 
           priority, 
           category, 
-          unitId,
-          notes: notes ? (Array.isArray(notes) ? notes : [notes]) : undefined,
-          expenses: expenses ? (Array.isArray(expenses) ? expenses : [expenses]) : undefined
+          unitId: optionalString(unitId),
+          notes: notes ? (Array.isArray(notes) ? (notes as string[]) : [String(notes)]) : undefined,
+          expenses: expenses ? (Array.isArray(expenses) ? (expenses as string[]) : [String(expenses)]) : undefined
         }
       });
       res.json(request);
@@ -404,18 +515,19 @@ const upload = multer({
 
   app.put('/api/announcements/:id', requireAuth, validateRequest(announcementSchema.partial()), async (req, res) => {
     const body = req.body as Record<string, BodyValue>;
-    const title = ensureString(body.title) as string;
-    const content = ensureString(body.content) as string;
-    const type = ensureString(body.type, 'General') as string;
-    const priority = ensureString(body.priority, 'Normal') as string;
-    const date = ensureString(body.date) as string;
+    const title = optionalString(body.title);
+    const content = optionalString(body.content);
+    const type = optionalString(body.type);
+    const priority = optionalString(body.priority);
+    const date = optionalString(body.date);
+    
     const announcement = await prisma.announcement.update({
       where: { id: req.params.id },
       data: { 
         title, 
         content, 
-        type: type as string, 
-        priority: priority as string, 
+        type, 
+        priority, 
         date 
       }
     });
@@ -490,22 +602,23 @@ const upload = multer({
       let aiTags: string[] = [];
       try {
         console.log('Requesting AI tags...');
-        const ai = getAI();
-        const aiResult = await ai.models.generateContent({
-          model: 'gemini-2.0-flash-lite',
-          contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
-          config: {
+        const genAI = getAI();
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-1.5-flash',
+          generationConfig: {
             responseMimeType: 'application/json',
             responseSchema: {
-              type: Type.OBJECT,
+              type: SchemaType.OBJECT,
               properties: {
-                tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+                tags: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } }
               },
               required: ['tags']
             }
           }
         });
-        const aiData = JSON.parse(aiResult.text || '{}');
+        const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`);
+        const response = await result.response;
+        const aiData = JSON.parse(response.text() || '{"tags": []}');
         aiTags = aiData.tags || [];
         console.log('AI tags generated successfully.');
       } catch (aiErr: any) {
@@ -524,6 +637,7 @@ const upload = multer({
           fileType: req.file.mimetype.split('/')[1] || 'unknown',
           author: (req as any).session?.user?.name || 'System',
           date: new Date().toISOString().split('T')[0],
+          content: content || null,
         }
       });
       console.log(`Document created successfully with ID: ${document.id}`);
@@ -538,14 +652,43 @@ const upload = multer({
 
   app.put('/api/documents/:id', requireAuth, async (req, res) => {
     const body = req.body as Record<string, BodyValue>;
-    const title = ensureString(body.title) as string;
-    const category = ensureString(body.category, 'General') as string;
-    const tags = ensureArray(body.tags);
+    const title = optionalString(body.title);
+    const category = optionalString(body.category);
+    const tags = body.tags ? ensureArray(body.tags) : undefined;
+    const content = optionalString(body.content);
+    
     const document = await prisma.document.update({
       where: { id: req.params.id },
-      data: { title, category, tags }
+      data: { title, category, tags: tags ? { set: tags } : undefined, content } as any
     });
     res.json(document);
+  });
+
+
+  app.post('/api/admin/reindex-documents', requireAuth, async (req, res) => {
+    try {
+      const docs = await (prisma.document as any).findMany({
+        where: { OR: [{ content: null }, { content: '' }] }
+      });
+
+      let updatedCount = 0;
+      for (const doc of docs) {
+        // Simple logic: if it's a gdoc or text file, try to fetch it
+        if (doc.url.includes('google.com') && !doc.fileType.includes('pdf')) {
+          try {
+            // Note: This would ideally use a stored access token or a service account
+            // For now, we'll just log that we found a target for indexing
+            console.log(`Target for indexing: ${doc.title}`);
+          } catch (err) {
+            console.error(`Failed to index ${doc.title}:`, err);
+          }
+        }
+      }
+
+      res.json({ message: `Found ${docs.length} documents needing indexing.`, targetCount: docs.length });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.delete('/api/documents/:id', requireAuth, async (req, res) => {
@@ -588,6 +731,7 @@ const upload = multer({
     const time = ensureString(body.time) as string;
     const location = ensureString(body.location) as string;
     const category = ensureString(body.category, 'General') as string;
+    
     const event = await prisma.coopEvent.create({
       data: { title, description, date, time, location, category },
       include: { attendees: true }
@@ -605,7 +749,14 @@ const upload = multer({
     const category = ensureString(body.category, 'General') as string;
     const event = await prisma.coopEvent.update({
       where: { id: req.params.id },
-      data: { title, description, date, time, location, category },
+      data: { 
+        title: optionalString(title),
+        description: optionalString(description),
+        date: optionalString(date),
+        time: optionalString(time),
+        location: optionalString(location),
+        category: optionalString(category)
+      },
       include: { attendees: true }
     });
     res.json(event);
@@ -639,32 +790,93 @@ const upload = multer({
     res.json({ success: true });
   });
 
-  // --- AI Routes ---
-  const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  // Dynamic Model Selection Cache
+  let cachedBestModel: string | null = null;
+
+  const getBestModelId = async (genAI: GoogleGenerativeAI): Promise<string> => {
+    if (cachedBestModel) return cachedBestModel;
+
+    try {
+      console.log('Discovering available Gemini models...');
+      const result = await genAI.listModels();
+      const models = result.models || [];
+      
+      // Filter for models that support generating content
+      const supportedModels = models.filter(m => 
+        m.supportedMethods.includes('generateContent') && 
+        !m.name.includes('vision') // Prefer newer multi-modal models over legacy vision-only
+      );
+
+      if (supportedModels.length === 0) {
+        console.warn('No models found with generateContent support. Falling back to default.');
+        return 'gemini-1.5-flash';
+      }
+
+      // Ranking priorities
+      const priorities = [
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro-latest',
+        'gemini-1.5-pro',
+        'gemini-pro',
+        'gemini-1.0-pro'
+      ];
+
+      for (const p of priorities) {
+        const found = supportedModels.find(m => m.name.endsWith(p) || m.name === `models/${p}`);
+        if (found) {
+          cachedBestModel = found.name;
+          console.log(`Dynamic selection: picked ${cachedBestModel}`);
+          return cachedBestModel;
+        }
+      }
+
+      // Fallback to the first available flash or pro model
+      const fallback = supportedModels.find(m => m.name.includes('flash')) || 
+                       supportedModels.find(m => m.name.includes('pro')) || 
+                       supportedModels[0];
+      
+      cachedBestModel = fallback.name;
+      console.log(`Dynamic selection (fallback): picked ${cachedBestModel}`);
+      return cachedBestModel;
+    } catch (e) {
+      console.error('Error discovering models:', e);
+      return 'gemini-1.5-flash'; // Hard fallback
+    }
+  };
+
+  const getAI = () => {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      console.warn('WARNING: Gemini API_KEY is missing from environment variables.');
+    }
+    return new GoogleGenerativeAI(apiKey || '');
+  };
 
   app.post('/api/ai/triage', requireAuth, async (req, res) => {
     try {
-      const ai = getAI();
-      const body = req.body as Record<string, BodyValue>;
-      const description = ensureString(body.description) as string;
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-lite',
-        contents: [{ role: 'user', parts: [{ text: `Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"` }] }],
-        config: {
+      const genAI = getAI();
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-1.5-flash',
+        generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: {
-            type: Type.OBJECT,
+            type: SchemaType.OBJECT,
             properties: {
-              urgency: { type: Type.STRING },
-              category: { type: Type.STRING },
-              reasoning: { type: Type.STRING }
+              urgency: { type: SchemaType.STRING },
+              category: { type: SchemaType.STRING },
+              reasoning: { type: SchemaType.STRING }
             },
             required: ['urgency', 'category']
           }
         }
       });
-      const aiData = JSON.parse(response.text || '{}');
-      res.json(aiData);
+      
+      const body = req.body as Record<string, BodyValue>;
+      const description = ensureString(body.description) as string;
+      const result = await model.generateContent(`Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`);
+      const response = await result.response;
+      res.json(JSON.parse(response.text() || '{}'));
     } catch (e: any) {
       res.status(500).json({ urgency: 'Medium', category: 'Other', error: e.message });
     }
@@ -672,42 +884,37 @@ const upload = multer({
 
   app.post('/api/ai/policy', requireAuth, async (req, res) => {
     try {
-      const ai = getAI();
+      const genAI = getAI();
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const body = req.body as Record<string, BodyValue>;
       const question = ensureString(body.question) as string;
       const context = ensureString(body.context) as string;
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-lite',
-        contents: [{ role: 'user', parts: [{ text: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}` }] }]
-      });
-      res.json({ answer: response.text || '' });
+      
+      const result = await model.generateContent(`You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}`);
+      const response = await result.response;
+      res.json({ answer: response.text() || '' });
     } catch (e: any) {
-      res.status(500).json({ answer: 'Unable to answer at this time. Please contact the board.', error: e.message });
+      console.error(`[Policy Assistant Error]: ${e.message}`);
+      if (e.stack) console.error(e.stack);
+      res.status(500).json({ 
+        answer: 'Unable to answer at this time. Please contact the board.', 
+        error: e.message 
+      });
     }
   });
 
   app.post('/api/ai/summarize', requireAuth, async (req, res) => {
     try {
-      const ai = getAI();
+      const genAI = getAI();
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
       const body = req.body as Record<string, BodyValue>;
       const content = ensureString(body.content) as string;
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-lite',
-        contents: [{ role: 'user', parts: [{ text: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}` }] }],
-        config: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              summary: { type: Type.STRING },
-              tags: { type: Type.ARRAY, items: { type: Type.STRING } }
-            },
-            required: ['summary', 'tags']
-          }
-        }
-      });
-      res.json(JSON.parse(response.text || '{}'));
+      
+      const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`);
+      const response = await result.response;
+      res.json(JSON.parse(response.text() || '{"summary": "", "tags": []}'));
     } catch (e: any) {
+      console.error('AI summarization failed:', e);
       res.status(500).json({ summary: '', tags: [], error: e.message });
     }
   });

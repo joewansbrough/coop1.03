@@ -193,7 +193,8 @@ export interface ScheduledMaintenance {
   unitId: string;
   task: string;
   dueDate: string;
-  frequency: 'Monthly' | 'Quarterly' | 'Annual';
+  frequency: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL';
   assignedTo: string;
   isCompleted?: boolean;
+  category: 'PLUMBING' | 'ELECTRICAL' | 'HVAC' | 'SAFETY' | 'GENERAL' | 'OTHER';
 }

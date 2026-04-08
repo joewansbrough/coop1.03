@@ -3,9 +3,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bot, Send, User, Sparkles, Shield, MessageSquare, ChevronRight, Info } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
-import { Document } from '../types';
+import { Document, Announcement } from '../types';
 
-const PolicyAssistant: React.FC<{ documents: Document[] }> = ({ documents }) => {
+const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announcement[] }> = ({ documents, announcements }) => {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
     {
       role: 'assistant',
@@ -33,13 +33,18 @@ const PolicyAssistant: React.FC<{ documents: Document[] }> = ({ documents }) => 
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
-    // Prepare context from policy documents - match both 'Policy' and 'Policies' categories
-    const policyDocs = documents.filter(d =>
-      d.category === 'Policy' || d.category === 'Policies' || d.category === 'Bylaws'
+    // Prepare context from all documents that have text content
+    const searchableDocs = documents.filter(d => 
+      d.content && d.content.trim().length > 0
     );
-    const docContext = policyDocs.length > 0
-      ? policyDocs.map(d => 'Document: ' + d.title + '\nContent: ' + (d.content || '(Full text not available)')).join('\n\n')
-      : 'No local policy documents currently have extracted text content.';
+    const docContext = searchableDocs.length > 0
+      ? searchableDocs.map(d => `[Document] Title: ${d.title} | Category: ${d.category}\nContent: ${d.content}`).join('\n\n')
+      : 'No documents currently have extracted text content.';
+
+    // Prepare context from announcements
+    const announcementContext = announcements.length > 0
+      ? announcements.map(a => `[Announcement] Title: ${a.title} | Type: ${a.type} | Date: ${a.date}\nContent: ${a.content}`).join('\n\n')
+      : 'No recent announcements available.';
 
     const generalContext = [
       'BC Co-op Housing Context:',
@@ -55,13 +60,15 @@ const PolicyAssistant: React.FC<{ documents: Document[] }> = ({ documents }) => 
       '- The reserve fund must be maintained per a professional reserve fund study',
     ].join('\n');
 
-    const fullContext = docContext + '\n\n' + generalContext;
+    const fullContext = `DOCUMENT CONTEXT:\n${docContext}\n\nANNOUNCEMENT CONTEXT:\n${announcementContext}\n\nCO-OP PRINCIPLES:\n${generalContext}`;
 
     try {
       const response = await geminiService.askPolicyQuestion(userMessage, fullContext);
       setMessages(prev => [...prev, { role: 'assistant', content: response || "I'm sorry, I couldn't process that request." }]);
-    } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "I encountered an error while trying to find an answer. Please try again later or contact the board." }]);
+    } catch (error: any) {
+      console.error('Policy Assistant Error:', error);
+      const errorMessage = error.message || "I encountered an error while trying to find an answer.";
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${errorMessage}. Please check your connection or contact the board.` }]);
     } finally {
       setIsLoading(false);
     }

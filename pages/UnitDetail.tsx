@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { RequestStatus, Unit, Tenant, MaintenanceRequest } from '../types';
+import { RequestStatus, Unit, Tenant, MaintenanceRequest, Document, ScheduledMaintenance } from '../types';
 
 interface UnitDetailProps {
   isAdmin?: boolean;
@@ -10,9 +10,11 @@ interface UnitDetailProps {
   tenants: Tenant[];
   setTenants: React.Dispatch<React.SetStateAction<Tenant[]>>;
   requests: MaintenanceRequest[];
+  setRequests: React.Dispatch<React.SetStateAction<MaintenanceRequest[]>>;
+  documents: Document[];
 }
 
-const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnits, tenants, setTenants, requests: allRequests }) => {
+const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnits, tenants, setTenants, requests: allRequests, setRequests, documents = [] }) => {
   const { unitId } = useParams<{ unitId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,6 +30,14 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
     ]);
     setUnits(freshUnits);
     setTenants(freshTenants);
+
+    if (unitId) {
+      const tasksRes = await fetch(`/api/units/${unitId}/scheduled-maintenance`);
+      if (tasksRes.ok) {
+        const freshTasks = await tasksRes.json();
+        setScheduledTasks(freshTasks);
+      }
+    }
   };
   const unit = units.find(u => u.id === unitId);
   const currentResidents = tenants.filter(t => t.unitId === unitId && t.status === 'Current');
@@ -61,12 +71,112 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   const activeRequests = requests.filter(r => r.status === RequestStatus.PENDING || r.status === RequestStatus.IN_PROGRESS);
   const historicalRequests = requests.filter(r => r.status === RequestStatus.COMPLETED || r.status === RequestStatus.CANCELLED);
   
-  const scheduledTasks: any[] = []; // Scheduled tasks not yet in shared state
+  const [scheduledTasks, setScheduledTasks] = useState<ScheduledMaintenance[]>([]);
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'maintenance' | 'schedule' | 'occupancy' | 'history' | 'layout'>('overview');
+  const unitDocs = documents.filter(doc => doc.tags?.includes(`Unit ${unit?.number}`));
+  
+  const [activeTab, setActiveTab] = useState<'overview' | 'maintenance' | 'schedule' | 'occupancy' | 'history' | 'layout' | 'documents'>('overview');
   const [showUpload, setShowUpload] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+  
+  // Google Drive integration states
+  const [isScriptsReady, setIsScriptsReady] = useState(false);
+  const [config, setConfig] = useState<{ googleClientId: string; googleApiKey: string } | null>(null);
+
+  useEffect(() => {
+    // Fetch Google Config
+    fetch('/api/config')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setConfig(data))
+      .catch(err => console.error('Failed to load Google config:', err));
+
+    // Poll for Google Scripts
+    const checkScripts = setInterval(() => {
+      if ((window as any).google?.accounts?.oauth2 && (window as any).gapi) {
+        setIsScriptsReady(true);
+        clearInterval(checkScripts);
+      }
+    }, 500);
+
+    return () => clearInterval(checkScripts);
+  }, []);
+
+  useEffect(() => {
+    if (unitId) {
+      fetch(`/api/units/${unitId}/scheduled-maintenance`)
+        .then(res => res.ok ? res.json() : [])
+        .then(data => setScheduledTasks(data))
+        .catch(err => console.error('Failed to load scheduled tasks:', err));
+    }
+  }, [unitId]);
+
+  const handleOpenPicker = () => {
+    if (!config?.googleClientId || !config?.googleApiKey) {
+      alert(`Missing Google Configuration. Please check your environment variables.`);
+      return;
+    }
+
+    try {
+      const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+        client_id: config.googleClientId,
+        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        callback: (response: any) => {
+          if (response.error !== undefined) return;
+          createPicker(response.access_token);
+        },
+      });
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    } catch (err) {
+      console.error('Picker error:', err);
+    }
+  };
+
+  const createPicker = (accessToken: string) => {
+    (window as any).gapi.load('picker', () => {
+      const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
+      view.setIncludeFolders(true);
+      
+      const picker = new (window as any).google.picker.PickerBuilder()
+        .addView(view)
+        .setOAuthToken(accessToken)
+        .setDeveloperKey(config?.googleApiKey)
+        .setCallback(async (data: any) => {
+          if (data.action === (window as any).google.picker.Action.PICKED) {
+            const driveDoc = data.docs[0];
+            const newDoc = {
+              title: driveDoc.name,
+              category: 'Unit' as any,
+              url: driveDoc.url,
+              fileType: driveDoc.type || 'gdoc',
+              author: 'Google Drive',
+              date: new Date().toISOString().split('T')[0],
+              tags: ['Google Drive', 'Linked', `Unit ${unit?.number}`]
+            };
+
+            try {
+              const res = await fetch('/api/documents', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newDoc)
+              });
+              if (res.ok) {
+                setNotification({ message: 'Document linked successfully from Google Drive.', type: 'success' });
+                setShowUpload(false);
+                setTimeout(() => setNotification(null), 5000);
+              } else {
+                throw new Error('Failed to save document reference');
+              }
+            } catch (err) {
+              console.error('Failed to save drive doc:', err);
+              setNotification({ message: 'Failed to link document.', type: 'error' });
+            }
+          }
+        })
+        .build();
+      picker.setVisible(true);
+    });
+  };
   
   // Turnover State
   const [showMoveInModal, setShowMoveInModal] = useState(false);
@@ -213,6 +323,28 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
     }
   };
 
+  const handleSeedPreventative = async () => {
+    try {
+      const res = await fetch('/api/seed/preventative');
+      if (res.ok) {
+        setNotification({ message: 'Preventative maintenance tasks seeded for all units.', type: 'success' });
+        setTimeout(() => setNotification(null), 5000);
+        // Reload tasks for current unit
+        const tasksRes = await fetch(`/api/units/${unitId}/scheduled-maintenance`);
+        if (tasksRes.ok) {
+          const freshTasks = await tasksRes.json();
+          setScheduledTasks(freshTasks);
+        }
+      } else {
+        throw new Error('Failed to seed tasks');
+      }
+    } catch (err) {
+      console.error(err);
+      setNotification({ message: 'Failed to seed preventative tasks.', type: 'error' });
+      setTimeout(() => setNotification(null), 5000);
+    }
+  };
+
   const handleTransfer = async () => {
     console.log("handleTransfer triggered", { unit, primaryResident, selectedTargetUnitId });
     if (!unit || !selectedTargetUnitId) return;
@@ -284,7 +416,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get('tab');
-    if (tabParam && ['overview', 'maintenance', 'schedule', 'occupancy', 'history', 'layout'].includes(tabParam)) {
+    if (tabParam && ['overview', 'maintenance', 'schedule', 'occupancy', 'history', 'layout', 'documents'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
   }, [location]);
@@ -452,9 +584,9 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
           {isAdmin && (
             <button 
               onClick={() => setShowUpload(!showUpload)}
-              className="flex-1 md:flex-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300 px-4 py-2.5 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+              className={`flex-1 md:flex-none ${showUpload ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-white/5 text-slate-700 dark:text-slate-300'} border px-4 py-2.5 rounded-xl font-bold hover:bg-blue-50 dark:hover:bg-slate-700 transition-all active:scale-95 flex items-center justify-center gap-2`}
             >
-              <i className="fa-solid fa-cloud-arrow-up"></i> <span>Document</span>
+              <i className="fa-brands fa-google-drive"></i> <span>Document</span>
             </button>
           )}
           {isAdmin && (
@@ -515,21 +647,29 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
       )}
 
       {showUpload && (
-        <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 p-6 rounded-3xl animate-in fade-in slide-in-from-top-4">
+        <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 p-6 rounded-3xl animate-in fade-in slide-in-from-top-4">
           <div className="flex justify-between items-center mb-4">
-            <h4 className="font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-2">
-              <i className="fa-solid fa-file-circle-plus"></i> Upload Document for Unit {unit.number}
+            <h4 className="font-bold text-blue-800 dark:text-blue-400 flex items-center gap-2 text-sm uppercase tracking-widest">
+              <i className="fa-brands fa-google-drive"></i> Link Document from Cloud
             </h4>
-            <button onClick={() => setShowUpload(false)} className="text-emerald-600"><i className="fa-solid fa-times"></i></button>
+            <button onClick={() => setShowUpload(false)} className="text-blue-600 hover:text-blue-800 transition-colors">
+              <i className="fa-solid fa-times"></i>
+            </button>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-             <input type="file" className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700" />
-             <select className="bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2 text-sm outline-none w-full sm:w-auto">
-                <option>Lease Agreement</option>
-                <option>Inspection Report</option>
-                <option>Maintenance Receipt</option>
-             </select>
-             <button className="bg-emerald-800 text-white px-6 py-2 rounded-xl text-sm font-bold w-full sm:w-auto">Upload</button>
+          <div className="flex flex-col md:flex-row gap-6 items-center">
+             <div className="flex-1">
+               <p className="text-xs text-blue-700 dark:text-blue-400 font-bold mb-1">Select file for Unit {unit.number}</p>
+               <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                 Choose a lease, inspection, or maintenance record from Google Drive. It will be tagged and searchable in the Resource Library.
+               </p>
+             </div>
+             <button 
+               onClick={handleOpenPicker}
+               className="w-full md:w-auto bg-blue-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
+             >
+               <i className="fa-brands fa-google-drive text-sm"></i>
+               Open Google Picker
+             </button>
           </div>
         </div>
       )}
@@ -541,6 +681,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
           { id: 'schedule', label: 'Preventative' },
           { id: 'occupancy', label: 'Members' },
           { id: 'history', label: 'Tenant History' },
+          { id: 'documents', label: 'Documents' },
           { id: 'layout', label: 'Layout' }
         ].map(tab => (
           <button 
@@ -557,6 +698,52 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
       </nav>
 
       <div className="animate-in fade-in duration-300">
+        {activeTab === 'documents' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center px-2">
+              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Linked Unit Documents</h3>
+              {isAdmin && (
+                <button 
+                  onClick={() => setShowUpload(true)}
+                  className="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                >
+                  <i className="fa-brands fa-google-drive"></i> Add from Drive
+                </button>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {unitDocs.length > 0 ? unitDocs.map(doc => (
+                <div key={doc.id} className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-blue-500/30 transition-all group">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center text-blue-600">
+                      <i className={`fa-solid ${doc.url.includes('drive.google.com') ? 'fa-file-lines' : 'fa-file-pdf'} text-lg`}></i>
+                    </div>
+                    <span className="text-[8px] font-black px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded uppercase">{doc.category}</span>
+                  </div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1 line-clamp-1">{doc.title}</h4>
+                  <p className="text-[10px] text-slate-400 mb-4">{new Date(doc.date).toLocaleDateString()} • {doc.author}</p>
+                  <a 
+                    href={doc.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full py-3 bg-slate-50 dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-600 dark:text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-solid fa-external-link text-[8px]"></i> View Document
+                  </a>
+                </div>
+              )) : (
+                <div className="col-span-full py-20 bg-slate-50 dark:bg-slate-950/30 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center px-6">
+                  <div className="w-16 h-16 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-200 dark:text-slate-800 text-3xl mb-4">
+                    <i className="fa-solid fa-folder-open"></i>
+                  </div>
+                  <h4 className="text-slate-400 font-bold mb-1">No documents linked yet</h4>
+                  <p className="text-[10px] text-slate-400 max-w-xs leading-relaxed uppercase tracking-tighter">Use the Google Drive button to link leases, inspections, or other unit-specific records.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
@@ -761,6 +948,86 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 <div className="absolute top-4 right-4 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded">North Facing</div>
              </div>
              <p className="mt-8 text-sm text-slate-500 font-medium">Standard {unit.type} floorplan orientation within the building envelope.</p>
+          </div>
+        )}
+
+        {activeTab === 'schedule' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center px-2">
+              <div className="flex flex-col">
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Scheduled Preventative Maintenance</h3>
+                <p className="text-[10px] text-slate-500 font-medium">Routine system inspections and recurring unit safety checks.</p>
+              </div>
+              {isAdmin && (
+                <button 
+                  onClick={handleSeedPreventative}
+                  className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95 flex items-center gap-2"
+                >
+                  <i className="fa-solid fa-seedling"></i> Seed Unit Tasks
+                </button>
+              )}
+            </div>
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50/50 dark:bg-slate-950/30 border-b border-slate-100 dark:border-white/5">
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Next Due Date</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Maintenance Task</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Frequency</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+                  {scheduledTasks.length > 0 ? scheduledTasks.map(task => (
+                    <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
+                      <td className="px-6 py-4 text-xs font-bold text-slate-500">
+                        {new Date(task.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400">
+                            <i className={`fa-solid ${
+                              task.category === 'HVAC' ? 'fa-wind' :
+                              task.category === 'PLUMBING' ? 'fa-droplet' :
+                              task.category === 'ELECTRICAL' ? 'fa-bolt' :
+                              task.category === 'SAFETY' ? 'fa-shield-halved' :
+                              'fa-toolbox'
+                            } text-[10px]`}></i>
+                          </div>
+                          {task.task}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-[9px] font-black px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg uppercase tracking-tight">
+                          {task.frequency.charAt(0) + task.frequency.slice(1).toLowerCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest ${
+                          task.isCompleted ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                        }`}>
+                          {task.isCompleted ? 'Completed' : 'Upcoming'}
+                        </span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-24 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                           <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-[1.5rem] flex items-center justify-center text-slate-200 dark:text-slate-800 text-3xl mb-6">
+                              <i className="fa-solid fa-calendar-check"></i>
+                           </div>
+                           <h4 className="text-slate-400 font-bold mb-2">No preventative tasks found for this unit</h4>
+                           <p className="text-[10px] text-slate-400/60 uppercase tracking-widest max-w-[240px] leading-relaxed mx-auto">
+                             Click the seed button above to generate a standard schedule based on building protocols.
+                           </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

@@ -11,6 +11,21 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum MaintenanceFrequency {
+       MONTHLY
+       QUARTERLY
+       ANNUAL
+     }
+
+     enum MaintenanceCategory {
+       PLUMBING
+       ELECTRICAL
+       HVAC
+       SAFETY
+       GENERAL
+       OTHER // Added 'Other' to match the error message's suggestion
+     }
+
 model Unit {
   id                String               @id @default(uuid())
   number            String               @unique
@@ -95,6 +110,7 @@ model Document {
   author    String   @default("Admin")
   date      String
   tags      String[] @default([])
+  content   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -130,7 +146,7 @@ model ScheduledMaintenance {
   unit          Unit     @relation("ScheduledTasks", fields: [unitId], references: [id], onDelete: Cascade)
   task          String
   description   String?
-  frequency     String
+  frequency     MaintenanceFrequency //use the defined enum
   dueDate       String
   lastCompleted String?
   assignedTo    String
@@ -138,4 +154,5 @@ model ScheduledMaintenance {
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  category      MaintenanceCategory //use the defined enum
 }

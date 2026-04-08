@@ -3,10 +3,12 @@ import cookieSession from 'cookie-session';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
+import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import { MaintenancePriority } from '../types.js';
-import { tenantSchema } from './validation.js';
+
+
 
 dotenv.config();
 
@@ -166,6 +168,48 @@ app.get('/auth/callback', async (req, res) => {
     // Check both DB role and legacy list for now
     const isAdmin = user?.role === 'ADMIN' || ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'].includes(email);
 
+    // Dynamically resolve the best available Gemini model once at login
+    let resolvedModel = 'gemini-2.5-flash-lite'; // safe fallback
+    try {
+      const genAI = new GoogleGenerativeAI(process.env.API_KEY || '');
+      const { models } = await genAI.listModels();
+
+      // Skip known deprecated/unavailable model families
+      const DEPRECATED = ['gemini-1.0', 'gemini-1.5', 'gemini-2.0', 'gemini-pro', 'aqa', 'embedding'];
+
+      const contentModels = models.filter(m => {
+        const name = m.name.toLowerCase();
+        return (
+          m.supportedGenerationMethods?.includes('generateContent') &&
+          name.includes('gemini') &&
+          !DEPRECATED.some(d => name.includes(d))
+        );
+      });
+
+      // Score: prefer flash-lite > flash > pro, boosted by version number
+      const score = (name: string): number => {
+        let s = 0;
+        if (name.includes('flash-lite') || name.includes('flash_lite')) s += 30;
+        else if (name.includes('flash')) s += 20;
+        else if (name.includes('pro')) s += 10;
+        const versionMatch = name.match(/(\d+\.\d+)/);
+        if (versionMatch) s += parseFloat(versionMatch[0]) * 2;
+        return s;
+      };
+
+      const ranked = contentModels.sort((a, b) => score(b.name.toLowerCase()) - score(a.name.toLowerCase()));
+      console.log(`[ModelResolver] Candidates:`, contentModels.map(m => m.name));
+
+      if (ranked[0]?.name) {
+        resolvedModel = ranked[0].name.replace('models/', '');
+        console.log(`[ModelResolver] Selected model for ${email}: ${resolvedModel}`);
+      } else {
+        console.warn('[ModelResolver] No non-deprecated models found, using fallback:', resolvedModel);
+      }
+    } catch (err) {
+      console.warn('[ModelResolver] Model listing failed, using fallback:', err);
+    }
+
     (req as any).session.user = {
       email,
       name: userData.name,
@@ -173,7 +217,8 @@ app.get('/auth/callback', async (req, res) => {
       isAdmin,
       tenantId: user?.id || null,
       unitNumber: user?.unit?.number || null,
-      role: user?.role || 'MEMBER'
+      role: user?.role || 'MEMBER',
+      geminiModel: resolvedModel,
     };
 
     res.send(`
@@ -209,6 +254,114 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
   res.json({ success: true });
 });
 
+app.get('/api/seed/preventative', async (req, res) => {
+try {
+const p = getPrisma();
+const units = await p.unit.findMany(); // Fetch all units to get their IDs
+
+// Create a map for quick lookup of existing scheduled maintenance tasks
+const existingTasks = await p.scheduledMaintenance.findMany();
+const existingTaskMap = new Map<string, ScheduledMaintenance>(); // Key: unitId-taskName
+
+existingTasks.forEach(task => {
+// Create a unique key for each task (adjust if task names can be identical for the same unit)
+existingTaskMap.set(`${task.unitId}-${task.task}`, task);
+});
+
+console.log('Seeding preventative maintenance tasks...');
+
+const tasksToSeed: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>[] = [];
+
+    // Generate mock tasks for each unit, ensuring variety
+    units.forEach(unit => {
+      // Add 1-4 tasks per unit, varying frequency and category
+      const numTasks = Math.floor(Math.random() * 4) + 1; // 1 to 4 tasks per unit
+
+      for (let i = 0; i < numTasks; i++) {
+        let taskDetails: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>;
+        const today = new Date();
+
+        switch (i) {
+          case 0: // First task: HVAC related, monthly/quarterly
+            taskDetails = {
+              unitId: unit.id,
+              task: 'HVAC Filter Replacement',
+              dueDate: new Date(today.setMonth(today.getMonth() + 1)).toISOString().split('T')[0],
+              frequency: Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY',
+              assignedTo: 'Building Management',
+              category: 'HVAC',
+            };
+            break;
+          case 1: // Second task: Plumbing or Electrical, quarterly/annual
+            taskDetails = {
+              unitId: unit.id,
+              task: Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel',
+              dueDate: new Date(today.setMonth(today.getMonth() + (Math.random() > 0.5 ? 3 : 6))).toISOString().split('T')[0],
+              frequency: Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL',
+              assignedTo: Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician',
+              category: Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL',
+            };
+            break;
+          case 2: // Third task: Safety or General, annual
+            taskDetails = {
+              unitId: unit.id,
+              task: Math.random() > 0.5 ? 'Annual Fire Alarm Test' : 'Inspect Balcony Sealant',
+              dueDate: new Date(today.setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0],
+              frequency: 'ANNUAL',
+              assignedTo: Math.random() > 0.5 ? 'Safety Officer' : 'Exterior Maintenance',
+              category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
+            };
+            break;
+          default: // Fourth task: Appliance or Other, annual
+            taskDetails = {
+              unitId: unit.id,
+              task: Math.random() > 0.5 ? 'Test Smoke Detectors' : 'Dryer Vent Cleaning',
+              dueDate: new Date(today.setMonth(today.getMonth() + 2)).toISOString().split('T')[0],
+              frequency: 'ANNUAL',
+              assignedTo: 'In-House Staff',
+              category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
+            };
+            break;
+        }
+        tasksToSeed.push(taskDetails);
+      }
+    });
+
+     let addedCount = 0;
+     for (const task of tasksToSeed) {
+       const key = `${task.unitId}-${task.task}`;
+       if (!existingTaskMap.has(key)) {
+         await p.scheduledMaintenance.create({
+           data: {
+             ...task,
+             isCompleted: false, // Default to not completed
+           },
+         });
+         addedCount++;
+       }
+     }
+
+     res.json({
+       success: true,
+       message: `Preventative maintenance tasks seeded. ${addedCount} new tasks added.`
+     });
+
+   } catch (e: any) {
+    console.error('Preventative seeding error:', e);
+    res.status(500).json({ success: false, error: e.message });
+   }
+ });
+
+app.delete('/api/seed/preventative', async (req, res) => {
+   try {
+     await getPrisma().scheduledMaintenance.deleteMany();
+     res.json({ success: true, message: "Preventative maintenance tasks cleared." });
+   } catch (e: any) {
+     console.error('Clear preventative tasks error:', e);
+     res.status(500).json({ success: false, error: e.message });
+   }
+ });
+
 // Development Bypass Login
 app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
   // Security check: Only allow in development or preview environments
@@ -243,6 +396,18 @@ app.get('/api/units', async (req, res) => {
     }
   });
   res.json(units);
+});
+
+app.get('/api/units/:id/scheduled-maintenance', async (req, res) => {
+  try {
+    const tasks = await getPrisma().scheduledMaintenance.findMany({
+      where: { unitId: req.params.id },
+      orderBy: { dueDate: 'asc' }
+    });
+    res.json(tasks);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {
@@ -491,7 +656,7 @@ app.get('/api/documents', async (req, res) => {
 });
 
 app.post('/api/documents', async (req, res) => {
-  const { title, category, url, fileType, author, date, tags, committee } = req.body;
+  const { title, category, url, fileType, author, date, tags, committee, content } = req.body;
 
   // Tag generation temporarily disabled for basic metadata sync
   const currentYear = new Date().getFullYear().toString();
@@ -508,16 +673,22 @@ app.post('/api/documents', async (req, res) => {
       author: author || ((req as any).session?.user?.name || 'System'),
       date: date || new Date().toISOString().split('T')[0],
       tags: finalTags,
-    }
+      content: content || null,
+    } as any
   });
   res.json(document);
 });
 
 app.put('/api/documents/:id', async (req, res) => {
-  const { title, category, tags, committee } = req.body;
+  const { title, category, tags, content } = req.body;
   const document = await getPrisma().document.update({
     where: { id: req.params.id },
-    data: { title, category, tags, committee }
+    data: { 
+      title, 
+      category, 
+      tags: tags ? { set: tags } : undefined,
+      content 
+    } as any
   });
   res.json(document);
 });
@@ -597,29 +768,38 @@ app.delete('/api/events/:id', async (req, res) => {
 });
 
 // --- AI Routes ---
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+const getAI = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn('WARNING: Gemini API_KEY is missing from environment variables.');
+  }
+  return new GoogleGenerativeAI(apiKey || '');
+};
 
 app.post('/api/ai/triage', async (req, res) => {
   try {
-    const ai = getAI();
-    const { description } = req.body;
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: `Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`,
-      config: {
+    const genAI = getAI();
+    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
+    const model = genAI.getGenerativeModel({
+      model: resolvedModel,
+      generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: {
-          type: Type.OBJECT,
+          type: SchemaType.OBJECT,
           properties: {
-            priority: { type: Type.STRING }, // Consolidation: use priority field
-            category: { type: Type.STRING },
-            reasoning: { type: Type.STRING }
+            priority: { type: SchemaType.STRING },
+            category: { type: SchemaType.STRING },
+            reasoning: { type: SchemaType.STRING }
           },
           required: ['priority', 'category']
         }
       }
     });
-    res.json(JSON.parse(response.text || '{}'));
+    
+    const { description } = req.body;
+    const result = await model.generateContent(`Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`);
+    const response = await result.response;
+    res.json(JSON.parse(response.text() || '{}'));
   } catch (e: any) {
     res.status(500).json({ priority: 'Medium', category: 'Other', error: e.message });
   }
@@ -627,39 +807,33 @@ app.post('/api/ai/triage', async (req, res) => {
 
 app.post('/api/ai/policy', async (req, res) => {
   try {
-    const ai = getAI();
+    const genAI = getAI();
+    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
+    const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { question, context } = req.body;
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: `You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}`,
-      config: { temperature: 0.2 }
-    });
-    res.json({ answer: response.text });
+    
+    const result = await model.generateContent(`You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}`);
+    const response = await result.response;
+    res.json({ answer: response.text() || '' });
   } catch (e: any) {
-    res.status(500).json({ answer: 'Unable to answer at this time. Please contact the board.', error: e.message });
+    console.error(`[Policy Assistant Error]: ${e.message}`);
+    res.status(500).json({ 
+      answer: 'Unable to answer at this time. Please contact the board.', 
+      error: e.message 
+    });
   }
 });
 
 app.post('/api/ai/summarize', async (req, res) => {
   try {
-    const ai = getAI();
+    const genAI = getAI();
+    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
+    const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { content } = req.body;
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: `Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            summary: { type: Type.STRING },
-            tags: { type: Type.ARRAY, items: { type: Type.STRING } }
-          },
-          required: ['summary', 'tags']
-        }
-      }
-    });
-    res.json(JSON.parse(response.text || '{}'));
+    
+    const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`);
+    const response = await result.response;
+    res.json(JSON.parse(response.text() || '{"summary": "", "tags": []}'));
   } catch (e: any) {
     res.status(500).json({ summary: '', tags: [], error: e.message });
   }
@@ -676,7 +850,6 @@ app.get('/api/migrate', async (req, res) => {
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
 
     // Explicitly DROP columns if they exist to match metadata-only goal
-    await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "content";`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "isPrivate";`);
 
     // Check if seeding is needed

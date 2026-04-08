@@ -46,6 +46,14 @@ const ResourceLibrary: React.FC<{
       .then(data => setConfig(data))
       .catch(err => console.error('Failed to load Google config:', err));
 
+    // Load pdf.js if not already present
+    if (!(window as any).pdfjsLib) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+
     // Poll for Google Scripts
     const checkScripts = setInterval(() => {
       if ((window as any).google?.accounts?.oauth2 && (window as any).gapi) {
@@ -66,7 +74,7 @@ const ResourceLibrary: React.FC<{
     try {
       const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: config.googleClientId,
-        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
         callback: (response: any) => {
           if (response.error !== undefined) return;
           createPicker(response.access_token);
@@ -79,7 +87,7 @@ const ResourceLibrary: React.FC<{
   };
 
   const createPicker = (accessToken: string) => {
-    (window as any).gapi.load('picker', () => {
+    (window as any).gapi.load('picker', async () => {
       const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
       view.setIncludeFolders(true);
       
@@ -90,14 +98,61 @@ const ResourceLibrary: React.FC<{
         .setCallback(async (data: any) => {
           if (data.action === (window as any).google.picker.Action.PICKED) {
             const driveDoc = data.docs[0];
+            let extractedContent = '';
+
+            // Attempt to extract text from Google Docs or PDFs
+            if (driveDoc.mimeType === 'application/vnd.google-apps.document' || driveDoc.mimeType === 'application/pdf') {
+              try {
+                const exportUrl = driveDoc.mimeType === 'application/vnd.google-apps.document'
+                  ? `https://www.googleapis.com/drive/v3/files/${driveDoc.id}/export?mimeType=text/plain`
+                  : `https://www.googleapis.com/drive/v3/files/${driveDoc.id}?alt=media`;
+
+                const response = await fetch(exportUrl, {
+                  headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+
+                if (response.ok) {
+                  if (driveDoc.mimeType === 'application/pdf') {
+                    // Extract text from PDF using pdf.js
+                    try {
+                      const pdfBytes = await response.arrayBuffer();
+                      const pdfjsLib = (window as any).pdfjsLib;
+                      if (pdfjsLib) {
+                        pdfjsLib.GlobalWorkerOptions.workerSrc =
+                          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                        const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+                        const textPages: string[] = [];
+                        for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+                          const page = await pdf.getPage(i);
+                          const textContent = await page.getTextContent();
+                          textPages.push(textContent.items.map((item: any) => item.str).join(' '));
+                        }
+                        extractedContent = textPages.join('\n\n');
+                      } else {
+                        extractedContent = '[PDF content could not be extracted: pdf.js not loaded]';
+                      }
+                    } catch (pdfErr) {
+                      console.warn('PDF text extraction failed:', pdfErr);
+                      extractedContent = '[PDF content extraction failed]';
+                    }
+                  } else {
+                    extractedContent = await response.text();
+                  }
+                }
+              } catch (err) {
+                console.warn('Could not extract content from Drive file:', err);
+              }
+            }
+
             const newDoc = {
               title: driveDoc.name,
-              category: 'Cloud' as any,
+              category: reviewingDoc?.category || 'Cloud', // Favor user-selected category if available
               url: driveDoc.url,
               fileType: driveDoc.type || 'gdoc',
               author: 'Google Drive',
               date: new Date().toISOString().split('T')[0],
-              tags: ['Google Drive', 'Linked']
+              tags: ['Google Drive', 'Linked'],
+              content: extractedContent || ''
             };
 
             try {
@@ -106,13 +161,47 @@ const ResourceLibrary: React.FC<{
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newDoc)
               });
+              
               const saved = await res.json();
+              
+              if (!res.ok) {
+                throw new Error(saved.error || saved.details || `Failed to save document: ${res.status}`);
+              }
+
               setDocuments(prev => [saved, ...prev]);
               setShowUpload(false);
               setUploadMode(null);
               setReviewingDoc(saved);
-            } catch (err) {
+
+              // Auto-extract: if we have content, summarize + generate tags and persist them
+              if (extractedContent && extractedContent.trim().length > 0 &&
+                  !extractedContent.includes('[Content is in a Cloud PDF')) {
+                try {
+                  const aiResult = await geminiService.summarizeAndTag(extractedContent);
+                  const aiTags = Array.isArray(aiResult.tags) ? aiResult.tags : [];
+                  const mergedTags = Array.from(new Set([...(saved.tags || []), ...aiTags]));
+
+                  await fetch(`/api/documents/${saved.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      title: saved.title,
+                      category: saved.category,
+                      tags: mergedTags,
+                      content: extractedContent,
+                    }),
+                  });
+
+                  const updatedDoc = { ...saved, tags: mergedTags, content: extractedContent };
+                  setDocuments(prev => prev.map(d => d.id === saved.id ? updatedDoc : d));
+                  setReviewingDoc(updatedDoc);
+                } catch (aiErr) {
+                  console.warn('[AI Extract] Failed to auto-summarize document:', aiErr);
+                }
+              }
+            } catch (err: any) {
               console.error('Failed to save drive doc:', err);
+              alert(err.message || 'Failed to link document. Please try again.');
             }
           }
         })
@@ -162,7 +251,14 @@ const ResourceLibrary: React.FC<{
     setLoading(true);
     setAiResponse('');
 
-    const context = "Association policies and bylaws are stored in the secure archive.";
+    const docContext = documents.length > 0
+      ? documents.map(d =>
+          `[Document] Title: ${d.title} | Category: ${d.category}` +
+          (d.tags?.length ? ` | Tags: ${d.tags.join(', ')}` : '') +
+          (d.content?.trim() ? `\nContent: ${d.content.substring(0, 3000)}` : ' | (no extracted text)')
+        ).join('\n\n')
+      : 'No documents in the library.';
+    const context = `DOCUMENT CONTEXT:\n${docContext}`;
 
     try {
       const answer = await geminiService.askPolicyQuestion(question, context);
@@ -267,6 +363,7 @@ const ResourceLibrary: React.FC<{
           category: reviewingDoc.category,
           tags: reviewingDoc.tags,
           committee: reviewingDoc.committee ?? '',
+          content: reviewingDoc.content ?? null,
         }),
       });
 
@@ -350,150 +447,16 @@ const ResourceLibrary: React.FC<{
           </div>
           {isAdmin && !isGuest && (
             <button
-              onClick={() => {
-                setShowUpload(!showUpload);
-                setUploadMode(null);
-              }}
-              className={`w-full sm:w-auto px-6 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all ${showUpload ? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300' : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                }`}
+              onClick={handleOpenPicker}
+              className="w-full sm:w-auto px-6 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20"
             >
-              <i className={`fa-solid ${showUpload ? 'fa-xmark' : 'fa-plus'}`}></i>
-              {showUpload ? 'Close Portal' : 'Add Resource'}
+              <i className="fa-brands fa-google-drive"></i>
+              Link from Google Drive
             </button>
           )}
         </div>
 
-        {showUpload && isAdmin && !isGuest && (
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 animate-in slide-in-from-top-4">
-            {!uploadMode ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button
-                  onClick={() => setUploadMode('file')}
-                  className="p-8 rounded-3xl bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center gap-4 hover:border-emerald-500 transition-all"
-                >
-                  <i className="fa-solid fa-file-arrow-up text-3xl text-slate-400"></i>
-                  <span className="font-black uppercase text-xs">Upload Local File</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setUploadMode('drive');
-                    handleOpenPicker();
-                  }}
-                  className="p-8 rounded-3xl bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center gap-4 hover:border-blue-500 transition-all"
-                >
-                  <i className="fa-brands fa-google-drive text-3xl text-blue-500"></i>
-                  <span className="font-black uppercase text-xs">Link from Google Drive</span>
-                </button>
-              </div>
-            ) : uploadMode === 'file' ? (
-              <>
-                <div className="flex justify-between items-center mb-6">
-                  <h4 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Association Upload Portal</h4>
-                  <button onClick={() => setUploadMode(null)} className="text-slate-400 hover:text-slate-600 font-bold text-xs uppercase tracking-widest">Back</button>
-                </div>
-
-                {isUploading ? (
-                  <div className="space-y-4 py-8">
-                    <div className="flex justify-between text-xs font-bold text-slate-500 uppercase">
-                      <span>{isAnalyzing ? 'Analyzing content...' : 'Encrypting & Archiving...'}</span>
-                      <span>{uploadProgress}%</span>
-                    </div>
-                    <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 transition-all duration-200" style={{ width: `${uploadProgress}%` }}></div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div
-                      onDrop={handleDrop}
-                      onDragOver={handleDragOver}
-                      onClick={() => fileInputRef.current?.click()}
-                      className={`bg-slate-50 dark:bg-slate-950/50 border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center group transition-all cursor-pointer ${selectedFile ? 'border-emerald-500 bg-emerald-50/10' : 'border-slate-200 dark:border-white/10 hover:border-emerald-400'
-                        }`}
-                    >
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        accept=".pdf,.doc,.docx,.txt"
-                      />
-                      <i className={`fa-solid ${selectedFile ? 'fa-file-circle-check text-emerald-500' : 'fa-file-pdf text-slate-300 group-hover:text-emerald-500'} text-4xl mb-4 transition-colors`}></i>
-                      {selectedFile ? (
-                        <div>
-                          <p className="text-xs font-black text-emerald-600 uppercase tracking-tight">{selectedFile.name}</p>
-                          <p className="text-[10px] text-slate-400 font-bold mt-1">{(selectedFile.size / 1024).toFixed(1)} KB • Click to change</p>
-                        </div>
-                      ) : (
-                        <>
-                          <p className="text-xs font-black text-slate-400 uppercase">Drop associations files here</p>
-                          <p className="text-[10px] text-slate-400 font-medium mt-1">or click to browse</p>
-                        </>
-                      )}
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Document Title</label>
-                        <input
-                          type="text"
-                          value={newDocTitle}
-                          onChange={(e) => setNewDocTitle(e.target.value)}
-                          placeholder="e.g. AGM Minutes 2026"
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</label>
-                        <select
-                          value={newDocCategory}
-                          onChange={(e) => setNewDocCategory(e.target.value as Document['category'])}
-                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-emerald-500"
-                        >
-                          {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                      </div>
-                      {isAdmin && committees.length > 0 && (
-                        <div>
-                          <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Link to Committee (Optional)</label>
-                          <select
-                            value={newDocCommittee}
-                            onChange={(e) => setNewDocCommittee(e.target.value)}
-                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 focus:ring-emerald-500"
-                          >
-                            <option value="">None (General Document)</option>
-                            {committees.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                          </select>
-                        </div>
-                      )}
-                      <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
-                        <p className="text-[10px] text-amber-800 dark:text-amber-500 font-bold leading-relaxed">
-                          <i className="fa-solid fa-shield-halved mr-1"></i>
-                          By uploading, you certify this document complies with BC PIPA standards and does not expose unauthorized personal information.
-                        </p>
-                      </div>
-                      <button
-                        onClick={handleSimulatedUpload}
-                        className="w-full bg-slate-900 dark:bg-emerald-600 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
-                      >
-                        <i className="fa-solid fa-plus"></i>
-                        Add Document
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center py-12">
-                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i className="fa-brands fa-google-drive text-2xl text-blue-600"></i>
-                 </div>
-                 <h4 className="text-lg font-black text-slate-800 dark:text-white uppercase mb-2">Connecting to Google Drive</h4>
-                 <p className="text-xs text-slate-500 mb-6">The Google Picker portal is opening. Once linked, your document will appear in the library.</p>
-                 <button onClick={() => setUploadMode(null)} className="px-6 py-2 bg-slate-200 dark:bg-slate-800 rounded-xl text-[10px] font-black uppercase">Cancel</button>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Local upload section hidden per user request */}
 
         <FilterBar
           search={search}
