@@ -18,6 +18,8 @@ export default function CommunicationsPage() {
   const [newAnnTitle, setNewAnnTitle] = useState('');
   const [newAnnContent, setNewAnnContent] = useState('');
   const [newAnnPriority, setNewAnnPriority] = useState<'Normal' | 'Urgent'>('Normal');
+  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
+  const [selectedContactId, setSelectedContactId] = useState('');
 
   if (!user) return null;
 
@@ -55,9 +57,6 @@ export default function CommunicationsPage() {
     }
   };
 
-  const [showNewMessageModal, setShowNewMessageModal] = useState(false);
-  const [selectedContactId, setSelectedContactId] = useState('');
-  
   const handleStartNewMessage = () => {
     if (!selectedContactId) return;
     setSelectedThread(selectedContactId);

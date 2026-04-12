@@ -207,7 +207,7 @@ export default function AdminTenantDetailPage() {
               <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl shadow-black/10 border border-white/5">
                 <h3 className="font-black uppercase text-[10px] tracking-widest text-emerald-400 mb-4">Board Notes</h3>
                 <p className="text-xs font-medium leading-relaxed opacity-70 italic border-l-2 border-emerald-500 pl-4">
-                  "Member in good standing. Active contributor to community initiatives. No reported infractions."
+                  &ldquo;Member in good standing. Active contributor to community initiatives. No reported infractions.&rdquo;
                 </p>
               </div>
             </div>

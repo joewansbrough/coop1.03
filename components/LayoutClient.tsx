@@ -361,8 +361,8 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               <div className="p-8 text-center">
                 {searchQuery ? (
                   <div className="space-y-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No results found for "{searchQuery}"</p>
-                    <p className="text-[10px] text-slate-500">Try searching for "Bylaws", "AGM", or "Maintenance"</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No results found for &ldquo;{searchQuery}&rdquo;</p>
+                    <p className="text-[10px] text-slate-500">Try searching for &ldquo;Bylaws&rdquo;, &ldquo;AGM&rdquo;, or &ldquo;Maintenance&rdquo;</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">

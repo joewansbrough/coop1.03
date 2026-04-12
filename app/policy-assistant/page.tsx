@@ -111,7 +111,7 @@ export default function PolicyAssistantPage() {
               <h4 className="text-xs font-black uppercase tracking-widest">How it works</h4>
             </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-              This assistant analyzes your co-op's archived documents and BC housing regulations to provide instant answers to policy questions.
+              This assistant analyzes your co-op&rsquo;s archived documents and BC housing regulations to provide instant answers to policy questions.
             </p>
             <div className="pt-2">
               <div className="flex items-center gap-2 text-slate-400 mb-3">

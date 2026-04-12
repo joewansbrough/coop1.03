@@ -197,7 +197,7 @@ export default function EventDetailPage() {
                   </div>
                   {!isAttending && !isGuest && (
                     <button onClick={handleAttend} className="w-full mt-6 py-3 text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800 transition-all active:scale-95">
-                      I'm Attending
+                      I&rsquo;m Attending
                     </button>
                   )}
                   {isAttending && (

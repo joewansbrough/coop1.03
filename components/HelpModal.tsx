@@ -55,7 +55,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, onRestartTour })
               </div>
             </div>
             <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 leading-relaxed font-medium">
-              Need help with co-op policies or maintenance? Use our AI assistant to get instant answers from your association's bylaws.
+              Need help with co-op policies or maintenance? Use our AI assistant to get instant answers from your association&rsquo;s bylaws.
             </p>
             <button className="mt-4 w-full py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95">
               Launch Assistant

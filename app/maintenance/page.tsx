@@ -456,7 +456,7 @@ export default function MaintenancePage() {
                 <h4 className="font-black text-slate-800 dark:text-white mb-1">{quote.vendorName}</h4>
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Submitted: {quote.date}</p>
                 <div className="flex-1 bg-slate-50 dark:bg-slate-950/50 p-3 rounded-2xl border border-slate-100 dark:border-white/5 mb-6">
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed italic">"{quote.details}"</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed italic">&ldquo;{quote.details}&rdquo;</p>
                 </div>
                 <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50 dark:border-white/5">
                   <span className="text-2xl font-black text-slate-900 dark:text-white">${quote.amount.toLocaleString()}</span>

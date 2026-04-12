@@ -58,6 +58,11 @@ export default function AdminUnitDetailPage() {
   
   const [isScriptsReady, setIsScriptsReady] = useState(false);
   const [config, setConfig] = useState<{ googleClientId: string; googleApiKey: string } | null>(null);
+  const [showMoveInModal, setShowMoveInModal] = useState(false);
+  const [showMoveOutModal, setShowMoveOutModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [selectedNewTenantId, setSelectedNewTenantId] = useState('');
+  const [selectedTargetUnitId, setSelectedTargetUnitId] = useState('');
 
   useEffect(() => {
     fetch('/api/config')
@@ -160,12 +165,6 @@ export default function AdminUnitDetailPage() {
     });
   };
   
-  const [showMoveInModal, setShowMoveInModal] = useState(false);
-  const [showMoveOutModal, setShowMoveOutModal] = useState(false);
-  const [showTransferModal, setShowTransferModal] = useState(false);
-  const [selectedNewTenantId, setSelectedNewTenantId] = useState('');
-  const [selectedTargetUnitId, setSelectedTargetUnitId] = useState('');
-
   const handleMoveOut = async () => {
     if (!unit || isGuest) return;
     const moveOutDate = new Date().toISOString().split('T')[0];
