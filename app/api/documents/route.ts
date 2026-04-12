@@ -32,8 +32,30 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = documentSchema.parse(body);
+    const {
+      title,
+      category,
+      committee,
+      url,
+      fileType,
+      author,
+      date,
+      tags,
+      content,
+    } = validatedData;
+
     const document = await prisma.document.create({
-      data: validatedData,
+      data: {
+        title,
+        category,
+        committee: committee ?? null,
+        url,
+        fileType,
+        author,
+        date,
+        tags: tags ?? [],
+        content: content ?? null,
+      },
     });
     return NextResponse.json(document);
   } catch (error: any) {
