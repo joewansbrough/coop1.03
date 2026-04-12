@@ -47,8 +47,10 @@ model Tenant {
   lastName      String
   email         String          @unique
   phone         String?
-  startDate     String          // Renamed from moveInDate to match UI
+  startDate     DateTime          // Changed from String to DateTime
+  endDate       DateTime?
   status        String          @default("Current") // e.g., "Current", "Past", "Waitlist"
+
   role          String          @default("MEMBER")  // "ADMIN" or "MEMBER"
   unitId        String?
   unit          Unit?           @relation("CurrentResident")

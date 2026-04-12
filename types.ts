@@ -52,6 +52,7 @@ export interface Tenant {
   id: string;
   firstName: string;
   lastName: string;
+  name?: string; // Derived or full name
   email: string;
   phone?: string;
   startDate: string;
@@ -64,6 +65,11 @@ export interface Tenant {
   balance?: number;
   shareCapital?: number;
   split?: any;
+  notes?: string;
+  picture?: string;
+  isAdmin?: boolean;
+  isGuest?: boolean;
+  tenantId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
