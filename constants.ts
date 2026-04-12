@@ -1,5 +1,5 @@
 
-import { Unit, Tenant, MaintenanceRequest, Document, RequestStatus, Transaction, Announcement, Message, CoopEvent, Committee, ScheduledMaintenance, RepairQuote, Notification, ParticipationRecord } from './types';
+import { Unit, Tenant, MaintenanceRequest, Document, RequestStatus, Announcement, Message, CoopEvent, Committee, ScheduledMaintenance, RepairQuote, Notification, ParticipationRecord } from './types';
 
 export const MOCK_UNITS: Unit[] = [];
 export const MOCK_TENANTS: Tenant[] = [];
@@ -45,6 +45,5 @@ export const MOCK_DOCS: Document[] = [
     tags: ['sublet', 'occupancy', 'rules']
   }
 ];
-export const MOCK_TRANSACTIONS: Transaction[] = [];
 export const MOCK_ANNOUNCEMENTS: Announcement[] = [];
 export const MOCK_MESSAGES: Message[] = [];

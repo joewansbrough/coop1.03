@@ -153,10 +153,15 @@ export interface Transaction {
   id: string;
   tenantId: string;
   amount: number;
+  currency: string;
   type: string;
-  status: string;
-  date: string;
   description: string;
+  direction: 'DEBIT' | 'CREDIT';
+  status: 'PENDING' | 'PAID' | 'FAILED';
+  stripeSessionId?: string;
+  stripeSessionUrl?: string;
+  metadata?: Record<string, any>;
+  date: string;
 }
 
 export interface Message {

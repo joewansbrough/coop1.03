@@ -318,7 +318,67 @@ async function main() {
         },
       });
     }
-    currentDate.setMonth(currentDate.getMonth() + 1);
+      currentDate.setMonth(currentDate.getMonth() + 1);
+  }
+
+  console.log('Seeding transactions...');
+  const transactionSeeds = [
+    {
+      tenant: 'margaret.chen@email.com',
+      amount: 1250,
+      type: 'Housing Charge',
+      description: 'March housing charge',
+      direction: 'DEBIT',
+      status: 'PAID',
+      date: new Date('2026-03-01'),
+      metadata: { period: '2026-03' },
+    },
+    {
+      tenant: 'david.okafor@email.com',
+      amount: 520,
+      type: 'Parking & Utilities',
+      description: 'Billed for April parking and utilities',
+      direction: 'DEBIT',
+      status: 'PENDING',
+      date: new Date('2026-04-01'),
+    },
+    {
+      tenant: 'aisha.mohammed@email.com',
+      amount: 250,
+      type: 'Online Payment',
+      description: 'Partial credit toward housing charge',
+      direction: 'CREDIT',
+      status: 'PAID',
+      date: new Date('2026-03-10'),
+      metadata: { method: 'manual' },
+    },
+    {
+      tenant: 'thomas.bergstrom@email.com',
+      amount: 75,
+      type: 'Community Charge',
+      description: 'Garden volunteer event fee',
+      direction: 'DEBIT',
+      status: 'PAID',
+      date: new Date('2026-03-05'),
+    },
+  ];
+
+  for (const transaction of transactionSeeds) {
+    const tenant = tenants[transaction.tenant];
+    if (!tenant) continue;
+    await prisma.transaction.create({
+      data: {
+        tenantId: tenant.id,
+        amount: transaction.amount,
+        currency: 'cad',
+        type: transaction.type,
+        description: transaction.description,
+        direction: transaction.direction as 'DEBIT' | 'CREDIT',
+        status: transaction.status as 'PAID' | 'PENDING',
+        date: transaction.date,
+        metadata: transaction.metadata,
+      },
+    });
   }
 
   console.log('Seeding complete!');

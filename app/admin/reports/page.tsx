@@ -1,41 +1,94 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import StatCard from '../../../components/StatCard';
-import { MOCK_TRANSACTIONS } from '../../../constants';
-import { useUser } from '../../../hooks/useCoopData';
+import { useTransactions, useUser } from '../../../hooks/useCoopData';
+import type { Transaction } from '../../../types';
 
 export default function AdminReportsPage() {
   const { data: user } = useUser();
+  const { data: transactions = [], isLoading: isTransactionsLoading } = useTransactions();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('overview');
-  const [isPaying, setIsPaying] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  if (!user) return null;
+  const isAdmin = !!user?.isAdmin;
+  const tenantId = user?.tenantId ?? null;
+  const myTransactions = useMemo(() => {
+    if (!tenantId) return [];
+    return transactions
+      .filter(tx => tx.tenantId === tenantId)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, tenantId]);
 
-  const isAdmin = !!user.isAdmin;
-  const myTransactions = MOCK_TRANSACTIONS.filter(t => t.tenantId === user.tenantId || t.tenantId === 't1');
-  const coopIncome = MOCK_TRANSACTIONS.reduce((acc, t) => acc + (t.status === 'Paid' ? t.amount : 0), 0);
-  
-  const chartData = [
+  const coopIncome = useMemo(() => {
+    return transactions.reduce((sum, tx) => {
+      if (tx.direction === 'DEBIT' && tx.status === 'PAID') {
+        return sum + tx.amount;
+      }
+      return sum;
+    }, 0);
+  }, [transactions]);
+
+  const chartData = useMemo(() => [
     { name: 'Income', amount: coopIncome, fill: '#10b981' },
     { name: 'Budget', amount: 0, fill: '#3b82f6' },
     { name: 'Expenses', amount: 0, fill: '#f43f5e' },
-  ];
+  ], [coopIncome]);
 
-  const pieData = [
+  const pieData = useMemo(() => [
     { name: 'Housing Charges', value: coopIncome > 0 ? 100 : 0, fill: '#10b981' },
     { name: 'Maintenance Fees', value: 0, fill: '#3b82f6' },
     { name: 'Parking/Misc', value: 0, fill: '#f59e0b' },
-  ];
+  ], [coopIncome]);
+
+  const createTransaction = useMutation<Transaction, Error, {
+    amount: number;
+    currency: string;
+    type: string;
+    description: string;
+    direction?: 'DEBIT' | 'CREDIT';
+    status?: 'PENDING' | 'PAID' | 'FAILED';
+  }>({
+    mutationFn: async (payload) => {
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData?.error ?? 'Unable to record transaction');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setStatusMessage('Payment recorded in the ledger.');
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+    onError: (error) => {
+      setStatusMessage(error.message || 'Payment could not be recorded.');
+    }
+  });
 
   const handlePayment = () => {
-    setIsPaying(true);
-    setTimeout(() => {
-      setIsPaying(false);
-      alert("Payment processed successfully. Your ledger has been updated.");
-    }, 1500);
+    if (createTransaction.isLoading || user?.isGuest || !tenantId) return;
+    setStatusMessage(null);
+    createTransaction.mutate({
+      amount: 250,
+      currency: 'cad',
+      type: 'Housing Payment',
+      description: 'Manual payment recorded through portal',
+      direction: 'CREDIT',
+      status: 'PAID',
+    });
   };
+
+  const paymentDisabled = createTransaction.isLoading || user?.isGuest || !tenantId;
+
+  if (!user) return null;
 
   return (
     <div className="space-y-6 pb-12 transition-colors duration-200 animate-in fade-in duration-500">
@@ -118,13 +171,23 @@ export default function AdminReportsPage() {
             </div>
             <button 
               onClick={handlePayment}
-              disabled={isPaying || user.isGuest}
+              disabled={paymentDisabled}
               className={`w-full md:w-auto px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
-                (isPaying || user.isGuest) ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                paymentDisabled ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'
               }`}
             >
-              {isPaying ? 'Processing...' : 'Submit Payment'}
+              {createTransaction.isLoading ? 'Processing...' : 'Submit Payment'}
             </button>
+            {statusMessage && (
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-300 font-bold uppercase tracking-tight mt-2">
+                {statusMessage}
+              </p>
+            )}
+            {isTransactionsLoading && (
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-tight mt-2">
+                Loading ledger entries…
+              </p>
+            )}
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden">

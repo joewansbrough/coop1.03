@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -18,20 +18,21 @@ export default function DashboardPage() {
   const { data: events = MOCK_EVENTS } = useEvents();
   const router = useRouter();
 
-  if (!user) return null;
-
   const isAdmin = !!user.isAdmin;
   const isGuest = !!user.isGuest;
   const firstName = user?.name ? user.name.split(' ')[0] : '';
 
   // For members, only show stats for their unit (if they have one)
   const userTenantId = user?.tenantId ?? null;
-  const userUnit = units.find(u => u.currentTenantId === userTenantId);
+  const userUnit = useMemo(() => units.find(u => u.currentTenantId === userTenantId), [units, userTenantId]);
   const userUnitId = userUnit?.id ?? null;
   
-  const userOpenRequests = (userUnitId && Array.isArray(requests)) 
-    ? requests.filter(r => r.unitId === userUnitId && r.status !== RequestStatus.COMPLETED && r.status !== RequestStatus.CANCELLED)
-    : [];
+  const userOpenRequests = useMemo(() => {
+    if (!userUnitId || !Array.isArray(requests)) return [];
+    return requests.filter(
+      r => r.unitId === userUnitId && r.status !== RequestStatus.COMPLETED && r.status !== RequestStatus.CANCELLED
+    );
+  }, [requests, userUnitId]);
 
   // Admin KPI Calculations
   const pendingRequestsAll = Array.isArray(requests) ? requests.filter(r => r.status === RequestStatus.PENDING).length : 0;
@@ -39,25 +40,32 @@ export default function DashboardPage() {
   const pendingRequests = isAdmin ? pendingRequestsAll : pendingRequestsUser;
   
   // Find closest upcoming meeting
-  const now = new Date();
-  const nextMeeting = events
-    .filter(e => (e.category === 'Meeting' || e.category === 'Board') && new Date(e.date) >= now)
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+  const nextMeeting = useMemo(() => {
+    const now = new Date();
+    return events
+      .filter(e => (e.category === 'Meeting' || e.category === 'Board') && new Date(e.date) >= now)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+  }, [events]);
 
-  const upcomingEvents = events.slice(0, 3);
-  const recentAnnouncements = announcements.slice(0, 2);
+  const upcomingEvents = useMemo(() => events.slice(0, 3), [events]);
+  const recentAnnouncements = useMemo(() => announcements.slice(0, 2), [announcements]);
 
-  // Group units by floor for the map
-  const unitsByFloor = units.reduce((acc, unit) => {
-    const floor = unit.floor || 0;
-    if (!acc[floor]) acc[floor] = [];
-    acc[floor].push(unit);
-    return acc;
-  }, {} as Record<number, Unit[]>);
+  const unitsByFloor = useMemo(() => {
+    return units.reduce((acc, unit) => {
+      const floor = unit.floor || 0;
+      if (!acc[floor]) acc[floor] = [];
+      acc[floor].push(unit);
+      return acc;
+    }, {} as Record<number, Unit[]>);
+  }, [units]);
 
-  const sortedFloors = Object.keys(unitsByFloor)
-    .map(Number)
-    .sort((a, b) => a - b);
+  const sortedFloors = useMemo(() => {
+    return Object.keys(unitsByFloor)
+      .map(Number)
+      .sort((a, b) => a - b);
+  }, [unitsByFloor]);
+
+  if (!user) return null;
 
   if (isAdmin) {
     return (

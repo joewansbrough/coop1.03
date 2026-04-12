@@ -7,8 +7,6 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 enum MaintenanceFrequency {
@@ -57,8 +55,38 @@ model Tenant {
   committees    Committee[]     @relation("CommitteeMembers")
   events        CoopEvent[]     @relation("EventAttendees")
   history       TenantHistory[]
+  transactions  Transaction[]
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+}
+
+enum TransactionDirection {
+  DEBIT
+  CREDIT
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+model Transaction {
+  id              String               @id @default(uuid())
+  tenantId        String
+  tenant          Tenant               @relation(fields: [tenantId], references: [id])
+  amount          Float
+  currency        String               @default("cad")
+  type            String
+  description     String
+  direction       TransactionDirection @default(DEBIT)
+  status          TransactionStatus    @default(PENDING)
+  stripeSessionId String?
+  stripeSessionUrl String?
+  metadata        Json?
+  date            DateTime             @default(now())
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @default(now())
 }
 
 model TenantHistory {

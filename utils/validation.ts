@@ -78,3 +78,15 @@ export const committeeSchema = z.object({
   icon: z.string().optional(),
   members: z.array(z.string()).optional(),
 });
+
+export const transactionSchema = z.object({
+  amount: z.number().positive({ message: "Amount must be greater than 0" }),
+  currency: z.string().min(2, { message: "Currency is required" }),
+  type: z.string().min(1, { message: "Transaction type is required" }),
+  description: z.string().min(1, { message: "Description is required" }),
+  direction: z.enum(['DEBIT', 'CREDIT']).optional(),
+  status: z.enum(['PENDING', 'PAID', 'FAILED']).optional(),
+  metadata: z.record(z.any()).optional(),
+  tenantId: z.string().uuid().optional(),
+  date: z.string().optional(),
+});

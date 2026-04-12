@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent } from '../types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent, Transaction } from '../types';
 
 const fetchJson = async (url: string) => {
   const res = await fetch(url);
@@ -46,6 +46,11 @@ export const useCommittees = () => useQuery<Committee[]>({
 export const useEvents = () => useQuery<CoopEvent[]>({
   queryKey: ['events'],
   queryFn: () => fetchJson('/api/events'),
+});
+
+export const useTransactions = () => useQuery<Transaction[]>({
+  queryKey: ['transactions'],
+  queryFn: () => fetchJson('/api/transactions'),
 });
 
 // Mutations helper
