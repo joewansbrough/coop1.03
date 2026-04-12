@@ -13,8 +13,13 @@ export interface UserSession {
   isGuest?: boolean;
 }
 
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret || sessionSecret.length < 32) {
+  throw new Error('SESSION_SECRET must be defined and at least 32 characters long.');
+}
+
 export const sessionOptions: SessionOptions = {
-  password: process.env.SESSION_SECRET || 'a_very_secure_random_string_at_least_32_characters_long',
+  password: sessionSecret,
   cookieName: 'oak_bay_housing_coop_session',
   cookieOptions: {
     secure: process.env.NODE_ENV === 'production',

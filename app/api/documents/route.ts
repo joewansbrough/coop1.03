@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../../../utils/prisma';
-import { announcementSchema } from '../../../utils/validation';
+import { documentSchema } from '../../../utils/validation';
 import { getSession } from '../../../utils/session';
 
 export async function GET() {
@@ -10,11 +10,12 @@ export async function GET() {
   }
 
   try {
-    const announcements = await prisma.announcement.findMany({
-      orderBy: { date: 'desc' }
+    const documents = await prisma.document.findMany({
+      orderBy: { date: 'desc' },
     });
-    return NextResponse.json(announcements);
+    return NextResponse.json(documents);
   } catch (error: any) {
+    console.error('Failed to load documents:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -30,20 +31,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const validatedData = announcementSchema.parse(body);
-    const announcement = await prisma.announcement.create({
-      data: {
-        title: validatedData.title,
-        content: validatedData.content,
-        type: validatedData.type,
-        priority: validatedData.priority,
-        author: validatedData.author || session.email,
-        date: validatedData.date,
-      }
+    const validatedData = documentSchema.parse(body);
+    const document = await prisma.document.create({
+      data: validatedData,
     });
-    return NextResponse.json(announcement);
+    return NextResponse.json(document);
   } catch (error: any) {
-    console.error('Failed to create announcement:', error);
+    console.error('Failed to save document:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

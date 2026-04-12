@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../../../utils/prisma';
 import { tenantSchema } from '../../../utils/validation';
+import { getSession } from '../../../utils/session';
 
 export async function GET() {
+  const session = await getSession();
+  if (!session || Object.keys(session).length === 0) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const tenants = await prisma.tenant.findMany({
-      include: { unit: true }
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        status: true,
+        role: true,
+        unitId: true,
+        createdAt: true,
+        updatedAt: true,
+      }
     });
     return NextResponse.json(tenants);
   } catch (error: any) {
@@ -14,6 +30,14 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session || Object.keys(session).length === 0) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!session.isAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
     const validatedData = tenantSchema.parse(body);

@@ -76,4 +76,5 @@ export const committeeSchema = z.object({
   description: z.string().optional(),
   chair: z.string().min(1, { message: "Chair name is required" }),
   icon: z.string().optional(),
+  members: z.array(z.string()).optional(),
 });

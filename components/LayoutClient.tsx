@@ -217,7 +217,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             </button>
             <div className="hidden sm:flex flex-col">
               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">
-                <Link to="/" className="hover:text-emerald-500 transition-colors">Home</Link>
+                <Link href="/" className="hover:text-emerald-500 transition-colors">Home</Link>
                 {pathname !== '/' && (
                   <>
                     <i className="fa-solid fa-chevron-right text-[8px]"></i>

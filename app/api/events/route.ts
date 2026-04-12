@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '../../../utils/prisma';
+import { coopEventSchema } from '../../../utils/validation';
+import { getSession } from '../../../utils/session';
 
 export async function GET() {
+  const session = await getSession();
+  if (!session || Object.keys(session).length === 0) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const events = await prisma.coopEvent.findMany({
       orderBy: { date: 'asc' }
@@ -13,10 +20,19 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session || Object.keys(session).length === 0) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!session.isAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
+    const validatedData = coopEventSchema.parse(body);
     const event = await prisma.coopEvent.create({
-      data: body
+      data: validatedData,
     });
     return NextResponse.json(event);
   } catch (error: any) {
