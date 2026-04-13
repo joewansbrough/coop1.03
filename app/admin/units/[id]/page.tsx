@@ -21,7 +21,7 @@ export default function AdminUnitDetailPage() {
   const unit = units.find(u => u.id === unitId);
   const currentResidents = tenants.filter(t => t.unitId === unitId && t.status === 'Current');
   const primaryResident = currentResidents.find(t => t.id === unit?.currentTenantId) || currentResidents[0];
-  
+
   const historicalRecords = (unit?.occupancyHistory || [])
     .filter(rh => rh.endDate)
     .map(rh => ({
@@ -40,22 +40,22 @@ export default function AdminUnitDetailPage() {
     isCurrent: true
   }));
 
-  const unitHistory = [...activeRecords, ...historicalRecords].sort((a, b) => 
+  const unitHistory = [...activeRecords, ...historicalRecords].sort((a, b) =>
     new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
   );
 
   const requests = allRequests.filter(r => r.unitId === unitId);
   const activeRequests = requests.filter(r => r.status === RequestStatus.PENDING || r.status === RequestStatus.IN_PROGRESS);
   const historicalRequests = requests.filter(r => r.status === RequestStatus.COMPLETED || r.status === RequestStatus.CANCELLED);
-  
+
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledMaintenance[]>([]);
   const unitDocs = documents.filter(doc => doc.tags?.includes(`Unit ${unit?.number}`));
-  
+
   const [activeTab, setActiveTab] = useState<'overview' | 'maintenance' | 'schedule' | 'occupancy' | 'history' | 'layout' | 'documents'>('overview');
   const [showUpload, setShowUpload] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
-  
+
   const [isScriptsReady, setIsScriptsReady] = useState(false);
   const [config, setConfig] = useState<{ googleClientId: string; googleApiKey: string } | null>(null);
   const [showMoveInModal, setShowMoveInModal] = useState(false);
@@ -126,7 +126,7 @@ export default function AdminUnitDetailPage() {
     (window as any).gapi.load('picker', () => {
       const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
       view.setIncludeFolders(true);
-      
+
       const picker = new (window as any).google.picker.PickerBuilder()
         .addView(view)
         .setOAuthToken(accessToken)
@@ -164,7 +164,7 @@ export default function AdminUnitDetailPage() {
       picker.setVisible(true);
     });
   };
-  
+
   const handleMoveOut = async () => {
     if (!unit || isGuest) return;
     const moveOutDate = new Date().toISOString().split('T')[0];
@@ -238,19 +238,18 @@ export default function AdminUnitDetailPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex-1 line-clamp-2">{req.description}</p>
-                <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase shrink-0 whitespace-nowrap ${
-                  req.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase shrink-0 whitespace-nowrap ${req.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
                   req.status === RequestStatus.PENDING ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                  req.status === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
-                  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                }`}>
+                    req.status === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                  }`}>
                   {req.status}
                 </span>
               </div>
               <div className="flex items-center gap-3 mt-1.5">
                 <span className="text-[9px] font-black px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded uppercase">{req.category[0]}</span>
                 <span className="text-slate-300 dark:text-slate-600">·</span>
-                <span className="text-[10px] font-bold text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</span>
+                <span className="text-[10px] font-bold text-slate-400">{req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '—'}</span>
               </div>
             </div>
           )) : (
@@ -274,7 +273,7 @@ export default function AdminUnitDetailPage() {
                 onClick={() => router.push(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance/${req.id}`)}
                 className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
               >
-                <td className="px-6 py-4 text-xs font-bold text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</td>
+                <td className="px-6 py-4 text-xs font-bold text-slate-500">{req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '—'}</td>
                 <td className="px-6 py-4">
                   <span className="text-[9px] font-black px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg uppercase whitespace-nowrap">
                     {req.category[0]}
@@ -284,12 +283,11 @@ export default function AdminUnitDetailPage() {
                   {req.description}
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase whitespace-nowrap ${
-                    req.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                  <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase whitespace-nowrap ${req.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
                     req.status === RequestStatus.PENDING ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                    req.status === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
-                    'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                  }`}>
+                      req.status === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                    }`}>
                     {req.status}
                   </span>
                 </td>
@@ -317,32 +315,30 @@ export default function AdminUnitDetailPage() {
 
       <header className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200 dark:border-white/5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden transition-colors shadow-sm">
         <div className={`absolute top-0 right-0 w-64 h-64 opacity-[0.03] -mr-16 -mt-16 pointer-events-none dark:text-white`}>
-           <i className="fa-solid fa-building text-[12rem]"></i>
+          <i className="fa-solid fa-building text-[12rem]"></i>
         </div>
 
         <div className="flex items-center gap-4 md:gap-6 relative z-10 w-full lg:w-auto">
-          <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex flex-col items-center justify-center text-white text-2xl md:text-3xl relative overflow-hidden group shrink-0 ${
-            unit.status === 'Occupied' ? 'bg-emerald-500' :
+          <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex flex-col items-center justify-center text-white text-2xl md:text-3xl relative overflow-hidden group shrink-0 ${unit.status === 'Occupied' ? 'bg-emerald-500' :
             unit.status === 'Vacant' ? 'bg-slate-300 dark:bg-slate-700' :
-            'bg-amber-500'
-          }`}>
+              'bg-amber-500'
+            }`}>
             <i className="fa-solid fa-door-open relative z-10"></i>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">Unit {unit.number}</h1>
-              <span className={`text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border ${
-                unit.status === 'Occupied' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' :
+              <span className={`text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border ${unit.status === 'Occupied' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' :
                 unit.status === 'Vacant' ? 'bg-slate-100 text-slate-700 border-slate-200' :
-                'bg-amber-100 text-amber-700 border-amber-200'
-              }`}>
+                  'bg-amber-100 text-amber-700 border-amber-200'
+                }`}>
                 {unit.status}
               </span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 text-sm md:text-base">{unit.type} Residence • Floor {unit.floor}</p>
           </div>
         </div>
-        
+
         {isAdmin && (
           <div className="flex flex-wrap gap-2 md:gap-3 w-full lg:w-auto relative z-20 justify-start lg:justify-end">
             {!isGuest && (
@@ -375,9 +371,8 @@ export default function AdminUnitDetailPage() {
       </header>
 
       {notification && (
-        <div className={`fixed top-6 right-6 z-[200] animate-in slide-in-from-right-8 duration-300 p-4 rounded-2xl border flex items-center gap-4 max-w-md ${
-          notification.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-rose-600 border-rose-500 text-white'
-        } shadow-2xl`}>
+        <div className={`fixed top-6 right-6 z-[200] animate-in slide-in-from-right-8 duration-300 p-4 rounded-2xl border flex items-center gap-4 max-w-md ${notification.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-rose-600 border-rose-500 text-white'
+          } shadow-2xl`}>
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
             <i className={`fa-solid ${notification.type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}`}></i>
           </div>
@@ -401,7 +396,7 @@ export default function AdminUnitDetailPage() {
           { id: 'documents', label: 'Documents' },
           { id: 'layout', label: 'Layout' }
         ].map(tab => (
-          <button 
+          <button
             key={tab.id}
             onClick={() => {
               setActiveTab(tab.id as any);
@@ -436,7 +431,7 @@ export default function AdminUnitDetailPage() {
                                 {resident.id === unit.currentTenantId ? 'Primary Member' : 'Household Member'}
                               </p>
                               <p className="text-lg font-black text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors uppercase tracking-tight">
-                                {resident.firstName} {resident.lastName} 
+                                {resident.firstName} {resident.lastName}
                               </p>
                             </Link>
                           </div>
@@ -507,7 +502,7 @@ export default function AdminUnitDetailPage() {
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-white/5">
             <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">Transfer Household</h3>
             <div className="space-y-6">
-              <select 
+              <select
                 value={selectedTargetUnitId}
                 onChange={(e) => setSelectedTargetUnitId(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-2xl px-5 py-3 text-sm font-bold outline-none text-slate-900 dark:text-white"
@@ -531,7 +526,7 @@ export default function AdminUnitDetailPage() {
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-white/5">
             <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6 uppercase tracking-tight">Process Move-In</h3>
             <div className="space-y-6">
-              <select 
+              <select
                 value={selectedNewTenantId}
                 onChange={(e) => setSelectedNewTenantId(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-2xl px-5 py-3 text-sm font-bold outline-none text-slate-900 dark:text-white"

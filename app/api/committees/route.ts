@@ -10,9 +10,9 @@ export async function GET() {
   if (!session || Object.keys(session).length === 0) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
   try {
     const committees = await prisma.committee.findMany({
+      where: { cooperativeId: session.cooperativeId },
       include: {
         members: {
           select: { firstName: true, lastName: true },
@@ -39,30 +39,28 @@ export async function POST(request: NextRequest) {
   if (!session.isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-
   try {
     const body = await request.json();
     const validatedData = committeeSchema.parse(body);
     const tenantCandidates = await prisma.tenant.findMany({
-      where: { status: 'Current' },
+      where: { status: 'Current', cooperativeId: session.cooperativeId },
       select: { id: true, firstName: true, lastName: true },
     });
     const nameToId = new Map<string, string>();
     tenantCandidates.forEach(tenant => {
       nameToId.set(normalizeName(`${tenant.firstName} ${tenant.lastName}`), tenant.id);
     });
-
     const memberConnect = Array.from(new Set(validatedData.members ?? []))
       .map(name => nameToId.get(normalizeName(name)))
       .filter(Boolean)
       .map(id => ({ id: id as string }));
-
     const committee = await prisma.committee.create({
       data: {
         name: validatedData.name,
         description: validatedData.description ?? '',
         chair: validatedData.chair,
         icon: validatedData.icon ?? 'fa-users',
+        cooperativeId: session.cooperativeId,
         members: memberConnect.length > 0 ? { connect: memberConnect } : undefined,
       },
     });

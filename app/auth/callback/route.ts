@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import prisma from '../../../utils/prisma';
 import { getSession } from '../../../utils/session';
@@ -24,20 +23,34 @@ export async function GET(request: NextRequest) {
     const baseUrl = getBaseUrl(request);
     const redirectUri = `${baseUrl}/auth/callback`;
 
-    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
-      code,
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code',
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
     });
 
-    const { access_token } = tokenResponse.data;
-    const userResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+    if (!tokenResponse.ok) {
+      const errorData = await tokenResponse.text();
+      throw new Error(`Token request failed: ${errorData}`);
+    }
+
+    const { access_token } = await tokenResponse.json();
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${access_token}` },
     });
 
-    const userData = userResponse.data;
+    if (!userResponse.ok) {
+      const errorData = await userResponse.text();
+      throw new Error(`User info request failed: ${errorData}`);
+    }
+
+    const userData = await userResponse.json();
     const email = userData.email.toLowerCase();
 
     // Find or create user in database

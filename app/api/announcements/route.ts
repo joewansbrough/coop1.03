@@ -8,9 +8,9 @@ export async function GET() {
   if (!session || Object.keys(session).length === 0) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
   try {
     const announcements = await prisma.announcement.findMany({
+      where: { cooperativeId: session.cooperativeId },
       orderBy: { date: 'desc' }
     });
     return NextResponse.json(announcements);
@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
   if (!session.isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-
   try {
     const body = await request.json();
     const validatedData = announcementSchema.parse(body);
@@ -39,6 +38,7 @@ export async function POST(request: NextRequest) {
         priority: validatedData.priority,
         author: validatedData.author || session.email,
         date: validatedData.date,
+        cooperativeId: session.cooperativeId,
       }
     });
     return NextResponse.json(announcement);

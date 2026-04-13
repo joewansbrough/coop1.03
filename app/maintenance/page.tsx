@@ -13,10 +13,10 @@ export default function MaintenancePage() {
   const { data: user } = useUser();
   const { data: requests = MOCK_REQUESTS, refetch: fetchRequests } = useMaintenance();
   const { data: units = MOCK_UNITS } = useUnits();
-  
+
   const router = useRouter();
   const queryClient = useQueryClient();
-  
+
   const [quotes, setQuotes] = useState<RepairQuote[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [activeView, setActiveView] = useState<'requests' | 'quotes'>('requests');
@@ -25,7 +25,7 @@ export default function MaintenancePage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
-  const [pendingRequest, setPendingRequest] = useState<{id: string, status: RequestStatus} | null>(null);
+  const [pendingRequest, setPendingRequest] = useState<{ id: string, status: RequestStatus } | null>(null);
   const [urgency, setUrgency] = useState<string>('Medium');
 
   // Form State
@@ -45,8 +45,8 @@ export default function MaintenancePage() {
     .filter(r => isAdmin || r.unitId === userUnitId)
     .filter(r => {
       const matchesFilter = filter === 'All' || r.status === filter;
-      const matchesSearch = r.description.toLowerCase().includes(search.toLowerCase()) || 
-                           (units.find(u => u.id === r.unitId)?.number.includes(search));
+      const matchesSearch = r.description.toLowerCase().includes(search.toLowerCase()) ||
+        (units.find(u => u.id === r.unitId)?.number.includes(search));
       return matchesFilter && matchesSearch;
     });
 
@@ -71,7 +71,7 @@ export default function MaintenancePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isGuest) return;
-    
+
     if (!category || category.length === 0) {
       alert("At least one category is required.");
       return;
@@ -86,7 +86,7 @@ export default function MaintenancePage() {
       status: RequestStatus.PENDING,
       urgency,
     };
-    
+
     try {
       const res = await fetch('/api/maintenance', {
         method: 'POST',
@@ -144,7 +144,7 @@ export default function MaintenancePage() {
     alert("Quote approved. Vendor has been notified.");
   };
 
-  const filteredQuotes = selectedRequestIdForQuotes 
+  const filteredQuotes = selectedRequestIdForQuotes
     ? quotes.filter(q => q.requestId === selectedRequestIdForQuotes)
     : quotes;
 
@@ -174,7 +174,7 @@ export default function MaintenancePage() {
               </button>
             </div>
           )}
-          <button 
+          <button
             onClick={() => setShowForm(!showForm)}
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"
           >
@@ -183,7 +183,7 @@ export default function MaintenancePage() {
         </div>
       </div>
 
-      <FilterBar 
+      <FilterBar
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Search maintenance requests..."
@@ -196,7 +196,7 @@ export default function MaintenancePage() {
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 animate-in fade-in slide-in-from-top-4">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-3">
-               <i className="fa-solid fa-clipboard-list text-emerald-500"></i> {isAdmin ? 'Report Building Defect' : 'Request Maintenance'}
+              <i className="fa-solid fa-clipboard-list text-emerald-500"></i> {isAdmin ? 'Report Building Defect' : 'Request Maintenance'}
             </h3>
             <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600">
               <i className="fa-solid fa-xmark"></i>
@@ -232,16 +232,16 @@ export default function MaintenancePage() {
                 )}
               </div>
               <div className="grid grid-cols-2 gap-4">
-                 <div>
+                <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Category</label>
                     <span className="text-[8px] text-slate-400 font-bold uppercase italic">(Ctrl+Click)</span>
                   </div>
-                  <select 
+                  <select
                     multiple
                     size={4}
-                    className="w-full border border-slate-200 dark:border-white/5 rounded-xl p-3 text-sm outline-none bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200" 
-                    value={category} 
+                    className="w-full border border-slate-200 dark:border-white/5 rounded-xl p-3 text-sm outline-none bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+                    value={category}
                     onChange={(e) => setCategory(Array.from(e.target.selectedOptions, (option: HTMLOptionElement) => option.value as MaintenanceCategory))}
                     required
                   >
@@ -305,30 +305,28 @@ export default function MaintenancePage() {
                         </td>
                         <td className="px-6 py-4">
                           <p className="text-sm font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{req.description}</p>
-                          <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Filed: {new Date(req.createdAt).toLocaleDateString()}</span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Filed: {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '—'}</span>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter ${
-                            req.priority === MaintenancePriority.EMERGENCY ? 'bg-rose-100 text-rose-700' :
-                            req.priority === MaintenancePriority.HIGH ? 'bg-amber-100 text-amber-700' : 
-                            req.priority === MaintenancePriority.MEDIUM ? 'bg-blue-100 text-blue-700' :
-                            'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                          }`}>
+                          <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter ${req.priority === MaintenancePriority.EMERGENCY ? 'bg-rose-100 text-rose-700' :
+                            req.priority === MaintenancePriority.HIGH ? 'bg-amber-100 text-amber-700' :
+                              req.priority === MaintenancePriority.MEDIUM ? 'bg-blue-100 text-blue-700' :
+                                'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                            }`}>
                             {req.priority}
                           </span>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <div className={`w-1.5 h-1.5 rounded-full ${
-                              req.status === RequestStatus.IN_PROGRESS ? 'bg-blue-500' : 'bg-amber-500'
-                            }`}></div>
+                            <div className={`w-1.5 h-1.5 rounded-full ${req.status === RequestStatus.IN_PROGRESS ? 'bg-blue-500' : 'bg-amber-500'
+                              }`}></div>
                             <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">{req.status}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {isAdmin && (
-                              <button 
+                              <button
                                 onClick={(e) => { e.stopPropagation(); updateRequestStatus(req.id, RequestStatus.COMPLETED); }}
                                 className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg"
                                 title="Mark Complete"
@@ -336,7 +334,7 @@ export default function MaintenancePage() {
                                 <i className="fa-solid fa-check"></i>
                               </button>
                             )}
-                            <button 
+                            <button
                               onClick={(e) => { e.stopPropagation(); router.push(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance/${req.id}`); }}
                               className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
                             >
@@ -391,7 +389,7 @@ export default function MaintenancePage() {
                         </td>
                         <td className="px-6 py-4">
                           <p className="text-sm font-bold text-slate-500 dark:text-slate-400 line-clamp-1">{req.description}</p>
-                          <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Resolved: {new Date(req.updatedAt || req.createdAt).toLocaleDateString()}</span>
+                          <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Resolved: {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '—'}</span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className="text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter bg-slate-100 dark:bg-slate-800 text-slate-400">
@@ -400,23 +398,22 @@ export default function MaintenancePage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <div className={`w-1.5 h-1.5 rounded-full ${
-                              req.status === RequestStatus.COMPLETED ? 'bg-emerald-500/50' : 'bg-rose-500/50'
-                            }`}></div>
+                            <div className={`w-1.5 h-1.5 rounded-full ${req.status === RequestStatus.COMPLETED ? 'bg-emerald-500/50' : 'bg-rose-500/50'
+                              }`}></div>
                             <span className="text-[10px] font-black text-slate-400 uppercase">{req.status}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {isAdmin && (
-                              <button 
+                              <button
                                 onClick={(e) => { e.stopPropagation(); updateRequestStatus(req.id, RequestStatus.IN_PROGRESS); }}
                                 className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-amber-200/50 dark:border-amber-900/30"
                               >
                                 Re-open
                               </button>
                             )}
-                            <button 
+                            <button
                               onClick={(e) => { e.stopPropagation(); router.push(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance/${req.id}`); }}
                               className="p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
                             >
@@ -447,9 +444,8 @@ export default function MaintenancePage() {
                   <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20 group-hover:text-emerald-600 transition-colors">
                     <i className="fa-solid fa-file-invoice-dollar text-xl"></i>
                   </div>
-                  <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest ${
-                    quote.status === 'Approved' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                  }`}>
+                  <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest ${quote.status === 'Approved' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                    }`}>
                     {quote.status}
                   </span>
                 </div>
@@ -462,7 +458,7 @@ export default function MaintenancePage() {
                   <span className="text-2xl font-black text-slate-900 dark:text-white">${quote.amount.toLocaleString()}</span>
                   <div className="flex gap-2">
                     {quote.status !== 'Approved' && (
-                      <button 
+                      <button
                         onClick={() => approveQuote(quote.id)}
                         className="bg-slate-900 dark:bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all active:scale-95"
                       >
@@ -479,12 +475,11 @@ export default function MaintenancePage() {
       {showStatusConfirm && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 animate-in zoom-in-95 duration-200 text-center">
-            <div className={`w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center text-2xl ${
-              pendingRequest?.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-600' :
+            <div className={`w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center text-2xl ${pendingRequest?.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-600' :
               pendingRequest?.status === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-600' :
-              pendingRequest?.status === RequestStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-600' :
-              'bg-amber-100 text-amber-600'
-            }`}>
+                pendingRequest?.status === RequestStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-600' :
+                  'bg-amber-100 text-amber-600'
+              }`}>
               <i className="fa-solid fa-circle-question"></i>
             </div>
             <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">Update Status?</h3>
@@ -492,20 +487,19 @@ export default function MaintenancePage() {
               Are you sure you want to move this request to <span className="font-black text-slate-700 dark:text-slate-300 uppercase">{pendingRequest?.status}</span>?
             </p>
             <div className="flex gap-3">
-              <button 
-                onClick={() => { setShowStatusConfirm(false); setPendingRequest(null); }} 
+              <button
+                onClick={() => { setShowStatusConfirm(false); setPendingRequest(null); }}
                 className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl"
               >
                 Go Back
               </button>
-              <button 
-                onClick={confirmRequestStatus} 
-                className={`flex-1 py-3 text-white rounded-xl text-xs font-black uppercase shadow-lg transition-all active:scale-95 ${
-                  pendingRequest?.status === RequestStatus.COMPLETED ? 'bg-emerald-600 shadow-emerald-500/20' :
+              <button
+                onClick={confirmRequestStatus}
+                className={`flex-1 py-3 text-white rounded-xl text-xs font-black uppercase shadow-lg transition-all active:scale-95 ${pendingRequest?.status === RequestStatus.COMPLETED ? 'bg-emerald-600 shadow-emerald-500/20' :
                   pendingRequest?.status === RequestStatus.CANCELLED ? 'bg-rose-600 shadow-rose-500/20' :
-                  pendingRequest?.status === RequestStatus.IN_PROGRESS ? 'bg-blue-600 shadow-blue-500/20' :
-                  'bg-amber-100 text-amber-600'
-                }`}
+                    pendingRequest?.status === RequestStatus.IN_PROGRESS ? 'bg-blue-600 shadow-blue-500/20' :
+                      'bg-amber-100 text-amber-600'
+                  }`}
               >
                 Confirm Update
               </button>

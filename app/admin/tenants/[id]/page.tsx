@@ -20,7 +20,7 @@ export default function AdminTenantDetailPage() {
   const tenant = tenants.find(t => t.id === tenantId);
   const unit = units.find(u => u.id === tenant?.unitId);
   const tenantRequests = requests.filter(r => r.unitId === tenant?.unitId);
-  
+
   const [activeTab, setActiveTab] = useState<'overview' | 'maintenance' | 'participation' | 'tenancy'>('overview');
   const [showMsgModal, setShowMsgModal] = useState(false);
   const [msgBody, setMsgBody] = useState('');
@@ -50,7 +50,7 @@ export default function AdminTenantDetailPage() {
 
   const isAdmin = !!user.isAdmin;
   const openRequests = tenantRequests.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled');
-  
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (user.isGuest) return;
@@ -90,14 +90,14 @@ export default function AdminTenantDetailPage() {
               </span>
             </div>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-              Shareholder since {new Date(tenant.startDate).toLocaleDateString()} 
+              Shareholder since {new Date(tenant.startDate).toLocaleDateString()}
               {unit && ` • Assigned to Unit ${unit.number}`}
             </p>
           </div>
         </div>
 
         <div className="flex gap-3 relative z-10">
-          <button 
+          <button
             onClick={() => setShowMsgModal(true)}
             className="bg-slate-900 dark:bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-black/10"
           >
@@ -118,7 +118,7 @@ export default function AdminTenantDetailPage() {
           { id: 'maintenance', label: 'Service' },
           { id: 'participation', label: 'Participation' },
         ].map(tab => (
-          <button 
+          <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={`px-8 py-4 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
@@ -133,17 +133,17 @@ export default function AdminTenantDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6 shadow-sm transition-colors">
-                      <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Personal Profile (Restricted)</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Full Name</p>
-                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tenant.firstName} {tenant.lastName}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Direct Email</p>
-                          <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tenant.email}</p>
-                        </div>
-                      </div>
+                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Personal Profile (Restricted)</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Full Name</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tenant.firstName} {tenant.lastName}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Direct Email</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tenant.email}</p>
+                  </div>
+                </div>
               </div>
 
               {unit && (
@@ -177,11 +177,10 @@ export default function AdminTenantDetailPage() {
                       <div key={req.id} onClick={() => router.push(`/admin/maintenance/${req.id}`)} className="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-100 dark:border-white/5 flex justify-between items-center cursor-pointer hover:border-emerald-500/50 transition-all">
                         <div>
                           <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{req.title}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{req.priority} • {new Date(req.createdAt).toLocaleDateString()}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{req.priority} • {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '—'}</p>
                         </div>
-                        <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${
-                          req.status === 'Pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        }`}>
+                        <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${req.status === 'Pending' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                          }`}>
                           {req.status}
                         </span>
                       </div>
@@ -192,7 +191,7 @@ export default function AdminTenantDetailPage() {
                 )}
               </div>
             </div>
-            
+
             <div className="space-y-8">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6 shadow-sm transition-colors">
                 <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Engagement Status</h3>
@@ -279,7 +278,7 @@ export default function AdminTenantDetailPage() {
             <form onSubmit={handleSendMessage} className="p-8 space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Message Content</label>
-                <textarea 
+                <textarea
                   required
                   value={msgBody}
                   onChange={(e) => setMsgBody(e.target.value)}

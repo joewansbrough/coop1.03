@@ -8,13 +8,11 @@ export async function GET() {
   if (!session || Object.keys(session).length === 0) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
   const where = session.isAdmin
-    ? undefined
+    ? { cooperativeId: session.cooperativeId }
     : session.tenantId
-      ? { tenantId: session.tenantId }
-      : { tenantId: '' };
-
+      ? { cooperativeId: session.cooperativeId, tenantId: session.tenantId }
+      : { cooperativeId: session.cooperativeId, tenantId: '' };
   const transactions = await prisma.transaction.findMany({
     where,
     orderBy: { date: 'desc' },
@@ -24,7 +22,6 @@ export async function GET() {
       },
     },
   });
-
   return NextResponse.json(transactions);
 }
 
@@ -33,7 +30,6 @@ export async function POST(request: NextRequest) {
   if (!session || Object.keys(session).length === 0) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
   try {
     const body = await request.json();
     const validated = transactionSchema.parse(body);
@@ -41,7 +37,6 @@ export async function POST(request: NextRequest) {
     if (!tenantId) {
       return NextResponse.json({ error: 'Tenant context is required' }, { status: 400 });
     }
-
     const transaction = await prisma.transaction.create({
       data: {
         tenantId,
@@ -53,6 +48,7 @@ export async function POST(request: NextRequest) {
         status: validated.status ?? 'PAID',
         metadata: validated.metadata,
         date: validated.date ? new Date(validated.date) : new Date(),
+        cooperativeId: session.cooperativeId,
       },
       include: {
         tenant: {
@@ -60,7 +56,6 @@ export async function POST(request: NextRequest) {
         },
       },
     });
-
     return NextResponse.json(transaction);
   } catch (error: any) {
     console.error('Transaction error:', error);

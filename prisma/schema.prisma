@@ -6,32 +6,56 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 enum MaintenanceFrequency {
-       MONTHLY
-       QUARTERLY
-       ANNUAL
-     }
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
 
-     enum MaintenanceCategory {
-       PLUMBING
-       ELECTRICAL
-       HVAC
-       SAFETY
-       GENERAL
-       OTHER // Added 'Other' to match the error message's suggestion
-     }
+enum MaintenanceCategory {
+  PLUMBING
+  ELECTRICAL
+  HVAC
+  SAFETY
+  GENERAL
+  OTHER
+}
+
+model Cooperative {
+  id         String   @id @default(uuid())
+  name       String
+  slug       String   @unique
+  address    String?
+  city       String?
+  province   String   @default("BC")
+  adminEmail String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  units                Unit[]
+  tenants              Tenant[]
+  announcements        Announcement[]
+  documents            Document[]
+  events               CoopEvent[]
+  committees           Committee[]
+  maintenanceRequests  MaintenanceRequest[]
+  scheduledMaintenance ScheduledMaintenance[]
+  transactions         Transaction[]
+}
 
 model Unit {
-  id                String               @id @default(uuid())
-  number            String               @unique
-  type              String               // e.g., "1BR", "2BR", "3BR"
-  floor             Int                  @default(1)
-  status            String               // e.g., "Occupied", "Vacant", "Maintenance"
-  currentTenantId   String?              @unique
-  currentTenant     Tenant?              @relation("CurrentResident", fields: [currentTenantId], references: [id])
+  id            String      @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+  number        String      @unique
+  type          String // e.g., "1BR", "2BR", "3BR"
+  floor         Int         @default(1)
+  status        String // e.g., "Occupied", "Vacant", "Maintenance"
+  currentTenantId String?   @unique
+  currentTenant   Tenant?   @relation("CurrentResident", fields: [currentTenantId], references: [id])
   maintenanceHistory MaintenanceRequest[]
   occupancyHistory   TenantHistory[]
   createdAt         DateTime             @default(now())
@@ -40,24 +64,26 @@ model Unit {
 }
 
 model Tenant {
-  id            String          @id @default(uuid())
+  id            String      @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
   firstName     String
   lastName      String
-  email         String          @unique
+  email         String      @unique
   phone         String?
-  startDate     DateTime          // Changed from String to DateTime
+  startDate     DateTime // Changed from String to DateTime
   endDate       DateTime?
-  status        String          @default("Current") // e.g., "Current", "Past", "Waitlist"
+  status        String      @default("Current") // e.g., "Current", "Past", "Waitlist"
 
-  role          String          @default("MEMBER")  // "ADMIN" or "MEMBER"
-  unitId        String?
-  unit          Unit?           @relation("CurrentResident")
-  committees    Committee[]     @relation("CommitteeMembers")
-  events        CoopEvent[]     @relation("EventAttendees")
-  history       TenantHistory[]
-  transactions  Transaction[]
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  role       String          @default("MEMBER") // "ADMIN" or "MEMBER"
+  unitId     String?
+  unit       Unit?           @relation("CurrentResident")
+  committees Committee[]     @relation("CommitteeMembers")
+  events     CoopEvent[]     @relation("EventAttendees")
+  history    TenantHistory[]
+  transactions Transaction[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 }
 
 enum TransactionDirection {
@@ -72,117 +98,130 @@ enum TransactionStatus {
 }
 
 model Transaction {
-  id              String               @id @default(uuid())
-  tenantId        String
-  tenant          Tenant               @relation(fields: [tenantId], references: [id])
-  amount          Float
-  currency        String               @default("cad")
-  type            String
-  description     String
-  direction       TransactionDirection @default(DEBIT)
-  status          TransactionStatus    @default(PENDING)
+  id            String      @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+  amount        Float
+  currency      String            @default("cad")
+  type          String
+  description   String
+  direction     TransactionDirection @default(DEBIT)
+  status        TransactionStatus    @default(PENDING)
   stripeSessionId String?
   stripeSessionUrl String?
-  metadata        Json?
-  date            DateTime             @default(now())
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @default(now())
+  metadata      Json?
+  date          DateTime          @default(now())
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @default(now())
 }
 
 model TenantHistory {
-  id          String   @id @default(uuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  unitId      String
-  unit        Unit     @relation(fields: [unitId], references: [id])
-  startDate   DateTime
-  endDate     DateTime?
-  moveReason  String?
-  createdAt   DateTime @default(now())
+  id         String    @id @default(uuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+  unitId     String
+  unit       Unit      @relation(fields: [unitId], references: [id])
+  startDate  DateTime
+  endDate    DateTime?
+  moveReason String?
+  createdAt  DateTime  @default(now())
 }
 
 model MaintenanceRequest {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  status      String   // "Pending", "In Progress", "Completed"
-  priority    String   // "Low", "Medium", "High", "Urgent"
-  category    String   @default("General")
-  unitId      String
-  unit        Unit     @relation(fields: [unitId], references: [id])
-  tenantId    String?  // Added to match UI
-  requestedBy String?  // Email of the tenant who requested
-  notes       Json?    // Array of MaintenanceNote
-  expenses    Json?    // Array of MaintenanceExpense
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String      @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+  title         String
+  description   String
+  status        String // "Pending", "In Progress", "Completed"
+  priority      String // "Low", "Medium", "High", "Urgent"
+  category      String      @default("General")
+  unitId        String
+  unit          Unit        @relation(fields: [unitId], references: [id])
+  tenantId      String? // Added to match UI
+  requestedBy   String? // Email of the tenant who requested
+  notes         Json? // Array of MaintenanceNote
+  expenses      Json? // Array of MaintenanceExpense
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Announcement {
-  id        String   @id @default(uuid())
-  title     String
-  content   String
-  type      String   // "General", "Urgent", "Maintenance"
-  priority  String   @default("Normal")
-  author    String   // Email of the admin
-  date      String   // Added to match UI
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String      @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+  title         String
+  content       String
+  type          String // "General", "Urgent", "Maintenance"
+  priority      String      @default("Normal")
+  author        String // Email of the admin
+  date          String // Added to match UI
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Document {
-  id        String   @id @default(uuid())
-  title     String
-  category  String
-  committee String?  @default("")
-  url       String
-  fileType  String
-  author    String   @default("Admin")
-  date      String
-  tags      String[] @default([])
-  content   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String      @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+  title         String
+  category      String
+  committee     String?     @default("")
+  url           String
+  fileType      String
+  author        String      @default("Admin")
+  date          String
+  tags          String[]    @default([])
+  content       String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model CoopEvent {
-  id          String   @id @default(uuid())
-  title       String
-  description String   @default("")
-  date        String
-  time        String
-  location    String
-  category    String   // "Meeting", "Social", "Maintenance", "Board"
-  attendees   Tenant[] @relation("EventAttendees")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String      @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+  title         String
+  description   String      @default("")
+  date          String
+  time          String
+  location      String
+  category      String // "Meeting", "Social", "Maintenance", "Board"
+  attendees     Tenant[]    @relation("EventAttendees")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
-
 model Committee {
-  id          String   @id @default(uuid())
-  name        String
-  description String
-  chair       String   @default("")
-  icon        String   @default("fa-users")
-  members     Tenant[] @relation("CommitteeMembers")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String      @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+  name          String
+  description   String
+  chair         String      @default("")
+  icon          String      @default("fa-users")
+  members       Tenant[]    @relation("CommitteeMembers")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model ScheduledMaintenance {
-  id            String   @id @default(uuid())
+  id            String      @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
   unitId        String
-  unit          Unit     @relation("ScheduledTasks", fields: [unitId], references: [id], onDelete: Cascade)
+  unit          Unit        @relation("ScheduledTasks", fields: [unitId], references: [id], onDelete: Cascade)
   task          String
   description   String?
   frequency     MaintenanceFrequency //use the defined enum
   dueDate       String
   lastCompleted String?
   assignedTo    String
-  isCompleted   Boolean  @default(false)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isCompleted   Boolean              @default(false)
+  isActive      Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
   category      MaintenanceCategory //use the defined enum
 }

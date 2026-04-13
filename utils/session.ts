@@ -6,6 +6,7 @@ export interface UserSession {
   name: string;
   picture: string;
   isAdmin: boolean;
+  cooperativeId: string;
   tenantId: string | null;
   unitNumber: string | null;
   role: string;

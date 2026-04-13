@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const userTenantId = user?.tenantId ?? null;
   const userUnit = useMemo(() => units.find(u => u.currentTenantId === userTenantId), [units, userTenantId]);
   const userUnitId = userUnit?.id ?? null;
-  
+
   const userOpenRequests = useMemo(() => {
     if (!userUnitId || !Array.isArray(requests)) return [];
     return requests.filter(
@@ -38,7 +38,7 @@ export default function DashboardPage() {
   const pendingRequestsAll = Array.isArray(requests) ? requests.filter(r => r.status === RequestStatus.PENDING).length : 0;
   const pendingRequestsUser = (userUnitId && Array.isArray(requests)) ? requests.filter(r => r.unitId === userUnitId && r.status === RequestStatus.PENDING).length : 0;
   const pendingRequests = isAdmin ? pendingRequestsAll : pendingRequestsUser;
-  
+
   // Find closest upcoming meeting
   const nextMeeting = useMemo(() => {
     const now = new Date();
@@ -93,34 +93,34 @@ export default function DashboardPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid grid-rows-2 gap-4">
-                  <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
-                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">Managed Units</p>
-                    <p className="text-2xl font-black">{units.length}</p>
-                  </div>
-                  <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
-                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Residents</p>
-                    <p className="text-2xl font-black">{tenants.filter(t => t.status === 'Current').length}</p>
-                  </div>
+                <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
+                  <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-2">Managed Units</p>
+                  <p className="text-2xl font-black">{units.length}</p>
+                </div>
+                <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Residents</p>
+                  <p className="text-2xl font-black">{tenants.filter(t => t.status === 'Current').length}</p>
+                </div>
               </div>
               <div className="flex h-full">
-                  {nextMeeting ? (
-                    <Link href={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center">
-                      <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-4">Next Meeting</p>
-                      <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4">
-                        <i className="fa-solid fa-calendar-day text-2xl"></i>
-                      </div>
-                      <p className="text-3xl font-black mb-1">{new Date(nextMeeting.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">{nextMeeting.title}</p>
-                    </Link>
-                  ) : (
-                    <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Next Meeting</p>
-                      <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
-                        <i className="fa-solid fa-calendar-xmark text-2xl"></i>
-                      </div>
-                      <p className="text-xl font-black">TBD</p>
+                {nextMeeting ? (
+                  <Link href={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center">
+                    <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-4">Next Meeting</p>
+                    <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4">
+                      <i className="fa-solid fa-calendar-day text-2xl"></i>
                     </div>
-                  )}
+                    <p className="text-3xl font-black mb-1">{new Date(nextMeeting.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">{nextMeeting.title}</p>
+                  </Link>
+                ) : (
+                  <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Next Meeting</p>
+                    <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
+                      <i className="fa-solid fa-calendar-xmark text-2xl"></i>
+                    </div>
+                    <p className="text-xl font-black">TBD</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -172,10 +172,9 @@ export default function DashboardPage() {
                         <button
                           key={unit.id}
                           onClick={() => router.push(`/admin/units/${unit.id}`)}
-                          className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all hover:scale-110 active:scale-95 group relative shadow-sm ${
-                            unit.status === 'Occupied' ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-500 text-emerald-700 dark:text-emerald-400' :
-                            'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-600'
-                          }`}
+                          className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all hover:scale-110 active:scale-95 group relative shadow-sm ${unit.status === 'Occupied' ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-500 text-emerald-700 dark:text-emerald-400' :
+                              'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-600'
+                            }`}
                         >
                           <span className="text-xs lg:text-sm font-black">{unit.number}</span>
                           <i className="fa-solid fa-house text-[8px] lg:text-[10px] mt-1 opacity-20 group-hover:opacity-100 transition-opacity"></i>
@@ -202,7 +201,7 @@ export default function DashboardPage() {
               Quick Actions
             </h3>
             <div className="space-y-3">
-              <button 
+              <button
                 onClick={() => router.push('/documents')}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 hover:border-emerald-500 transition-all group"
               >
@@ -214,7 +213,7 @@ export default function DashboardPage() {
                   <p className="text-[9px] text-slate-500 font-bold uppercase">Archive new policy</p>
                 </div>
               </button>
-              <button 
+              <button
                 onClick={() => router.push('/communications')}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 hover:border-blue-500 transition-all group"
               >
@@ -226,7 +225,7 @@ export default function DashboardPage() {
                   <p className="text-[9px] text-slate-500 font-bold uppercase">Blast to community</p>
                 </div>
               </button>
-              <button 
+              <button
                 onClick={() => router.push('/calendar')}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 hover:border-amber-500 transition-all group"
               >
@@ -267,69 +266,69 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex h-full">
-                {userUnitId ? (
-                  <Link href={`/admin/units/${userUnitId}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center group">
-                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-4">My Residency</p>
-                    <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
-                      <i className="fa-solid fa-house-user text-2xl"></i>
-                    </div>
-                    <p className="text-3xl font-black mb-1">Unit {userUnit?.number ?? '—'}</p>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">
-                      {userUnit?.type ?? 'Unit'} • Floor {userUnit?.floor ?? '—'}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex h-full">
+              {userUnitId ? (
+                <Link href={`/admin/units/${userUnitId}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center group">
+                  <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-4">My Residency</p>
+                  <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-110 transition-transform">
+                    <i className="fa-solid fa-house-user text-2xl"></i>
+                  </div>
+                  <p className="text-3xl font-black mb-1">Unit {userUnit?.number ?? '—'}</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">
+                    {userUnit?.type ?? 'Unit'} • Floor {userUnit?.floor ?? '—'}
+                  </p>
+                  <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      {userOpenRequests.length > 0 ? (
+                        <span className="text-amber-400">{userOpenRequests.length} Pending Requests</span>
+                      ) : (
+                        <span className="text-emerald-400">Residency Active</span>
+                      )}
                     </p>
-                    <div className="mt-6 pt-6 border-t border-white/5 w-full">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        {userOpenRequests.length > 0 ? (
-                          <span className="text-amber-400">{userOpenRequests.length} Pending Requests</span>
-                        ) : (
-                          <span className="text-emerald-400">Residency Active</span>
-                        )}
-                      </p>
-                    </div>
-                  </Link>
-                ) : (
-                  <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">My Residency</p>
-                    <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
-                      <i className="fa-solid fa-house-slash text-2xl"></i>
-                    </div>
-                    <p className="text-xl font-black mb-1">No Unit</p>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Contact administration</p>
-                    <div className="mt-6 pt-6 border-t border-white/5 w-full">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TBD</p>
-                    </div>
                   </div>
-                )}
-              </div>
-              <div className="flex h-full">
-                {nextMeeting ? (
-                  <Link href={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center group">
-                    <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-4">Next Meeting</p>
-                    <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
-                      <i className="fa-solid fa-calendar-day text-2xl"></i>
-                    </div>
-                    <p className="text-3xl font-black mb-1">{new Date(nextMeeting.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">{nextMeeting.title}</p>
-                    <div className="mt-6 pt-6 border-t border-white/5 w-full">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{nextMeeting.time} • {nextMeeting.location}</p>
-                    </div>
-                  </Link>
-                ) : (
-                  <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Next Meeting</p>
-                    <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
-                      <i className="fa-solid fa-calendar-xmark text-2xl"></i>
-                    </div>
-                    <p className="text-xl font-black mb-1">TBD</p>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">No upcoming events</p>
-                    <div className="mt-6 pt-6 border-t border-white/5 w-full">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TBD</p>
-                    </div>
+                </Link>
+              ) : (
+                <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">My Residency</p>
+                  <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
+                    <i className="fa-solid fa-house-slash text-2xl"></i>
                   </div>
-                )}
-             </div>
+                  <p className="text-xl font-black mb-1">No Unit</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Contact administration</p>
+                  <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TBD</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex h-full">
+              {nextMeeting ? (
+                <Link href={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center group">
+                  <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-4">Next Meeting</p>
+                  <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
+                    <i className="fa-solid fa-calendar-day text-2xl"></i>
+                  </div>
+                  <p className="text-3xl font-black mb-1">{new Date(nextMeeting.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">{nextMeeting.title}</p>
+                  <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{nextMeeting.time} • {nextMeeting.location}</p>
+                  </div>
+                </Link>
+              ) : (
+                <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Next Meeting</p>
+                  <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
+                    <i className="fa-solid fa-calendar-xmark text-2xl"></i>
+                  </div>
+                  <p className="text-xl font-black mb-1">TBD</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">No upcoming events</p>
+                  <div className="mt-6 pt-6 border-t border-white/5 w-full">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TBD</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -347,23 +346,22 @@ export default function DashboardPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {userOpenRequests.map(req => (
-                  <Link 
-                    href={`/maintenance/${req.id}`} 
-                    key={req.id} 
+                  <Link
+                    href={`/maintenance/${req.id}`}
+                    key={req.id}
                     className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-emerald-500 transition-all group flex flex-col"
                   >
                     <div className="flex justify-between items-start mb-3">
-                      <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
-                        req.priority === MaintenancePriority.EMERGENCY ? 'bg-rose-100 text-rose-700' :
-                        req.priority === MaintenancePriority.HIGH ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
-                      }`}>
+                      <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${req.priority === MaintenancePriority.EMERGENCY ? 'bg-rose-100 text-rose-700' :
+                          req.priority === MaintenancePriority.HIGH ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
                         {req.priority}
                       </span>
                       <span className="text-[9px] font-black text-slate-400 uppercase">{req.status}</span>
                     </div>
                     <h3 className="text-sm font-black text-slate-800 dark:text-white mb-2 group-hover:text-emerald-600 transition-colors line-clamp-1">{req.description}</h3>
                     <div className="mt-auto pt-3 border-t border-slate-200/50 dark:border-white/5 flex justify-between items-center">
-                      <span className="text-[8px] font-bold text-slate-400 uppercase">Filed {new Date(req.createdAt).toLocaleDateString()}</span>
+                      <span className="text-[8px] font-bold text-slate-400 uppercase">Filed {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '—'}</span>
                       <i className="fa-solid fa-arrow-right text-[10px] text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
                     </div>
                   </Link>
@@ -410,7 +408,7 @@ export default function DashboardPage() {
               <span>Community Calendar</span>
               <Link href="/calendar" className="text-emerald-600 dark:text-emerald-400 hover:underline">View Full</Link>
             </h3>
-            
+
             {/* Mini Calendar View */}
             <div className="mb-8 bg-slate-50 dark:bg-slate-950/50 rounded-2xl p-4 border border-slate-100 dark:border-white/5">
               <div className="flex justify-between items-center mb-4">
@@ -435,13 +433,12 @@ export default function DashboardPage() {
                     return d.getDate() === day && d.getMonth() === new Date().getMonth() && d.getFullYear() === new Date().getFullYear();
                   });
                   return (
-                    <div 
-                      key={day} 
-                      className={`aspect-square flex items-center justify-center text-[10px] font-black rounded-lg relative ${
-                        isToday ? 'bg-emerald-600 text-white' : 
-                        hasEvent ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 
-                        'text-slate-400'
-                      }`}
+                    <div
+                      key={day}
+                      className={`aspect-square flex items-center justify-center text-[10px] font-black rounded-lg relative ${isToday ? 'bg-emerald-600 text-white' :
+                          hasEvent ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' :
+                            'text-slate-400'
+                        }`}
                     >
                       {day}
                       {hasEvent && !isToday && (
@@ -457,8 +454,8 @@ export default function DashboardPage() {
             {upcomingEvents.length > 0 ? (
               <div className="space-y-6">
                 {upcomingEvents.map(event => (
-                  <div 
-                    key={event.id} 
+                  <div
+                    key={event.id}
                     onClick={() => router.push(`/calendar/${event.id}`)}
                     className="flex gap-4 group cursor-pointer items-center"
                   >

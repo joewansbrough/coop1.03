@@ -8,9 +8,9 @@ export async function GET() {
   if (!session || Object.keys(session).length === 0) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
   try {
     const documents = await prisma.document.findMany({
+      where: { cooperativeId: session.cooperativeId },
       orderBy: { date: 'desc' },
     });
     return NextResponse.json(documents);
@@ -28,22 +28,10 @@ export async function POST(request: NextRequest) {
   if (!session.isAdmin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-
   try {
     const body = await request.json();
     const validatedData = documentSchema.parse(body);
-    const {
-      title,
-      category,
-      committee,
-      url,
-      fileType,
-      author,
-      date,
-      tags,
-      content,
-    } = validatedData;
-
+    const { title, category, committee, url, fileType, author, date, tags, content } = validatedData;
     const document = await prisma.document.create({
       data: {
         title,
@@ -55,6 +43,7 @@ export async function POST(request: NextRequest) {
         date,
         tags: tags ?? [],
         content: content ?? null,
+        cooperativeId: session.cooperativeId,
       },
     });
     return NextResponse.json(document);
