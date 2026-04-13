@@ -74,7 +74,7 @@ export default function AdminReportsPage() {
   });
 
   const handlePayment = () => {
-    if (createTransaction.isLoading || user?.isGuest || !tenantId) return;
+    if (createTransaction.isPending || user?.isGuest || !tenantId) return;
     setStatusMessage(null);
     createTransaction.mutate({
       amount: 250,
@@ -86,7 +86,7 @@ export default function AdminReportsPage() {
     });
   };
 
-  const paymentDisabled = createTransaction.isLoading || user?.isGuest || !tenantId;
+  const paymentDisabled = createTransaction.isPending || user?.isGuest || !tenantId;
 
   if (!user) return null;
 
@@ -176,7 +176,7 @@ export default function AdminReportsPage() {
                 paymentDisabled ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'
               }`}
             >
-              {createTransaction.isLoading ? 'Processing...' : 'Submit Payment'}
+              {createTransaction.isPending ? 'Processing...' : 'Submit Payment'}
             </button>
             {statusMessage && (
               <p className="text-[10px] text-emerald-600 dark:text-emerald-300 font-bold uppercase tracking-tight mt-2">
