@@ -238,14 +238,14 @@ export default function CommitteesPage() {
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{committee.chair}</span>
                 </div>
                 <div className="flex -space-x-2">
-                  {committee.members.slice(0, 3).map((m, i) => (
+                  {(committee.members ?? []).slice(0, 3).map((m: string, i: number) => (
                     <div key={i} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[8px] font-black text-slate-400">
-                      {m.split(' ').map(n => n[0]).join('')}
+                      {m.split(' ').map((n: string) => n[0]).join('')}
                     </div>
                   ))}
-                  {committee.members.length > 3 && (
+                  {(committee.members ?? []).length > 3 && (
                     <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[8px] font-black text-emerald-600">
-                      +{committee.members.length - 3}
+                      +{(committee.members ?? []).length - 3}
                     </div>
                   )}
                 </div>
@@ -292,7 +292,7 @@ export default function CommitteesPage() {
                     <div>
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 dark:border-white/5 pb-2">Active Members</h4>
                       <div className="flex flex-wrap gap-2">
-                        {selectedCommittee?.members.map(member => (
+                        {(selectedCommittee?.members ?? []).map((member: string) => (
                           <span key={member} className="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold border border-slate-200 dark:border-white/5 hover:border-emerald-300 transition-colors cursor-default">{member}</span>
                         ))}
                       </div>

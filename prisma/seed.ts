@@ -139,9 +139,10 @@ async function main() {
         await prisma.tenantHistory.create({
           data: {
             tenantId: tenant.id,
-            unitId: unitMap[t.unit],
+            unitId: unitMap[t.unit]!,
             startDate: new Date(t.startDate),
             moveReason: 'Initial occupancy',
+            cooperativeId: coopId,
           },
         });
       }

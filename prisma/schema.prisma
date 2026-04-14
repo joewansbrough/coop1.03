@@ -44,6 +44,7 @@ model Cooperative {
   maintenanceRequests  MaintenanceRequest[]
   scheduledMaintenance ScheduledMaintenance[]
   transactions         Transaction[]
+  tenantHistories      TenantHistory[]
 }
 
 model Unit {
@@ -118,15 +119,17 @@ model Transaction {
 }
 
 model TenantHistory {
-  id         String    @id @default(uuid())
-  tenantId   String
-  tenant     Tenant    @relation(fields: [tenantId], references: [id])
-  unitId     String
-  unit       Unit      @relation(fields: [unitId], references: [id])
-  startDate  DateTime
-  endDate    DateTime?
-  moveReason String?
-  createdAt  DateTime  @default(now())
+  id            String      @id @default(uuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+  unitId        String
+  unit          Unit        @relation(fields: [unitId], references: [id])
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+  startDate     DateTime
+  endDate       DateTime?
+  moveReason    String?
+  createdAt     DateTime    @default(now())
 }
 
 model MaintenanceRequest {

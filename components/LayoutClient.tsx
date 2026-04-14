@@ -163,7 +163,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
                   </div>
                 )}
                 <Link
-                  to={item.path}
+                  href={item.path}
                   onClick={() => setIsSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
                     pathname === item.path 

@@ -47,9 +47,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const tasks = [];
     for (const unit of units) {
       const unitTasks = [
-        { unitId: unit.id, task: 'Fire Alarm Test', frequency: 'ANNUAL', category: 'SAFETY', dueDate: new Date('2026-12-01') },
-        { unitId: unit.id, task: 'HVAC Filter Change', frequency: 'QUARTERLY', category: 'HVAC', dueDate: new Date('2026-06-01') },
-        { unitId: unit.id, task: 'Balcony Inspection', frequency: 'ANNUAL', category: 'STRUCTURAL', dueDate: new Date('2026-08-15') },
+        { unitId: unit.id, task: 'Fire Alarm Test', frequency: 'ANNUAL' as const, category: 'SAFETY' as const, dueDate: new Date('2026-12-01').toISOString(), assignedTo: 'Unassigned' },
+        { unitId: unit.id, task: 'HVAC Filter Change', frequency: 'QUARTERLY' as const, category: 'HVAC' as const, dueDate: new Date('2026-06-01').toISOString(), assignedTo: 'Unassigned' },
+        { unitId: unit.id, task: 'Balcony Inspection', frequency: 'ANNUAL' as const, category: 'GENERAL' as const, dueDate: new Date('2026-08-15').toISOString(), assignedTo: 'Unassigned' },
       ];
       for (const t of unitTasks) {
         tasks.push(await prisma.scheduledMaintenance.create({
