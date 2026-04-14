@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         notes: validatedData.notes?.length ? validatedData.notes : undefined,
         expenses: validatedData.expenses?.length ? validatedData.expenses : undefined,
         unitId: validatedData.unitId as string,
-	cooperativeId: validatedData.cooperativeId,
+	cooperativeId: session.cooperativeId,
       },
       include: { unit: true }
     });
