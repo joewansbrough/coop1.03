@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
         ...validatedData,
         firstName: validatedData.firstName as string,
         lastName: validatedData.lastName as string,
+        cooperativeId: session.cooperativeId,
         email: validatedData.email as string,
         phone: validatedData.phone ?? undefined,
         unitId: validatedData.unitId ?? undefined,

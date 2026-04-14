@@ -52,7 +52,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         { unitId: unit.id, task: 'Balcony Inspection', frequency: 'ANNUAL', category: 'STRUCTURAL', dueDate: new Date('2026-08-15') },
       ];
       for (const t of unitTasks) {
-        tasks.push(await prisma.scheduledMaintenance.create({ data: t as any }));
+        tasks.push(await prisma.scheduledMaintenance.create({
+          data: { ...t, cooperativeId: session.cooperativeId }
+        }));
       }
     }
     return NextResponse.json({ success: true, count: tasks.length });
@@ -126,7 +128,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
 
     await prisma.tenantHistory.create({
-      data: { tenantId, unitId, startDate: new Date(date) }
+      data: { tenantId, unitId, startDate: new Date(date), cooperativeId: session.cooperativeId }
     });
 
     return NextResponse.json({ success: true });
@@ -138,7 +140,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { fromUnitId, toUnitId, date } = body;
 
     const residents = await prisma.tenant.findMany({ where: { unitId: fromUnitId, status: 'Current' } });
-    
+
     for (const res of residents) {
       await prisma.tenantHistory.updateMany({
         where: { tenantId: res.id, unitId: fromUnitId, endDate: null },
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         data: { unitId: toUnitId, startDate: new Date(date) }
       });
       await prisma.tenantHistory.create({
-        data: { tenantId: res.id, unitId: toUnitId, startDate: new Date(date) }
+        data: { tenantId: res.id, unitId: toUnitId, startDate: new Date(date), cooperativeId: session.cooperativeId }
       });
     }
 
