@@ -97,9 +97,6 @@ const createPicker = (accessToken: string) => {
     view.setIncludeFolders(true);
     view.setSelectFolderEnabled(true);
 
-    const picker = new (window as any).google.picker.PickerBuilder()
-      .addView(view)
-      
       const picker = new (window as any).google.picker.PickerBuilder()
         .addView(view)
         .setOAuthToken(accessToken)
