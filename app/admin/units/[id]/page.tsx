@@ -122,23 +122,27 @@ export default function AdminUnitDetailPage() {
     }
   };
 
-  const createPicker = (accessToken: string) => {
-    (window as any).gapi.load('picker', () => {
-      const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
-      view.setIncludeFolders(true);
+const createPicker = (accessToken: string) => {
+  (window as any).gapi.load('picker', () => {
+    const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
+    view.setIncludeFolders(true);
+    view.setSelectFolderEnabled(true); 
 
-      const picker = new (window as any).google.picker.PickerBuilder()
-        .addView(view)
+    const picker = new (window as any).google.picker.PickerBuilder()
+      .addView(view)
         .setOAuthToken(accessToken)
         .setDeveloperKey(config?.googleApiKey)
         .setCallback(async (data: any) => {
           if (data.action === (window as any).google.picker.Action.PICKED) {
             const driveDoc = data.docs[0];
+		const isFolder = driveDoc.mimeType === 'application/vnd.google-apps.folder';		
             const newDoc = {
               title: driveDoc.name,
               category: 'Unit' as any,
-              url: driveDoc.url,
-              fileType: driveDoc.type || 'gdoc',
+              url: isFolder 
+        ? `https://drive.google.com/drive/folders/${driveDoc.id}`
+		:driveDoc.url,
+              fileType: isFolder ? 'folder' : (driveDoc.type || 'gdoc'),
               author: 'Google Drive',
               date: new Date().toISOString().split('T')[0],
               tags: ['Google Drive', 'Linked', `Unit ${unit?.number}`]

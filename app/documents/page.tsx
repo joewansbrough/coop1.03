@@ -91,10 +91,14 @@ export default function ResourceLibraryPage() {
     }
   };
 
-  const createPicker = (accessToken: string) => {
-    (window as any).gapi.load('picker', async () => {
-      const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
-      view.setIncludeFolders(true);
+const createPicker = (accessToken: string) => {
+  (window as any).gapi.load('picker', () => {
+    const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
+    view.setIncludeFolders(true);
+    view.setSelectFolderEnabled(true);  // ← ADD THIS LINE
+
+    const picker = new (window as any).google.picker.PickerBuilder()
+      .addView(view)
       
       const picker = new (window as any).google.picker.PickerBuilder()
         .addView(view)
@@ -103,6 +107,7 @@ export default function ResourceLibraryPage() {
         .setCallback(async (data: any) => {
           if (data.action === (window as any).google.picker.Action.PICKED) {
             const driveDoc = data.docs[0];
+		const isFolder = driveDoc.mimeType === 'application/vnd.google-apps.folder';
             let extractedContent = '';
 
             // Attempt to extract text from Google Docs or PDFs
@@ -152,8 +157,10 @@ export default function ResourceLibraryPage() {
             const newDoc = {
               title: driveDoc.name,
               category: reviewingDoc?.category || 'Cloud', // Favor user-selected category if available
-              url: driveDoc.url,
-              fileType: driveDoc.type || 'gdoc',
+              url: : isFolder 
+        ? `https://drive.google.com/drive/folders/${driveDoc.id}`
+		   : driveDoc.url,
+              fileType: isFolder ? 'folder' : (driveDoc.type || 'gdoc'),
               author: 'Google Drive',
               date: new Date().toISOString().split('T')[0],
               tags: ['Google Drive', 'Linked'],
