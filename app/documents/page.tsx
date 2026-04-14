@@ -95,7 +95,7 @@ const createPicker = (accessToken: string) => {
   (window as any).gapi.load('picker', () => {
     const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
     view.setIncludeFolders(true);
-    view.setSelectFolderEnabled(true);  // ← ADD THIS LINE
+    view.setSelectFolderEnabled(true);
 
     const picker = new (window as any).google.picker.PickerBuilder()
       .addView(view)
@@ -157,7 +157,7 @@ const createPicker = (accessToken: string) => {
             const newDoc = {
               title: driveDoc.name,
               category: reviewingDoc?.category || 'Cloud', // Favor user-selected category if available
-              url: : isFolder 
+              url: isFolder 
         ? `https://drive.google.com/drive/folders/${driveDoc.id}`
 		   : driveDoc.url,
               fileType: isFolder ? 'folder' : (driveDoc.type || 'gdoc'),
