@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { Readable } from 'stream';
 import { driveClient } from '../services/googleDrive.js';
 
 const router = Router();
@@ -125,5 +126,120 @@ async function isFolderWithinRoot(folderId: string): Promise<boolean> {
 
     return false;
 }
+
+// Add these imports at the top (after existing imports)
+import { Readable } from 'stream';
+
+// ─── Add these three routes before `export default router` ───────────────────
+
+// Get metadata for a single file
+router.get('/files/:fileId', async (req: Request, res: Response) => {
+    try {
+        const { fileId } = req.params;
+        const drive = driveClient();
+
+        // Reuse the existing root-check helper
+        const file = await drive.files.get({
+            fileId,
+            fields: 'id, name, mimeType, size, modifiedTime, parents, webViewLink, iconLink',
+        });
+
+        // Verify it lives under the root
+        const parents = file.data.parents ?? [];
+        const allowed = fileId === ROOT_FOLDER_ID ||
+            await isFolderWithinRoot(parents[0] ?? '');
+        if (!allowed) {
+            return res.status(403).json({ error: 'File is outside the allowed directory' });
+        }
+
+        res.json(file.data);
+    } catch (error) {
+        console.error('Drive file metadata error:', error);
+        res.status(500).json({ error: 'Failed to fetch file metadata' });
+    }
+});
+
+// Download / stream a file
+// Google Workspace files are exported (Docs→PDF, Sheets→XLSX, Slides→PDF)
+// All other files are streamed as-is
+router.get('/files/:fileId/download', async (req: Request, res: Response) => {
+    try {
+        const { fileId } = req.params;
+        const drive = driveClient();
+
+        const meta = await drive.files.get({
+            fileId,
+            fields: 'id, name, mimeType, parents',
+        });
+
+        const { name, mimeType, parents } = meta.data;
+
+        const allowed = fileId === ROOT_FOLDER_ID ||
+            await isFolderWithinRoot(parents?.[0] ?? '');
+        if (!allowed) {
+            return res.status(403).json({ error: 'File is outside the allowed directory' });
+        }
+
+        const EXPORT_MAP: Record<string, string> = {
+            'application/vnd.google-apps.document': 'application/pdf',
+            'application/vnd.google-apps.spreadsheet': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.google-apps.presentation': 'application/pdf',
+        };
+
+        const exportMime = mimeType ? EXPORT_MAP[mimeType] : undefined;
+
+        res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+
+        if (exportMime) {
+            res.setHeader('Content-Type', exportMime);
+            const response = await drive.files.export(
+                { fileId, mimeType: exportMime },
+                { responseType: 'stream' }
+            );
+            (response.data as Readable).pipe(res);
+        } else {
+            res.setHeader('Content-Type', mimeType ?? 'application/octet-stream');
+            const response = await drive.files.get(
+                { fileId, alt: 'media' },
+                { responseType: 'stream' }
+            );
+            (response.data as Readable).pipe(res);
+        }
+    } catch (error) {
+        console.error('Drive download error:', error);
+        res.status(500).json({ error: 'Failed to download file' });
+    }
+});
+
+// Search files by name or full-text within the root folder tree
+router.get('/search', async (req: Request, res: Response) => {
+    try {
+        const term = (req.query.q as string)?.trim();
+        if (!term) {
+            return res.status(400).json({ error: "Query param 'q' is required" });
+        }
+
+        const pageToken = req.query.pageToken as string | undefined;
+        const drive = driveClient();
+
+        // `ancestors` does a deep subtree search — no need to walk folders manually
+        const escaped = term.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const response = await drive.files.list({
+            q: `'${ROOT_FOLDER_ID}' in ancestors and trashed = false and (name contains '${escaped}' or fullText contains '${escaped}')`,
+            fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, size, webViewLink)',
+            orderBy: 'modifiedTime desc',
+            pageSize: 50,
+            pageToken,
+        });
+
+        res.json({
+            files: response.data.files ?? [],
+            nextPageToken: response.data.nextPageToken ?? null,
+        });
+    } catch (error) {
+        console.error('Drive search error:', error);
+        res.status(500).json({ error: 'Search failed' });
+    }
+});
 
 export default router;
