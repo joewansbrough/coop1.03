@@ -7,6 +7,8 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import { MaintenancePriority } from '../types.js';
+import driveRoutes from './api/drive.js';
+
 
 
 
@@ -260,6 +262,9 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
   (req as any).session = null;
   res.json({ success: true });
 });
+
+// With your other routes, under your auth middleware
+app.use('/api/drive', requireAuth, driveRoutes);
 
 app.get('/api/seed/preventative', async (req, res) => {
   try {
