@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import express from 'express';
 import cookieSession from 'cookie-session';
 import axios from 'axios';
@@ -6,10 +5,21 @@ import { PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
-import { MaintenancePriority } from '../types.js';
 import driveRoutes from './drive.js';
 
 const app = express();
+
+// Trust proxy for secure cookies on Vercel
+app.set('trust proxy', true);
+
+// Health check route (at the very top to bypass middleware if needed)
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
+});
 
 // Validation Middleware
 const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -28,8 +38,6 @@ const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: exp
 // Helper to sanitize strings for PostgreSQL (removes null bytes and invalid UTF-8 sequences)
 const sanitizeUtf8 = (str: string): string => {
   if (!str) return "";
-  // Round-trip through Buffer to strip any bytes that aren't valid UTF-8,
-  // then remove null bytes and non-printable control characters Postgres rejects.
   const cleaned = Buffer.from(str, 'utf8').toString('utf8');
   return cleaned
     .replace(/\u0000/g, '')
@@ -48,25 +56,20 @@ const getPrisma = () => {
   return prismaInstance;
 };
 
-// Trust proxy for secure cookies on Vercel
-app.set('trust proxy', true);
-
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-app.use((req, res, next) => {
-  // Use a stable cookie-session middleware
-  cookieSession({
-    name: 'session',
-    keys: [process.env.SESSION_SECRET || 'default_secret'],
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    secure: true, // Always true on Vercel (HTTPS)
-    sameSite: 'none',
-    httpOnly: true,
-    signed: true,
-    overwrite: true,
-  } as any)(req, res, next);
-});
+// Standard cookie-session middleware
+app.use(cookieSession({
+  name: 'session',
+  keys: [process.env.SESSION_SECRET || 'default_secret'],
+  maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  secure: true, // Always true on Vercel (HTTPS)
+  sameSite: 'none',
+  httpOnly: true,
+  signed: true,
+  overwrite: true,
+}));
 
 // Mock Data
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com'];
@@ -79,20 +82,26 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
   return next();
 };
 
-// Helper to get base URL
+// Robust Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
-  const host = req.get('x-forwarded-host') || req.get('host') || '';
-  const protocol = 'https';
-  let url = `${protocol}://${host}`;
+  const host = req.get('x-forwarded-host') || req.get('host');
+  const protocol = req.get('x-forwarded-proto') || 'https';
+  
   if (process.env.APP_URL && !host) {
-    url = process.env.APP_URL;
+    return process.env.APP_URL.replace(/\/+$/, "");
   }
+  
+  if (!host) return 'https://coop1-03.vercel.app'; // Hard fallback for this project
+  
+  const url = `${protocol}://${host}`;
   return url.replace(/\/+$/, "");
 };
 
 // API Request Logger
 app.use('/api', (req, res, next) => {
-  console.log(`API Request: ${req.method} ${req.originalUrl}`);
+  if (req.path !== '/health') {
+    console.log(`API Request: ${req.method} ${req.originalUrl}`);
+  }
   next();
 });
 
@@ -108,24 +117,34 @@ app.get('/api/config', requireAuth, (req, res) => {
 const authRouter = express.Router();
 
 authRouter.get('/url', (req, res) => {
-  const baseUrl = getBaseUrl(req);
-  const redirectUri = `${baseUrl}/auth/callback`;
+  try {
+    const baseUrl = getBaseUrl(req);
+    const redirectUri = `${baseUrl}/auth/callback`;
 
-  if (!process.env.GOOGLE_CLIENT_ID) {
-    return res.status(500).json({ error: 'GOOGLE_CLIENT_ID is not configured in Vercel environment variables' });
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      console.error('CRITICAL: GOOGLE_CLIENT_ID is missing from env');
+      return res.status(500).json({ 
+        error: 'GOOGLE_CLIENT_ID is not configured in Vercel environment variables',
+        details: 'Check Vercel Project Settings > Environment Variables'
+      });
+    }
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'openid email profile',
+      access_type: 'offline',
+      prompt: 'select_account',
+    });
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+    res.json({ url: authUrl });
+  } catch (err: any) {
+    console.error('Error generating auth URL:', err);
+    res.status(500).json({ error: 'Failed to generate auth URL', details: err.message });
   }
-
-  const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: 'openid email profile',
-    access_type: 'offline',
-    prompt: 'select_account',
-  });
-
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
-  res.json({ url: authUrl });
 });
 
 app.use('/api/auth', authRouter);

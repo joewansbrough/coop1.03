@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { driveClient } from '../services/googleDrive';
+import { driveClient } from '../services/googleDrive.js';
 
 const router = Router();
 const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID!;
