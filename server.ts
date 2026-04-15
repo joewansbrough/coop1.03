@@ -13,6 +13,7 @@ import * as pdf from 'pdf-parse';
 
 import { z } from 'zod';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './api/validation.js';
+import driveRoutes from './api/drive.js';
 
 const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET) {
@@ -1110,6 +1111,8 @@ const upload = multer({
       googleApiKey: process.env.PICKER_API_KEY,
     });
   });
+
+  app.use('/api/drive', requireAuth, driveRoutes);
 
   // API 404 handler
   app.use('/api', (req, res) => {
