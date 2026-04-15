@@ -15,6 +15,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
 
   const [resourceQuestion, setResourceQuestion] = useState('');
   const [resourceAiResponse, setResourceAiResponse] = useState('');
@@ -50,6 +51,10 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
   };
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     scrollToBottom();
   }, [messages]);
 
@@ -111,9 +116,9 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
   ];
 
   return (
-    <div className="max-w-5xl mx-auto flex flex-col gap-6 animate-in fade-in duration-700">
+    <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Policy Assistant</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">AI-powered guidance for BC Housing Co-operative regulations.</p>
@@ -227,7 +232,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
       </div>
 
       {/* Resource Search Module - Full Width with Separator */}
-      <div className="pt-8 border-t border-slate-100 dark:border-white/5">
+      <div className="pt-2 border-t border-slate-100 dark:border-white/5">
         <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-8 opacity-5 text-[15rem] pointer-events-none group-hover:opacity-10 transition-opacity">
             <i className="fa-solid fa-wand-magic-sparkles"></i>
