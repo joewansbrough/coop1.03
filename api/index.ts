@@ -74,11 +74,18 @@ app.use(cookieSession({
 // Mock Data
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com'];
 
-const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const hasUser = !!(req as any).session?.user;
-  if (!hasUser) {
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const session = (req as any).session;
+  if (!session?.user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  // Ensure cooperativeId is present, fallback if missing
+  if (!session.user.cooperativeId) {
+    const defaultCoop = await getPrisma().cooperative.findFirst({ where: { slug: 'oak-bay' } });
+    session.user.cooperativeId = defaultCoop?.id || null;
+  }
+
   return next();
 };
 
@@ -180,6 +187,13 @@ app.get('/auth/callback', async (req, res) => {
       include: { unit: true }
     });
 
+    // Resolve cooperative context
+    let cooperativeId = user?.cooperativeId;
+    if (!cooperativeId) {
+      const defaultCoop = await getPrisma().cooperative.findFirst({ where: { slug: 'oak-bay' } });
+      cooperativeId = defaultCoop?.id || null;
+    }
+
     // Check both DB role and legacy list for now
     const isAdmin = user?.role === 'ADMIN' || ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'].includes(email);
 
@@ -234,6 +248,7 @@ app.get('/auth/callback', async (req, res) => {
       unitNumber: user?.unit?.number || null,
       role: user?.role || 'MEMBER',
       geminiModel: resolvedModel,
+      cooperativeId,
     };
 
     res.send(`
@@ -272,14 +287,19 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
 // With your other routes, under your auth middleware
 app.use('/api/drive', requireAuth, driveRoutes);
 
-app.get('/api/seed/preventative', async (req, res) => {
+app.get('/api/seed/preventative', requireAuth, async (req, res) => {
   try {
     const p = getPrisma();
-    const units = await p.unit.findMany({ include: { cooperative: true } }); // Fetch all units to get their IDs
+    const coopId = (req as any).session?.user?.cooperativeId;
+    const units = await p.unit.findMany({ 
+      where: { cooperativeId: coopId },
+      include: { cooperative: true } 
+    }); // Fetch units for current coop
 
 
     // Create a map for quick lookup of existing scheduled maintenance tasks
     const existingTasks = await p.scheduledMaintenance.findMany({
+      where: { cooperativeId: coopId },
       select: { unitId: true, task: true }
     });
     const existingTaskSet = new Set(existingTasks.map(t => `${t.unitId}-${t.task}`));
@@ -333,7 +353,7 @@ app.get('/api/seed/preventative', async (req, res) => {
         if (!existingTaskSet.has(`${unit.id}-${task}`)) {
           tasksToInsert.push({
             unitId: unit.id,
-            cooperativeId: unit.cooperativeId,
+            cooperativeId: coopId,
             task,
             dueDate,
             frequency,
@@ -361,10 +381,13 @@ app.get('/api/seed/preventative', async (req, res) => {
   }
 });
 
-app.delete('/api/seed/preventative', async (req, res) => {
+app.delete('/api/seed/preventative', requireAuth, async (req, res) => {
   try {
-    await getPrisma().scheduledMaintenance.deleteMany();
-    res.json({ success: true, message: "Preventative maintenance tasks cleared." });
+    const coopId = (req as any).session?.user?.cooperativeId;
+    await getPrisma().scheduledMaintenance.deleteMany({
+      where: { cooperativeId: coopId }
+    });
+    res.json({ success: true, message: "Preventative maintenance tasks cleared for your cooperative." });
   } catch (e: any) {
     console.error('Clear preventative tasks error:', e);
     res.status(500).json({ success: false, error: e.message });
@@ -372,12 +395,14 @@ app.delete('/api/seed/preventative', async (req, res) => {
 });
 
 // Development Bypass Login
-app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
+app.post(['/api/auth/bypass', '/auth/bypass'], async (req, res) => {
   // Security check: Only allow in development or preview environments
   const isProduction = process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV;
   if (isProduction) {
     return res.status(403).json({ error: 'Bypass not allowed in production' });
   }
+
+  const defaultCoop = await getPrisma().cooperative.findFirst({ where: { slug: 'oak-bay' } });
 
   (req as any).session.user = {
     email: 'guest@example.com',
@@ -386,7 +411,8 @@ app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
     isAdmin: true,
     isGuest: false,
     tenantId: null,
-    unitNumber: 'GUEST-001'
+    unitNumber: 'GUEST-001',
+    cooperativeId: defaultCoop?.id || null
   };
 
   res.json({ success: true, user: (req as any).session.user });
@@ -394,8 +420,10 @@ app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
 
 // --- Database API Routes ---
 
-app.get('/api/units', async (req, res) => {
+app.get('/api/units', requireAuth, async (req, res) => {
+  const coopId = (req as any).session?.user?.cooperativeId;
   const units = await getPrisma().unit.findMany({
+    where: { cooperativeId: coopId },
     include: {
       currentTenant: true,
       occupancyHistory: {
@@ -407,10 +435,11 @@ app.get('/api/units', async (req, res) => {
   res.json(units);
 });
 
-app.get('/api/units/:id/scheduled-maintenance', async (req, res) => {
+app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) => {
   try {
+    const coopId = (req as any).session?.user?.cooperativeId;
     const tasks = await getPrisma().scheduledMaintenance.findMany({
-      where: { unitId: req.params.id },
+      where: { id: req.params.id, cooperativeId: coopId },
       orderBy: { dueDate: 'asc' }
     });
     res.json(tasks);
@@ -419,10 +448,11 @@ app.get('/api/units/:id/scheduled-maintenance', async (req, res) => {
   }
 });
 
-app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {
+app.post('/api/tenants', requireAuth, validateRequest(tenantSchema), async (req, res) => {
   try {
+    const coopId = (req as any).session?.user?.cooperativeId;
     const tenant = await getPrisma().tenant.create({
-      data: req.body,
+      data: { ...req.body, cooperativeId: coopId },
       include: { unit: true }
     });
     res.json(tenant);
@@ -432,16 +462,19 @@ app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {
   }
 });
 
-app.get('/api/tenants', async (req, res) => {
+app.get('/api/tenants', requireAuth, async (req, res) => {
+  const coopId = (req as any).session?.user?.cooperativeId;
   const tenants = await getPrisma().tenant.findMany({
+    where: { cooperativeId: coopId },
     include: { unit: true }
   });
   res.json(tenants);
 });
 
-app.get('/api/tenants/:id/history', async (req, res) => {
+app.get('/api/tenants/:id/history', requireAuth, async (req, res) => {
+  const coopId = (req as any).session?.user?.cooperativeId;
   const history = await getPrisma().tenantHistory.findMany({
-    where: { tenantId: req.params.id },
+    where: { tenantId: req.params.id, cooperativeId: coopId },
     include: { unit: true },
     orderBy: { startDate: 'desc' }
   });
@@ -450,17 +483,20 @@ app.get('/api/tenants/:id/history', async (req, res) => {
 
 // --- Unit Turnover Endpoints ---
 
-app.post('/api/units/:id/move-out', async (req, res) => {
+app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { date, reason } = req.body;
+  const coopId = (req as any).session?.user?.cooperativeId;
   try {
     // Find all current residents of this unit
-    const residents = await getPrisma().tenant.findMany({ where: { unitId: id, status: 'Current' } });
+    const residents = await getPrisma().tenant.findMany({ 
+      where: { unitId: id, status: 'Current', cooperativeId: coopId } 
+    });
 
     for (const tenant of residents) {
       // Close any open TenantHistory record for this unit
       const openHistory = await getPrisma().tenantHistory.findFirst({
-        where: { tenantId: tenant.id, unitId: id, endDate: null }
+        where: { tenantId: tenant.id, unitId: id, endDate: null, cooperativeId: coopId }
       });
       if (openHistory) {
         await getPrisma().tenantHistory.update({
@@ -477,7 +513,7 @@ app.post('/api/units/:id/move-out', async (req, res) => {
 
     // Mark unit as Vacant
     await getPrisma().unit.update({
-      where: { id },
+      where: { id, cooperativeId: coopId },
       data: { status: 'Vacant', currentTenantId: null }
     });
 
@@ -485,17 +521,20 @@ app.post('/api/units/:id/move-out', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/units/:id/move-in', async (req, res) => {
+app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { tenantId, date } = req.body;
+  const coopId = (req as any).session?.user?.cooperativeId;
   try {
-    const tenant = await getPrisma().tenant.findUnique({ where: { id: tenantId } });
+    const tenant = await getPrisma().tenant.findUnique({ 
+      where: { id: tenantId, cooperativeId: coopId } 
+    });
     if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
     // If internal transfer: close open history record on their previous unit
     if (tenant.unitId && tenant.unitId !== id) {
       const openHistory = await getPrisma().tenantHistory.findFirst({
-        where: { tenantId, unitId: tenant.unitId, endDate: null }
+        where: { tenantId, unitId: tenant.unitId, endDate: null, cooperativeId: coopId }
       });
       if (openHistory) {
         await getPrisma().tenantHistory.update({
@@ -505,14 +544,14 @@ app.post('/api/units/:id/move-in', async (req, res) => {
       }
       // Vacate previous unit
       await getPrisma().unit.update({
-        where: { id: tenant.unitId },
+        where: { id: tenant.unitId, cooperativeId: coopId },
         data: { status: 'Vacant', currentTenantId: null }
       });
     }
 
     // Create new TenantHistory record for the new unit
     await getPrisma().tenantHistory.create({
-      data: { tenantId, unitId: id, startDate: new Date(date) }
+      data: { tenantId, unitId: id, startDate: new Date(date), cooperativeId: coopId }
     });
 
     // Update tenant
@@ -523,7 +562,7 @@ app.post('/api/units/:id/move-in', async (req, res) => {
 
     // Update unit
     await getPrisma().unit.update({
-      where: { id },
+      where: { id, cooperativeId: coopId },
       data: { status: 'Occupied', currentTenantId: tenantId }
     });
 
@@ -531,17 +570,20 @@ app.post('/api/units/:id/move-in', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/units/:id/transfer', async (req, res) => {
+app.post('/api/units/:id/transfer', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { toUnitId, date } = req.body;
+  const coopId = (req as any).session?.user?.cooperativeId;
   try {
     // Find all residents of the source unit
-    const residents = await getPrisma().tenant.findMany({ where: { unitId: id, status: 'Current' } });
+    const residents = await getPrisma().tenant.findMany({ 
+      where: { unitId: id, status: 'Current', cooperativeId: coopId } 
+    });
 
     for (const tenant of residents) {
       // Close open history on source unit
       const openHistory = await getPrisma().tenantHistory.findFirst({
-        where: { tenantId: tenant.id, unitId: id, endDate: null }
+        where: { tenantId: tenant.id, unitId: id, endDate: null, cooperativeId: coopId }
       });
       if (openHistory) {
         await getPrisma().tenantHistory.update({
@@ -551,7 +593,7 @@ app.post('/api/units/:id/transfer', async (req, res) => {
       }
       // Open new history on destination unit
       await getPrisma().tenantHistory.create({
-        data: { tenantId: tenant.id, unitId: toUnitId, startDate: new Date(date) }
+        data: { tenantId: tenant.id, unitId: toUnitId, startDate: new Date(date), cooperativeId: coopId }
       });
       // Update tenant's unit
       await getPrisma().tenant.update({
@@ -561,9 +603,12 @@ app.post('/api/units/:id/transfer', async (req, res) => {
     }
 
     // Vacate source unit, occupy destination unit
-    await getPrisma().unit.update({ where: { id }, data: { status: 'Vacant', currentTenantId: null } });
+    await getPrisma().unit.update({ 
+      where: { id, cooperativeId: coopId }, 
+      data: { status: 'Vacant', currentTenantId: null } 
+    });
     await getPrisma().unit.update({
-      where: { id: toUnitId },
+      where: { id: toUnitId, cooperativeId: coopId },
       data: { status: 'Occupied', currentTenantId: residents[0]?.id ?? null }
     });
 
@@ -571,9 +616,11 @@ app.post('/api/units/:id/transfer', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/maintenance', async (req, res) => {
+app.get('/api/maintenance', requireAuth, async (req, res) => {
   try {
+    const coopId = (req as any).session?.user?.cooperativeId;
     const requests = await getPrisma().maintenanceRequest.findMany({
+      where: { cooperativeId: coopId },
       include: { unit: true },
       orderBy: { createdAt: 'desc' }
     });
@@ -586,8 +633,9 @@ app.get('/api/maintenance', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/maintenance', async (req, res) => {
+app.post('/api/maintenance', requireAuth, async (req, res) => {
   const { title, description, status, priority, category, unitId, requestedBy, notes } = req.body;
+  const coopId = (req as any).session?.user?.cooperativeId;
   const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.create({
     data: {
@@ -598,17 +646,19 @@ app.post('/api/maintenance', async (req, res) => {
       category: categoryString,
       unitId,
       requestedBy,
-      notes: notes || []
+      notes: notes || [],
+      cooperativeId: coopId
     }
   });
   res.json(request);
 });
 
-app.put('/api/maintenance/:id', async (req, res) => {
+app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
   const { title, description, status, priority, category, unitId, notes } = req.body;
+  const coopId = (req as any).session?.user?.cooperativeId;
   const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.update({
-    where: { id: req.params.id },
+    where: { id: req.params.id, cooperativeId: coopId },
     data: {
       title,
       description,
@@ -623,49 +673,73 @@ app.put('/api/maintenance/:id', async (req, res) => {
 });
 
 
-app.delete('/api/maintenance/:id', async (req, res) => {
-  await getPrisma().maintenanceRequest.delete({ where: { id: req.params.id } });
+app.delete('/api/maintenance/:id', requireAuth, async (req, res) => {
+  const coopId = (req as any).session?.user?.cooperativeId;
+  await getPrisma().maintenanceRequest.deleteMany({ 
+    where: { id: req.params.id, cooperativeId: coopId } 
+  });
   res.json({ success: true });
 });
 
-app.get('/api/announcements', async (req, res) => {
+app.get('/api/announcements', requireAuth, async (req, res) => {
+  const coopId = (req as any).session?.user?.cooperativeId;
   const announcements = await getPrisma().announcement.findMany({
+    where: { cooperativeId: coopId },
     orderBy: { createdAt: 'desc' }
   });
   res.json(announcements);
 });
 
-app.post('/api/announcements', async (req, res) => {
+app.post('/api/announcements', requireAuth, async (req, res) => {
   const { title, content, type, priority, author, date } = req.body;
+  const coopId = (req as any).session?.user?.cooperativeId;
   const announcement = await getPrisma().announcement.create({
-    data: { title, content, type, priority, author, date }
+    data: { title, content, type, priority, author, date: new Date(date), cooperativeId: coopId }
   });
   res.json(announcement);
 });
 
-app.put('/api/announcements/:id', async (req, res) => {
+app.put('/api/announcements/:id', requireAuth, async (req, res) => {
   const { title, content, type, priority, date } = req.body;
+  const coopId = (req as any).session?.user?.cooperativeId;
   const announcement = await getPrisma().announcement.update({
-    where: { id: req.params.id },
-    data: { title, content, type, priority, date }
+    where: { id: req.params.id, cooperativeId: coopId },
+    data: { 
+      title, 
+      content, 
+      type, 
+      priority, 
+      date: date ? new Date(date) : undefined 
+    }
   });
   res.json(announcement);
 });
 
-app.delete('/api/announcements/:id', async (req, res) => {
-  await getPrisma().announcement.delete({ where: { id: req.params.id } });
+app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
+  const coopId = (req as any).session?.user?.cooperativeId;
+  await getPrisma().announcement.deleteMany({ 
+    where: { id: req.params.id, cooperativeId: coopId } 
+  });
   res.json({ success: true });
 });
 
-app.get('/api/documents', async (req, res) => {
+app.get('/api/documents', requireAuth, async (req, res) => {
+  const user = (req as any).session?.user;
   const documents = await getPrisma().document.findMany({
+    where: { cooperativeId: user?.cooperativeId },
     orderBy: { createdAt: 'desc' }
   });
   res.json(documents);
 });
 
-app.post('/api/documents', async (req, res) => {
+app.post('/api/documents', requireAuth, async (req, res) => {
   const { title, category, url, fileType, author, date, tags, committee, content } = req.body;
+  const user = (req as any).session?.user;
+  const coopId = user?.cooperativeId;
+
+  if (!coopId) {
+    return res.status(400).json({ error: 'Missing cooperative context' });
+  }
 
   // Tag generation temporarily disabled for basic metadata sync
   const currentYear = new Date().getFullYear().toString();
@@ -673,43 +747,88 @@ app.post('/api/documents', async (req, res) => {
   const providedTags = Array.isArray(tags) ? tags : [];
   const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
 
-  const document = await getPrisma().document.create({
-    data: {
-      title: title || 'Untitled Document',
-      category: category || 'General',
-      url: url || '#',
-      fileType: fileType || 'txt',
-      author: author || ((req as any).session?.user?.name || 'System'),
-      date: date || new Date().toISOString().split('T')[0],
-      tags: finalTags,
-      content: content || null,
-    } as any
-  });
-  res.json(document);
+  try {
+    const p = getPrisma();
+    // Use raw SQL to avoid Prisma's TEXT[] wire encoding bug (sends null byte for empty arrays)
+    // and to ensure cooperativeId is correctly handled as a mandatory field.
+    await p.$executeRawUnsafe(
+      `INSERT INTO "Document" (id, title, category, committee, url, "fileType", author, date, tags, content, "cooperativeId", "createdAt", "updatedAt")
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7::timestamptz, $8::TEXT[], $9, $10, now(), now())`,
+      sanitizeUtf8(title || 'Untitled Document').trim(),
+      sanitizeUtf8(category || 'General').trim(),
+      sanitizeUtf8(committee || '').trim(),
+      sanitizeUtf8(url || '#').trim(),
+      sanitizeUtf8(fileType || 'txt').trim(),
+      sanitizeUtf8(author || (user?.name || 'System')).trim(),
+      new Date(date || Date.now()).toISOString(),
+      finalTags,
+      content || null,
+      coopId
+    );
+
+    // Fetch the newly created document to return it
+    const document = await p.document.findFirst({
+      where: { url: url || '#', cooperativeId: coopId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(document);
+  } catch (err: any) {
+    console.error('Failed to create document:', err);
+    res.status(500).json({ error: 'Database error during document creation', details: err.message });
+  }
 });
 
-app.put('/api/documents/:id', async (req, res) => {
-  const { title, category, tags, content } = req.body;
-  const document = await getPrisma().document.update({
-    where: { id: req.params.id },
-    data: {
-      title,
-      category,
-      tags: tags ? { set: tags } : undefined,
-      content
-    } as any
-  });
-  res.json(document);
+app.put('/api/documents/:id', requireAuth, async (req, res) => {
+  const { title, category, tags, content, committee } = req.body;
+  const { id } = req.params;
+  const user = (req as any).session?.user;
+  const coopId = user?.cooperativeId;
+
+  if (!coopId) {
+    return res.status(400).json({ error: 'Missing cooperative context' });
+  }
+
+  try {
+    const p = getPrisma();
+    // Use raw SQL to avoid Prisma's TEXT[] wire encoding bug (sends null byte for empty arrays)
+    await p.$executeRawUnsafe(
+      `UPDATE "Document" 
+       SET title = $1, category = $2, tags = $3::TEXT[], content = $4, committee = $5, "updatedAt" = now()
+       WHERE id = $6 AND "cooperativeId" = $7`,
+      sanitizeUtf8(title || '').trim(),
+      sanitizeUtf8(category || '').trim(),
+      Array.isArray(tags) ? tags : [],
+      content || null,
+      sanitizeUtf8(committee || '').trim(),
+      id,
+      coopId
+    );
+
+    const updated = await p.document.findUnique({ where: { id } });
+    res.json(updated);
+  } catch (err: any) {
+    console.error('Failed to update document:', err);
+    res.status(500).json({ error: 'Database error during document update', details: err.message });
+  }
 });
 
-app.delete('/api/documents/:id', async (req, res) => {
-  await getPrisma().document.delete({ where: { id: req.params.id } });
+app.delete('/api/documents/:id', requireAuth, async (req, res) => {
+  const user = (req as any).session?.user;
+  await getPrisma().document.deleteMany({ 
+    where: { 
+      id: req.params.id,
+      cooperativeId: user?.cooperativeId
+    } 
+  });
   res.json({ success: true });
 });
 
-app.get('/api/committees', async (req, res) => {
+app.get('/api/committees', requireAuth, async (req, res) => {
   try {
+    const coopId = (req as any).session?.user?.cooperativeId;
     const committees = await getPrisma().committee.findMany({
+      where: { cooperativeId: coopId },
       include: { members: true }
     });
     // UI expects members as an array of name strings
@@ -721,43 +840,65 @@ app.get('/api/committees', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/events', async (req, res) => {
+app.get('/api/events', requireAuth, async (req, res) => {
+  const coopId = (req as any).session?.user?.cooperativeId;
   const events = await getPrisma().coopEvent.findMany({
+    where: { cooperativeId: coopId },
     include: { attendees: true },
     orderBy: { date: 'asc' }
   });
   res.json(events);
 });
 
-app.post('/api/events', async (req, res) => {
+app.post('/api/events', requireAuth, async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
+  const coopId = (req as any).session?.user?.cooperativeId;
   const event = await getPrisma().coopEvent.create({
-    data: { title, description, date, time, location, category },
+    data: { 
+      title, 
+      description, 
+      date: new Date(date), 
+      time, 
+      location, 
+      category,
+      cooperativeId: coopId
+    },
     include: { attendees: true }
   });
   res.json(event);
 });
 
-app.put('/api/events/:id', async (req, res) => {
+app.put('/api/events/:id', requireAuth, async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
+  const coopId = (req as any).session?.user?.cooperativeId;
   const event = await getPrisma().coopEvent.update({
-    where: { id: req.params.id },
-    data: { title, description, date, time, location, category },
+    where: { id: req.params.id, cooperativeId: coopId },
+    data: { 
+      title, 
+      description, 
+      date: date ? new Date(date) : undefined, 
+      time, 
+      location, 
+      category 
+    },
     include: { attendees: true }
   });
   res.json(event);
 });
 
-app.post('/api/events/:id/attend', async (req, res) => {
+app.post('/api/events/:id/attend', requireAuth, async (req, res) => {
   const user = (req as any).session?.user;
+  const coopId = user?.cooperativeId;
   if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const tenant = await getPrisma().tenant.findUnique({ where: { email: user.email } });
+    const tenant = await getPrisma().tenant.findUnique({ 
+      where: { email: user.email, cooperativeId: coopId } 
+    });
     if (!tenant) return res.status(404).json({ error: 'Tenant record not found for this user' });
 
     const event = await getPrisma().coopEvent.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id, cooperativeId: coopId },
       data: {
         attendees: {
           connect: { id: tenant.id }
@@ -771,8 +912,11 @@ app.post('/api/events/:id/attend', async (req, res) => {
   }
 });
 
-app.delete('/api/events/:id', async (req, res) => {
-  await getPrisma().coopEvent.delete({ where: { id: req.params.id } });
+app.delete('/api/events/:id', requireAuth, async (req, res) => {
+  const coopId = (req as any).session?.user?.cooperativeId;
+  await getPrisma().coopEvent.deleteMany({ 
+    where: { id: req.params.id, cooperativeId: coopId } 
+  });
   res.json({ success: true });
 });
 

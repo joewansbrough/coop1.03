@@ -30,7 +30,7 @@ const prisma = new PrismaClient();
 // Legacy Admin List (Fallback during migration)
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'joewansbrough@gmail.com', 'wwansbro@gmail.com', 'samisaeed123@gmail.com'];
 
-const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const host = req.get('x-forwarded-host') || req.get('host') || '';
   const isLocal = host.includes('localhost') || 
                   host.includes('127.0.0.1') || 
@@ -38,11 +38,28 @@ const requireAuth = (req: express.Request, res: express.Response, next: express.
                   req.ip === '127.0.0.1' ||
                   req.hostname === 'localhost';
   
-  const hasUser = !!(req as any).session?.user;
-  if (!hasUser && !isLocal) {
-    console.log(`[Auth Blocked] Host: ${host}, IP: ${req.ip}, URL: ${req.originalUrl}`);
-    return res.status(401).json({ error: 'Unauthorized' });
+  const session = (req as any).session;
+  if (!session?.user) {
+    if (isLocal) {
+      // Create a guest user for local dev if not logged in
+      const defaultCoop = await prisma.cooperative.findFirst({ where: { slug: 'oak-bay' } });
+      session.user = {
+        email: 'local-dev@example.com',
+        name: 'Local Dev',
+        isAdmin: true,
+        cooperativeId: defaultCoop?.id || null
+      };
+    } else {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
   }
+
+  // Ensure cooperativeId is present
+  if (!session.user.cooperativeId) {
+    const defaultCoop = await prisma.cooperative.findFirst({ where: { slug: 'oak-bay' } });
+    session.user.cooperativeId = defaultCoop?.id || null;
+  }
+
   return next();
 };
 
@@ -51,6 +68,18 @@ type BodyValue = string | string[] | undefined;
 const firstString = (value?: BodyValue): string | undefined => {
   if (Array.isArray(value)) return value[0];
   return value;
+};
+
+// Helper to sanitize strings for PostgreSQL (removes null bytes and invalid UTF-8 sequences)
+const sanitizeUtf8 = (str: string): string => {
+  if (!str) return "";
+  const cleaned = Buffer.from(str, 'utf8').toString('utf8');
+  return cleaned
+    .replace(/\u0000/g, '')
+    .replace(/\0/g, '')
+    // eslint-disable-next-line no-control-regex
+    .replace(/\x00/g, '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g, "");
 };
 
 const ensureString = (value: BodyValue, fallback = ''): string => firstString(value) ?? fallback;
@@ -197,6 +226,13 @@ const upload = multer({
         include: { unit: true }
       });
 
+      // Resolve cooperative context
+      let cooperativeId = userInDb?.cooperativeId;
+      if (!cooperativeId) {
+        const defaultCoop = await prisma.cooperative.findFirst({ where: { slug: 'oak-bay' } });
+        cooperativeId = defaultCoop?.id || null;
+      }
+
       const isAdminByList = ADMIN_EMAILS.includes(email);
       const isAdminByRole = userInDb?.role === 'ADMIN';
       const isAdmin = isAdminByList || isAdminByRole;
@@ -213,7 +249,8 @@ const upload = multer({
         isAdmin,
         role: userInDb?.role || (isAdminByList ? 'ADMIN' : 'MEMBER'),
         tenantId: userInDb?.id || null,
-        unitNumber: userInDb?.unit?.number || null
+        unitNumber: userInDb?.unit?.number || null,
+        cooperativeId
       };
 
       res.send(`
@@ -250,19 +287,22 @@ const upload = multer({
   });
 
   // Development Bypass Login
-  app.post('/api/auth/bypass', (req, res) => {
+  app.post('/api/auth/bypass', async (req, res) => {
     if (process.env.NODE_ENV === 'production') {
       return res.status(403).json({ error: 'Bypass not allowed in production' });
     }
+
+    const defaultCoop = await prisma.cooperative.findFirst({ where: { slug: 'oak-bay' } });
 
     (req as any).session.user = {
       email: 'guest@example.com',
       name: 'Guest User',
       picture: 'https://picsum.photos/seed/guest/200',
-      isAdmin: false,
+      isAdmin: true, // Should be true for testing
       isGuest: true,
       tenantId: null,
-      unitNumber: 'GUEST-001'
+      unitNumber: 'GUEST-001',
+      cooperativeId: defaultCoop?.id || null
     };
 
     res.json({ success: true, user: (req as any).session.user });
@@ -525,12 +565,57 @@ const upload = multer({
 
   app.get('/api/documents', requireAuth, async (req, res) => {
     try {
+      const user = (req as any).session?.user;
       const documents = await prisma.document.findMany({
+        where: { cooperativeId: user?.cooperativeId },
         orderBy: { createdAt: 'desc' }
       });
       res.json(documents);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch documents' });
+    }
+  });
+
+  app.post('/api/documents', requireAuth, async (req, res) => {
+    const { title, category, url, fileType, author, date, tags, committee, content } = req.body;
+    const user = (req as any).session?.user;
+    const coopId = user?.cooperativeId;
+
+    if (!coopId) {
+      return res.status(400).json({ error: 'Missing cooperative context' });
+    }
+
+    const currentYear = new Date().getFullYear().toString();
+    const committeeTags = committee ? [committee] : [];
+    const providedTags = Array.isArray(tags) ? tags : [];
+    const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
+
+    try {
+      // Use raw SQL to avoid Prisma's TEXT[] wire encoding bug
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO "Document" (id, title, category, committee, url, "fileType", author, date, tags, content, "cooperativeId", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7::timestamptz, $8::TEXT[], $9, $10, now(), now())`,
+        sanitizeUtf8(title || 'Untitled Document').trim(),
+        sanitizeUtf8(category || 'General').trim(),
+        sanitizeUtf8(committee || '').trim(),
+        sanitizeUtf8(url || '#').trim(),
+        sanitizeUtf8(fileType || 'txt').trim(),
+        sanitizeUtf8(author || (user?.name || 'System')).trim(),
+        new Date(date || Date.now()).toISOString(),
+        finalTags,
+        content || null,
+        coopId
+      );
+
+      const document = await prisma.document.findFirst({
+        where: { url: url || '#', cooperativeId: coopId },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      res.json(document);
+    } catch (err: any) {
+      console.error('Failed to create document:', err);
+      res.status(500).json({ error: 'Database error during document creation', details: err.message });
     }
   });
 
@@ -552,6 +637,13 @@ const upload = multer({
       return res.status(400).json({ error: 'No file uploaded.' });
     }
 
+    const user = (req as any).session?.user;
+    const coopId = user?.cooperativeId;
+
+    if (!coopId) {
+      return res.status(400).json({ error: 'Missing cooperative context' });
+    }
+
     console.log(`File received: ${req.file.originalname} (${req.file.mimetype}, ${req.file.size} bytes)`);
 
     try {
@@ -559,14 +651,12 @@ const upload = multer({
       if (req.file.mimetype === 'application/pdf') {
         console.log('Processing PDF file...');
         try {
-          // pdf-parse can sometimes be exported as a default function or a property on the default export
           const pdfParser = (pdf as any).default || pdf;
           const data = await pdfParser(req.file.buffer);
           content = data.text;
           console.log(`PDF processed successfully. Extracted ${content.length} characters.`);
         } catch (pdfErr: any) {
           console.error('PDF parsing error:', pdfErr);
-          // Fallback to empty string or throw error
           content = `[PDF content could not be extracted: ${pdfErr.message}]`;
         }
       } else {
@@ -578,14 +668,11 @@ const upload = multer({
       const title = ensureString(body.title, 'Untitled Document') as string;
       const category = ensureString(body.category, 'General') as string;
       const committee = optionalString(body.committee);
-      console.log(`Metadata: Title="${title}", Category="${category}", Committee="${committee}"`);
       
       const currentYear = new Date().getFullYear().toString();
       
-      // Get AI tags directly
       let aiTags: string[] = [];
       try {
-        console.log('Requesting AI tags...');
         const genAI = getAI();
         const model = genAI.getGenerativeModel({
           model: 'gemini-1.5-flash',
@@ -604,27 +691,33 @@ const upload = multer({
         const response = await result.response;
         const aiData = JSON.parse(response.text() || '{"tags": []}');
         aiTags = aiData.tags || [];
-        console.log('AI tags generated successfully.');
       } catch (aiErr: any) {
         console.error('AI tagging failed during upload:', aiErr.message);
       }
       const committeeTags = committee ? [committee] : [];
       const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...(aiTags || [])]));
 
-      console.log('Creating database record...');
-      const document = await prisma.document.create({
-          data: {
-            title,
-            category,
-            tags: finalTags,
-            url: '#', // Placeholder, in a real app this would be a file storage URL
-          fileType: req.file.mimetype.split('/')[1] || 'unknown',
-          author: (req as any).session?.user?.name || 'System',
-          date: new Date().toISOString().split('T')[0],
-          content: content || null,
-        }
+      console.log('Creating database record via raw SQL...');
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO "Document" (id, title, category, committee, url, "fileType", author, date, tags, content, "cooperativeId", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7::timestamptz, $8::TEXT[], $9, $10, now(), now())`,
+        sanitizeUtf8(title).trim(),
+        sanitizeUtf8(category).trim(),
+        sanitizeUtf8(committee || '').trim(),
+        '#',
+        sanitizeUtf8(req.file.mimetype.split('/')[1] || 'unknown').trim(),
+        sanitizeUtf8(user?.name || 'System').trim(),
+        new Date().toISOString(),
+        finalTags,
+        content || null,
+        coopId
+      );
+
+      const document = await prisma.document.findFirst({
+        where: { title, cooperativeId: coopId },
+        orderBy: { createdAt: 'desc' }
       });
-      console.log(`Document created successfully with ID: ${document.id}`);
+
       res.json(document);
     } catch (error: any) {
       console.error('CRITICAL: File upload process failed:', error);
@@ -640,12 +733,41 @@ const upload = multer({
     const category = optionalString(body.category);
     const tags = body.tags ? ensureArray(body.tags) : undefined;
     const content = optionalString(body.content);
-    
-    const document = await prisma.document.update({
-      where: { id: req.params.id },
-      data: { title, category, tags: tags ? { set: tags } : undefined, content } as any
-    });
-    res.json(document);
+    const user = (req as any).session?.user;
+    const coopId = user?.cooperativeId;
+
+    if (!coopId) {
+      return res.status(400).json({ error: 'Missing cooperative context' });
+    }
+
+    try {
+      if (tags) {
+        await prisma.$executeRawUnsafe(
+          `UPDATE "Document" SET title = $1, category = $2, tags = $3::TEXT[], content = $4, "updatedAt" = now()
+           WHERE id = $5 AND "cooperativeId" = $6`,
+          sanitizeUtf8(title || '').trim(),
+          sanitizeUtf8(category || '').trim(),
+          tags,
+          content || null,
+          req.params.id,
+          coopId
+        );
+      } else {
+        await prisma.document.updateMany({
+          where: { id: req.params.id, cooperativeId: coopId },
+          data: { 
+            title: title ? sanitizeUtf8(title).trim() : undefined, 
+            category: category ? sanitizeUtf8(category).trim() : undefined, 
+            content: content || undefined 
+          }
+        });
+      }
+      
+      const document = await prisma.document.findUnique({ where: { id: req.params.id } });
+      res.json(document);
+    } catch (err: any) {
+      res.status(500).json({ error: 'Failed to update document', details: err.message });
+    }
   });
 
 
