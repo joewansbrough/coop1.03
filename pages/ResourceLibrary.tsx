@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { geminiService } from '../services/geminiService';
 import { Document, Committee } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import DriveExplorer from '../components/DriveExplorer';
 import FilterBar from '../components/FilterBar';
 
 const ResourceLibrary: React.FC<{
@@ -90,7 +91,7 @@ const ResourceLibrary: React.FC<{
     (window as any).gapi.load('picker', async () => {
       const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
       view.setIncludeFolders(true);
-      
+
       const picker = new (window as any).google.picker.PickerBuilder()
         .addView(view)
         .setOAuthToken(accessToken)
@@ -161,9 +162,9 @@ const ResourceLibrary: React.FC<{
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newDoc)
               });
-              
+
               const saved = await res.json();
-              
+
               if (!res.ok) {
                 throw new Error(saved.error || saved.details || `Failed to save document: ${res.status}`);
               }
@@ -175,7 +176,7 @@ const ResourceLibrary: React.FC<{
 
               // Auto-extract: if we have content, summarize + generate tags and persist them
               if (extractedContent && extractedContent.trim().length > 0 &&
-                  !extractedContent.includes('[Content is in a Cloud PDF')) {
+                !extractedContent.includes('[Content is in a Cloud PDF')) {
                 try {
                   const aiResult = await geminiService.summarizeAndTag(extractedContent);
                   const aiTags = Array.isArray(aiResult.tags) ? aiResult.tags : [];
@@ -253,10 +254,10 @@ const ResourceLibrary: React.FC<{
 
     const docContext = documents.length > 0
       ? documents.map(d =>
-          `[Document] Title: ${d.title} | Category: ${d.category}` +
-          (d.tags?.length ? ` | Tags: ${d.tags.join(', ')}` : '') +
-          (d.content?.trim() ? `\nContent: ${d.content.substring(0, 3000)}` : ' | (no extracted text)')
-        ).join('\n\n')
+        `[Document] Title: ${d.title} | Category: ${d.category}` +
+        (d.tags?.length ? ` | Tags: ${d.tags.join(', ')}` : '') +
+        (d.content?.trim() ? `\nContent: ${d.content.substring(0, 3000)}` : ' | (no extracted text)')
+      ).join('\n\n')
       : 'No documents in the library.';
     const context = `DOCUMENT CONTEXT:\n${docContext}`;
 
@@ -456,7 +457,12 @@ const ResourceLibrary: React.FC<{
           )}
         </div>
 
-        {/* Local upload section hidden per user request */}
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Documents</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Browse the co-op's shared document folder.</p>
+        </div>
+
+        <DriveExplorer />
 
         <FilterBar
           search={search}
@@ -500,8 +506,8 @@ const ResourceLibrary: React.FC<{
                         key={tag}
                         onClick={(e) => handleTagClick(tag, e)}
                         className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter transition-all ${filter === tag
-                            ? 'bg-emerald-600 text-white'
-                            : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-600'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-600'
                           }`}
                       >
                         #{tag}
@@ -514,8 +520,8 @@ const ResourceLibrary: React.FC<{
                   <button
                     onClick={(e) => handleCategoryClick(doc.category, e)}
                     className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest border transition-all ${filter === doc.category
-                        ? 'bg-emerald-600 text-white border-emerald-600'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-white/5 hover:border-emerald-300'
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-white/5 hover:border-emerald-300'
                       }`}
                   >
                     {doc.category}
@@ -585,11 +591,11 @@ const ResourceLibrary: React.FC<{
                 <div className="space-y-6">
                   <div className="h-[400px] bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-white/10 rounded-[2rem] flex flex-col items-center justify-center text-center p-12">
                     <div className={`w-20 h-20 ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-500/10 text-blue-500' : 'bg-emerald-500/10 text-emerald-500'} rounded-3xl flex items-center justify-center mb-6`}>
-                       <i className={`fa-solid ${reviewingDoc.url?.includes('drive.google.com') ? 'fa-brands fa-google-drive' : 'fa-file-shield'} text-3xl`}></i>
+                      <i className={`fa-solid ${reviewingDoc.url?.includes('drive.google.com') ? 'fa-brands fa-google-drive' : 'fa-file-shield'} text-3xl`}></i>
                     </div>
                     <h4 className="text-lg font-black text-slate-800 dark:text-white mb-2 uppercase tracking-tight">Streamlined Metadata View</h4>
                     <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-xs">Association documents are now stored externally. Managing metadata below will update the searchable archive.</p>
-                    <button 
+                    <button
                       onClick={() => handleViewDoc(reviewingDoc)}
                       className={`mt-8 ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-black'} px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all`}
                     >
