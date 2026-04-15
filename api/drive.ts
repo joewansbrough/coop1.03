@@ -215,7 +215,7 @@ router.get('/files/:fileId/download', async (req: Request, res: Response) => {
     }
 });
 
-// Search files by name or full-text within the root folder tree
+// Search files by name or full-text (restricted to files reachable from root)
 router.get('/search', async (req: Request, res: Response) => {
     try {
         const term = (req.query.q as string)?.trim();
@@ -223,25 +223,34 @@ router.get('/search', async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Query param 'q' is required" });
         }
 
-        const pageToken = req.query.pageToken as string | undefined;
         const drive = driveClient();
-
-        // `ancestors` does a deep subtree search — no need to walk folders manually
         const escaped = term.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        
+        // We search the entire drive visible to the service account
+        // and then filter results that are within the root tree.
         const response = await drive.files.list({
-            q: `'${ROOT_FOLDER_ID}' in ancestors and trashed = false and (name contains '${escaped}' or fullText contains '${escaped}')`,
-            fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, size, webViewLink)',
-            orderBy: 'modifiedTime desc',
-            pageSize: 50,
-            pageToken,
+            q: `trashed = false and (name contains '${escaped}' or fullText contains '${escaped}')`,
+            fields: 'files(id, name, mimeType, modifiedTime, size, webViewLink, parents)',
+            pageSize: 100,
         });
+
+        const allFiles = response.data.files ?? [];
+        const filteredFiles = [];
+
+        // Filter files that belong to the co-op root tree
+        for (const file of allFiles) {
+            const isInside = await isFolderWithinRoot(file.id);
+            if (isInside) {
+                filteredFiles.push(file);
+            }
+        }
 
         res.json({
-            files: response.data.files ?? [],
-            nextPageToken: response.data.nextPageToken ?? null,
+            files: filteredFiles,
+            nextPageToken: null, // Filtering breaks simple pagination
         });
-    } catch (error) {
-        console.error('Drive search error:', error);
+    } catch (error: any) {
+        console.error('Drive search error:', error.message);
         res.status(500).json({ error: 'Search failed' });
     }
 });
