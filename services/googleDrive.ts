@@ -7,8 +7,15 @@ const getAuthClient = () => {
         throw new Error('Missing GOOGLE_SERVICE_ACCOUNT_JSON');
     }
 
+    let cleaned = raw;
+
+    // Handle double-stringified JSON
+    if (cleaned.startsWith('"')) {
+        cleaned = JSON.parse(cleaned);
+    }
+
     const credentials = JSON.parse(
-        raw.replace(/\\n/g, '\n')
+        cleaned.replace(/\\n/g, '\n')
     );
 
     return new google.auth.GoogleAuth({
