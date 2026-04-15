@@ -588,15 +588,15 @@ const upload = multer({
     try {
       const document = await prisma.document.create({
         data: {
-          title: title || 'Untitled Document',
-          category: category || 'General',
-          url: url || '#',
-          fileType: fileType || 'txt',
-          author: author || user?.name || 'System',
+          title: sanitizeUtf8(title || 'Untitled Document').trim(),
+          category: sanitizeUtf8(category || 'General').trim(),
+          url: sanitizeUtf8(url || '#').trim(),
+          fileType: sanitizeUtf8(fileType || 'txt').trim(),
+          author: sanitizeUtf8(author || user?.name || 'System').trim(),
           date: new Date(date || Date.now()),
           tags: tags || [],
-          content: content || null,
-          committee: committee || '',
+          content: content ? sanitizeUtf8(content) : null,
+          committee: sanitizeUtf8(committee || '').trim(),
           cooperativeId: coopId
         }
       });
