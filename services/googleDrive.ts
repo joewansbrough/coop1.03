@@ -39,6 +39,10 @@ const getAuthClient = () => {
             .replace(/\\r/g, '\r');
     }
 
+    if (credentials && credentials.client_email) {
+        console.log(`[Drive] Using service account: ${credentials.client_email}`);
+    }
+
     return new google.auth.GoogleAuth({
         credentials,
         scopes: ['https://www.googleapis.com/auth/drive.readonly'],
