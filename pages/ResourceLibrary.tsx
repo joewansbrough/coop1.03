@@ -398,48 +398,6 @@ const ResourceLibrary: React.FC<{
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12">
-      <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-8 opacity-5 text-[15rem] pointer-events-none group-hover:opacity-10 transition-opacity">
-          <i className="fa-solid fa-wand-magic-sparkles"></i>
-        </div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center">
-              <i className="fa-solid fa-robot text-xl"></i>
-            </div>
-            <div>
-              <h3 className="text-xl font-black uppercase tracking-tight">Resource Search</h3>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Instant association rule lookup</p>
-            </div>
-          </div>
-          <form onSubmit={handleAskAI} className="relative">
-            <input
-              type="text"
-              className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-6 py-4 pr-32 outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm font-medium"
-              placeholder="e.g., How many days notice for a general meeting?"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="absolute right-2 top-2 bottom-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 active:scale-95"
-            >
-              {loading ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-bolt"></i>}
-              Query
-            </button>
-          </form>
-          {aiResponse && (
-            <div className="mt-6 p-6 bg-white/5 border border-white/10 rounded-2xl text-sm leading-relaxed animate-in fade-in slide-in-from-top-2">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest border border-emerald-500/30 px-2 py-0.5 rounded">Search Result</span>
-              </div>
-              <p className="text-slate-200 font-medium leading-relaxed">{aiResponse}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Documents</h2>

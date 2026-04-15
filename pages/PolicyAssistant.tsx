@@ -16,6 +16,35 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [resourceQuestion, setResourceQuestion] = useState('');
+  const [resourceAiResponse, setResourceAiResponse] = useState('');
+  const [isResourceSearching, setIsResourceSearching] = useState(false);
+
+  const handleResourceSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resourceQuestion) return;
+    setIsResourceSearching(true);
+    setResourceAiResponse('');
+
+    const docContext = documents.length > 0
+      ? documents.map(d =>
+        `[Document] Title: ${d.title} | Category: ${d.category}` +
+        (d.tags?.length ? ` | Tags: ${d.tags.join(', ')}` : '') +
+        (d.content?.trim() ? `\nContent: ${d.content.substring(0, 3000)}` : ' | (no extracted text)')
+      ).join('\n\n')
+      : 'No documents in the library.';
+    const context = `DOCUMENT CONTEXT:\n${docContext}`;
+
+    try {
+      const answer = await geminiService.askPolicyQuestion(resourceQuestion, context);
+      setResourceAiResponse(answer || 'Sorry, I could not find an answer.');
+    } catch (err) {
+      setResourceAiResponse('Error communicating with AI Assistant.');
+    } finally {
+      setIsResourceSearching(false);
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -82,7 +111,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
   ];
 
   return (
-    <div className="max-w-5xl mx-auto h-[calc(100vh-8rem)] flex flex-col gap-6 animate-in fade-in duration-700">
+    <div className="max-w-5xl mx-auto flex flex-col gap-6 animate-in fade-in duration-700">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -95,10 +124,11 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-0">
-        {/* Sidebar */}
-        <div className="hidden lg:flex flex-col gap-6 lg:col-span-1">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
+        {/* Sidebar Column */}
+        <div className="hidden lg:flex flex-col gap-6 lg:col-span-1 h-full">
+          {/* Sidebar Row 1: How It Works */}
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 space-y-4 flex flex-col">
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
               <Shield className="w-5 h-5" />
               <h4 className="text-xs font-black uppercase tracking-widest">How it works</h4>
@@ -106,8 +136,8 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
               This assistant analyzes your co-op's archived documents and BC housing regulations to provide instant answers to policy questions.
             </p>
-            <div className="pt-2">
-              <div className="flex items-center gap-2 text-slate-400 mb-3">
+            <div className="pt-2 flex-1 overflow-y-auto min-h-0">
+              <div className="flex items-center gap-2 text-slate-400 mb-3 sticky top-0 bg-white dark:bg-slate-900 pb-1">
                 <MessageSquare className="w-4 h-4" />
                 <h4 className="text-[10px] font-black uppercase tracking-widest">Try asking:</h4>
               </div>
@@ -125,6 +155,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
             </div>
           </div>
 
+          {/* Sidebar Row 2: Disclaimer */}
           <div className="bg-amber-50 dark:bg-amber-900/10 p-6 rounded-3xl border border-amber-100 dark:border-amber-900/30">
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-500 mb-2">
               <Info className="w-4 h-4" />
@@ -136,77 +167,117 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
           </div>
         </div>
 
-        {/* Main Chat Interface */}
-        <div className="lg:col-span-3 flex flex-col bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden">
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
-            <AnimatePresence initial={false}>
-              {messages.map((msg, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${msg.role === 'user'
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                      }`}>
-                      {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+        {/* Main Column */}
+        <div className="lg:col-span-3 flex flex-col gap-6">
+          {/* Main Content Row 1: Chat Interface */}
+          <div className="flex flex-col bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden">
+            {/* Chat Messages */}
+            <div className="h-[420px] overflow-y-auto p-6 space-y-6 scrollbar-hide">
+              <AnimatePresence initial={false}>
+                {messages.map((msg, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${msg.role === 'user'
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                        }`}>
+                        {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                      </div>
+                      <div className={`p-4 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
+                          ? 'bg-emerald-600 text-white rounded-tr-none'
+                          : 'bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-white/5'
+                        }`}>
+                        {msg.content}
+                      </div>
                     </div>
-                    <div className={`p-4 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
-                        ? 'bg-emerald-600 text-white rounded-tr-none'
-                        : 'bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-white/5'
-                      }`}>
-                      {msg.content}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="flex gap-3 max-w-[85%]">
+                    <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                      <Bot className="w-4 h-4 text-slate-500" />
                     </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="flex gap-3 max-w-[85%]">
-                  <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-slate-500" />
-                  </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl rounded-tl-none border border-slate-100 dark:border-white/5">
-                    <div className="flex gap-1">
-                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl rounded-tl-none border border-slate-100 dark:border-white/5">
+                      <div className="flex gap-1">
+                        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                        <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="p-6 bg-slate-50/50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-white/5 mt-auto">
+              <form onSubmit={handleSend} className="relative flex items-center gap-3">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask about bylaws, rules, or occupancy agreements..."
+                  className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-slate-900 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isLoading}
+                  className="w-12 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </form>
+            </div>
           </div>
 
-          {/* Input Area */}
-          <div className="p-6 bg-slate-50/50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-white/5">
-            <form onSubmit={handleSend} className="relative flex items-center gap-3">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about bylaws, rules, or occupancy agreements..."
-                className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-slate-900 dark:text-white"
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || isLoading}
-                className="w-12 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </form>
-            <div className="mt-3 flex justify-center">
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                <Shield className="w-3 h-3" />
-                Secure AI Assistant &bull; Member Data Protected
-              </p>
+          {/* Main Content Row 2: Resource Search Module */}
+          <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-5 text-[15rem] pointer-events-none group-hover:opacity-10 transition-opacity">
+              <i className="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center">
+                  <i className="fa-solid fa-robot text-xl"></i>
+                </div>
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-tight">Resource Search</h3>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Instant association rule lookup</p>
+                </div>
+              </div>
+              <form onSubmit={handleResourceSearch} className="relative">
+                <input
+                  type="text"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-6 py-4 pr-32 outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm font-medium"
+                  placeholder="e.g., How many days notice for a general meeting?"
+                  value={resourceQuestion}
+                  onChange={(e) => setResourceQuestion(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  disabled={isResourceSearching}
+                  className="absolute right-2 top-2 bottom-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 active:scale-95"
+                >
+                  {isResourceSearching ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-bolt"></i>}
+                  Query
+                </button>
+              </form>
+              {resourceAiResponse && (
+                <div className="mt-6 p-6 bg-white/5 border border-white/10 rounded-2xl text-sm leading-relaxed animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest border border-emerald-500/30 px-2 py-0.5 rounded">Search Result</span>
+                  </div>
+                  <p className="text-slate-200 font-medium leading-relaxed">{resourceAiResponse}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
