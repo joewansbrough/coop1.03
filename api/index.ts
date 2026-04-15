@@ -748,27 +748,26 @@ app.post('/api/documents', requireAuth, async (req, res) => {
   }
 
   try {
-    const document = await getPrisma().document.create({
-      data: {
-        title: title || 'Untitled Document',
-        category: category || 'General',
-        url: url || '#',
-        fileType: fileType || 'txt',
-        author: author || user?.name || 'System',
-        date: new Date(date || Date.now()),
-        tags: tags || [],
-        content: content || null,
-        committee: committee || '',
-        cooperativeId: coopId
-      }
-    });
-    console.log('Document created successfully:', document.id);
-    res.json(document);
+  const document = await getPrisma().document.create({
+    data: {
+      title: sanitizeUtf8(title || 'Untitled Document').trim(),
+      category: sanitizeUtf8(category || 'General').trim(),
+      url: sanitizeUtf8(url || '#').trim(),
+      fileType: sanitizeUtf8(fileType || 'txt').trim(),
+      author: sanitizeUtf8(author || user?.name || 'System').trim(),
+      date: new Date(date || Date.now()),
+      tags: tags || [],
+      content: content ? sanitizeUtf8(content) : null,
+      committee: sanitizeUtf8(committee || '').trim(),
+      cooperativeId: coopId
+    }
+  });
+  console.log('Document created successfully:', document.id);
+  res.json(document);
   } catch (err: any) {
-    console.error('Failed to create document (Prisma):', err);
-    res.status(500).json({ error: 'Database creation failed', details: err.message });
-  }
-});
+  console.error('Failed to create document (Prisma):', err);
+  res.status(500).json({ error: 'Database creation failed', details: err.message });
+  }});
 
 app.put('/api/documents/:id', requireAuth, async (req, res) => {
   const { title, category, tags, content, committee } = req.body;
