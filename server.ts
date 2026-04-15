@@ -585,37 +585,25 @@ const upload = multer({
       return res.status(400).json({ error: 'Missing cooperative context' });
     }
 
-    const currentYear = new Date().getFullYear().toString();
-    const committeeTags = committee ? [committee] : [];
-    const providedTags = Array.isArray(tags) ? tags : [];
-    const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
-
     try {
-      // Use raw SQL to avoid Prisma's TEXT[] wire encoding bug
-      await prisma.$executeRawUnsafe(
-        `INSERT INTO "Document" (id, title, category, committee, url, "fileType", author, date, tags, content, "cooperativeId", "createdAt", "updatedAt")
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7::timestamptz, $8::TEXT[], $9, $10, now(), now())`,
-        sanitizeUtf8(title || 'Untitled Document').trim(),
-        sanitizeUtf8(category || 'General').trim(),
-        sanitizeUtf8(committee || '').trim(),
-        sanitizeUtf8(url || '#').trim(),
-        sanitizeUtf8(fileType || 'txt').trim(),
-        sanitizeUtf8(author || (user?.name || 'System')).trim(),
-        new Date(date || Date.now()).toISOString(),
-        finalTags,
-        content || null,
-        coopId
-      );
-
-      const document = await prisma.document.findFirst({
-        where: { url: url || '#', cooperativeId: coopId },
-        orderBy: { createdAt: 'desc' }
+      const document = await prisma.document.create({
+        data: {
+          title: title || 'Untitled Document',
+          category: category || 'General',
+          url: url || '#',
+          fileType: fileType || 'txt',
+          author: author || user?.name || 'System',
+          date: new Date(date || Date.now()),
+          tags: tags || [],
+          content: content || null,
+          committee: committee || '',
+          cooperativeId: coopId
+        }
       });
-
       res.json(document);
     } catch (err: any) {
-      console.error('Failed to create document:', err);
-      res.status(500).json({ error: 'Database error during document creation', details: err.message });
+      console.error('Failed to create document (Prisma):', err);
+      res.status(500).json({ error: 'Database creation failed', details: err.message });
     }
   });
 
