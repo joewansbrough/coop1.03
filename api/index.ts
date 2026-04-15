@@ -1121,7 +1121,7 @@ app.get('/api/seed', async (req, res) => {
         data: {
           title: sanitizeUtf8(e.title).trim(),
           description: sanitizeUtf8(e.description).trim(),
-          date: dt.toISOString().split('T')[0],
+          date: dt,
           time: dt.toISOString().split('T')[1].substring(0, 5),
           location: sanitizeUtf8(e.location).trim(),
           category: "General",
