@@ -885,7 +885,7 @@ app.get('/api/seed', async (req, res) => {
   try {
     const p = getPrisma();
 
-    // 1. DEFINE DATA ARRAYS FIRST (Prevents ReferenceErrors)
+    // 1. DATA DEFINITIONS
     const unitDefs = [
       { number: '101', type: '1BR', floor: 1, status: 'Occupied' },
       { number: '102', type: '2BR', floor: 1, status: 'Occupied' },
@@ -905,6 +905,7 @@ app.get('/api/seed', async (req, res) => {
       { number: '207', type: '1BR', floor: 2, status: 'Occupied' },
       { number: '208', type: '1BR', floor: 2, status: 'Occupied' },
       { number: '209', type: '2BR', floor: 2, status: 'Occupied' },
+      { number: '210', type: '1BR', floor: 2, status: 'Occupied' },
       { number: '301', type: '3BR', floor: 3, status: 'Occupied' },
       { number: '302', type: '2BR', floor: 3, status: 'Occupied' },
       { number: '303', type: '1BR', floor: 3, status: 'Occupied' },
@@ -914,6 +915,7 @@ app.get('/api/seed', async (req, res) => {
       { number: '307', type: '2BR', floor: 3, status: 'Occupied' },
       { number: '308', type: '1BR', floor: 3, status: 'Occupied' },
       { number: '309', type: '2BR', floor: 3, status: 'Occupied' },
+      { number: '310', type: '3BR', floor: 3, status: 'Occupied' },
       { number: '401', type: '2BR', floor: 4, status: 'Occupied' },
       { number: '402', type: '1BR', floor: 4, status: 'Occupied' },
       { number: '403', type: '2BR', floor: 4, status: 'Occupied' },
@@ -924,22 +926,111 @@ app.get('/api/seed', async (req, res) => {
     ];
 
     const tenantData = [
+      // Couples in 102, 103, 104, 202, 205, 301, 305, 306, 309, 401, 403, 407
       { firstName: 'Margaret', lastName: 'Chen', email: 'margaret.chen@email.com', phone: '250-555-0101', startDate: '2019-03-15', status: 'Current', unit: '101' },
-      { firstName: 'Joe', lastName: 'Wansbrough', email: 'joewansbrough@gmail.com', phone: '250-555-9999', startDate: '2025-05-01', status: 'Current', unit: '201' },
       { firstName: 'David', lastName: 'Okafor', email: 'david.okafor@email.com', phone: '250-555-0102', startDate: '2020-07-01', status: 'Current', unit: '102' },
-      // ... Add other tenants here if needed
+      { firstName: 'Priya', lastName: 'Sharma', email: 'priya.sharma@email.com', phone: '250-555-0103', startDate: '2021-01-10', status: 'Current', unit: '102' },
+      { firstName: 'Robert', lastName: 'Tremblay', email: 'robert.tremblay@email.com', phone: '250-555-0104', startDate: '2018-09-01', status: 'Current', unit: '103' },
+      { firstName: 'Susan', lastName: 'Tremblay', email: 'susan.tremblay@email.com', phone: '250-555-0105', startDate: '2018-09-01', status: 'Current', unit: '103' },
+      { firstName: 'James', lastName: 'Nakamura', email: 'james.nakamura@email.com', phone: '250-555-0106', startDate: '2017-05-20', status: 'Current', unit: '104' },
+      { firstName: 'Linda', lastName: 'Nakamura', email: 'linda.nakamura@email.com', phone: '250-555-0107', startDate: '2017-05-20', status: 'Current', unit: '104' },
+      { firstName: 'Carlos', lastName: 'Rivera', email: 'carlos.rivera@email.com', phone: '250-555-0108', startDate: '2022-02-14', status: 'Current', unit: '106' },
+      { firstName: 'Aisha', lastName: 'Mohammed', email: 'aisha.mohammed@email.com', phone: '250-555-0109', startDate: '2021-08-30', status: 'Current', unit: '201' },
+      { firstName: 'Thomas', lastName: 'Bergstrom', email: 'thomas.bergstrom@email.com', phone: '250-555-0110', startDate: '2016-11-01', status: 'Current', unit: '202' },
+      { firstName: 'Karen', lastName: 'Bergstrom', email: 'karen.bergstrom@email.com', phone: '250-555-0111', startDate: '2016-11-01', status: 'Current', unit: '202' },
+      { firstName: 'Wei', lastName: 'Liu', email: 'wei.liu@email.com', phone: '250-555-0112', startDate: '2023-04-01', status: 'Current', unit: '203' },
+      { firstName: 'Patricia', lastName: 'MacLeod', email: 'patricia.macleod@email.com', phone: '250-555-0113', startDate: '2019-06-15', status: 'Current', unit: '205' },
+      { firstName: 'Kevin', lastName: 'MacLeod', email: 'kevin.macleod@email.com', phone: '250-555-0114', startDate: '2019-06-15', status: 'Current', unit: '205' },
+      { firstName: 'Fatima', lastName: 'Al-Hassan', email: 'fatima.alhassan@email.com', phone: '250-555-0115', startDate: '2020-10-01', status: 'Current', unit: '206' },
+      { firstName: 'George', lastName: 'Papadopoulos', email: 'george.papadopoulos@email.com', phone: '250-555-0116', startDate: '2015-03-01', status: 'Current', unit: '301' },
+      { firstName: 'Helen', lastName: 'Papadopoulos', email: 'helen.papadopoulos@email.com', phone: '250-555-0117', startDate: '2015-03-01', status: 'Current', unit: '301' },
+      { firstName: 'Michael', lastName: 'Johansson', email: 'michael.johansson@email.com', phone: '250-555-0118', startDate: '2022-09-01', status: 'Current', unit: '302' },
+      { firstName: 'Yuki', lastName: 'Tanaka', email: 'yuki.tanaka@email.com', phone: '250-555-0119', startDate: '2023-01-15', status: 'Current', unit: '303' },
+      { firstName: 'Brian', lastName: 'Walsh', email: 'brian.walsh@email.com', phone: '250-555-0120', startDate: '2018-07-01', status: 'Current', unit: '305' },
+      { firstName: 'Catherine', lastName: 'Walsh', email: 'catherine.walsh@email.com', phone: '250-555-0121', startDate: '2018-07-01', status: 'Current', unit: '305' },
+      { firstName: 'Ahmed', lastName: 'Patel', email: 'ahmed.patel@email.com', phone: '250-555-0122', startDate: '2017-12-01', status: 'Current', unit: '306' },
+      { firstName: 'Nadia', lastName: 'Patel', email: 'nadia.patel@email.com', phone: '250-555-0123', startDate: '2017-12-01', status: 'Current', unit: '306' },
+      { firstName: 'Ingrid', lastName: 'Sorensen', email: 'ingrid.sorensen@email.com', phone: '250-555-0124', startDate: '2021-05-01', status: 'Current', unit: '107' },
+      { firstName: 'Paulo', lastName: 'Ferreira', email: 'paulo.ferreira@email.com', phone: '250-555-0125', startDate: '2022-11-15', status: 'Current', unit: '108' },
+      { firstName: 'Diana', lastName: 'Ferreira', email: 'diana.ferreira@email.com', phone: '250-555-0126', startDate: '2022-11-15', status: 'Current', unit: '108' },
+      { firstName: 'Lena', lastName: 'Kowalski', email: 'lena.kowalski@email.com', phone: '250-555-0127', startDate: '2023-08-01', status: 'Current', unit: '109' },
+      { firstName: 'Derek', lastName: 'Munroe', email: 'derek.munroe@email.com', phone: '250-555-0128', startDate: '2020-04-01', status: 'Current', unit: '207' },
+      { firstName: 'Amara', lastName: 'Diallo', email: 'amara.diallo@email.com', phone: '250-555-0129', startDate: '2024-02-01', status: 'Current', unit: '208' },
+      { firstName: 'Stefan', lastName: 'Novak', email: 'stefan.novak@email.com', phone: '250-555-0133', startDate: '2021-09-15', status: 'Current', unit: '209' },
+      { firstName: 'Jana', lastName: 'Novak', email: 'jana.novak@email.com', phone: '250-555-0134', startDate: '2021-09-15', status: 'Current', unit: '209' },
+      { firstName: 'Trevor', lastName: 'Osei', email: 'trevor.osei@email.com', phone: '250-555-0135', startDate: '2022-06-01', status: 'Current', unit: '307' },
+      { firstName: 'Miriam', lastName: 'Goldstein', email: 'miriam.goldstein@email.com', phone: '250-555-0136', startDate: '2023-03-15', status: 'Current', unit: '308' },
+      { firstName: 'Kenji', lastName: 'Watanabe', email: 'kenji.watanabe@email.com', phone: '250-555-0137', startDate: '2020-12-01', status: 'Current', unit: '309' },
+      { firstName: 'Yuna', lastName: 'Watanabe', email: 'yuna.watanabe@email.com', phone: '250-555-0138', startDate: '2020-12-01', status: 'Current', unit: '309' },
+      { firstName: 'Bernard', lastName: 'Lefebvre', email: 'bernard.lefebvre@email.com', phone: '250-555-0150', startDate: '2024-06-01', status: 'Current', unit: '401' },
+      { firstName: 'Claire', lastName: 'Lefebvre', email: 'claire.lefebvre@email.com', phone: '250-555-0151', startDate: '2024-06-01', status: 'Current', unit: '401' },
+      { firstName: 'Ravi', lastName: 'Krishnamurthy', email: 'ravi.krishnamurthy@email.com', phone: '250-555-0152', startDate: '2024-07-15', status: 'Current', unit: '402' },
+      { firstName: 'Elena', lastName: 'Vasquez', email: 'elena.vasquez@email.com', phone: '250-555-0153', startDate: '2024-08-01', status: 'Current', unit: '403' },
+      { firstName: 'Marco', lastName: 'Vasquez', email: 'marco.vasquez@email.com', phone: '250-555-0154', startDate: '2024-08-01', status: 'Current', unit: '403' },
+      { firstName: 'Hana', lastName: 'Becker', email: 'hana.becker@email.com', phone: '250-555-0155', startDate: '2024-09-01', status: 'Current', unit: '404' },
+      { firstName: 'Isaiah', lastName: 'Campbell', email: 'isaiah.campbell@email.com', phone: '250-555-0156', startDate: '2025-01-15', status: 'Current', unit: '406' },
+      { firstName: 'Natasha', lastName: 'Ivanova', email: 'natasha.ivanova@email.com', phone: '250-555-0157', startDate: '2025-02-01', status: 'Current', unit: '407' },
+      { firstName: 'Dmitri', lastName: 'Ivanov', email: 'dmitri.ivanov@email.com', phone: '250-555-0158', startDate: '2025-02-01', status: 'Current', unit: '407' },
+      { firstName: 'Joe', lastName: 'Wansbrough', email: 'joewansbrough@gmail.com', phone: '250-555-9999', startDate: '2025-05-01', status: 'Current', unit: '210' },
+      // Waitlist
+      { firstName: 'Alice', lastName: 'Waites', email: 'alice.wait@email.com', phone: '250-555-1001', startDate: '2026-01-01', status: 'Waitlist', unit: null },
+      { firstName: 'Bob', lastName: 'Waites', email: 'bob.wait@email.com', phone: '250-555-1002', startDate: '2026-01-01', status: 'Waitlist', unit: null },
+      { firstName: 'Sarah', lastName: 'Jenkins', email: 'sarah.j@email.com', phone: '250-555-1003', startDate: '2026-02-15', status: 'Waitlist', unit: null },
+      { firstName: 'Mike', lastName: 'Ross', email: 'mike.ross@email.com', phone: '250-555-1004', startDate: '2026-03-01', status: 'Waitlist', unit: null },
+      { firstName: 'Rachel', lastName: 'Zane', email: 'rachel.z@email.com', phone: '250-555-1005', startDate: '2026-03-01', status: 'Waitlist', unit: null },
+      { firstName: 'Harvey', lastName: 'Specter', email: 'harvey.s@email.com', phone: '250-555-1006', startDate: '2026-03-10', status: 'Waitlist', unit: null },
+      { firstName: 'Donna', lastName: 'Paulsen', email: 'donna.p@email.com', phone: '250-555-1007', startDate: '2026-03-10', status: 'Waitlist', unit: null },
+      { firstName: 'Louis', lastName: 'Litt', email: 'louis.l@email.com', phone: '250-555-1008', startDate: '2026-04-01', status: 'Waitlist', unit: null },
+    ];
+
+    const maintenanceData = [
+      { title: 'Leaking kitchen faucet', description: 'Constant drip in 101.', status: 'Pending', priority: 'Medium', category: 'Plumbing', unitNumber: '101', requestedBy: 'margaret.chen@email.com' },
+      { title: 'Bathroom exhaust fan', description: 'Not working since Tuesday.', status: 'In Progress', priority: 'Medium', category: 'Electrical', unitNumber: '102', requestedBy: 'david.okafor@email.com' },
+      { title: 'Broken window latch', description: 'Security risk on ground floor.', status: 'Resolved', priority: 'High', category: 'Security', unitNumber: '104', requestedBy: 'james.nakamura@email.com' },
+      { title: 'Hallway light flickering', description: 'Near unit 205.', status: 'Resolved', priority: 'Low', category: 'Electrical', unitNumber: '205', requestedBy: 'patricia.macleod@email.com' },
+      { title: 'No hot water', description: 'Whole unit affected.', status: 'Pending', priority: 'High', category: 'Plumbing', unitNumber: '301', requestedBy: 'george.papadopoulos@email.com' },
+      { title: 'Fridge making loud noise', description: 'Internal fan issue?', status: 'In Progress', priority: 'Low', category: 'Appliance', unitNumber: '306', requestedBy: 'ahmed.patel@email.com' },
+      { title: 'Drafty balcony door', description: 'Needs new weather stripping.', status: 'Pending', priority: 'Medium', category: 'Carpentry', unitNumber: '407', requestedBy: 'natasha.ivanova@email.com' },
+      { title: 'Intercom not buzzing', description: 'Can hear guests but can\'t let them in.', status: 'Resolved', priority: 'Medium', category: 'Electrical', unitNumber: '201', requestedBy: 'aisha.mohammed@email.com' },
+      { title: 'Loose floorboards', description: 'Tripping hazard in living room.', status: 'Pending', priority: 'Low', category: 'Flooring', unitNumber: '109', requestedBy: 'lena.kowalski@email.com' },
+      { title: 'Slow drain in tub', description: 'Standing water after shower.', status: 'Resolved', priority: 'Medium', category: 'Plumbing', unitNumber: '402', requestedBy: 'ravi.krishnamurthy@email.com' },
+      { title: 'Clogged gutter', description: 'Overflowing onto balcony during rain.', status: 'Pending', priority: 'Medium', category: 'Exterior', unitNumber: '401', requestedBy: 'bernard.lefebvre@email.com' },
+      { title: 'Loose railing', description: 'External stairs near parking.', status: 'In Progress', priority: 'High', category: 'Safety', unitNumber: '101', requestedBy: 'margaret.chen@email.com' },
     ];
 
     const announcementData = [
-      { title: 'Annual General Meeting — April 12th', content: 'Details regarding the upcoming AGM.', type: 'General', priority: 'High', author: 'Board', date: '2026-03-08' },
+      { title: 'Annual General Meeting — April 12th', content: 'Co-op AGM details and agenda in the common room.', type: 'General', priority: 'High', author: 'Board', date: '2026-03-08' },
+      { title: 'New Pet Policy Adopted', content: 'The new rules regarding pet size and registration are now in effect.', type: 'Policy', priority: 'Medium', author: 'Board', date: '2026-01-15' },
+      { title: 'Spring Landscaping Clean-up', content: 'Volunteers needed for Saturday morning garden work.', type: 'Event', priority: 'Low', author: 'Maintenance', date: '2026-03-20' },
+      { title: 'Elevator Maintenance Schedule', content: 'Elevator will be out of service for inspection on Wednesday.', type: 'Alert', priority: 'High', author: 'Maintenance', date: '2026-04-01' },
+      { title: 'Parking Lot Repaving', content: 'Please move all vehicles by 8 AM on Monday morning.', type: 'Alert', priority: 'High', author: 'Board', date: '2026-04-10' },
+    ];
+
+    const eventData = [
+      { title: 'Co-op AGM', description: 'Official annual meeting and board elections.', date: '2026-04-12T19:00:00Z', location: 'Common Room' },
+      { title: 'Block Party Prep', description: 'Planning meeting for the Cook Street Block Party.', date: '2026-04-20T18:30:00Z', location: 'Unit 210' },
+      { title: 'Community Garden Kickoff', description: 'First planting session of the year.', date: '2026-05-02T10:00:00Z', location: 'Back Courtyard' },
+      { title: 'Coffee & Conversation', description: 'Casual meetup for new and old members.', date: '2026-05-15T11:00:00Z', location: 'Common Room' },
+      { title: 'Board Meeting', description: 'Monthly oversight meeting.', date: '2026-04-28T19:30:00Z', location: 'Zoom' },
+      { title: 'Summer BBQ', description: 'Annual summer social.', date: '2026-07-04T16:00:00Z', location: 'Front Lawn' },
+      { title: 'Emergency Drill', description: 'Fire safety walkthrough for all residents.', date: '2026-05-10T14:00:00Z', location: 'Main Entrance' },
     ];
 
     const documentData = [
-      { title: 'Pet Policy', category: 'Policies', url: 'https://example.com/pet-policy.pdf', fileType: 'pdf', author: 'Board Administration', date: '2023-09-01' },
+      { title: 'Rules & Regulations', category: 'Bylaws', url: '#', fileType: 'pdf', author: 'Board', date: '2020-01-01' },
+      { title: 'Pet Policy 2026', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board', date: '2026-01-15' },
+      { title: 'AGM Minutes March 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-03-10' },
+      { title: 'Co-op Membership Application', category: 'Forms', url: '#', fileType: 'pdf', author: 'Admin', date: '2025-11-01' },
+      { title: 'Building Safety Map', category: 'Safety', url: '#', fileType: 'pdf', author: 'Maintenance', date: '2024-05-20' },
     ];
 
     const committeeData = [
-      { name: 'Board of Directors', chair: 'George Papadopoulos', members: ['margaret.chen@email.com', 'joewansbrough@gmail.com'] },
+      { name: 'Board of Directors', chair: 'George Papadopoulos', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com', 'margaret.chen@email.com', 'joewansbrough@gmail.com'] },
+      { name: 'Maintenance Committee', chair: 'Thomas Bergstrom', members: ['thomas.bergstrom@email.com', 'carlos.rivera@email.com', 'patricia.macleod@email.com'] },
+      { name: 'Finance Committee', chair: 'Patricia MacLeod', members: ['patricia.macleod@email.com', 'margaret.chen@email.com', 'ahmed.patel@email.com'] },
+      { name: 'Membership Committee', chair: 'Linda Nakamura', members: ['linda.nakamura@email.com', 'priya.sharma@email.com', 'yuki.tanaka@email.com'] },
+      { name: 'Social Committee', chair: 'Wei Liu', members: ['wei.liu@email.com', 'joewansbrough@gmail.com', 'fatima.alhassan@email.com'] },
+      { name: 'Landscape Committee', chair: 'Michael Johansson', members: ['michael.johansson@email.com', 'wei.liu@email.com', 'james.nakamura@email.com'] },
     ];
 
     // 2. ENSURE COOPERATIVE EXISTS
@@ -1004,6 +1095,39 @@ app.get('/api/seed', async (req, res) => {
           data: { currentTenantId: tenant.id },
         });
       }
+    }
+
+    console.log('Seeding maintenance requests...');
+    for (const m of maintenanceData) {
+      await p.maintenanceRequest.create({
+        data: {
+          title: sanitizeUtf8(m.title).trim(),
+          description: sanitizeUtf8(m.description).trim(),
+          status: m.status,
+          priority: m.priority,
+          category: m.category,
+          unitId: unitMap[m.unitNumber],
+          tenantId: tenants[m.requestedBy]?.id || null,
+          requestedBy: sanitizeUtf8(m.requestedBy),
+          cooperativeId: coopId
+        }
+      });
+    }
+
+    console.log('Seeding events...');
+    for (const e of eventData) {
+      const dt = new Date(e.date);
+      await p.coopEvent.create({
+        data: {
+          title: sanitizeUtf8(e.title).trim(),
+          description: sanitizeUtf8(e.description).trim(),
+          date: dt.toISOString().split('T')[0],
+          time: dt.toISOString().split('T')[1].substring(0, 5),
+          location: sanitizeUtf8(e.location).trim(),
+          category: "General",
+          cooperativeId: coopId
+        }
+      });
     }
 
     console.log('Seeding announcements...');
