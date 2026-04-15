@@ -94,9 +94,13 @@ router.get('/root', async (_req: Request, res: Response) => {
             folders: files.filter(f => f.mimeType === 'application/vnd.google-apps.folder'),
             files: files.filter(f => f.mimeType !== 'application/vnd.google-apps.folder'),
         });
-    } catch (error) {
-        console.error('Drive root error:', error);
-        res.status(500).json({ error: 'Failed to fetch root folder' });
+    } catch (error: any) {
+        console.error('🚨 DRIVE ROOT ERROR FULL:', error);
+
+        res.status(500).json({
+            error: error.message,
+            details: error?.response?.data || error,
+        });
     }
 });
 

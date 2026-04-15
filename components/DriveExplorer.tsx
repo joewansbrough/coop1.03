@@ -68,7 +68,11 @@ const DriveExplorer: React.FC = () => {
         setError(null);
         try {
             const res = await fetch('/api/drive/root');
-            if (!res.ok) throw new Error('Failed to load documents');
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to load documents');
+            }
+
             const data = await res.json();
             setContents({ folders: data.folders, files: data.files });
             setCurrentFolderId(data.rootId);
@@ -168,8 +172,8 @@ const DriveExplorer: React.FC = () => {
                                 <button
                                     onClick={() => navigateToBreadcrumb(crumb, i)}
                                     className={`text-xs font-black uppercase tracking-tight truncate max-w-[120px] transition-colors ${i === breadcrumbs.length - 1
-                                            ? 'text-slate-800 dark:text-white cursor-default'
-                                            : 'text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                                        ? 'text-slate-800 dark:text-white cursor-default'
+                                        : 'text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
                                         }`}
                                 >
                                     {crumb.name}
