@@ -1,18 +1,13 @@
+import 'dotenv/config';
 import express from 'express';
 import cookieSession from 'cookie-session';
 import axios from 'axios';
-import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import { MaintenancePriority } from '../types.js';
-import driveRoutes from './api/drive.js';
-
-
-
-
-dotenv.config();
+import driveRoutes from './drive.js';
 
 const app = express();
 
@@ -56,19 +51,11 @@ const getPrisma = () => {
 // Trust proxy for secure cookies on Vercel
 app.set('trust proxy', true);
 
-// Aggressively force req.secure to true for the Vercel environment
-app.use((req, res, next) => {
-  const proto = req.get('x-forwarded-proto');
-  if (proto === 'https' || req.get('x-forwarded-port') === '443') {
-    Object.defineProperty(req, 'secure', { get: () => true, configurable: true });
-    Object.defineProperty(req, 'protocol', { get: () => 'https', configurable: true });
-  }
-  next();
-});
-
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
 app.use((req, res, next) => {
+  // Use a stable cookie-session middleware
   cookieSession({
     name: 'session',
     keys: [process.env.SESSION_SECRET || 'default_secret'],
@@ -354,12 +341,6 @@ app.get('/api/seed/preventative', async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
-
-   } catch (e: any) {
-  console.error('Preventative seeding error:', e);
-  res.status(500).json({ success: false, error: e.message });
-}
- });
 
 app.delete('/api/seed/preventative', async (req, res) => {
   try {

@@ -1,9 +1,9 @@
 
+import 'dotenv/config';
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import cookieSession from 'cookie-session';
 import axios from 'axios';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
@@ -13,10 +13,6 @@ import * as pdf from 'pdf-parse';
 
 import { z } from 'zod';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './api/validation.js';
-
-
-
-dotenv.config();
 
 const SESSION_SECRET = process.env.SESSION_SECRET;
 if (!SESSION_SECRET) {
@@ -82,19 +78,6 @@ async function startServer() {
   
   // Trust proxy for secure cookies behind nginx
   app.set('trust proxy', true);
-
-  // Aggressively force req.secure to true for the preview environment
-  app.use((req, res, next) => {
-    const host = req.get('x-forwarded-host') || req.get('host') || '';
-    const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
-    const proto = req.get('x-forwarded-proto');
-    
-    if (!isLocal || proto === 'https' || req.get('x-forwarded-port') === '443') {
-      Object.defineProperty(req, 'secure', { get: () => true, configurable: true });
-      Object.defineProperty(req, 'protocol', { get: () => 'https', configurable: true });
-    }
-    next();
-  });
 
   // Middleware
   app.use(express.json({ limit: '50mb' }));
@@ -307,7 +290,7 @@ const upload = multer({
       const tasks = await prisma.scheduledMaintenance.findMany({
         where: {
           unitId: req.params.id,
-          type: typeof req.query.type === 'string' ? req.query.type : undefined
+          category: typeof req.query.category === 'string' ? req.query.category : undefined
         },
         orderBy: { dueDate: 'asc' }
       });
@@ -919,7 +902,7 @@ const upload = multer({
     }
   });
 
-  app.get('/api/debug/config', requireAuth, (req, res) => {
+  app.get('/api/debug/config', (req, res) => {
     const host = req.get('x-forwarded-host') || req.get('host') || '';
     res.json({
       hasClientId: !!process.env.GOOGLE_CLIENT_ID,
