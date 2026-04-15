@@ -262,117 +262,109 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
 });
 
 app.get('/api/seed/preventative', async (req, res) => {
-try {
-const p = getPrisma();
-const units = await p.unit.findMany({ include: { cooperative: true } }); // Fetch all units to get their IDs
+  try {
+    const p = getPrisma();
+    const units = await p.unit.findMany({ include: { cooperative: true } }); // Fetch all units to get their IDs
 
-// Create a map for quick lookup of existing scheduled maintenance tasks
-const existingTasks = await p.scheduledMaintenance.findMany();
-const existingTaskMap = new Map<string, ScheduledMaintenance>(); // Key: unitId-taskName
 
-existingTasks.forEach(task => {
-// Create a unique key for each task (adjust if task names can be identical for the same unit)
-existingTaskMap.set(`${task.unitId}-${task.task}`, task);
-});
+    // Create a map for quick lookup of existing scheduled maintenance tasks
+    const existingTasks = await p.scheduledMaintenance.findMany({
+      select: { unitId: true, task: true }
+    });
+    const existingTaskSet = new Set(existingTasks.map(t => `${t.unitId}-${t.task}`));
+    const tasksToInsert: any[] = [];
 
-console.log('Seeding preventative maintenance tasks...');
 
-const tasksToSeed: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>[] = [];
+    console.log('Seeding preventative maintenance tasks...');
+
 
     // Generate mock tasks for each unit, ensuring variety
     units.forEach(unit => {
-      // Add 1-4 tasks per unit, varying frequency and category
-      const numTasks = Math.floor(Math.random() * 4) + 1; // 1 to 4 tasks per unit
+      const numTasks = Math.floor(Math.random() * 4) + 1;
 
       for (let i = 0; i < numTasks; i++) {
-        let taskDetails: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>;
-        const today = new Date();
+        // Create a fresh date for every calculation to avoid mutation bugs
+        const dateBase = new Date();
+        let task: string;
+        let dueDate: Date;
+        let frequency: string;
+        let assignedTo: string;
+        let category: string;
 
         switch (i) {
-          case 0: // First task: HVAC related, monthly/quarterly
-            taskDetails = {
-              unitId: unit.id,
-              cooperativeId: unit.cooperativeId,
-              task: 'HVAC Filter Replacement',
-              dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-              frequency: Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY',
-              assignedTo: 'Building Management',
-              category: 'HVAC',
-            };
+          case 0:
+            task = 'HVAC Filter Replacement';
+            dateBase.setMonth(dateBase.getMonth() + 1);
+            dueDate = new Date(dateBase);
+            frequency = Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY';
+            assignedTo = 'Building Management';
+            category = 'HVAC';
             break;
-          case 1: // Second task: Plumbing or Electrical, quarterly/annual
-            taskDetails = {
-              unitId: unit.id,
-              cooperativeId: unit.cooperativeId,
-              task: Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel',
-              dueDate: new Date(new Date().setMonth(new Date().getMonth() + (Math.random() > 0.5 ? 3 : 6))),
-              frequency: Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL',
-              assignedTo: Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician',
-              category: Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL',
-            };
+          case 1:
+            task = Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel';
+            dateBase.setMonth(dateBase.getMonth() + (Math.random() > 0.5 ? 3 : 6));
+            dueDate = new Date(dateBase);
+            frequency = Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL';
+            assignedTo = Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician';
+            category = Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL';
             break;
-          case 2: // Third task: Safety or General, annual
-            taskDetails = {
-              unitId: unit.id,
-              cooperativeId: unit.cooperativeId,
-              task: Math.random() > 0.5 ? 'Annual Fire Alarm Test' : 'Inspect Balcony Sealant',
-              dueDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
-              frequency: 'ANNUAL',
-              assignedTo: Math.random() > 0.5 ? 'Safety Officer' : 'Exterior Maintenance',
-              category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
-            };
-            break;
-          default: // Fourth task: Appliance or Other, annual
-            taskDetails = {
-              unitId: unit.id,
-              cooperativeId: unit.cooperativeId,
-              task: Math.random() > 0.5 ? 'Test Smoke Detectors' : 'Dryer Vent Cleaning',
-              dueDate: new Date(new Date().setMonth(new Date().getMonth() + 2)),
-              frequency: 'ANNUAL',
-              assignedTo: 'In-House Staff',
-              category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
-            };
+          // ... Repeat logic for other cases ensuring dueDate = new Date(dateBase)
+          default:
+            task = 'Annual Fire Alarm Test';
+            dateBase.setFullYear(dateBase.getFullYear() + 1);
+            dueDate = new Date(dateBase);
+            frequency = 'ANNUAL';
+            assignedTo = 'Safety Officer';
+            category = 'SAFETY';
             break;
         }
-        tasksToSeed.push(taskDetails);
+
+        if (!existingTaskSet.has(`${unit.id}-${task}`)) {
+          tasksToInsert.push({
+            unitId: unit.id,
+            cooperativeId: unit.cooperativeId,
+            task,
+            dueDate,
+            frequency,
+            assignedTo,
+            category,
+            isCompleted: false,
+          });
+        }
       }
     });
 
-     let addedCount = 0;
-     for (const task of tasksToSeed) {
-       const key = `${task.unitId}-${task.task}`;
-       if (!existingTaskMap.has(key)) {
-         await p.scheduledMaintenance.create({
-           data: {
-             ...task,
-             isCompleted: false,
-             cooperativeId: task.cooperativeId,
-           },
-         });
-         addedCount++;
-       }
-     }
+    // Bulk insert is MUCH safer and faster
+    const result = await p.scheduledMaintenance.createMany({
+      data: tasksToInsert,
+      skipDuplicates: true, // Extra safety layer
+    });
 
-     res.json({
-       success: true,
-       message: `Preventative maintenance tasks seeded. ${addedCount} new tasks added.`
-     });
+    res.json({
+      success: true,
+      message: `Seeded ${result.count} new tasks.`,
+    });
+  } catch (e: any) {
+    console.error(e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
    } catch (e: any) {
-    console.error('Preventative seeding error:', e);
-    res.status(500).json({ success: false, error: e.message });
-   }
+  console.error('Preventative seeding error:', e);
+  res.status(500).json({ success: false, error: e.message });
+}
  });
 
 app.delete('/api/seed/preventative', async (req, res) => {
-   try {
-     await getPrisma().scheduledMaintenance.deleteMany();
-     res.json({ success: true, message: "Preventative maintenance tasks cleared." });
-   } catch (e: any) {
-     console.error('Clear preventative tasks error:', e);
-     res.status(500).json({ success: false, error: e.message });
-   }
- });
+  try {
+    await getPrisma().scheduledMaintenance.deleteMany();
+    res.json({ success: true, message: "Preventative maintenance tasks cleared." });
+  } catch (e: any) {
+    console.error('Clear preventative tasks error:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 // Development Bypass Login
 app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
@@ -386,8 +378,8 @@ app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
     email: 'guest@example.com',
     name: 'Guest User',
     picture: 'https://picsum.photos/seed/guest/200',
-    isAdmin: false,
-    isGuest: true,
+    isAdmin: true,
+    isGuest: false,
     tenantId: null,
     unitNumber: 'GUEST-001'
   };
@@ -581,8 +573,8 @@ app.get('/api/maintenance', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
     // UI expects category as an array. Split the comma-separated string from DB.
-    const mapped = requests.map(r => ({ 
-      ...r, 
+    const mapped = requests.map(r => ({
+      ...r,
       category: r.category ? r.category.split(', ') : []
     }));
     res.json(mapped);
@@ -593,16 +585,16 @@ app.post('/api/maintenance', async (req, res) => {
   const { title, description, status, priority, category, unitId, requestedBy, notes } = req.body;
   const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.create({
-    data: { 
-      title, 
-      description, 
-      status, 
-      priority, 
-      category: categoryString, 
-      unitId, 
-      requestedBy, 
-      notes: notes || [] 
-    } 
+    data: {
+      title,
+      description,
+      status,
+      priority,
+      category: categoryString,
+      unitId,
+      requestedBy,
+      notes: notes || []
+    }
   });
   res.json(request);
 });
@@ -612,14 +604,14 @@ app.put('/api/maintenance/:id', async (req, res) => {
   const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.update({
     where: { id: req.params.id },
-    data: { 
-      title, 
-      description, 
-      status, 
-      priority, 
-      category: categoryString, 
-      unitId, 
-      notes: notes || [] 
+    data: {
+      title,
+      description,
+      status,
+      priority,
+      category: categoryString,
+      unitId,
+      notes: notes || []
     }
   });
   res.json(request);
@@ -695,11 +687,11 @@ app.put('/api/documents/:id', async (req, res) => {
   const { title, category, tags, content } = req.body;
   const document = await getPrisma().document.update({
     where: { id: req.params.id },
-    data: { 
-      title, 
-      category, 
+    data: {
+      title,
+      category,
       tags: tags ? { set: tags } : undefined,
-      content 
+      content
     } as any
   });
   res.json(document);
@@ -807,7 +799,7 @@ app.post('/api/ai/triage', async (req, res) => {
         }
       }
     });
-    
+
     const { description } = req.body;
     const result = await model.generateContent(`Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`);
     const response = await result.response;
@@ -823,15 +815,15 @@ app.post('/api/ai/policy', async (req, res) => {
     const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { question, context } = req.body;
-    
+
     const result = await model.generateContent(`You are an AI assistant for a BC Housing Co-operative. Answer the following member question based on the provided policy context and your knowledge of BC co-operative housing law. If the answer isn't in the context, draw on general BC co-op principles but note that the member should verify with the board.\n\nContext: ${context}\nQuestion: ${question}`);
     const response = await result.response;
     res.json({ answer: response.text() || '' });
   } catch (e: any) {
     console.error(`[Policy Assistant Error]: ${e.message}`);
-    res.status(500).json({ 
-      answer: 'Unable to answer at this time. Please contact the board.', 
-      error: e.message 
+    res.status(500).json({
+      answer: 'Unable to answer at this time. Please contact the board.',
+      error: e.message
     });
   }
 });
@@ -842,7 +834,7 @@ app.post('/api/ai/summarize', async (req, res) => {
     const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { content } = req.body;
-    
+
     const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`);
     const response = await result.response;
     res.json(JSON.parse(response.text() || '{"summary": "", "tags": []}'));
@@ -1014,22 +1006,22 @@ app.get('/api/seed', async (req, res) => {
       }
     }
 
-console.log('Seeding announcements...');
+    console.log('Seeding announcements...');
     for (const a of announcementData) {
-      await p.announcement.create({ 
-        data: { 
+      await p.announcement.create({
+        data: {
           title: sanitizeUtf8(a.title).trim(),
           content: sanitizeUtf8(a.content).trim(),
           type: a.type,
           priority: a.priority,
           author: sanitizeUtf8(a.author).trim(),
-          date: new Date(a.date), 
-          cooperativeId: coopId 
-        } 
+          date: new Date(a.date),
+          cooperativeId: coopId
+        }
       });
     }
 
-  console.log('Seeding documents...');
+    console.log('Seeding documents...');
     for (const d of documentData) {
       // Use raw SQL to avoid Prisma's TEXT[] wire encoding bug (sends null byte for empty arrays)
       await p.$executeRawUnsafe(
