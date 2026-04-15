@@ -200,7 +200,7 @@ const DriveExplorer: React.FC = () => {
             </div>
 
             {/* Body */}
-            <div className="divide-y divide-slate-50 dark:divide-white/5 max-h-[480px] overflow-y-auto">
+            <div className="divide-y divide-slate-50 dark:divide-white/5 max-h-[364px] overflow-y-auto">
                 {loading && (
                     <div className="flex items-center justify-center py-16 text-slate-400">
                         <i className="fa-solid fa-spinner animate-spin mr-2"></i>
