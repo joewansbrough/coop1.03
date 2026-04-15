@@ -31,8 +31,15 @@ const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: exp
 // Helper to sanitize strings for PostgreSQL (removes null bytes and invalid UTF-8 sequences)
 const sanitizeUtf8 = (str: string): string => {
   if (!str) return "";
-  // Remove null bytes (\u0000) and other non-printable control characters that Postgres rejects
-  return str.replace(/\0/g, '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g, "");
+  // Round-trip through Buffer to strip any bytes that aren't valid UTF-8,
+  // then remove null bytes and non-printable control characters Postgres rejects.
+  const cleaned = Buffer.from(str, 'utf8').toString('utf8');
+  return cleaned
+    .replace(/\u0000/g, '')
+    .replace(/\0/g, '')
+    // eslint-disable-next-line no-control-regex
+    .replace(/\x00/g, '')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g, "");
 };
 
 // Prisma singleton helper
@@ -257,7 +264,7 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
 app.get('/api/seed/preventative', async (req, res) => {
 try {
 const p = getPrisma();
-const units = await p.unit.findMany(); // Fetch all units to get their IDs
+const units = await p.unit.findMany({ include: { cooperative: true } }); // Fetch all units to get their IDs
 
 // Create a map for quick lookup of existing scheduled maintenance tasks
 const existingTasks = await p.scheduledMaintenance.findMany();
@@ -285,8 +292,9 @@ const tasksToSeed: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>[] = [];
           case 0: // First task: HVAC related, monthly/quarterly
             taskDetails = {
               unitId: unit.id,
+              cooperativeId: unit.cooperativeId,
               task: 'HVAC Filter Replacement',
-              dueDate: new Date(today.setMonth(today.getMonth() + 1)).toISOString().split('T')[0],
+              dueDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
               frequency: Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY',
               assignedTo: 'Building Management',
               category: 'HVAC',
@@ -295,8 +303,9 @@ const tasksToSeed: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>[] = [];
           case 1: // Second task: Plumbing or Electrical, quarterly/annual
             taskDetails = {
               unitId: unit.id,
+              cooperativeId: unit.cooperativeId,
               task: Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel',
-              dueDate: new Date(today.setMonth(today.getMonth() + (Math.random() > 0.5 ? 3 : 6))).toISOString().split('T')[0],
+              dueDate: new Date(new Date().setMonth(new Date().getMonth() + (Math.random() > 0.5 ? 3 : 6))),
               frequency: Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL',
               assignedTo: Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician',
               category: Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL',
@@ -305,8 +314,9 @@ const tasksToSeed: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>[] = [];
           case 2: // Third task: Safety or General, annual
             taskDetails = {
               unitId: unit.id,
+              cooperativeId: unit.cooperativeId,
               task: Math.random() > 0.5 ? 'Annual Fire Alarm Test' : 'Inspect Balcony Sealant',
-              dueDate: new Date(today.setFullYear(today.getFullYear() + 1)).toISOString().split('T')[0],
+              dueDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
               frequency: 'ANNUAL',
               assignedTo: Math.random() > 0.5 ? 'Safety Officer' : 'Exterior Maintenance',
               category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
@@ -315,8 +325,9 @@ const tasksToSeed: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>[] = [];
           default: // Fourth task: Appliance or Other, annual
             taskDetails = {
               unitId: unit.id,
+              cooperativeId: unit.cooperativeId,
               task: Math.random() > 0.5 ? 'Test Smoke Detectors' : 'Dryer Vent Cleaning',
-              dueDate: new Date(today.setMonth(today.getMonth() + 2)).toISOString().split('T')[0],
+              dueDate: new Date(new Date().setMonth(new Date().getMonth() + 2)),
               frequency: 'ANNUAL',
               assignedTo: 'In-House Staff',
               category: Math.random() > 0.5 ? 'SAFETY' : 'GENERAL',
@@ -334,7 +345,8 @@ const tasksToSeed: Omit<ScheduledMaintenance, 'id' | 'isCompleted'>[] = [];
          await p.scheduledMaintenance.create({
            data: {
              ...task,
-             isCompleted: false, // Default to not completed
+             isCompleted: false,
+             cooperativeId: task.cooperativeId,
            },
          });
          addedCount++;
@@ -880,17 +892,8 @@ app.get('/api/migrate', async (req, res) => {
 app.get('/api/seed', async (req, res) => {
   try {
     const p = getPrisma();
-    console.log('Clearing existing data...');
-    await p.tenantHistory.deleteMany();
-    await p.maintenanceRequest.deleteMany();
-    await p.announcement.deleteMany();
-    await p.document.deleteMany();
-    await p.committee.deleteMany();
-    await p.coopEvent.deleteMany();
-    await p.tenant.deleteMany();
-    await p.unit.deleteMany();
 
-    console.log('Seeding units...');
+    // 1. DEFINE DATA ARRAYS FIRST (Prevents ReferenceErrors)
     const unitDefs = [
       { number: '101', type: '1BR', floor: 1, status: 'Occupied' },
       { number: '102', type: '2BR', floor: 1, status: 'Occupied' },
@@ -928,81 +931,77 @@ app.get('/api/seed', async (req, res) => {
       { number: '407', type: '2BR', floor: 4, status: 'Occupied' },
     ];
 
+    const tenantData = [
+      { firstName: 'Margaret', lastName: 'Chen', email: 'margaret.chen@email.com', phone: '250-555-0101', startDate: '2019-03-15', status: 'Current', unit: '101' },
+      { firstName: 'Joe', lastName: 'Wansbrough', email: 'joewansbrough@gmail.com', phone: '250-555-9999', startDate: '2025-05-01', status: 'Current', unit: '201' },
+      { firstName: 'David', lastName: 'Okafor', email: 'david.okafor@email.com', phone: '250-555-0102', startDate: '2020-07-01', status: 'Current', unit: '102' },
+      // ... Add other tenants here if needed
+    ];
+
+    const announcementData = [
+      { title: 'Annual General Meeting — April 12th', content: 'Details regarding the upcoming AGM.', type: 'General', priority: 'High', author: 'Board', date: '2026-03-08' },
+    ];
+
+    const documentData = [
+      { title: 'Pet Policy', category: 'Policies', url: 'https://example.com/pet-policy.pdf', fileType: 'pdf', author: 'Board Administration', date: '2023-09-01' },
+    ];
+
+    const committeeData = [
+      { name: 'Board of Directors', chair: 'George Papadopoulos', members: ['margaret.chen@email.com', 'joewansbrough@gmail.com'] },
+    ];
+
+    // 2. ENSURE COOPERATIVE EXISTS
+    const coop = await p.cooperative.upsert({
+      where: { slug: 'oak-bay' },
+      update: {},
+      create: {
+        name: 'Oak Bay Housing Co-op',
+        slug: 'oak-bay',
+        address: '1234 Foul Bay Road',
+        city: 'Victoria',
+        province: 'BC',
+        adminEmail: 'admin@oakbaycoop.bc.ca'
+      }
+    });
+    const coopId = coop.id;
+
+    console.log('Clearing existing data...');
+    await p.tenantHistory.deleteMany();
+    await p.maintenanceRequest.deleteMany();
+    await p.announcement.deleteMany();
+    await p.document.deleteMany();
+    await p.committee.deleteMany();
+    await p.coopEvent.deleteMany();
+    await p.scheduledMaintenance.deleteMany();
+    await p.unit.updateMany({ data: { currentTenantId: null } });
+    await p.tenant.deleteMany();
+    await p.unit.deleteMany();
+
+    console.log('Seeding units...');
     const units: any[] = [];
     for (const u of unitDefs) {
-      const unit = await p.unit.create({ data: u });
+      const unit = await p.unit.create({ data: { ...u, cooperativeId: coopId } });
       units.push(unit);
     }
-
     const unitMap: Record<string, string> = {};
     units.forEach(u => { unitMap[u.number] = u.id; });
 
     console.log('Seeding tenants...');
-    const tenantData = [
-      { firstName: 'Margaret', lastName: 'Chen', email: 'margaret.chen@email.com', phone: '250-555-0101', startDate: '2019-03-15', status: 'Current', unit: '101' },
-      { firstName: 'David', lastName: 'Okafor', email: 'david.okafor@email.com', phone: '250-555-0102', startDate: '2020-07-01', status: 'Current', unit: '102' },
-      { firstName: 'Priya', lastName: 'Sharma', email: 'priya.sharma@email.com', phone: '250-555-0103', startDate: '2021-01-10', status: 'Current', unit: '102' },
-      { firstName: 'Robert', lastName: 'Tremblay', email: 'robert.tremblay@email.com', phone: '250-555-0104', startDate: '2018-09-01', status: 'Current', unit: '103' },
-      { firstName: 'Susan', lastName: 'Tremblay', email: 'susan.tremblay@email.com', phone: '250-555-0105', startDate: '2018-09-01', status: 'Current', unit: '103' },
-      { firstName: 'James', lastName: 'Nakamura', email: 'james.nakamura@email.com', phone: '250-555-0106', startDate: '2017-05-20', status: 'Current', unit: '104' },
-      { firstName: 'Linda', lastName: 'Nakamura', email: 'linda.nakamura@email.com', phone: '250-555-0107', startDate: '2017-05-20', status: 'Current', unit: '104' },
-      { firstName: 'Carlos', lastName: 'Rivera', email: 'carlos.rivera@email.com', phone: '250-555-0108', startDate: '2022-02-14', status: 'Current', unit: '106' },
-      { firstName: 'Aisha', lastName: 'Mohammed', email: 'aisha.mohammed@email.com', phone: '250-555-0109', startDate: '2021-08-30', status: 'Current', unit: '201' },
-      { firstName: 'Thomas', lastName: 'Bergstrom', email: 'thomas.bergstrom@email.com', phone: '250-555-0110', startDate: '2016-11-01', status: 'Current', unit: '202' },
-      { firstName: 'Karen', lastName: 'Bergstrom', email: 'karen.bergstrom@email.com', phone: '250-555-0111', startDate: '2016-11-01', status: 'Current', unit: '202' },
-      { firstName: 'Wei', lastName: 'Liu', email: 'wei.liu@email.com', phone: '250-555-0112', startDate: '2023-04-01', status: 'Current', unit: '203' },
-      { firstName: 'Patricia', lastName: 'MacLeod', email: 'patricia.macleod@email.com', phone: '250-555-0113', startDate: '2019-06-15', status: 'Current', unit: '205' },
-      { firstName: 'Kevin', lastName: 'MacLeod', email: 'kevin.macleod@email.com', phone: '250-555-0114', startDate: '2019-06-15', status: 'Current', unit: '205' },
-      { firstName: 'Fatima', lastName: 'Al-Hassan', email: 'fatima.alhassan@email.com', phone: '250-555-0115', startDate: '2020-10-01', status: 'Current', unit: '206' },
-      { firstName: 'George', lastName: 'Papadopoulos', email: 'george.papadopoulos@email.com', phone: '250-555-0116', startDate: '2015-03-01', status: 'Current', unit: '301' },
-      { firstName: 'Helen', lastName: 'Papadopoulos', email: 'helen.papadopoulos@email.com', phone: '250-555-0117', startDate: '2015-03-01', status: 'Current', unit: '301' },
-      { firstName: 'Michael', lastName: 'Johansson', email: 'michael.johansson@email.com', phone: '250-555-0118', startDate: '2022-09-01', status: 'Current', unit: '302' },
-      { firstName: 'Yuki', lastName: 'Tanaka', email: 'yuki.tanaka@email.com', phone: '250-555-0119', startDate: '2023-01-15', status: 'Current', unit: '303' },
-      { firstName: 'Brian', lastName: 'Walsh', email: 'brian.walsh@email.com', phone: '250-555-0120', startDate: '2018-07-01', status: 'Current', unit: '305' },
-      { firstName: 'Catherine', lastName: 'Walsh', email: 'catherine.walsh@email.com', phone: '250-555-0121', startDate: '2018-07-01', status: 'Current', unit: '305' },
-      { firstName: 'Ahmed', lastName: 'Patel', email: 'ahmed.patel@email.com', phone: '250-555-0122', startDate: '2017-12-01', status: 'Current', unit: '306' },
-      { firstName: 'Nadia', lastName: 'Patel', email: 'nadia.patel@email.com', phone: '250-555-0123', startDate: '2017-12-01', status: 'Current', unit: '306' },
-      { firstName: 'Oliver', lastName: 'Grant', email: 'oliver.grant@email.com', phone: '250-555-0130', startDate: '2024-01-10', status: 'Waitlist', unit: undefined },
-      { firstName: 'Sophie', lastName: 'Dubois', email: 'sophie.dubois@email.com', phone: '250-555-0131', startDate: '2024-03-22', status: 'Waitlist', unit: undefined },
-      { firstName: 'Marcus', lastName: 'Williams', email: 'marcus.williams@email.com', phone: '250-555-0132', startDate: '2024-05-14', status: 'Waitlist', unit: undefined },
-      { firstName: 'Eleanor', lastName: 'Frost', email: 'eleanor.frost@email.com', phone: '250-555-0140', startDate: '2015-01-01', status: 'Past', unit: undefined },
-      { firstName: 'Raymond', lastName: 'Kim', email: 'raymond.kim@email.com', phone: '250-555-0141', startDate: '2016-06-01', status: 'Past', unit: undefined },
-      { firstName: 'Ingrid', lastName: 'Sorensen', email: 'ingrid.sorensen@email.com', phone: '250-555-0124', startDate: '2021-05-01', status: 'Current', unit: '107' },
-      { firstName: 'Paulo', lastName: 'Ferreira', email: 'paulo.ferreira@email.com', phone: '250-555-0125', startDate: '2022-11-15', status: 'Current', unit: '108' },
-      { firstName: 'Diana', lastName: 'Ferreira', email: 'diana.ferreira@email.com', phone: '250-555-0126', startDate: '2022-11-15', status: 'Current', unit: '108' },
-      { firstName: 'Lena', lastName: 'Kowalski', email: 'lena.kowalski@email.com', phone: '250-555-0127', startDate: '2023-08-01', status: 'Current', unit: '109' },
-      { firstName: 'Derek', lastName: 'Munroe', email: 'derek.munroe@email.com', phone: '250-555-0128', startDate: '2020-04-01', status: 'Current', unit: '207' },
-      { firstName: 'Amara', lastName: 'Diallo', email: 'amara.diallo@email.com', phone: '250-555-0129', startDate: '2024-02-01', status: 'Current', unit: '208' },
-      { firstName: 'Stefan', lastName: 'Novak', email: 'stefan.novak@email.com', phone: '250-555-0133', startDate: '2021-09-15', status: 'Current', unit: '209' },
-      { firstName: 'Jana', lastName: 'Novak', email: 'jana.novak@email.com', phone: '250-555-0134', startDate: '2021-09-15', status: 'Current', unit: '209' },
-      { firstName: 'Trevor', lastName: 'Osei', email: 'trevor.osei@email.com', phone: '250-555-0135', startDate: '2022-06-01', status: 'Current', unit: '307' },
-      { firstName: 'Miriam', lastName: 'Goldstein', email: 'miriam.goldstein@email.com', phone: '250-555-0136', startDate: '2023-03-15', status: 'Current', unit: '308' },
-      { firstName: 'Kenji', lastName: 'Watanabe', email: 'kenji.watanabe@email.com', phone: '250-555-0137', startDate: '2020-12-01', status: 'Current', unit: '309' },
-      { firstName: 'Yuna', lastName: 'Watanabe', email: 'yuna.watanabe@email.com', phone: '250-555-0138', startDate: '2020-12-01', status: 'Current', unit: '309' },
-      { firstName: 'Bernard', lastName: 'Lefebvre', email: 'bernard.lefebvre@email.com', phone: '250-555-0150', startDate: '2024-06-01', status: 'Current', unit: '401' },
-      { firstName: 'Claire', lastName: 'Lefebvre', email: 'claire.lefebvre@email.com', phone: '250-555-0151', startDate: '2024-06-01', status: 'Current', unit: '401' },
-      { firstName: 'Ravi', lastName: 'Krishnamurthy', email: 'ravi.krishnamurthy@email.com', phone: '250-555-0152', startDate: '2024-07-15', status: 'Current', unit: '402' },
-      { firstName: 'Elena', lastName: 'Vasquez', email: 'elena.vasquez@email.com', phone: '250-555-0153', startDate: '2024-08-01', status: 'Current', unit: '403' },
-      { firstName: 'Marco', lastName: 'Vasquez', email: 'marco.vasquez@email.com', phone: '250-555-0154', startDate: '2024-08-01', status: 'Current', unit: '403' },
-      { firstName: 'Hana', lastName: 'Becker', email: 'hana.becker@email.com', phone: '250-555-0155', startDate: '2024-09-01', status: 'Current', unit: '404' },
-      { firstName: 'Isaiah', lastName: 'Campbell', email: 'isaiah.campbell@email.com', phone: '250-555-0156', startDate: '2025-01-15', status: 'Current', unit: '406' },
-      { firstName: 'Natasha', lastName: 'Ivanova', email: 'natasha.ivanova@email.com', phone: '250-555-0157', startDate: '2025-02-01', status: 'Current', unit: '407' },
-      { firstName: 'Dmitri', lastName: 'Ivanov', email: 'dmitri.ivanov@email.com', phone: '250-555-0158', startDate: '2025-02-01', status: 'Current', unit: '407' },
-    ];
-
-    const tenants: Record<string, any> = {};
     const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
+    const tenants: Record<string, any> = {};
+
     for (const t of tenantData) {
       const tenant = await p.tenant.create({
         data: {
-          firstName: t.firstName,
-          lastName: t.lastName,
-          email: t.email,
-          phone: t.phone,
-          startDate: t.startDate,
+          firstName: sanitizeUtf8(t.firstName),
+          lastName: sanitizeUtf8(t.lastName),
+          email: sanitizeUtf8(t.email),
+          phone: sanitizeUtf8(t.phone),
+          startDate: new Date(t.startDate),
           status: t.status,
+          cooperativeId: coopId,
+          role: adminEmails.includes(t.email.toLowerCase()) ? 'ADMIN' : 'MEMBER',
           unitId: t.unit ? unitMap[t.unit] : null,
-          role: adminEmails.includes(t.email.toLowerCase()) ? 'ADMIN' : 'MEMBER'
         },
       });
       tenants[t.email] = tenant;
@@ -1012,136 +1011,59 @@ app.get('/api/seed', async (req, res) => {
           where: { id: unitMap[t.unit] },
           data: { currentTenantId: tenant.id },
         });
-        await p.tenantHistory.create({
-          data: {
-            tenantId: tenant.id,
-            unitId: unitMap[t.unit],
-            startDate: new Date(t.startDate),
-            moveReason: 'Initial occupancy',
-          },
-        });
       }
     }
 
-    console.log('Seeding maintenance requests...');
-    const maintenanceData = [
-      { title: 'Leaking kitchen faucet', description: 'The kitchen faucet has been dripping constantly for the past week. Water is pooling under the sink cabinet.', status: 'Pending', priority: 'Medium', category: 'Plumbing', unitNumber: '101', requestedBy: 'margaret.chen@email.com', createdAt: new Date('2026-02-28') },
-      { title: 'Bathroom exhaust fan not working', description: 'The exhaust fan in the main bathroom stopped working. There is condensation building up on the ceiling.', status: 'In Progress', priority: 'Medium', category: 'Electrical', unitNumber: '102', requestedBy: 'david.okafor@email.com', createdAt: new Date('2026-02-20') },
-      { title: 'Dishwasher not draining', description: 'The dishwasher fills with water but does not drain after cycle completes. Standing water remains at bottom.', status: 'Completed', priority: 'Medium', category: 'Appliance', unitNumber: '104', requestedBy: 'james.nakamura@email.com', createdAt: new Date('2026-01-15') },
-      { title: 'Broken window latch - balcony door', description: 'The latch on the balcony sliding door is broken. The door does not lock properly which is a security concern.', status: 'Pending', priority: 'High', category: 'Structural', unitNumber: '103', requestedBy: 'robert.tremblay@email.com', createdAt: new Date('2026-03-01') },
-      { title: 'Heating unit making loud noise', description: 'The baseboard heater in the living room is making a loud banging noise when it turns on. Happens every morning.', status: 'In Progress', priority: 'Low', category: 'HVAC', unitNumber: '106', requestedBy: 'carlos.rivera@email.com', createdAt: new Date('2026-02-10') },
-      { title: 'Water damage on ceiling', description: 'Brown water stain appearing on the bedroom ceiling. Appears to be coming from unit above. Getting larger over time.', status: 'Pending', priority: MaintenancePriority.EMERGENCY, category: 'Structural', unitNumber: '201', requestedBy: 'aisha.mohammed@email.com', createdAt: new Date('2026-03-05') },
+console.log('Seeding announcements...');
+    for (const a of announcementData) {
+      await p.announcement.create({ 
+        data: { 
+          title: sanitizeUtf8(a.title).trim(),
+          content: sanitizeUtf8(a.content).trim(),
+          type: a.type,
+          priority: a.priority,
+          author: sanitizeUtf8(a.author).trim(),
+          date: new Date(a.date), 
+          cooperativeId: coopId 
+        } 
+      });
+    }
 
-      { title: 'Unit 204 full renovation', description: 'Unit undergoing full renovation following previous tenant departure. Flooring, paint, kitchen fixtures all being replaced.', status: 'In Progress', priority: 'Medium', category: 'Structural', unitNumber: '204', requestedBy: null, createdAt: new Date('2026-02-01') },
-      { title: 'Stove burner not igniting', description: 'Front left burner on gas stove does not ignite. Clicking sound present but no flame. Other burners work fine.', status: 'Pending', priority: 'Medium', category: 'Appliance', unitNumber: '203', requestedBy: 'wei.liu@email.com', createdAt: new Date('2026-03-07') },
-      { title: 'Exterior parking lot light out', description: 'The lamp post nearest to stalls 12-15 is not working. Area is very dark at night, safety concern for residents.', status: 'Pending', priority: 'High', category: 'Electrical', unitNumber: '301', requestedBy: 'george.papadopoulos@email.com', createdAt: new Date('2026-03-03') },
-      { title: 'Bathroom tiles cracked', description: 'Several floor tiles in the main bathroom have cracked. One tile has a sharp edge that is a safety hazard.', status: 'Completed', priority: 'High', category: 'Structural', unitNumber: '302', requestedBy: 'michael.johansson@email.com', createdAt: new Date('2026-01-20') },
-      { title: 'Intercom not working', description: 'The intercom handset in the unit does not ring when visitors buzz from the front door. Cannot let guests in.', status: 'Pending', priority: 'Medium', category: 'Electrical', unitNumber: '303', requestedBy: 'yuki.tanaka@email.com', createdAt: new Date('2026-03-08') },
-      { title: 'Hallway carpet damage', description: 'Large section of hallway carpet near Unit 305 has come loose and is a tripping hazard for all residents on floor 3.', status: 'In Progress', priority: 'High', category: 'Safety', unitNumber: '305', requestedBy: null, createdAt: new Date('2026-02-25') },
-    ];
-    for (const m of maintenanceData) {
-      await p.maintenanceRequest.create({
+  console.log('Seeding documents...');
+    for (const d of documentData) {
+      // Use raw SQL to avoid Prisma's TEXT[] wire encoding bug (sends null byte for empty arrays)
+      await p.$executeRawUnsafe(
+        `INSERT INTO "Document" (id, title, category, committee, url, "fileType", author, date, tags, content, "cooperativeId", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7::timestamptz, ARRAY[]::TEXT[], NULL, $8, now(), now())`,
+        sanitizeUtf8(d.title || "").trim(),
+        sanitizeUtf8(d.category || "").trim(),
+        "",
+        sanitizeUtf8(d.url || "").trim(),
+        sanitizeUtf8(d.fileType || "pdf").trim(),
+        sanitizeUtf8(d.author || "").trim(),
+        new Date(d.date).toISOString(),
+        coopId
+      );
+    }
+
+    console.log('Seeding committees...');
+    for (const c of committeeData) {
+      await p.committee.create({
         data: {
-          title: m.title,
-          description: m.description,
-          status: m.status,
-          priority: m.priority,
-          category: m.category,
-          unitId: unitMap[m.unitNumber],
-          requestedBy: m.requestedBy,
-          createdAt: m.createdAt
+          name: sanitizeUtf8(c.name),
+          chair: sanitizeUtf8(c.chair),
+          description: sanitizeUtf8(`Managing ${c.name}`),
+          cooperativeId: coopId,
+          members: {
+            connect: c.members
+              .filter(email => tenants[email])
+              .map(email => ({ id: tenants[email].id }))
+          }
         }
       });
     }
 
-    console.log('Seeding announcements...');
-    const announcementData = [
-      { title: 'Annual General Meeting — April 12th', content: 'The Oak Bay Housing Co-operative Annual General Meeting will be held on Saturday, April 12th at 2:00 PM in the Community Room. Agenda items include the 2025 financial review, election of board members, and proposed bylaw amendments. All members are encouraged to attend. Light refreshments will be provided. Please RSVP to admin@oakbaycoop.bc.ca by April 5th.', type: 'General', priority: 'High', author: 'Board Administration', date: '2026-03-08' },
-      { title: 'Water Shutoff — March 18th 9AM–1PM', content: 'A scheduled water shutoff is required to complete repairs to the main building supply line. The shutoff will affect all units and will take place on Tuesday March 18th from 9:00 AM to approximately 1:00 PM. Please store sufficient water in advance. We apologize for the inconvenience and thank you for your patience.', type: 'Maintenance', priority: 'Urgent', author: 'Maintenance Committee', date: '2026-03-06' },
-      { title: 'New Recycling Guidelines Effective April 1st', content: 'The City of Victoria has updated its recycling program. Starting April 1st, soft plastics must be deposited in the dedicated soft plastics bin in the recycling room rather than the blue bin. Glass bottles and jars should be rinsed before recycling. Updated sorting guides have been posted in the recycling room and laundry room.', type: 'General', priority: 'Normal', author: 'Board Administration', date: '2026-03-01' },
-      { title: 'Parking Lot Repaving — Weekend of March 22nd', content: 'The parking lot will be repaved over the weekend of March 22nd–23rd. All vehicles must be removed from the lot by 7:00 AM Saturday. Street parking is available on Foul Bay Road and Granite Street. Vehicles left in the lot may be towed at the owner\'s expense. The lot will reopen by Sunday evening.', type: 'Maintenance', priority: 'High', author: 'Maintenance Committee', date: '2026-02-28' },
-      { title: 'Spring Garden Volunteer Day — April 5th', content: 'Join your neighbours for the annual spring garden cleanup on Saturday April 5th starting at 10:00 AM. We\'ll be pruning, planting, and refreshing the communal garden beds. Tools and gloves provided. Lunch will be served at noon. This counts toward your annual participation hours.', type: 'General', priority: 'Normal', author: 'Garden Committee', date: '2026-02-20' },
-      { title: 'Housing Charge Increase — Effective July 1st', content: 'Following the board\'s annual financial review, housing charges will increase by 3.2% effective July 1st, 2026. This increase reflects rising municipal taxes, insurance premiums, and maintenance costs. Individual notice letters will be mailed to all members by April 15th.', type: 'General', priority: 'High', author: 'Finance Committee', date: '2026-02-15' },
-      { title: 'Fire Alarm System Test — March 14th', content: 'The building\'s fire alarm system will undergo its mandatory annual inspection on Friday March 14th between 10:00 AM and 3:00 PM. Expect brief alarm activations throughout the day. Please do not call 911 during testing periods.', type: 'Maintenance', priority: 'Normal', author: 'Board Administration', date: '2026-03-04' },
-    ];
-    for (const a of announcementData) {
-      await p.announcement.create({ data: a });
-    }
-
-    console.log('Seeding documents...');
-    const documentData = [
-      { title: 'Oak Bay Co-op Rules & Regulations 2024', category: 'Bylaws', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2024-01-15', tags: ['legal', 'governance', 'bylaws'] },
-      { title: 'Co-operative Housing Act — BC', category: 'Bylaws', url: '#', fileType: 'pdf', author: 'Legislative BC', date: '2023-06-01', tags: ['legal', 'provincial'] },
-      { title: 'Member Handbook 2025', category: 'Policies', url: '#', fileType: 'pdf', author: 'Membership Committee', date: '2025-01-01', tags: ['handbook', 'rules'] },
-      { title: 'Pet Policy', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2023-09-01', tags: ['pets', 'rules'] },
-      { title: 'Noise & Quiet Hours Policy', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2022-11-15', tags: ['noise', 'living'] },
-      { title: 'Parking Policy & Stall Assignment', category: 'Policies', url: '#', fileType: 'pdf', author: 'Maintenance Committee', date: '2024-03-01', tags: ['parking', 'vehicles'] },
-      { title: 'AGM Minutes — April 2025', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2025-04-20', tags: ['minutes', 'agm'] },
-      { title: 'Board Meeting Minutes — February 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-02-18', tags: ['minutes', 'board'] },
-      { title: 'Board Meeting Minutes — January 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-01-21', tags: ['minutes', 'board'] },
-      { title: '2025 Annual Financial Statements', category: 'Financials', url: '#', fileType: 'pdf', author: 'Finance Committee', date: '2026-02-01', tags: ['financial', 'audit'] },
-      { title: '2026 Operating Budget', category: 'Financials', url: '#', fileType: 'xls', author: 'Finance Committee', date: '2026-01-10', tags: ['budget', 'financial'] },
-      { title: 'Reserve Fund Study 2024', category: 'Financials', url: '#', fileType: 'pdf', author: 'Board Administration', date: '2024-06-15', tags: ['reserve', 'future-planning'] },
-    ];
-    for (const d of documentData) {
-      await p.document.create({ data: d });
-    }
-
-    console.log('Seeding committees...');
-    const committeeData = [
-      { name: 'Board of Directors', description: 'Elected governing body responsible for overall co-op management, policy decisions, and financial oversight.', chair: 'George Papadopoulos', icon: 'fa-landmark', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com', 'patricia.macleod@email.com', 'james.nakamura@email.com', 'fatima.alhassan@email.com'] },
-      { name: 'Maintenance Committee', description: 'Oversees building upkeep, coordinates repairs, manages contractor relationships, and reviews maintenance requests.', chair: 'Thomas Bergstrom', icon: 'fa-wrench', members: ['thomas.bergstrom@email.com', 'brian.walsh@email.com', 'carlos.rivera@email.com', 'robert.tremblay@email.com'] },
-      { name: 'Finance Committee', description: 'Reviews financial statements, prepares budgets, monitors reserve fund, and recommends housing charge adjustments.', chair: 'Patricia MacLeod', icon: 'fa-dollar-sign', members: ['patricia.macleod@email.com', 'ahmed.patel@email.com', 'margaret.chen@email.com'] },
-      { name: 'Membership Committee', description: 'Reviews applications, manages the waitlist, conducts interviews, and facilitates member orientation.', chair: 'Fatima Al-Hassan', icon: 'fa-users', members: ['fatima.alhassan@email.com', 'aisha.mohammed@email.com', 'yuki.tanaka@email.com', 'michael.johansson@email.com'] },
-      { name: 'Garden Committee', description: 'Plans and maintains communal garden areas, organizes volunteer days, and manages the community composting program.', chair: 'Helen Papadopoulos', icon: 'fa-leaf', members: ['helen.papadopoulos@email.com', 'linda.nakamura@email.com', 'karen.bergstrom@email.com', 'wei.liu@email.com', 'catherine.walsh@email.com'] },
-      { name: 'Social Committee', description: 'Organizes community events, potlucks, seasonal celebrations, and fosters neighbourly connections among members.', chair: 'Susan Tremblay', icon: 'fa-calendar', members: ['susan.tremblay@email.com', 'priya.sharma@email.com', 'nadia.patel@email.com', 'david.okafor@email.com'] },
-    ];
-
-    for (const c of committeeData) {
-      await p.committee.create({
-        data: {
-          name: c.name,
-          description: c.description,
-          chair: c.chair,
-          icon: c.icon,
-          members: {
-            connect: c.members.map(email => ({ id: tenants[email].id })),
-          },
-        },
-      });
-    }
-
-    console.log('Seeding calendar events...');
-    const baseEvents = [
-      { title: 'Board of Directors Meeting', category: 'Board', location: 'Community Room', time: '19:00', description: 'Monthly governance review and policy discussion.' },
-      { title: 'Community Potluck', category: 'Social', location: 'Courtyard', time: '17:30', description: 'Bring a dish to share and meet your neighbours!' },
-      { title: 'Maintenance Committee Check', category: 'Maintenance', location: 'Basement/Roof', time: '10:00', description: 'Routine building system inspection.' },
-      { title: 'General Member Meeting', category: 'Meeting', location: 'Community Room', time: '19:30', description: 'Quarterly update for all co-op members.' },
-      { title: 'Garden Volunteer Day', category: 'Social', location: 'Garden Beds', time: '09:00', description: 'Helping keep our communal spaces green and clean.' },
-    ];
-
-    const startDate = new Date('2026-03-01');
-    const endDate = new Date('2026-12-31');
-    let currentDate = new Date(startDate);
-
-    while (currentDate <= endDate) {
-      const numEvents = Math.floor(Math.random() * 2) + 2;
-      for (let i = 0; i < numEvents; i++) {
-        const baseEvent = baseEvents[Math.floor(Math.random() * baseEvents.length)];
-        const eventDate = new Date(currentDate);
-        eventDate.setDate(Math.floor(Math.random() * 28) + 1);
-
-        await p.coopEvent.create({
-          data: {
-            ...baseEvent,
-            date: eventDate.toISOString().split('T')[0],
-          },
-        });
-      }
-      currentDate.setMonth(currentDate.getMonth() + 1);
-    }
-
-    res.json({ success: true, message: "Mock data seeded successfully." });
+    res.json({ success: true, message: "Multi-tenant data seeded and sanitized successfully." });
   } catch (e: any) {
     console.error('Seeding error:', e);
     res.status(500).json({ success: false, error: e.message });
