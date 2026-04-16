@@ -1,5 +1,5 @@
 // src/components/DriveExplorer.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 interface DriveFile {
     id: string;
@@ -62,6 +62,14 @@ const DriveExplorer: React.FC = () => {
     const [search, setSearch] = useState('');
     const [searchResults, setSearchResults] = useState<DriveFile[] | null>(null);
     const [searching, setSearching] = useState(false);
+    const breadcrumbRef = useRef<HTMLElement>(null);
+
+    // Auto-scroll breadcrumbs to the end when they change
+    useEffect(() => {
+        if (breadcrumbRef.current) {
+            breadcrumbRef.current.scrollLeft = breadcrumbRef.current.scrollWidth;
+        }
+    }, [breadcrumbs]);
 
     useEffect(() => {
         loadRoot();
@@ -212,26 +220,41 @@ const DriveExplorer: React.FC = () => {
 
             {/* Header */}
             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                    <button 
-                        onClick={() => {
-                            setSearch('');
-                            setSearchResults(null);
-                            loadRoot();
-                        }}
-                        className="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center shrink-0 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                        title="Back to top level"
-                    >
-                        <i className="fa-brands fa-google-drive text-blue-500 text-sm"></i>
-                    </button>
+                <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button 
+                            onClick={() => {
+                                setSearch('');
+                                setSearchResults(null);
+                                loadRoot();
+                            }}
+                            className="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 rounded-xl flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                            title="Back to top level"
+                        >
+                            <i className="fa-brands fa-google-drive text-blue-500 text-sm"></i>
+                        </button>
+
+                        {!isAtRootLevel && (
+                            <button
+                                onClick={() => navigateToBreadcrumb(breadcrumbs[breadcrumbs.length - 2], breadcrumbs.length - 2)}
+                                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-emerald-500 transition-colors border border-slate-100 dark:border-white/5 sm:hidden"
+                                title="Up one level"
+                            >
+                                <i className="fa-solid fa-arrow-left text-xs"></i>
+                            </button>
+                        )}
+                    </div>
                     {/* Breadcrumbs */}
-                    <nav className="flex items-center gap-1 min-w-0 flex-wrap">
+                    <nav 
+                        ref={breadcrumbRef}
+                        className="flex items-center gap-1 min-w-0 overflow-x-auto scrollbar-hide flex-nowrap"
+                    >
                         {breadcrumbs.map((crumb, i) => (
                             <React.Fragment key={crumb.id}>
                                 {i > 0 && <i className="fa-solid fa-chevron-right text-[8px] text-slate-300 dark:text-slate-600 shrink-0"></i>}
                                 <button
                                     onClick={() => navigateToBreadcrumb(crumb, i)}
-                                    className={`text-xs font-black uppercase tracking-tight truncate max-w-[120px] transition-colors ${i === breadcrumbs.length - 1
+                                    className={`text-[10px] font-black uppercase tracking-tight truncate shrink-0 transition-colors ${i === breadcrumbs.length - 1
                                             ? 'text-slate-800 dark:text-white cursor-default'
                                             : 'text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
                                         }`}
@@ -299,14 +322,15 @@ const DriveExplorer: React.FC = () => {
                         {!isAtRootLevel && !searchResults && breadcrumbs.length > 1 && (
                             <button
                                 onClick={() => navigateToBreadcrumb(breadcrumbs[breadcrumbs.length - 2], breadcrumbs.length - 2)}
-                                className="w-full flex items-center gap-4 px-6 py-2 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group text-left border-b border-slate-50 dark:divide-white/5"
+                                className="w-full flex items-center gap-4 px-6 py-2 bg-slate-50/50 dark:bg-white/[0.02] hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group text-left border-b border-slate-100 dark:border-white/5"
                             >
                                 <div className="w-5 flex justify-center shrink-0">
-                                    <i className="fa-solid fa-arrow-turn-up text-slate-300 dark:text-slate-600 group-hover:text-emerald-500 transition-colors text-xs"></i>
+                                    <i className="fa-solid fa-arrow-turn-up text-slate-400 dark:text-slate-500 group-hover:text-emerald-500 transition-colors text-xs"></i>
                                 </div>
-                                <span className="flex-1 text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-emerald-600 transition-colors">
+                                <span className="flex-1 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 group-hover:text-emerald-600 transition-colors">
                                     Up One Level
                                 </span>
+                                <i className="fa-solid fa-chevron-left text-[8px] text-slate-200 dark:text-slate-800 group-hover:text-emerald-400 transition-colors mr-1"></i>
                             </button>
                         )}
 
