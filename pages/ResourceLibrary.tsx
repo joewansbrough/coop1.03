@@ -398,16 +398,18 @@ const ResourceLibrary: React.FC<{
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Documents</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Browse the co-op's shared document folder.</p>
+      <div className="space-y-2 lg:space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Documents</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Browse the co-op's shared document folder.</p>
+          </div>
         </div>
+        <DriveExplorer />
       </div>
 
-        <DriveExplorer />
-
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-4 border-t border-slate-100 dark:border-white/5">
+      <div className="pt-4 border-t border-slate-100 dark:border-white/5 space-y-6 lg:space-y-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex flex-col">
             <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Resource Library</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Centralized association archives and governance records.</p>
@@ -520,6 +522,7 @@ const ResourceLibrary: React.FC<{
             );
           })}
         </div>
+      </div>
 
       {/* Review & Tagging Modal */}
       <AnimatePresence>

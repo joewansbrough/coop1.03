@@ -76,16 +76,16 @@ const Communications: React.FC<{
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Communications</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Manage association broadcasts and secure member messaging.</p>
         </div>
-        <div className="flex bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl w-full sm:w-auto border border-slate-200 dark:border-white/5 backdrop-blur-xl shrink-0">
+        <div className="flex bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl w-full sm:w-auto ring-1 ring-inset ring-slate-200 dark:ring-white/5 backdrop-blur-xl shrink-0">
           <button
             onClick={() => { setActiveTab('announcements'); setSelectedThread(null); }}
-            className={`flex-1 sm:px-10 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'announcements' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
+            className={`flex-1 sm:px-10 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'announcements' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
           >
             Broadcasts
           </button>
           <button
             onClick={() => setActiveTab('messaging')}
-            className={`flex-1 sm:px-10 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'messaging' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xl shadow-brand-500/10' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
+            className={`flex-1 sm:px-10 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'messaging' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xl shadow-brand-500/10' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
           >
             Direct Inbox
           </button>
@@ -103,9 +103,8 @@ const Communications: React.FC<{
         />
       )}
       
-      <div>
-        {activeTab === 'announcements' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 lg:gap-10">
+      {activeTab === 'announcements' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {isAdmin && !showNewAnnouncement && (
               <button 
                 onClick={() => setShowNewAnnouncement(true)}
@@ -323,8 +322,7 @@ const Communications: React.FC<{
               )}
             </div>
           </div>
-        )}
-      </div>
+      )}
 
       {showNewMessageModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
