@@ -114,6 +114,27 @@ router.get('/root', async (_req: Request, res: Response) => {
         const drive = driveClient();
         let allFolders: any[] = [];
         let allFiles: any[] = [];
+        const rootDetails: { id: string; name: string }[] = []; // New array to store root details
+
+        // Fetch details for each root folder first
+        for (const rootId of ROOT_FOLDER_IDS) {
+            try {
+                const rootFileMeta = await drive.files.get({
+                    fileId: rootId,
+                    fields: 'id, name',
+                });
+                if (rootFileMeta.data.name) {
+                    rootDetails.push({ id: rootId, name: rootFileMeta.data.name });
+                } else {
+                    // Provide a fallback name if the root folder has no name (should not happen for valid IDs)
+                    rootDetails.push({ id: rootId, name: 'Unnamed Root Folder' });
+                }
+            } catch (rootError: any) {
+                console.warn(`Could not fetch details for root folder ${rootId}:`, rootError.message);
+                // Indicate an error in fetching the name for this root
+                rootDetails.push({ id: rootId, name: `Error fetching root ${rootId}` });
+            }
+        }
 
         // Fetch contents for each root folder
         for (const rootId of ROOT_FOLDER_IDS) {
@@ -130,7 +151,8 @@ router.get('/root', async (_req: Request, res: Response) => {
         }
 
         res.json({
-            rootIds: ROOT_FOLDER_IDS, // Return all root IDs
+            rootIds: ROOT_FOLDER_IDS,
+            rootDetails: rootDetails, // Include root names
             folders: allFolders,
             files: allFiles,
         });
