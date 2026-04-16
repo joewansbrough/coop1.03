@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { RequestStatus, Unit, Tenant, MaintenanceRequest, Document, ScheduledMaintenance } from '../types';
+import { useRefreshData } from '../hooks/useCoopData';
 
 interface UnitDetailProps {
   isAdmin?: boolean;
@@ -19,26 +20,8 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   const navigate = useNavigate();
   const location = useLocation();
 
-  const refreshData = async () => {
-    const [unitsRes, tenantsRes] = await Promise.all([
-      fetch('/api/units'),
-      fetch('/api/tenants')
-    ]);
-    const [freshUnits, freshTenants] = await Promise.all([
-      unitsRes.json(),
-      tenantsRes.json()
-    ]);
-    setUnits(freshUnits);
-    setTenants(freshTenants);
+  const refreshData = useRefreshData();
 
-    if (unitId) {
-      const tasksRes = await fetch(`/api/units/${unitId}/scheduled-maintenance`);
-      if (tasksRes.ok) {
-        const freshTasks = await tasksRes.json();
-        setScheduledTasks(freshTasks);
-      }
-    }
-  };
   const unit = units.find(u => u.id === unitId);
   const currentResidents = tenants.filter(t => t.unitId === unitId && t.status === 'Current');
   const primaryResident = currentResidents.find(t => t.id === unit?.currentTenantId) || currentResidents[0];
@@ -229,7 +212,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
         return u;
       });
 
-      await refreshData();
+      refreshData();
       setShowMoveOutModal(false);
       setNotification({ message: `Move-out processed for entire household (${residentsToMoveOut.length} members).`, type: 'success' });
       setTimeout(() => setNotification(null), 5000);
@@ -307,7 +290,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
         return u;
       });
 
-      await refreshData();
+      refreshData();
       setShowMoveInModal(false);
       setSelectedNewTenantId('');
       
@@ -400,7 +383,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
         return u;
       });
 
-      await refreshData();
+      refreshData();
       setShowTransferModal(false);
       setSelectedTargetUnitId('');
       setNotification({ message: `Internal transfer successful. Household (${residentsToMove.length} members) has moved to Unit ${targetUnit.number}.`, type: 'success' });
