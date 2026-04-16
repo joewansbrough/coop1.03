@@ -25,8 +25,6 @@ interface BreadcrumbItem {
     name: string;
 }
 
-const FOLDER_MIME = 'application/vnd.google-apps.folder';
-
 const FILE_ICON: Record<string, string> = {
     'application/pdf': 'fa-file-pdf text-red-500',
     'application/vnd.google-apps.document': 'fa-file-word text-blue-500',
@@ -84,17 +82,18 @@ const DriveExplorer: React.FC = () => {
             setRootDetails(roots);
 
             if (roots.length > 1) {
-                // Multiple roots — show them as a folder list
+                // Multiple roots — show them as a top-level folder picker
                 setIsAtRootLevel(true);
                 setContents(null);
                 setCurrentFolderId(null);
                 setBreadcrumbs([{ id: 'all_roots', name: 'Documents' }]);
             } else {
-                // Single root — go straight into contents as before
+                // Single root — go straight into its contents
+                const singleRootId = data.rootIds?.[0] ?? null; // ✅ fixed: was data.rootId (undefined)
                 setIsAtRootLevel(false);
                 setContents({ folders: data.folders, files: data.files });
-                setCurrentFolderId(data.rootIds?.[0] ?? null);
-                setBreadcrumbs([{ id: data.rootIds?.[0] ?? 'all_roots', name: roots[0]?.name ?? 'Documents' }]);
+                setCurrentFolderId(singleRootId);
+                setBreadcrumbs([{ id: singleRootId ?? 'all_roots', name: roots[0]?.name ?? 'Documents' }]);
             }
         } catch (e: any) {
             setError(e.message);
@@ -103,6 +102,7 @@ const DriveExplorer: React.FC = () => {
         }
     };
 
+    // Navigate into a root folder (top-level blue folders)
     const loadRootFolder = async (root: RootDetail) => {
         setLoading(true);
         setError(null);
@@ -123,6 +123,7 @@ const DriveExplorer: React.FC = () => {
         }
     };
 
+    // Navigate into a subfolder
     const loadFolder = async (folder: DriveFile) => {
         setLoading(true);
         setError(null);
@@ -144,14 +145,14 @@ const DriveExplorer: React.FC = () => {
     };
 
     const navigateToBreadcrumb = async (crumb: BreadcrumbItem, index: number) => {
-        if (index === breadcrumbs.length - 1) return;
+        if (index === breadcrumbs.length - 1) return; // already here
         setLoading(true);
         setError(null);
         setSearch('');
         setSearchResults(null);
         try {
             if (crumb.id === 'all_roots') {
-                // Return to the root-folders view without re-fetching
+                // Restore root-folder picker view without re-fetching
                 setIsAtRootLevel(true);
                 setContents(null);
                 setCurrentFolderId(null);
@@ -271,7 +272,7 @@ const DriveExplorer: React.FC = () => {
 
                 {!loading && !error && (
                     <>
-                        {/* Root folder list — shown when multiple roots exist */}
+                        {/* Root folder picker — shown when multiple roots exist */}
                         {isAtRootLevel && rootDetails.map(root => (
                             <button
                                 key={root.id}
@@ -286,7 +287,7 @@ const DriveExplorer: React.FC = () => {
                             </button>
                         ))}
 
-                        {/* Folders (hidden during search or at root level) */}
+                        {/* Subfolders */}
                         {!isAtRootLevel && displayFolders.map(folder => (
                             <button
                                 key={folder.id}
