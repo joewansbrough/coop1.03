@@ -30,6 +30,18 @@ const prisma = new PrismaClient();
 // Legacy Admin List (Fallback during migration)
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'joewansbrough@gmail.com', 'wwansbro@gmail.com', 'samisaeed123@gmail.com'];
 
+
+const getCoopId = async (req: any, p: any = prisma) => {
+  const sessionUser = req.session?.user;
+  if (sessionUser?.tenantId) {
+    const t = await p.tenant.findUnique({ where: { id: sessionUser.tenantId } });
+    if (t?.cooperativeId) return t.cooperativeId;
+  }
+  const first = await p.cooperative.findFirst();
+  if (!first) throw new Error("No cooperative found in the system.");
+  return first.id;
+};
+
 const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const host = req.get('x-forwarded-host') || req.get('host') || '';
   const isLocal = host.includes('localhost') || 
@@ -432,7 +444,8 @@ const upload = multer({
     const unitId = ensureString(body.unitId) as string;
     const requestedBy = optionalString(body.requestedBy);
     const request = await prisma.maintenanceRequest.create({
-      data: { title, description, status, priority, category, unitId, requestedBy }
+      data: {
+      cooperativeId: await getCoopId(req, prisma), title, description, status, priority, category, unitId, requestedBy }
     });
     res.json(request);
   });
@@ -492,7 +505,8 @@ const upload = multer({
     const author = ensureString(body.author) as string;
     const date = ensureString(body.date) as string;
     const announcement = await prisma.announcement.create({
-      data: { title, content, type, priority, author, date }
+      data: {
+      cooperativeId: await getCoopId(req, prisma), title, content, type, priority, author, date }
     });
     res.json(announcement);
   });
@@ -614,6 +628,7 @@ const upload = multer({
       console.log('Creating database record...');
       const document = await prisma.document.create({
           data: {
+      cooperativeId: await getCoopId(req, prisma),
             title,
             category,
             tags: finalTags,
@@ -717,7 +732,8 @@ const upload = multer({
     const category = ensureString(body.category, 'General') as string;
     
     const event = await prisma.coopEvent.create({
-      data: { title, description, date, time, location, category },
+      data: {
+      cooperativeId: await getCoopId(req, prisma), title, description, date, time, location, category },
       include: { attendees: true }
     });
     res.json(event);
@@ -974,7 +990,8 @@ const upload = multer({
                 unitId: req.params.id,
                 startDate: new Date(resident.startDate || date),
                 endDate: new Date(date),
-                moveReason: reason || 'Household Move-out (Archived)'
+                moveReason: reason || 'Household Move-out (Archived)',
+                cooperativeId: resident.cooperativeId
               }
             });
           }

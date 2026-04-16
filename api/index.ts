@@ -74,6 +74,18 @@ app.use(cookieSession({
 // Mock Data
 const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com'];
 
+
+const getCoopId = async (req: any, p: any = getPrisma()) => {
+  const sessionUser = req.session?.user;
+  if (sessionUser?.tenantId) {
+    const t = await p.tenant.findUnique({ where: { id: sessionUser.tenantId } });
+    if (t?.cooperativeId) return t.cooperativeId;
+  }
+  const first = await p.cooperative.findFirst();
+  if (!first) throw new Error("No cooperative found in the system.");
+  return first.id;
+};
+
 const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const hasUser = !!(req as any).session?.user;
   if (!hasUser) {
@@ -512,7 +524,7 @@ app.post('/api/units/:id/move-in', async (req, res) => {
 
     // Create new TenantHistory record for the new unit
     await getPrisma().tenantHistory.create({
-      data: { tenantId, unitId: id, startDate: new Date(date) }
+      data: { tenantId, unitId: id, startDate: new Date(date), cooperativeId: tenant.cooperativeId }
     });
 
     // Update tenant
@@ -551,7 +563,7 @@ app.post('/api/units/:id/transfer', async (req, res) => {
       }
       // Open new history on destination unit
       await getPrisma().tenantHistory.create({
-        data: { tenantId: tenant.id, unitId: toUnitId, startDate: new Date(date) }
+        data: { tenantId: tenant.id, unitId: toUnitId, startDate: new Date(date), cooperativeId: tenant.cooperativeId }
       });
       // Update tenant's unit
       await getPrisma().tenant.update({
@@ -591,6 +603,7 @@ app.post('/api/maintenance', async (req, res) => {
   const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.create({
     data: {
+      cooperativeId: await getCoopId(req, getPrisma()),
       title,
       description,
       status,
@@ -638,7 +651,8 @@ app.get('/api/announcements', async (req, res) => {
 app.post('/api/announcements', async (req, res) => {
   const { title, content, type, priority, author, date } = req.body;
   const announcement = await getPrisma().announcement.create({
-    data: { title, content, type, priority, author, date }
+    data: {
+      cooperativeId: await getCoopId(req, getPrisma()), title, content, type, priority, author, date }
   });
   res.json(announcement);
 });
@@ -675,6 +689,7 @@ app.post('/api/documents', async (req, res) => {
 
   const document = await getPrisma().document.create({
     data: {
+      cooperativeId: await getCoopId(req, getPrisma()),
       title: title || 'Untitled Document',
       category: category || 'General',
       url: url || '#',
@@ -732,7 +747,8 @@ app.get('/api/events', async (req, res) => {
 app.post('/api/events', async (req, res) => {
   const { title, description, date, time, location, category } = req.body;
   const event = await getPrisma().coopEvent.create({
-    data: { title, description, date, time, location, category },
+    data: {
+      cooperativeId: await getCoopId(req, getPrisma()), title, description, date, time, location, category },
     include: { attendees: true }
   });
   res.json(event);
@@ -1081,6 +1097,7 @@ app.get('/api/seed', async (req, res) => {
     for (const t of tenantData) {
       const tenant = await p.tenant.create({
         data: {
+      cooperativeId: await getCoopId(req, getPrisma()),
           firstName: sanitizeUtf8(t.firstName),
           lastName: sanitizeUtf8(t.lastName),
           email: sanitizeUtf8(t.email),
@@ -1106,6 +1123,7 @@ app.get('/api/seed', async (req, res) => {
     for (const m of maintenanceData) {
       await p.maintenanceRequest.create({
         data: {
+      cooperativeId: await getCoopId(req, getPrisma()),
           title: sanitizeUtf8(m.title).trim(),
           description: sanitizeUtf8(m.description).trim(),
           status: m.status,
@@ -1124,6 +1142,7 @@ app.get('/api/seed', async (req, res) => {
       const dt = new Date(e.date);
       await p.coopEvent.create({
         data: {
+      cooperativeId: await getCoopId(req, getPrisma()),
           title: sanitizeUtf8(e.title).trim(),
           description: sanitizeUtf8(e.description).trim(),
           date: dt,
@@ -1139,6 +1158,7 @@ app.get('/api/seed', async (req, res) => {
     for (const a of announcementData) {
       await p.announcement.create({
         data: {
+      cooperativeId: await getCoopId(req, getPrisma()),
           title: sanitizeUtf8(a.title).trim(),
           content: sanitizeUtf8(a.content).trim(),
           type: a.type,
