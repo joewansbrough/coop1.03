@@ -71,11 +71,8 @@ const Communications: React.FC<{
     <div className="h-full flex flex-col space-y-4 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-1.5 h-6 bg-brand-500 rounded-full"></div>
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Communications</h2>
-          </div>
-          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-4">Direct Message & Community Broadcasts</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Communications</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Manage association broadcasts and secure member messaging.</p>
         </div>
         <div className="flex bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded-[1.25rem] w-full sm:w-auto border border-slate-200 dark:border-white/5 backdrop-blur-xl">
           <button
