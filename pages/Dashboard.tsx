@@ -51,7 +51,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
     { name: '3BR', count: units.filter(u => u.type === '3BR').length },
     { name: '4BR', count: units.filter(u => u.type === '4BR').length },
   ];
-  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
+  const COLORS = [
+    'var(--brand-500)', 
+    'var(--brand-400)', 
+    'var(--brand-600)', 
+    'var(--brand-300)'
+  ];
 
   const upcomingEvents = events.slice(0, 3);
   const recentAnnouncements = announcements.slice(0, 2);
@@ -72,8 +77,8 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
     return (
       <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 transition-colors duration-200">
         {/* Admin Welcome Header */}
-        <div className="relative overflow-hidden bg-slate-900 dark:bg-slate-950 rounded-[2.5rem] p-8 lg:p-12 text-white border border-white/5">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/10 rounded-full -mr-40 -mt-40 blur-[100px] pointer-events-none"></div>
+        <div className="relative overflow-hidden bg-slate-900 dark:bg-slate-950 rounded-[2.5rem] p-8 lg:p-12 text-white border border-white/5 shadow-2xl shadow-brand-500/10">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/10 rounded-full -mr-40 -mt-40 blur-[100px] pointer-events-none opacity-50"></div>
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-500/10 text-brand-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-brand-500/20">
@@ -133,7 +138,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Manage All <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
           <Link to="/admin/tenants" className="block hover:scale-[1.02] active:scale-95 transition-all group">
-            <StatCard label="Total Residents" value={tenants.filter(t => t.status === 'Current').length} icon="fa-users" color="bg-blue-500" />
+            <StatCard label="Total Residents" value={tenants.filter(t => t.status === 'Current').length} icon="fa-users" color="bg-white border border-slate-200 dark:bg-slate-800 dark:border-white/10" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Directory <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
           <Link to="/maintenance" className="block hover:scale-[1.02] active:scale-95 transition-all group">
@@ -141,7 +146,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Dispatch <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
           <Link to="/admin/waitlist" className="block hover:scale-[1.02] active:scale-95 transition-all group">
-            <StatCard label="Waitlist Size" value={tenants.filter(t => t.status === 'Waitlist').length} icon="fa-clock-rotate-left" color="bg-purple-500" />
+            <StatCard label="Waitlist Size" value={tenants.filter(t => t.status === 'Waitlist').length} icon="fa-clock-rotate-left" color="bg-brand-400" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">View Queue <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
         </div>
@@ -248,8 +253,8 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 pb-12 transition-colors duration-200">
-      <div className="relative overflow-hidden bg-slate-900 dark:bg-slate-950 rounded-[2.5rem] p-8 lg:p-12 text-white border border-white/5">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/10 rounded-full -mr-40 -mt-40 blur-[100px] pointer-events-none"></div>
+      <div className="relative overflow-hidden bg-slate-900 dark:bg-slate-950 rounded-[2.5rem] p-8 lg:p-12 text-white border border-white/5 shadow-2xl shadow-brand-500/10">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/10 rounded-full -mr-40 -mt-40 blur-[100px] pointer-events-none opacity-50"></div>
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-500/10 text-brand-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-brand-500/20">

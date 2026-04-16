@@ -403,7 +403,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
           )}
         </AnimatePresence>
 
-        <section className="flex-1 overflow-y-auto p-4 lg:p-8 bg-slate-50/50 dark:bg-slate-950/20 relative transition-colors duration-200">
+        <section key={theme} className="flex-1 overflow-y-auto p-4 lg:p-12 bg-slate-50/50 dark:bg-slate-950/20 relative transition-colors duration-200 animate-in fade-in duration-1000">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

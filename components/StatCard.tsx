@@ -11,9 +11,9 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, icon, trend, color }) => {
   return (
-    <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-white/5 transition-colors duration-200">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center text-white text-xl`}>
+    <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 transition-all duration-300 hover:shadow-xl hover:shadow-brand-500/5 group flex flex-col h-full">
+      <div className="flex items-center justify-between mb-6">
+        <div className={`w-12 h-12 rounded-2xl ${color.includes('brand') ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400' : color + ' text-white'} flex items-center justify-center text-xl transition-transform group-hover:scale-110`}>
           <i className={`fa-solid ${icon}`}></i>
         </div>
         {trend && (
