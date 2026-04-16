@@ -986,12 +986,12 @@ const upload = multer({
             // Create archived history record if none existed (backfill)
             await tx.tenantHistory.create({
               data: {
-                tenantId: resident.id,
-                unitId: req.params.id,
+                tenant: { connect: { id: resident.id } },
+                unit: { connect: { id: req.params.id } },
+                cooperative: { connect: { id: resident.cooperativeId } },
                 startDate: new Date(resident.startDate || date),
                 endDate: new Date(date),
-                moveReason: reason || 'Household Move-out (Archived)',
-                cooperativeId: resident.cooperativeId
+                moveReason: reason || 'Household Move-out (Archived)'
               }
             });
           }
@@ -1024,11 +1024,11 @@ const upload = multer({
         // 3. Create a new residency history entry
         await tx.tenantHistory.create({
           data: {
-            tenantId,
-            unitId: req.params.id,
+            tenant: { connect: { id: tenantId } },
+            unit: { connect: { id: req.params.id } },
+            cooperative: { connect: { id: updatedTenant.cooperativeId } },
             startDate: new Date(date),
-            moveReason: 'Move-in',
-            cooperativeId: updatedTenant.cooperativeId
+            moveReason: 'Move-in'
           }
         });
       });
@@ -1108,11 +1108,11 @@ const upload = multer({
           // Initialize new history for the target unit
           await tx.tenantHistory.create({
             data: {
-              tenantId: resident.id,
-              unitId: toUnitId,
+              tenant: { connect: { id: resident.id } },
+              unit: { connect: { id: toUnitId } },
+              cooperative: { connect: { id: resident.cooperativeId } },
               startDate: new Date(date),
-              moveReason: 'Internal Transfer',
-              cooperativeId: resident.cooperativeId
+              moveReason: 'Internal Transfer'
             }
           });
         }

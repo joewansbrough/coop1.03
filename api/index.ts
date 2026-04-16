@@ -524,7 +524,12 @@ app.post('/api/units/:id/move-in', async (req, res) => {
 
     // Create new TenantHistory record for the new unit
     await getPrisma().tenantHistory.create({
-      data: { tenantId, unitId: id, startDate: new Date(date), cooperativeId: tenant.cooperativeId }
+      data: {
+        tenant: { connect: { id: tenantId } },
+        unit: { connect: { id } },
+        cooperative: { connect: { id: tenant.cooperativeId } },
+        startDate: new Date(date)
+      }
     });
 
     // Update tenant
@@ -563,7 +568,12 @@ app.post('/api/units/:id/transfer', async (req, res) => {
       }
       // Open new history on destination unit
       await getPrisma().tenantHistory.create({
-        data: { tenantId: tenant.id, unitId: toUnitId, startDate: new Date(date), cooperativeId: tenant.cooperativeId }
+        data: {
+          tenant: { connect: { id: tenant.id } },
+          unit: { connect: { id: toUnitId } },
+          cooperative: { connect: { id: tenant.cooperativeId } },
+          startDate: new Date(date)
+        }
       });
       // Update tenant's unit
       await getPrisma().tenant.update({
