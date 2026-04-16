@@ -520,7 +520,6 @@ const ResourceLibrary: React.FC<{
             );
           })}
         </div>
-      </div>
 
       {/* Review & Tagging Modal */}
       <AnimatePresence>
