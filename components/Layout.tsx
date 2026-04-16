@@ -174,6 +174,12 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
                 <Link
                   to={item.path}
                   onClick={() => setIsSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
+                    location.pathname === item.path 
+                      ? (item.isAdmin ? 'bg-amber-500 text-white' : 'bg-brand-600 text-white') 
+                      : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+                  }`}
+                >
                   <i className={`fa-solid ${item.icon} w-5 group-hover:scale-110 transition-transform ${location.pathname === item.path ? 'text-white' : (item.isAdmin ? 'text-amber-500/70' : 'text-slate-500')}`}></i>
                   <span className="text-sm font-bold">{item.label}</span>
                 </Link>
