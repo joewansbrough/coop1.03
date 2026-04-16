@@ -1016,7 +1016,7 @@ const upload = multer({
         });
 
         // 2. Update tenant's current residency details
-        await tx.tenant.update({
+        const updatedTenant = await tx.tenant.update({
           where: { id: tenantId },
           data: { status: 'Current', unitId: req.params.id, startDate: date }
         });
@@ -1027,7 +1027,8 @@ const upload = multer({
             tenantId,
             unitId: req.params.id,
             startDate: new Date(date),
-            moveReason: 'Move-in'
+            moveReason: 'Move-in',
+            cooperativeId: updatedTenant.cooperativeId
           }
         });
       });
@@ -1110,7 +1111,8 @@ const upload = multer({
               tenantId: resident.id,
               unitId: toUnitId,
               startDate: new Date(date),
-              moveReason: 'Internal Transfer'
+              moveReason: 'Internal Transfer',
+              cooperativeId: resident.cooperativeId
             }
           });
         }
