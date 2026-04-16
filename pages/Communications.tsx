@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import { MOCK_MESSAGES } from '../constants';
 import { Announcement } from '../types';
@@ -9,6 +10,7 @@ const Communications: React.FC<{
   announcements: Announcement[], 
   setAnnouncements: React.Dispatch<React.SetStateAction<Announcement[]>> 
 }> = ({ isAdmin, announcements, setAnnouncements }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'announcements' | 'messaging'>('announcements');
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
@@ -68,8 +70,8 @@ const Communications: React.FC<{
     : [];
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="h-full flex flex-col max-w-7xl mx-auto pb-6 transition-all animate-in fade-in duration-500 overflow-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 lg:mb-8 shrink-0">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Communications</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Manage association broadcasts and secure member messaging.</p>
@@ -90,7 +92,7 @@ const Communications: React.FC<{
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden h-[calc(100vh-16rem)]">
+      <div className="flex-1 overflow-hidden h-[calc(100vh-16rem)] flex flex-col">
         {activeTab === 'announcements' && (
           <div className="mb-6 transition-all">
             <FilterBar 
@@ -104,7 +106,7 @@ const Communications: React.FC<{
           </div>
         )}
         
-        <div className="flex-1 overflow-y-auto pr-2 -mr-2 pb-12 pt-4">
+        <div className="flex-1 overflow-y-auto pr-4 -mr-4 pb-12 pt-8 scrollbar-hide">
           {activeTab === 'announcements' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 lg:gap-10">
             {isAdmin && !showNewAnnouncement && (
@@ -177,7 +179,11 @@ const Communications: React.FC<{
                 return matchesSearch && matchesFilter;
               })
               .map(ann => (
-              <div key={ann.id} className="group bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 relative overflow-hidden flex flex-col h-full transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/[0.03] hover:-translate-y-2 hover:border-brand-300 dark:hover:border-brand-600 cursor-pointer active:scale-[0.98] z-10 hover:z-20">
+              <Link 
+                key={ann.id} 
+                to={`/announcements/${ann.id}`}
+                className="group bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 relative overflow-hidden flex flex-col h-full transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/[0.03] hover:-translate-y-2 hover:border-brand-300 dark:hover:border-brand-600 cursor-pointer active:scale-[0.98] z-10 hover:z-20 no-underline"
+              >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full -mr-16 -mt-16 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 {ann.priority === 'Urgent' && <div className="absolute top-0 left-0 right-0 h-1.5 bg-rose-500 dark:bg-rose-600"></div>}
                 <div className="flex justify-between items-center mb-6">
@@ -197,7 +203,7 @@ const Communications: React.FC<{
                     <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-widest group-hover:text-brand-400 transition-colors">Authorized Publisher</span>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         ) : (
@@ -357,7 +363,6 @@ const Communications: React.FC<{
         </div>
       )}
       </div>
-    </div>
   );
 };
 
