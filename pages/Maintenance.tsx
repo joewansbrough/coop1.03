@@ -144,10 +144,12 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     : quotes;
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{isAdmin ? 'Maintenance Operations' : 'My Service Requests'}</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+            {isAdmin ? 'Maintenance Operations' : 'My Service Requests'}
+          </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
             {isAdmin ? 'Managing building longevity and member comfort.' : 'Track and report issues for your residence.'}
           </p>
@@ -171,7 +173,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
           )}
           <button 
             onClick={() => setShowForm(!showForm)}
-            className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"
+            className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"
           >
             <i className="fa-solid fa-plus"></i> Submit New Request
           </button>

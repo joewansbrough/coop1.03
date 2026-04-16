@@ -49,15 +49,19 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
     .sort((a, b) => a - b);
 
   return (
-    <div className="space-y-6 pb-12 transition-colors duration-200">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Unit Inventory</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Managing building envelope and unit assignments.</p>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+            Unit Inventory
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium font-medium">
+            Managing building envelope and unit assignments.
+          </p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto bg-brand-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center justify-center gap-2 active:scale-95"
+          className="w-full sm:w-auto bg-brand-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
           <i className="fa-solid fa-plus"></i> Add New Unit
         </button>
@@ -113,21 +117,21 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
               </div>
               <div className="h-px bg-slate-100 dark:bg-slate-800 flex-1"></div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {unitsByFloor[floor].sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true })).map(unit => {
                 const tenant = tenants.find(t => t.id === unit.currentTenantId);
                 return (
                   <div 
                     key={unit.id} 
                     onClick={() => navigate(`/admin/units/${unit.id}`)}
-                    className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden hover:border-brand-300 dark:hover:border-brand-500 transition-all group flex flex-col cursor-pointer active:scale-95 shadow-sm"
+                    className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden hover:border-brand-300 dark:hover:border-brand-500 transition-all group flex flex-col cursor-pointer active:scale-[0.98] shadow-sm"
                   >
                     <div className={`h-1 ${
                       unit.status === 'Occupied' ? 'bg-brand-500' :
                       unit.status === 'Vacant' ? 'bg-slate-200 dark:bg-slate-700' :
                       'bg-amber-500'
                     }`}></div>
-                    <div className="p-4 flex flex-col h-full">
+                    <div className="p-6 flex flex-col h-full">
                       <div className="flex justify-between items-start mb-3">
                         <h3 className="text-lg font-black text-slate-800 dark:text-white group-hover:text-brand-600 transition-colors">Unit {unit.number}</h3>
                         <div className={`w-2 h-2 rounded-full ${

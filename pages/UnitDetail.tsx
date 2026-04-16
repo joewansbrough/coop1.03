@@ -510,7 +510,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   );
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 transition-colors duration-200">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
       <div className="flex items-center gap-4 text-slate-500 text-sm mb-2">
         {isAdmin ? (
           <Link to="/admin/units" className="hover:text-brand-600 transition-colors flex items-center gap-1 font-bold">

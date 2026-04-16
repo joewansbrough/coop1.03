@@ -75,7 +75,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-            {isAdmin ? 'Member Registry' : 'Community Directory'}
+            Member Registry
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
             {isAdmin ? 'Protected community records and historical data.' : 'Connecting neighbors while respecting privacy.'}
@@ -237,7 +237,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
       </div>
 
       {/* ── Desktop: Table ── */}
-      <div className="hidden sm:block bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+      <div className="hidden sm:block bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-white/5">

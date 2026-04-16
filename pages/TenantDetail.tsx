@@ -58,7 +58,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 transition-colors duration-200 animate-in fade-in duration-500">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
       <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-sm mb-2">
         <Link to="/admin/tenants" className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors flex items-center gap-1 font-bold">
           <i className="fa-solid fa-arrow-left"></i> Association Directory
