@@ -70,13 +70,13 @@ const Communications: React.FC<{
     : [];
 
   return (
-    <div className="h-full flex flex-col max-w-7xl mx-auto pb-6 transition-all animate-in fade-in duration-500 overflow-hidden">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 lg:mb-8 shrink-0">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Communications</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Manage association broadcasts and secure member messaging.</p>
         </div>
-        <div className="flex bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded-[1.25rem] w-full sm:w-auto border border-slate-200 dark:border-white/5 backdrop-blur-xl">
+        <div className="flex bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl w-full sm:w-auto border border-slate-200 dark:border-white/5 backdrop-blur-xl shrink-0">
           <button
             onClick={() => { setActiveTab('announcements'); setSelectedThread(null); }}
             className={`flex-1 sm:px-10 py-2 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all duration-300 ${activeTab === 'announcements' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
@@ -92,23 +92,22 @@ const Communications: React.FC<{
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden h-[calc(100vh-16rem)] flex flex-col">
-        {activeTab === 'announcements' && (
-          <div className="mb-6 transition-all">
-            <FilterBar 
-              search={annSearch}
-              onSearchChange={setAnnSearch}
-              searchPlaceholder="Search broadcasts..."
-              filter={annFilter}
-              onFilterChange={setAnnFilter}
-              filterOptions={['All', 'Normal', 'Urgent']}
-            />
-          </div>
-        )}
-        
-        <div className="flex-1 overflow-y-auto pr-4 -mr-4 pb-12 pt-8 scrollbar-hide">
-          {activeTab === 'announcements' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 lg:gap-10">
+      {activeTab === 'announcements' && (
+        <div className="transition-all">
+          <FilterBar 
+            search={annSearch}
+            onSearchChange={setAnnSearch}
+            searchPlaceholder="Search broadcasts..."
+            filter={annFilter}
+            onFilterChange={setAnnFilter}
+            filterOptions={['All', 'Normal', 'Urgent']}
+          />
+        </div>
+      )}
+      
+      <div className="transition-all">
+        {activeTab === 'announcements' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 lg:gap-10">
             {isAdmin && !showNewAnnouncement && (
               <button 
                 onClick={() => setShowNewAnnouncement(true)}
