@@ -362,7 +362,6 @@ const Communications: React.FC<{
         </div>
       )}
       </div>
-    </div>
   );
 };
 
