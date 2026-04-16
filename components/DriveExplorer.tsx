@@ -15,6 +15,11 @@ interface DriveFolderContents {
     files: DriveFile[];
 }
 
+interface RootDetail {
+    id: string;
+    name: string;
+}
+
 interface BreadcrumbItem {
     id: string;
     name: string;
@@ -50,6 +55,8 @@ function formatDate(iso?: string) {
 
 const DriveExplorer: React.FC = () => {
     const [contents, setContents] = useState<DriveFolderContents | null>(null);
+    const [rootDetails, setRootDetails] = useState<RootDetail[]>([]);
+    const [isAtRootLevel, setIsAtRootLevel] = useState(false);
     const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
     const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -58,7 +65,6 @@ const DriveExplorer: React.FC = () => {
     const [searchResults, setSearchResults] = useState<DriveFile[] | null>(null);
     const [searching, setSearching] = useState(false);
 
-    // Load root on mount
     useEffect(() => {
         loadRoot();
     }, []);
@@ -74,9 +80,42 @@ const DriveExplorer: React.FC = () => {
             }
 
             const data = await res.json();
-            setContents({ folders: data.folders, files: data.files });
-            setCurrentFolderId(data.rootId);
-            setBreadcrumbs([{ id: data.rootId, name: 'Documents' }]);
+            const roots: RootDetail[] = data.rootDetails ?? [];
+            setRootDetails(roots);
+
+            if (roots.length > 1) {
+                // Multiple roots — show them as a folder list
+                setIsAtRootLevel(true);
+                setContents(null);
+                setCurrentFolderId(null);
+                setBreadcrumbs([{ id: 'all_roots', name: 'Documents' }]);
+            } else {
+                // Single root — go straight into contents as before
+                setIsAtRootLevel(false);
+                setContents({ folders: data.folders, files: data.files });
+                setCurrentFolderId(data.rootIds?.[0] ?? null);
+                setBreadcrumbs([{ id: data.rootIds?.[0] ?? 'all_roots', name: roots[0]?.name ?? 'Documents' }]);
+            }
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadRootFolder = async (root: RootDetail) => {
+        setLoading(true);
+        setError(null);
+        setSearch('');
+        setSearchResults(null);
+        try {
+            const res = await fetch(`/api/drive/folders/${root.id}/contents`);
+            if (!res.ok) throw new Error('Failed to load folder');
+            const data = await res.json();
+            setIsAtRootLevel(false);
+            setContents(data);
+            setCurrentFolderId(root.id);
+            setBreadcrumbs([{ id: 'all_roots', name: 'Documents' }, { id: root.id, name: root.name }]);
         } catch (e: any) {
             setError(e.message);
         } finally {
@@ -93,6 +132,7 @@ const DriveExplorer: React.FC = () => {
             const res = await fetch(`/api/drive/folders/${folder.id}/contents`);
             if (!res.ok) throw new Error('Failed to load folder');
             const data = await res.json();
+            setIsAtRootLevel(false);
             setContents(data);
             setCurrentFolderId(folder.id);
             setBreadcrumbs(prev => [...prev, { id: folder.id, name: folder.name }]);
@@ -104,21 +144,30 @@ const DriveExplorer: React.FC = () => {
     };
 
     const navigateToBreadcrumb = async (crumb: BreadcrumbItem, index: number) => {
-        if (index === breadcrumbs.length - 1) return; // already here
+        if (index === breadcrumbs.length - 1) return;
         setLoading(true);
         setError(null);
         setSearch('');
         setSearchResults(null);
         try {
-            const isRootLevel = crumb.id === 'all_roots';
-            const res = await fetch(isRootLevel ? '/api/drive/root' : `/api/drive/folders/${crumb.id}/contents`);
+            if (crumb.id === 'all_roots') {
+                // Return to the root-folders view without re-fetching
+                setIsAtRootLevel(true);
+                setContents(null);
+                setCurrentFolderId(null);
+                setBreadcrumbs([{ id: 'all_roots', name: 'Documents' }]);
+                setLoading(false);
+                return;
+            }
+            const res = await fetch(`/api/drive/folders/${crumb.id}/contents`);
             if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.error || 'Failed to navigate');
             }
             const data = await res.json();
-            setContents(data); // data contains aggregated folders/files from root, or specific folder contents
-            setCurrentFolderId(isRootLevel ? null : crumb.id); // Set to null for aggregate root view
+            setIsAtRootLevel(false);
+            setContents(data);
+            setCurrentFolderId(crumb.id);
             setBreadcrumbs(prev => prev.slice(0, index + 1));
         } catch (e: any) {
             setError(e.message);
@@ -143,7 +192,6 @@ const DriveExplorer: React.FC = () => {
         }
     }, []);
 
-    // Debounce search
     useEffect(() => {
         const t = setTimeout(() => handleSearch(search), 350);
         return () => clearTimeout(t);
@@ -174,11 +222,9 @@ const DriveExplorer: React.FC = () => {
                                 {i > 0 && <i className="fa-solid fa-chevron-right text-[8px] text-slate-300 dark:text-slate-600 shrink-0"></i>}
                                 <button
                                     onClick={() => navigateToBreadcrumb(crumb, i)}
-                                    className={`text-xs font-black uppercase tracking-tight truncate max-w-[120px] transition-colors ${crumb.id === 'all_roots' || crumb.id === 'no_roots'
-                                        ? 'text-slate-800 dark:text-white cursor-default' // Base 'Documents' or 'No Roots' level
-                                        : breadcrumbs.length - 1 === i
-                                            ? 'text-slate-800 dark:text-white cursor-default' // Current folder
-                                            : 'text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400' // Navigable parent
+                                    className={`text-xs font-black uppercase tracking-tight truncate max-w-[120px] transition-colors ${i === breadcrumbs.length - 1
+                                            ? 'text-slate-800 dark:text-white cursor-default'
+                                            : 'text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
                                         }`}
                                 >
                                     {crumb.name}
@@ -225,8 +271,23 @@ const DriveExplorer: React.FC = () => {
 
                 {!loading && !error && (
                     <>
-                        {/* Folders (hidden during search) */}
-                        {displayFolders.map(folder => (
+                        {/* Root folder list — shown when multiple roots exist */}
+                        {isAtRootLevel && rootDetails.map(root => (
+                            <button
+                                key={root.id}
+                                onClick={() => loadRootFolder(root)}
+                                className="w-full flex items-center gap-4 px-6 py-3 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group text-left"
+                            >
+                                <i className="fa-solid fa-folder-open text-blue-400 text-lg w-5 shrink-0"></i>
+                                <span className="flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors truncate">
+                                    {root.name}
+                                </span>
+                                <i className="fa-solid fa-chevron-right text-[10px] text-slate-300 dark:text-slate-600 group-hover:text-emerald-400 transition-colors shrink-0"></i>
+                            </button>
+                        ))}
+
+                        {/* Folders (hidden during search or at root level) */}
+                        {!isAtRootLevel && displayFolders.map(folder => (
                             <button
                                 key={folder.id}
                                 onClick={() => loadFolder(folder)}
@@ -241,7 +302,7 @@ const DriveExplorer: React.FC = () => {
                         ))}
 
                         {/* Files */}
-                        {displayFiles.map(file => (
+                        {!isAtRootLevel && displayFiles.map(file => (
                             <button
                                 key={file.id}
                                 onClick={() => openFile(file)}
@@ -266,7 +327,7 @@ const DriveExplorer: React.FC = () => {
                         ))}
 
                         {/* Empty state */}
-                        {displayFolders.length === 0 && displayFiles.length === 0 && (
+                        {!isAtRootLevel && displayFolders.length === 0 && displayFiles.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
                                 <i className="fa-solid fa-folder-open text-2xl"></i>
                                 <p className="text-xs font-medium">
