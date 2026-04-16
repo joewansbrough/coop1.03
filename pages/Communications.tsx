@@ -70,11 +70,11 @@ const Communications: React.FC<{
     : [];
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Communications</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Manage association broadcasts and secure member messaging.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">Manage association broadcasts and secure member messaging.</p>
         </div>
         <div className="flex bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl w-full sm:w-auto border border-slate-200 dark:border-white/5 backdrop-blur-xl shrink-0">
           <button
