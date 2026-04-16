@@ -84,18 +84,17 @@ const Communications: React.FC<{
         <div className="flex bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl w-full sm:w-auto ring-1 ring-inset ring-slate-200 dark:ring-white/5 backdrop-blur-xl shrink-0">
           <button
             onClick={() => { setActiveTab('announcements'); setSelectedThread(null); }}
-            className={`flex-1 sm:px-10 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'announcements' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
+            className={`flex-1 sm:px-10 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center justify-center ${activeTab === 'announcements' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
           >
             Broadcasts
           </button>
 
           <button
             onClick={() => setActiveTab('messaging')}
-            className={`flex-1 sm:px-10 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 ${activeTab === 'messaging' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xl shadow-brand-500/10' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
+            className={`flex-1 sm:px-10 py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all duration-300 flex items-center justify-center ${activeTab === 'messaging' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xl shadow-brand-500/10' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
           >
             Direct Inbox
           </button>
-
         </div>
       </div>
 
