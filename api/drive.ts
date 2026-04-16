@@ -3,7 +3,25 @@ import { Readable } from 'stream';
 import { driveClient } from '../services/googleDrive.js';
 
 const router = Router();
-const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID!;
+const ROOT_FOLDER_IDS_STR = process.env.GOOGLE_DRIVE_ROOT_FOLDER_IDS;
+let ROOT_FOLDER_IDS: string[] = [];
+
+if (ROOT_FOLDER_IDS_STR) {
+    ROOT_FOLDER_IDS = ROOT_FOLDER_IDS_STR.split(',').map(id => id.trim()).filter(id => id);
+} else {
+    const singleRootId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
+    if (singleRootId) {
+        ROOT_FOLDER_IDS.push(singleRootId.trim());
+    }
+}
+
+if (ROOT_FOLDER_IDS.length === 0) {
+    // This error will be caught by the Express server startup, which should be handled gracefully.
+    console.error('Error: GOOGLE_DRIVE_ROOT_FOLDER_IDS or GOOGLE_DRIVE_ROOT_FOLDER_ID must be set in environment variables.');
+    // Depending on server setup, this might crash the server. A more robust solution might involve
+    // a default empty array and letting the UI handle no roots, or a more explicit error response.
+    // For now, we'll log and assume it will be caught.
+}
 
 // List contents of a folder
 router.get('/folders/:folderId/contents', async (req: Request, res: Response) => {
@@ -46,28 +64,42 @@ router.get('/folders/:folderId/path', async (req: Request, res: Response) => {
         const { folderId } = req.params;
         const drive = driveClient();
         const path: { id: string; name: string }[] = [];
-
         let currentId = folderId;
+        let rootFound = false;
 
-        // Walk up the parent chain until we hit the root folder
-        while (currentId && currentId !== ROOT_FOLDER_ID) {
+        // First, check if the folderId itself is one of the roots.
+        if (ROOT_FOLDER_IDS.includes(folderId)) {
+            const rootFile = await drive.files.get({
+                fileId: folderId,
+                fields: 'id, name',
+            });
+            return res.json({ path: [{ id: rootFile.data.id!, name: rootFile.data.name! }] });
+        }
+
+        // Walk up the parent chain until we hit any of the root folders
+        while (currentId) {
             const file = await drive.files.get({
                 fileId: currentId,
                 fields: 'id, name, parents',
             });
 
+            // If we found a root folder, add it to the path and stop traversal.
+            if (ROOT_FOLDER_IDS.includes(file.data.id!)) {
+                path.unshift({ id: file.data.id!, name: file.data.name! });
+                rootFound = true;
+                break;
+            }
+            
             path.unshift({ id: file.data.id!, name: file.data.name! });
 
             const parents = file.data.parents;
             currentId = parents ? parents[0] : null;
         }
 
-        // Prepend the root
-        const rootFile = await drive.files.get({
-            fileId: ROOT_FOLDER_ID,
-            fields: 'id, name',
-        });
-        path.unshift({ id: rootFile.data.id!, name: rootFile.data.name! });
+        // If no root was found during traversal, the folder is not under any of the allowed roots.
+        if (!rootFound) {
+            return res.status(403).json({ error: 'Folder is outside the allowed directory' });
+        }
 
         res.json({ path });
     } catch (error) {
@@ -80,19 +112,27 @@ router.get('/folders/:folderId/path', async (req: Request, res: Response) => {
 router.get('/root', async (_req: Request, res: Response) => {
     try {
         const drive = driveClient();
-        const response = await drive.files.list({
-            q: `'${ROOT_FOLDER_ID}' in parents and trashed = false`,
-            fields: 'files(id, name, mimeType, modifiedTime, size, webViewLink)',
-            orderBy: 'folder,name',
-            pageSize: 200,
-        });
+        let allFolders: any[] = [];
+        let allFiles: any[] = [];
 
-        const files = response.data.files || [];
+        // Fetch contents for each root folder
+        for (const rootId of ROOT_FOLDER_IDS) {
+            const response = await drive.files.list({
+                q: `'${rootId}' in parents and trashed = false`,
+                fields: 'files(id, name, mimeType, modifiedTime, size, webViewLink)',
+                orderBy: 'folder,name',
+                pageSize: 200,
+            });
+
+            const currentRootFiles = response.data.files || [];
+            allFolders.push(...currentRootFiles.filter((f: any) => f.mimeType === 'application/vnd.google-apps.folder'));
+            allFiles.push(...currentRootFiles.filter((f: any) => f.mimeType !== 'application/vnd.google-apps.folder'));
+        }
 
         res.json({
-            rootId: ROOT_FOLDER_ID,
-            folders: files.filter(f => f.mimeType === 'application/vnd.google-apps.folder'),
-            files: files.filter(f => f.mimeType !== 'application/vnd.google-apps.folder'),
+            rootIds: ROOT_FOLDER_IDS, // Return all root IDs
+            folders: allFolders,
+            files: allFiles,
         });
     } catch (error: any) {
         console.error('🚨 DRIVE ROOT ERROR FULL:', error);
@@ -105,8 +145,10 @@ router.get('/root', async (_req: Request, res: Response) => {
 });
 
 // Helper: verify a folder is a descendant of ROOT_FOLDER_ID
-async function isFolderWithinRoot(folderId: string): Promise<boolean> {
-    if (folderId === ROOT_FOLDER_ID) return true;
+async function isFolderWithinRoot(folderId: string, rootIds: string[]): Promise<boolean> {
+    if (!rootIds || rootIds.length === 0) return false; // No roots configured
+
+    if (rootIds.includes(folderId)) return true; // Check if the current folder is one of the roots
 
     const drive = driveClient();
     let currentId = folderId;
@@ -120,11 +162,14 @@ async function isFolderWithinRoot(folderId: string): Promise<boolean> {
 
             const parents = file.data.parents;
             if (!parents || parents.length === 0) return false;
-            if (parents.includes(ROOT_FOLDER_ID)) return true;
+            
+            // Check if any parent is one of the allowed roots
+            if (parents.some(parent => rootIds.includes(parent))) return true;
 
-            currentId = parents[0];
+            currentId = parents[0]; // Move up to the next parent
         }
     } catch {
+        // If file.get fails, it's likely not accessible or doesn't exist, so not within root.
         return false;
     }
 
@@ -142,16 +187,15 @@ router.get('/files/:fileId', async (req: Request, res: Response) => {
         const { fileId } = req.params;
         const drive = driveClient();
 
-        // Reuse the existing root-check helper
         const file = await drive.files.get({
             fileId,
             fields: 'id, name, mimeType, size, modifiedTime, parents, webViewLink, iconLink',
         });
 
-        // Verify it lives under the root
+        // Verify it lives under any of the roots
         const parents = file.data.parents ?? [];
-        const allowed = fileId === ROOT_FOLDER_ID ||
-            await isFolderWithinRoot(parents[0] ?? '');
+        // Check if the fileId is one of the roots, or if its parent is within any root.
+        const allowed = ROOT_FOLDER_IDS.includes(fileId) || await isFolderWithinRoot(parents[0] ?? '', ROOT_FOLDER_IDS);
         if (!allowed) {
             return res.status(403).json({ error: 'File is outside the allowed directory' });
         }
@@ -178,8 +222,8 @@ router.get('/files/:fileId/download', async (req: Request, res: Response) => {
 
         const { name, mimeType, parents } = meta.data;
 
-        const allowed = fileId === ROOT_FOLDER_ID ||
-            await isFolderWithinRoot(parents?.[0] ?? '');
+        // Verify it lives under any of the roots
+        const allowed = ROOT_FOLDER_IDS.includes(fileId) || await isFolderWithinRoot(parents?.[0] ?? '', ROOT_FOLDER_IDS);
         if (!allowed) {
             return res.status(403).json({ error: 'File is outside the allowed directory' });
         }
@@ -239,7 +283,8 @@ router.get('/search', async (req: Request, res: Response) => {
 
         // Filter files that belong to the co-op root tree
         for (const file of allFiles) {
-            const isInside = await isFolderWithinRoot(file.id);
+            // Pass ROOT_FOLDER_IDS to the helper function
+            const isInside = await isFolderWithinRoot(file.id, ROOT_FOLDER_IDS);
             if (isInside) {
                 filteredFiles.push(file);
             }
