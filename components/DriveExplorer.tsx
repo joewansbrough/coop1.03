@@ -272,8 +272,8 @@ const DriveExplorer: React.FC = () => {
 
                 {!loading && !error && (
                     <>
-                        {/* Root folder picker — shown when multiple roots exist */}
-                        {isAtRootLevel && rootDetails.map(root => (
+                        {/* Root folder picker — shown when multiple roots exist and not searching */}
+                        {isAtRootLevel && !searchResults && rootDetails.map(root => (
                             <button
                                 key={root.id}
                                 onClick={() => loadRootFolder(root)}
@@ -288,7 +288,7 @@ const DriveExplorer: React.FC = () => {
                         ))}
 
                         {/* Subfolders */}
-                        {!isAtRootLevel && displayFolders.map(folder => (
+                        {(searchResults || !isAtRootLevel) && displayFolders.map(folder => (
                             <button
                                 key={folder.id}
                                 onClick={() => loadFolder(folder)}
@@ -303,7 +303,7 @@ const DriveExplorer: React.FC = () => {
                         ))}
 
                         {/* Files */}
-                        {!isAtRootLevel && displayFiles.map(file => (
+                        {(searchResults || !isAtRootLevel) && displayFiles.map(file => (
                             <button
                                 key={file.id}
                                 onClick={() => openFile(file)}
@@ -328,7 +328,7 @@ const DriveExplorer: React.FC = () => {
                         ))}
 
                         {/* Empty state */}
-                        {!isAtRootLevel && displayFolders.length === 0 && displayFiles.length === 0 && (
+                        {(searchResults || !isAtRootLevel) && displayFolders.length === 0 && displayFiles.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
                                 <i className="fa-solid fa-folder-open text-2xl"></i>
                                 <p className="text-xs font-medium">
