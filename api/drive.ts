@@ -21,30 +21,43 @@ if (ROOT_FOLDER_IDS.length === 0) {
 
 // ─── Helper: verify a folder is a descendant of any configured root ──────────
 
-async function isFolderWithinRoot(folderId: string): Promise<boolean> {
+async function isFolderWithinRoot(folderId: string, cache?: Map<string, boolean>): Promise<boolean> {
     if (ROOT_FOLDER_IDS.length === 0) return false;
     if (ROOT_FOLDER_IDS.includes(folderId)) return true;
+    if (cache?.has(folderId)) return cache.get(folderId)!;
 
     const drive = driveClient();
     let currentId = folderId;
+    const visited: string[] = [];
 
     try {
         while (currentId) {
+            visited.push(currentId);
             const file = await drive.files.get({
                 fileId: currentId,
                 fields: 'id, parents',
+                supportsAllDrives: true,
             });
 
             const parents = file.data.parents;
-            if (!parents || parents.length === 0) return false;
-            if (parents.some(parent => ROOT_FOLDER_IDS.includes(parent))) return true;
+            if (!parents || parents.length === 0) break;
+            if (parents.some(parent => ROOT_FOLDER_IDS.includes(parent))) {
+                if (cache) visited.forEach(id => cache.set(id, true));
+                return true;
+            }
 
             currentId = parents[0];
+            if (cache?.has(currentId)) {
+                const result = cache.get(currentId)!;
+                if (cache) visited.forEach(id => cache.set(id, result));
+                return result;
+            }
         }
     } catch {
-        return false;
+        // Fall through to false
     }
 
+    if (cache) visited.forEach(id => cache.set(id, false));
     return false;
 }
 
@@ -63,6 +76,7 @@ router.get('/root', async (_req: Request, res: Response) => {
                 const rootFileMeta = await drive.files.get({
                     fileId: rootId,
                     fields: 'id, name',
+                    supportsAllDrives: true,
                 });
                 rootDetails.push({
                     id: rootId,
@@ -80,6 +94,8 @@ router.get('/root', async (_req: Request, res: Response) => {
                 fields: 'files(id, name, mimeType, modifiedTime, size, webViewLink)',
                 orderBy: 'folder,name',
                 pageSize: 200,
+                supportsAllDrives: true,
+                includeItemsFromAllDrives: true,
             });
 
             const currentRootFiles = response.data.files || [];
@@ -115,6 +131,8 @@ router.get('/folders/:folderId/contents', async (req: Request, res: Response) =>
             fields: 'files(id, name, mimeType, modifiedTime, size, webViewLink)',
             orderBy: 'folder,name',
             pageSize: 200,
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true,
         });
 
         const files = response.data.files || [];
@@ -139,12 +157,20 @@ router.get('/folders/:folderId/path', async (req: Request, res: Response) => {
         let rootFound = false;
 
         if (ROOT_FOLDER_IDS.includes(folderId)) {
-            const rootFile = await drive.files.get({ fileId: folderId, fields: 'id, name' });
+            const rootFile = await drive.files.get({
+                fileId: folderId,
+                fields: 'id, name',
+                supportsAllDrives: true,
+            });
             return res.json({ path: [{ id: rootFile.data.id!, name: rootFile.data.name! }] });
         }
 
         while (currentId) {
-            const file = await drive.files.get({ fileId: currentId, fields: 'id, name, parents' });
+            const file = await drive.files.get({
+                fileId: currentId,
+                fields: 'id, name, parents',
+                supportsAllDrives: true,
+            });
 
             if (ROOT_FOLDER_IDS.includes(file.data.id!)) {
                 path.unshift({ id: file.data.id!, name: file.data.name! });
@@ -178,6 +204,7 @@ router.get('/files/:fileId', async (req: Request, res: Response) => {
         const file = await drive.files.get({
             fileId,
             fields: 'id, name, mimeType, size, modifiedTime, parents, webViewLink, iconLink',
+            supportsAllDrives: true,
         });
 
         const parents = file.data.parents ?? [];
@@ -199,7 +226,11 @@ router.get('/files/:fileId/download', async (req: Request, res: Response) => {
         const { fileId } = req.params;
         const drive = driveClient();
 
-        const meta = await drive.files.get({ fileId, fields: 'id, name, mimeType, parents' });
+        const meta = await drive.files.get({
+            fileId,
+            fields: 'id, name, mimeType, parents',
+            supportsAllDrives: true,
+        });
         const { name, mimeType, parents } = meta.data;
 
         const allowed = ROOT_FOLDER_IDS.includes(fileId) || await isFolderWithinRoot(parents?.[0] ?? '');
@@ -222,7 +253,11 @@ router.get('/files/:fileId/download', async (req: Request, res: Response) => {
             (response.data as Readable).pipe(res);
         } else {
             res.setHeader('Content-Type', mimeType ?? 'application/octet-stream');
-            const response = await drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
+            const response = await drive.files.get({
+                fileId,
+                alt: 'media',
+                supportsAllDrives: true,
+            }, { responseType: 'stream' });
             (response.data as Readable).pipe(res);
         }
     } catch (error) {
@@ -246,15 +281,36 @@ router.get('/search', async (req: Request, res: Response) => {
             q: `trashed = false and (name contains '${escaped}' or fullText contains '${escaped}')`,
             fields: 'files(id, name, mimeType, modifiedTime, size, webViewLink, parents)',
             pageSize: 100,
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true,
         });
 
         const allFiles = response.data.files ?? [];
-        const filteredFiles = [];
+        const cache = new Map<string, boolean>();
 
-        for (const file of allFiles) {
-            const isInside = await isFolderWithinRoot(file.id!);
-            if (isInside) filteredFiles.push(file);
-        }
+        // Pre-populate cache with root files themselves if they show up in results
+        ROOT_FOLDER_IDS.forEach(id => cache.set(id, true));
+
+        // Process search results in parallel with ancestry checking
+        const filterPromises = allFiles.map(async (file) => {
+            if (!file.id) return null;
+
+            // Immediate check: is it a root?
+            if (ROOT_FOLDER_IDS.includes(file.id)) return file;
+
+            // Immediate check: is its parent a root? (Already in response)
+            if (file.parents?.some(p => ROOT_FOLDER_IDS.includes(p))) {
+                cache.set(file.id, true);
+                return file;
+            }
+
+            // Fallback: full ancestry check with cache
+            const isInside = await isFolderWithinRoot(file.id, cache);
+            return isInside ? file : null;
+        });
+
+        const results = await Promise.all(filterPromises);
+        const filteredFiles = results.filter((f): f is any => f !== null);
 
         res.json({ files: filteredFiles, nextPageToken: null });
     } catch (error: any) {
