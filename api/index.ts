@@ -750,6 +750,7 @@ app.post('/api/documents', requireAuth, async (req, res) => {
   try {
   const document = await getPrisma().document.create({
     data: {
+      id: crypto.randomUUID(),
       title: sanitizeUtf8(title || 'Untitled Document').trim(),
       category: sanitizeUtf8(category || 'General').trim(),
       url: sanitizeUtf8(url || '#').trim(),
@@ -761,8 +762,7 @@ app.post('/api/documents', requireAuth, async (req, res) => {
       committee: sanitizeUtf8(committee || '').trim(),
       cooperativeId: coopId
     }
-  });
-  console.log('Document created successfully:', document.id);
+  });  console.log('Document created successfully:', document.id);
   res.json(document);
   } catch (err: any) {
   console.error('Failed to create document (Prisma):', err);
