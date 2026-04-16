@@ -108,7 +108,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
     .sort((a, b) => parseEventDate(a).getTime() - parseEventDate(b).getTime())[0];
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Community Calendar</h2>

@@ -68,8 +68,8 @@ const Communications: React.FC<{
     : [];
 
   return (
-    <div className="h-full flex flex-col space-y-4 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Communications</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Manage association broadcasts and secure member messaging.</p>
@@ -77,7 +77,7 @@ const Communications: React.FC<{
         <div className="flex bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded-[1.25rem] w-full sm:w-auto border border-slate-200 dark:border-white/5 backdrop-blur-xl">
           <button
             onClick={() => { setActiveTab('announcements'); setSelectedThread(null); }}
-            className={`flex-1 sm:px-10 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all duration-300 ${activeTab === 'announcements' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-xl shadow-brand-500/10' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
+            className={`flex-1 sm:px-10 py-2 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all duration-300 ${activeTab === 'announcements' ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-100'}`}
           >
             Broadcasts
           </button>
@@ -90,9 +90,9 @@ const Communications: React.FC<{
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col gap-6">
+      <div className="flex-1 overflow-hidden h-[calc(100vh-16rem)]">
         {activeTab === 'announcements' && (
-          <div className="animate-in slide-in-from-top-2 duration-500">
+          <div className="mb-6 transition-all">
             <FilterBar 
               search={annSearch}
               onSearchChange={setAnnSearch}

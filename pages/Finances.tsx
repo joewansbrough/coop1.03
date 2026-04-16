@@ -32,7 +32,7 @@ const Finances: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
   };
 
   return (
-    <div className="space-y-6 pb-12 transition-colors duration-200 animate-in fade-in duration-500">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Association Ledger</h2>
