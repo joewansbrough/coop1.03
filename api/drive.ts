@@ -3,7 +3,38 @@ import { Readable } from 'stream';
 import { driveClient } from '../services/googleDrive.js';
 
 const router = Router();
-const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID!;
+const folderIds = process.env.GOOGLE_DRIVE_FOLDER_IDS.split(',');
+
+// Fetch metadata for all roots to build your navigation
+const fetchRootFolders = async () => {
+    return await Promise.all(
+        folderIds.map(async (id) => {
+            const res = await drive.files.get({
+                fileId: id,
+                fields: 'id, name',
+                supportsAllDrives: true
+            });
+            return res.data;
+        })
+    );
+};
+const ROOT_FOLDER_ID = process.env.GOOGLE_DRIVE_ROOT_FOLDER_IDS!;
+
+// Sidebar Component
+const RootNavigation = ({ rootFolders }) => {
+    return (
+        <nav className= "w-64 border-r" >
+        {
+            rootFolders.map(folder => (
+                <Link key= { folder.id } href = {`/dashboard/${folder.id}`} >
+        <div className="p-3 hover:bg-gray-100 cursor-pointer" >
+            📁 { folder.name }
+</div>
+    </Link>
+      ))}
+</nav>
+  );
+};
 
 // List contents of a folder
 router.get('/folders/:folderId/contents', async (req: Request, res: Response) => {
@@ -225,7 +256,7 @@ router.get('/search', async (req: Request, res: Response) => {
 
         const drive = driveClient();
         const escaped = term.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        
+
         // We search the entire drive visible to the service account
         // and then filter results that are within the root tree.
         const response = await drive.files.list({
