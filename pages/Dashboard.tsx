@@ -133,19 +133,19 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          <Link to="/admin/units" className="block hover:scale-[1.02] active:scale-95 transition-all group">
+          <Link to="/admin/units" className="block hover:scale-[1.02] active:scale-[0.98] transition-all group">
             <StatCard label="Unit Inventory" value={units.length} icon="fa-building" color="bg-brand-500" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Manage All <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
-          <Link to="/admin/tenants" className="block hover:scale-[1.02] active:scale-95 transition-all group">
+          <Link to="/admin/tenants" className="block hover:scale-[1.02] active:scale-[0.98] transition-all group">
             <StatCard label="Total Residents" value={tenants.filter(t => t.status === 'Current').length} icon="fa-users" color="bg-white border border-slate-200 dark:bg-slate-800 dark:border-white/10" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Directory <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
-          <Link to="/maintenance" className="block hover:scale-[1.02] active:scale-95 transition-all group">
+          <Link to="/maintenance" className="block hover:scale-[1.02] active:scale-[0.98] transition-all group">
             <StatCard label="Active Requests" value={pendingRequests} icon="fa-wrench" color="bg-amber-500" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">Dispatch <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
-          <Link to="/admin/waitlist" className="block hover:scale-[1.02] active:scale-95 transition-all group">
+          <Link to="/admin/waitlist" className="block hover:scale-[1.02] active:scale-[0.98] transition-all group">
             <StatCard label="Waitlist Size" value={tenants.filter(t => t.status === 'Waitlist').length} icon="fa-clock-rotate-left" color="bg-brand-400" />
             <div className="mt-2 text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center opacity-0 group-hover:opacity-100 transition-opacity">View Queue <i className="fa-solid fa-arrow-right ml-1"></i></div>
           </Link>
@@ -178,13 +178,13 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
                         <button
                           key={unit.id}
                           onClick={() => navigate(`/admin/units/${unit.id}`)}
-                          className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all hover:scale-110 active:scale-95 group relative shadow-sm ${
-                            unit.status === 'Occupied' ? 'bg-brand-50 dark:bg-brand-900/10 border-brand-500 text-brand-700 dark:text-brand-400' :
-                            'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-600'
+                          className={`aspect-square rounded-2xl border-2 flex flex-col items-center justify-center transition-all hover:scale-110 active:scale-[0.98] group relative shadow-sm ${
+                            unit.status === 'Occupied' ? 'bg-brand-50 dark:bg-brand-900/10 border-brand-500 text-brand-700 dark:text-brand-400 hover:bg-brand-100 dark:hover:bg-brand-900/20' :
+                            'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-600 hover:border-brand-300 dark:hover:border-brand-600'
                           }`}
                         >
-                          <span className="text-xs lg:text-sm font-black">{unit.number}</span>
-                          <i className="fa-solid fa-house text-[8px] lg:text-[10px] mt-1 opacity-20 group-hover:opacity-100 transition-opacity"></i>
+                          <span className="text-xs lg:text-sm font-black group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{unit.number}</span>
+                          <i className="fa-solid fa-house text-[8px] lg:text-[10px] mt-1 opacity-20 group-hover:opacity-100 group-hover:text-brand-500 transition-all"></i>
                         </button>
                       ))}
                     </div>
@@ -207,41 +207,41 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
               <i className="fa-solid fa-bolt text-amber-500"></i>
               Quick Actions
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <button 
                 onClick={() => navigate('/documents')}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 hover:border-brand-500 transition-all group"
+                className="w-full flex items-center gap-4 p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 hover:border-brand-300 dark:hover:border-brand-600 transition-all group active:scale-[0.98]"
               >
-                <div className="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-all">
+                <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center text-xl group-hover:bg-brand-500 group-hover:text-white group-hover:scale-110 transition-all shadow-sm">
                   <i className="fa-solid fa-file-arrow-up"></i>
                 </div>
                 <div className="text-left">
-                  <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Upload Document</p>
-                  <p className="text-[9px] text-slate-500 font-bold uppercase">Archive new policy</p>
+                  <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">Upload Document</p>
+                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Archive new policy</p>
                 </div>
               </button>
               <button 
                 onClick={() => navigate('/communications')}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 hover:border-blue-500 transition-all group"
+                className="w-full flex items-center gap-4 p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 hover:border-blue-300 dark:hover:border-blue-600 transition-all group active:scale-[0.98]"
               >
-                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
+                <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl group-hover:bg-blue-600 group-hover:text-white group-hover:scale-110 transition-all shadow-sm">
                   <i className="fa-solid fa-bullhorn"></i>
                 </div>
                 <div className="text-left">
-                  <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">New Announcement</p>
-                  <p className="text-[9px] text-slate-500 font-bold uppercase">Blast to community</p>
+                  <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">New Announcement</p>
+                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Blast to community</p>
                 </div>
               </button>
               <button 
                 onClick={() => navigate('/calendar')}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 hover:border-amber-500 transition-all group"
+                className="w-full flex items-center gap-4 p-5 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 hover:border-amber-300 dark:hover:border-amber-600 transition-all group active:scale-[0.98]"
               >
-                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-all">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl group-hover:bg-amber-600 group-hover:text-white group-hover:scale-110 transition-all shadow-sm">
                   <i className="fa-solid fa-calendar-plus"></i>
                 </div>
                 <div className="text-left">
-                  <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Schedule Event</p>
-                  <p className="text-[9px] text-slate-500 font-bold uppercase">Add to calendar</p>
+                  <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">Schedule Event</p>
+                  <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Add to calendar</p>
                 </div>
               </button>
             </div>

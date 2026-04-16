@@ -154,7 +154,7 @@ const Communications: React.FC<{
               </div>
             )}
             {announcements.map(ann => (
-              <div key={ann.id} className="group bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 relative overflow-hidden flex flex-col h-full transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/[0.03] hover:-translate-y-1">
+              <div key={ann.id} className="group bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 relative overflow-hidden flex flex-col h-full transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/[0.03] hover:-translate-y-1 hover:border-brand-300 dark:hover:border-brand-600 cursor-pointer active:scale-[0.98]">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full -mr-16 -mt-16 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 {ann.priority === 'Urgent' && <div className="absolute top-0 left-0 right-0 h-1.5 bg-rose-500 dark:bg-rose-600"></div>}
                 <div className="flex justify-between items-center mb-6">
@@ -163,15 +163,15 @@ const Communications: React.FC<{
                   </span>
                   <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-tight">{ann.date}</span>
                 </div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3 leading-tight group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{ann.title}</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-8 flex-1 font-medium">{ann.content}</p>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white mb-3 leading-tight group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors uppercase tracking-tight">{ann.title}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-8 flex-1 font-medium group-hover:text-slate-900 dark:group-hover:text-slate-300 transition-colors">{ann.content}</p>
                 <div className="flex items-center gap-3 pt-6 border-t border-slate-50 dark:border-white/5">
-                  <div className="w-10 h-10 bg-slate-900 dark:bg-brand-600 text-white rounded-2xl flex items-center justify-center text-xs font-black uppercase shadow-lg shadow-black/10">
+                  <div className="w-10 h-10 bg-slate-900 dark:bg-brand-600 text-white rounded-2xl flex items-center justify-center text-xs font-black uppercase shadow-lg shadow-black/10 group-hover:bg-brand-500 group-hover:scale-110 transition-all">
                     {ann.author[0]}
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-900 dark:text-white font-black uppercase tracking-widest">{ann.author}</span>
-                    <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-widest">Authorized Publisher</span>
+                    <span className="block text-[10px] text-slate-900 dark:text-white font-black uppercase tracking-widest group-hover:text-brand-600 transition-colors">{ann.author}</span>
+                    <span className="block text-[8px] text-slate-400 font-bold uppercase tracking-widest group-hover:text-brand-400 transition-colors">Authorized Publisher</span>
                   </div>
                 </div>
               </div>
@@ -202,21 +202,21 @@ const Communications: React.FC<{
                   <button 
                     key={thread.id} 
                     onClick={() => setSelectedThread(thread.id)}
-                    className={`w-full p-6 flex gap-4 hover:bg-slate-50 dark:hover:bg-white/5 text-left transition-all border-b border-slate-50 dark:border-white/5 group relative ${selectedThread === thread.id ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}
+                    className={`w-full p-6 flex gap-4 hover:bg-slate-50 dark:hover:bg-brand-900/10 text-left transition-all border-b border-slate-50 dark:border-white/5 group relative active:scale-[0.98] ${selectedThread === thread.id ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}
                   >
-                    {selectedThread === thread.id && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-12 bg-brand-500 rounded-r-full"></div>}
+                    {selectedThread === thread.id && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-12 bg-brand-500 rounded-r-full shadow-[4px_0_12px_rgba(var(--brand-primary),0.3)]"></div>}
                     <div className="relative">
-                      <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-[1.25rem] shrink-0 flex items-center justify-center text-slate-400 dark:text-slate-500 font-black text-xs group-hover:scale-105 transition-transform">
+                      <div className="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-[1.25rem] shrink-0 flex items-center justify-center text-slate-400 dark:text-slate-500 font-black text-xs group-hover:scale-110 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/30 group-hover:text-brand-600 transition-all duration-300">
                         {thread.participant.split(' ').map(n => n[0]).join('')}
                       </div>
-                      {thread.active && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-brand-500 border-4 border-white dark:border-slate-900 rounded-full"></div>}
+                      {thread.active && <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-brand-500 border-4 border-white dark:border-slate-900 rounded-full group-hover:scale-125 transition-transform"></div>}
                     </div>
                     <div className="flex-1 overflow-hidden pt-1">
                       <div className="flex justify-between items-center mb-1">
-                        <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">{thread.participant}</h4>
+                        <h4 className="text-sm font-black text-slate-900 dark:text-white truncate group-hover:text-brand-600 transition-colors">{thread.participant}</h4>
                         <span className="text-[9px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-tight shrink-0">{thread.date}</span>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-medium">{thread.lastMsg}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-medium group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">{thread.lastMsg}</p>
                     </div>
                   </button>
                 ))}
