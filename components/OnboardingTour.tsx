@@ -26,7 +26,7 @@ const STEPS: Step[] = [
     title: "Welcome to CoopConnect BC",
     description: "Your comprehensive platform for British Columbia housing co-operative management. Let's take a quick tour of your new Board Administrator tools.",
     icon: <ShieldCheck className="w-12 h-12" />,
-    color: "bg-emerald-500"
+    color: "bg-brand-500"
   },
   {
     title: "Mission Control Dashboard",
@@ -167,8 +167,8 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
                 className="flex-1"
               >
                 <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="w-4 h-4 text-emerald-500" />
-                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Administrator Guide</span>
+                  <Sparkles className="w-4 h-4 text-brand-500" />
+                  <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest">Administrator Guide</span>
                 </div>
                 <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-tight mb-6">
                   {step.title}
@@ -198,7 +198,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
                 </button>
                 <button 
                   onClick={handleNext}
-                  className="px-8 py-4 bg-slate-900 dark:bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all flex items-center gap-2 group active:scale-95"
+                  className="px-8 py-4 bg-slate-900 dark:bg-brand-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-brand-700 transition-all flex items-center gap-2 group active:scale-95"
                 >
                   {currentStep === STEPS.length - 1 ? 'Get Started' : 'Next Step'}
                   <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -213,7 +213,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
           <motion.div 
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
-            className="h-full bg-emerald-500"
+            className="h-full bg-brand-500"
           />
         </div>
       </motion.div>

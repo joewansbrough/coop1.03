@@ -57,7 +57,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95"
+          className="w-full sm:w-auto bg-brand-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center justify-center gap-2 active:scale-95"
         >
           <i className="fa-solid fa-plus"></i> Add New Unit
         </button>
@@ -79,7 +79,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
             <form onSubmit={handleAddUnit} className="space-y-5">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unit Number</label>
-                <input type="text" required value={number} onChange={e => setNumber(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white" placeholder="e.g. 402" />
+                <input type="text" required value={number} onChange={e => setNumber(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white" placeholder="e.g. 402" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -95,7 +95,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 flex items-center justify-center gap-2">
+                <button type="submit" className="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 flex items-center justify-center gap-2">
                   <i className="fa-solid fa-plus"></i> Add New Unit
                 </button>
               </div>
@@ -120,18 +120,18 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
                   <div 
                     key={unit.id} 
                     onClick={() => navigate(`/admin/units/${unit.id}`)}
-                    className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden hover:border-emerald-300 dark:hover:border-emerald-500 transition-all group flex flex-col cursor-pointer active:scale-95 shadow-sm"
+                    className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden hover:border-brand-300 dark:hover:border-brand-500 transition-all group flex flex-col cursor-pointer active:scale-95 shadow-sm"
                   >
                     <div className={`h-1 ${
-                      unit.status === 'Occupied' ? 'bg-emerald-500' :
+                      unit.status === 'Occupied' ? 'bg-brand-500' :
                       unit.status === 'Vacant' ? 'bg-slate-200 dark:bg-slate-700' :
                       'bg-amber-500'
                     }`}></div>
                     <div className="p-4 flex flex-col h-full">
                       <div className="flex justify-between items-start mb-3">
-                        <h3 className="text-lg font-black text-slate-800 dark:text-white group-hover:text-emerald-600 transition-colors">Unit {unit.number}</h3>
+                        <h3 className="text-lg font-black text-slate-800 dark:text-white group-hover:text-brand-600 transition-colors">Unit {unit.number}</h3>
                         <div className={`w-2 h-2 rounded-full ${
-                          unit.status === 'Occupied' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                          unit.status === 'Occupied' ? 'bg-brand-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
                           unit.status === 'Vacant' ? 'bg-slate-300' :
                           'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
                         }`}></div>
@@ -149,7 +149,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
 
                       <div className="mt-4 pt-3 border-t border-slate-50 dark:border-white/5 flex justify-between items-center">
                         <span className="text-[8px] font-black text-slate-300 dark:text-slate-600 uppercase">View Details</span>
-                        <i className="fa-solid fa-chevron-right text-[8px] text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
+                        <i className="fa-solid fa-chevron-right text-[8px] text-slate-300 group-hover:text-brand-500 transition-colors"></i>
                       </div>
                     </div>
                   </div>

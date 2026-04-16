@@ -47,6 +47,18 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     return false;
   });
 
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('app-theme') || 'brand';
+    }
+    return 'brand';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('app-theme', theme);
+  }, [theme]);
+
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -139,7 +151,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
         <div className="p-6 flex justify-between items-center lg:block">
           <div>
             <h1 className="text-sm font-black flex items-center gap-2 tracking-tight whitespace-nowrap">
-              <i className="fa-solid fa-house-signal text-emerald-400 shrink-0"></i>
+              <i className="fa-solid fa-house-signal text-brand-400 shrink-0"></i>
               <span className="truncate">{coopName}</span>
             </h1>
             <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Co-op Management</p>
@@ -156,18 +168,12 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               <React.Fragment key={item.path}>
                 {isFirstAdminItem && (
                   <div className="pt-6 pb-2 px-3">
-                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]">Board Administration</p>
+                    <p className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Board Administration</p>
                   </div>
                 )}
                 <Link
                   to={item.path}
                   onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
-                    location.pathname === item.path 
-                      ? (item.isAdmin ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white') 
-                      : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
-                  }`}
-                >
                   <i className={`fa-solid ${item.icon} w-5 group-hover:scale-110 transition-transform ${location.pathname === item.path ? 'text-white' : (item.isAdmin ? 'text-amber-500/70' : 'text-slate-500')}`}></i>
                   <span className="text-sm font-bold">{item.label}</span>
                 </Link>
@@ -190,7 +196,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${
                 isAdmin 
                   ? 'bg-amber-500 text-white hover:bg-amber-600' 
-                  : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  : 'bg-brand-600 text-white hover:bg-brand-700'
               }`}
             >
               <i className={`fa-solid ${isAdmin ? 'fa-user-shield' : 'fa-user'}`}></i>
@@ -209,12 +215,12 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       <main className="flex-1 flex flex-col overflow-hidden w-full relative">
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 transition-colors duration-200">
           <div className="flex items-center gap-3">
-            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-emerald-600 active:scale-95">
+            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-brand-600 active:scale-95">
               <i className="fa-solid fa-bars-staggered text-xl"></i>
             </button>
             <div className="hidden sm:flex flex-col">
               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">
-                <Link to="/" className="hover:text-emerald-500 transition-colors">Home</Link>
+                <Link to="/" className="hover:text-brand-500 transition-colors">Home</Link>
                 {location.pathname !== '/' && (
                   <>
                     <i className="fa-solid fa-chevron-right text-[8px]"></i>
@@ -237,14 +243,14 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
           <div className="flex items-center gap-1 lg:gap-3">
             <button 
               onClick={() => setIsSearchOpen(true)}
-              className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors hidden sm:block active:scale-95"
+              className="p-2 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors hidden sm:block active:scale-95"
             >
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
             
             <button 
               onClick={() => setIsNotificationsOpen(true)}
-              className="p-2 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors relative active:scale-95"
+              className="p-2 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors relative active:scale-95"
             >
               <i className="fa-solid fa-bell"></i>
               {unreadNotificationsCount > 0 && (
@@ -260,7 +266,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
                 {user.picture ? (
                   <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-xl" referrerPolicy="no-referrer" />
                 ) : (
-                  <div className="w-8 h-8 rounded-xl bg-slate-900 dark:bg-emerald-600 flex items-center justify-center text-white font-black text-xs hover:bg-emerald-600 transition-colors">
+                  <div className="w-8 h-8 rounded-xl bg-slate-900 dark:bg-brand-600 flex items-center justify-center text-white font-black text-xs hover:bg-brand-600 transition-colors">
                     {user.name.charAt(0)}
                   </div>
                 )}
@@ -273,7 +279,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
                     <p className="text-xs font-black text-slate-900 dark:text-slate-100">{user.name}</p>
                     <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>
                     <div className="mt-3 flex gap-1">
-                       <span className="text-[8px] font-black px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded uppercase">Certified</span>
+                       <span className="text-[8px] font-black px-1.5 py-0.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded uppercase">Certified</span>
                        {isAdmin && <span className="text-[8px] font-black px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded uppercase">Administrator</span>}
                     </div>
                   </div>
@@ -310,14 +316,14 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               </div>
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {MOCK_NOTIFICATIONS.length > 0 ? MOCK_NOTIFICATIONS.map(n => (
-                  <div key={n.id} className={`p-4 rounded-2xl border transition-all hover:border-emerald-200 dark:hover:border-emerald-400 cursor-pointer group ${!n.isRead ? 'bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-white/5 opacity-70'}`}>
+                  <div key={n.id} className={`p-4 rounded-2xl border transition-all hover:border-brand-200 dark:hover:border-brand-400 cursor-pointer group ${!n.isRead ? 'bg-brand-50/30 dark:bg-brand-900/10 border-brand-100 dark:border-brand-900/30' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-white/5 opacity-70'}`}>
                     <div className="flex justify-between items-start mb-2">
                       <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${n.type === 'urgent' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
                         {n.type}
                       </span>
                       <span className="text-[9px] text-slate-400 font-bold uppercase">{n.timestamp}</span>
                     </div>
-                    <h4 className="text-sm font-black text-slate-800 dark:text-white mb-1 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">{n.title}</h4>
+                    <h4 className="text-sm font-black text-slate-800 dark:text-white mb-1 group-hover:text-brand-700 dark:group-hover:text-brand-400">{n.title}</h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{n.body}</p>
                   </div>
                 )) : (
@@ -330,7 +336,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               <div className="p-4 border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50">
                 <button 
                   onClick={() => alert("All notifications marked as read.")}
-                  className="w-full bg-slate-900 dark:bg-emerald-600 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 transition-all active:scale-95"
+                  className="w-full bg-slate-900 dark:bg-brand-600 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-brand-700 transition-all active:scale-95"
                 >
                   Clear All Alerts
                 </button>
@@ -363,11 +369,11 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => { navigate('/documents'); setIsSearchOpen(false); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-emerald-500 transition-all">
-                      <p className="text-[10px] font-black text-emerald-500 uppercase mb-1">Quick Link</p>
+                    <button onClick={() => { navigate('/documents'); setIsSearchOpen(false); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-brand-500 transition-all">
+                      <p className="text-[10px] font-black text-brand-500 uppercase mb-1">Quick Link</p>
                       <p className="text-sm font-bold text-slate-800 dark:text-white">Policy Library</p>
                     </button>
-                    <button onClick={() => { navigate('/calendar'); setIsSearchOpen(false); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-emerald-500 transition-all">
+                    <button onClick={() => { navigate('/calendar'); setIsSearchOpen(false); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-brand-500 transition-all">
                       <p className="text-[10px] font-black text-blue-500 uppercase mb-1">Quick Link</p>
                       <p className="text-sm font-bold text-slate-800 dark:text-white">Event Calendar</p>
                     </button>
@@ -381,6 +387,8 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
         <ProfileModal 
           isOpen={isProfileModalOpen} 
           onClose={() => setIsProfileModalOpen(false)} 
+          onThemeChange={setTheme}
+          currentTheme={theme}
           user={{
             email: user.email,
             name: user.name,

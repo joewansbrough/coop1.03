@@ -77,7 +77,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12 transition-colors duration-200">
       <div className="flex items-center gap-4 text-slate-500 text-sm mb-2">
-        <Link to="/calendar" className="hover:text-emerald-600 transition-colors flex items-center gap-1">
+        <Link to="/calendar" className="hover:text-brand-600 transition-colors flex items-center gap-1">
           <i className="fa-solid fa-arrow-left"></i> Back to Calendar
         </Link>
         <span>/</span>
@@ -91,7 +91,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
           <div className="absolute bottom-8 left-8">
             <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
               event.category === 'Meeting' ? 'bg-blue-600 text-white' :
-              event.category === 'Social' ? 'bg-emerald-600 text-white' :
+              event.category === 'Social' ? 'bg-brand-600 text-white' :
               'bg-amber-600 text-white'
             }`}>
               {event.category}
@@ -137,7 +137,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
               </div>
               <div className="flex gap-4 pt-4">
                 <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-500 bg-slate-100 dark:bg-slate-800 rounded-2xl">Cancel</button>
-                <button type="submit" className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-emerald-700">Save Changes</button>
+                <button type="submit" className="flex-1 py-4 bg-brand-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-brand-700">Save Changes</button>
               </div>
             </form>
           ) : (
@@ -190,7 +190,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                     {event.attendees && event.attendees.length > 0 ? (
                       event.attendees.map((attendee: Tenant) => (
                         <div key={attendee.id} className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] text-white font-black">
+                          <div className="w-6 h-6 rounded-full bg-brand-500 flex items-center justify-center text-[10px] text-white font-black">
                             {attendee.firstName[0]}{attendee.lastName[0]}
                           </div>
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{attendee.firstName} {attendee.lastName}</span>
@@ -203,13 +203,13 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                   {!isAttending && !isGuest && (
                     <button 
                       onClick={handleAttend}
-                      className="w-full mt-6 py-3 text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800 transition-all"
+                      className="w-full mt-6 py-3 text-[10px] font-black uppercase text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-xl border border-brand-100 dark:border-brand-800 transition-all"
                     >
                       I'm Attending
                     </button>
                   )}
                   {isAttending && (
-                    <div className="w-full mt-6 py-3 text-center text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
+                    <div className="w-full mt-6 py-3 text-center text-[10px] font-black uppercase text-brand-600 bg-brand-50 dark:bg-brand-900/20 rounded-xl border border-brand-100 dark:border-brand-800">
                       <i className="fa-solid fa-check mr-2"></i> Confirmed
                     </div>
                   )}

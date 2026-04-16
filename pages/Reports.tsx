@@ -81,14 +81,14 @@ const Reports: React.FC = () => {
               document.body.removeChild(link);
             }, 1500);
           }} 
-          className="bg-emerald-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center gap-2 active:scale-95"
+          className="bg-brand-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center gap-2 active:scale-95"
         >
           <i className="fa-solid fa-file-export"></i> Generate PDF Export
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard label="Response Time" value="N/A" icon="fa-clock" color="bg-emerald-500" />
+        <StatCard label="Response Time" value="N/A" icon="fa-clock" color="bg-brand-500" />
         <StatCard label="Waitlist Volume" value="0 Families" icon="fa-users-line" color="bg-blue-500" />
         <StatCard label="Occupancy Rate" value={`${MOCK_UNITS.length > 0 ? Math.round((MOCK_UNITS.filter(u => u.status === 'Occupied').length / MOCK_UNITS.length) * 100) : 0}%`} icon="fa-building-circle-check" color="bg-purple-500" />
         <StatCard label="Active Service" value={MOCK_REQUESTS.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled').length} icon="fa-wrench" color="bg-rose-500" />

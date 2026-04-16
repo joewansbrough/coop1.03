@@ -439,7 +439,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex-1 line-clamp-2">{req.description}</p>
                 <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase shrink-0 whitespace-nowrap ${
-                  req.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                  req.status === RequestStatus.COMPLETED ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400' :
                   req.status === RequestStatus.PENDING ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
                   req.status === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
                   'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
@@ -481,12 +481,12 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                     {req.category[0]}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                   {req.description}
                 </td>
                 <td className="px-6 py-4 text-right">
                   <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase whitespace-nowrap ${
-                    req.status === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                    req.status === RequestStatus.COMPLETED ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400' :
                     req.status === RequestStatus.PENDING ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
                     req.status === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
                     'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
@@ -513,11 +513,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
     <div className="space-y-6 max-w-7xl mx-auto pb-12 transition-colors duration-200">
       <div className="flex items-center gap-4 text-slate-500 text-sm mb-2">
         {isAdmin ? (
-          <Link to="/admin/units" className="hover:text-emerald-600 transition-colors flex items-center gap-1 font-bold">
+          <Link to="/admin/units" className="hover:text-brand-600 transition-colors flex items-center gap-1 font-bold">
             <i className="fa-solid fa-arrow-left"></i> Back to Units
           </Link>
         ) : (
-          <Link to="/" className="hover:text-emerald-600 transition-colors flex items-center gap-1 font-bold">
+          <Link to="/" className="hover:text-brand-600 transition-colors flex items-center gap-1 font-bold">
             <i className="fa-solid fa-arrow-left"></i> Back to Dashboard
           </Link>
         )}
@@ -532,7 +532,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
 
         <div className="flex items-center gap-4 md:gap-6 relative z-10 w-full lg:w-auto">
           <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex flex-col items-center justify-center text-white text-2xl md:text-3xl relative overflow-hidden group shrink-0 ${
-            unit.status === 'Occupied' ? 'bg-emerald-500' :
+            unit.status === 'Occupied' ? 'bg-brand-500' :
             unit.status === 'Vacant' ? 'bg-slate-300 dark:bg-slate-700' :
             'bg-amber-500'
           }`}>
@@ -542,7 +542,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white truncate">Unit {unit.number}</h1>
               <span className={`text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border ${
-                unit.status === 'Occupied' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' :
+                unit.status === 'Occupied' ? 'bg-brand-100 text-brand-700 border-brand-200 dark:bg-brand-900/30 dark:text-brand-400 dark:border-brand-800' :
                 unit.status === 'Vacant' ? 'bg-slate-100 text-slate-700 border-slate-200' :
                 'bg-amber-100 text-amber-700 border-amber-200'
               }`}>
@@ -558,7 +558,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
               {unit.status !== 'Occupied' && (
                 <button 
                   onClick={() => setShowMoveInModal(true)}
-                  className="flex-1 md:flex-none bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  className="flex-1 md:flex-none bg-brand-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-brand-700 transition-all active:scale-95 flex items-center justify-center gap-2"
                 >
                   <i className="fa-solid fa-user-plus"></i> <span>Process Move-In</span>
                 </button>
@@ -567,7 +567,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 <>
                   <button 
                     onClick={() => setShowTransferModal(true)}
-                    className="flex-1 md:flex-none bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 px-6 py-2.5 rounded-xl font-bold hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-800 active:scale-95 flex items-center justify-center gap-2"
+                    className="flex-1 md:flex-none bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 px-6 py-2.5 rounded-xl font-bold hover:bg-brand-100 transition-all border border-brand-100 dark:border-brand-800 active:scale-95 flex items-center justify-center gap-2"
                   >
                     <i className="fa-solid fa-right-left"></i> <span>Internal Transfer</span>
                   </button>
@@ -603,7 +603,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
       {/* In-App Notifications */}
       {notification && (
         <div className={`fixed top-6 right-6 z-[200] animate-in slide-in-from-right-8 duration-300 p-4 rounded-2xl border flex items-center gap-4 max-w-md ${
-          notification.type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-rose-600 border-rose-500 text-white'
+          notification.type === 'success' ? 'bg-brand-600 border-brand-500 text-white' : 'bg-rose-600 border-rose-500 text-white'
         }`}>
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
             <i className={`fa-solid ${notification.type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}`}></i>
@@ -640,7 +640,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
             </div>
             <div className="flex gap-4 mt-10">
               <button onClick={() => setShowSettings(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all">Discard Changes</button>
-              <button onClick={() => setShowSettings(false)} className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-emerald-700 active:scale-95 transition-all">Apply Configuration</button>
+              <button onClick={() => setShowSettings(false)} className="flex-1 py-4 bg-brand-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-brand-700 active:scale-95 transition-all">Apply Configuration</button>
             </div>
           </div>
         </div>
@@ -690,7 +690,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
               setActiveTab(tab.id as any);
               navigate(`/admin/units/${unitId}?tab=${tab.id}`, { replace: true });
             }}
-            className={`px-6 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
+            className={`px-6 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id ? 'border-brand-600 text-brand-600 dark:text-brand-400 dark:border-brand-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
           >
             {tab.label}
           </button>
@@ -749,14 +749,14 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
             <div className="lg:col-span-2 space-y-8">
               <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6 flex items-center gap-2">
-                  <i className="fa-solid fa-user-group text-emerald-500"></i> Household Residents ({currentResidents.length})
+                  <i className="fa-solid fa-user-group text-brand-500"></i> Household Residents ({currentResidents.length})
                 </h3>
                 {currentResidents.length > 0 ? (
                   <div className="space-y-6">
                     {currentResidents.map(resident => (
-                      <div key={resident.id} className="flex flex-col md:flex-row gap-6 items-start p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-transparent hover:border-emerald-500/30 transition-all group">
+                      <div key={resident.id} className="flex flex-col md:flex-row gap-6 items-start p-4 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-transparent hover:border-brand-500/30 transition-all group">
                         <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-300 text-2xl shrink-0 border border-slate-200 dark:border-white/5">
-                          {resident.id === unit.currentTenantId ? <i className="fa-solid fa-user-tie text-emerald-500"></i> : <i className="fa-solid fa-user"></i>}
+                          {resident.id === unit.currentTenantId ? <i className="fa-solid fa-user-tie text-brand-500"></i> : <i className="fa-solid fa-user"></i>}
                         </div>
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
@@ -764,7 +764,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
                                 {resident.id === unit.currentTenantId ? 'Primary Member' : 'Household Member'}
                               </p>
-                              <p className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">
+                              <p className="text-lg font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-600 transition-colors">
                                 {resident.firstName} {resident.lastName} 
                                 <i className="fa-solid fa-arrow-up-right-from-square text-xs ml-2 opacity-0 group-hover:opacity-100 transition-opacity"></i>
                               </p>
@@ -781,7 +781,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                       <div className="flex gap-3 pt-4">
                         <button 
                           onClick={() => setShowTransferModal(true)}
-                          className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95 flex items-center gap-2"
+                          className="bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-100 transition-all border border-brand-100 dark:border-brand-900/30 active:scale-95 flex items-center gap-2"
                         >
                           <i className="fa-solid fa-right-left"></i> Transfer Household
                         </button>
@@ -802,7 +802,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                     <p className="text-slate-500 dark:text-slate-400 font-bold mb-6">This unit is currently vacant.</p>
                     <button 
                       onClick={() => setShowMoveInModal(true)}
-                      className="bg-emerald-600 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                      className="bg-brand-600 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand-700 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
                       <i className="fa-solid fa-plus"></i> Process Move-In
                     </button>
@@ -811,11 +811,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5">
-                  <h4 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><i className="fa-solid fa-toolbox text-emerald-500"></i> Standard Features</h4>
+                  <h4 className="font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2"><i className="fa-solid fa-toolbox text-brand-500"></i> Standard Features</h4>
                   <ul className="space-y-3">
                     {['Hardwood Flooring', 'High-speed Fiber', 'Smart Thermostat'].map(item => (
                       <li key={item} className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400">
-                        <i className="fa-solid fa-circle-check text-emerald-500"></i> {item}
+                        <i className="fa-solid fa-circle-check text-brand-500"></i> {item}
                       </li>
                     ))}
                   </ul>
@@ -825,8 +825,8 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
             {isAdmin && (
               <div className="space-y-6">
                  <div className="bg-slate-900 text-white p-8 rounded-3xl">
-                    <h3 className="font-black uppercase text-[10px] tracking-widest text-emerald-400 mb-6">Internal Notes</h3>
-                    <p className="text-sm font-medium leading-relaxed opacity-70 italic border-l-2 border-emerald-500 pl-4">"Floor joists inspected in 2022. No significant settling found. Member reported balcony door sticking in high humidity."</p>
+                    <h3 className="font-black uppercase text-[10px] tracking-widest text-brand-400 mb-6">Internal Notes</h3>
+                    <p className="text-sm font-medium leading-relaxed opacity-70 italic border-l-2 border-brand-500 pl-4">"Floor joists inspected in 2022. No significant settling found. Member reported balcony door sticking in high humidity."</p>
                  </div>
               </div>
             )}
@@ -849,18 +849,18 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 <div key={`${record.tenant.id}-${idx}`} className="p-4 space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase shrink-0 ${record.isCurrent ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase shrink-0 ${record.isCurrent ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
                         {record.tenant.firstName[0]}
                       </div>
                       <span className="text-sm font-black text-slate-800 dark:text-slate-200">{record.tenant.firstName} {record.tenant.lastName}</span>
                       {record.isCurrent && (
-                        <span className="text-[8px] font-black px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded uppercase">Current</span>
+                        <span className="text-[8px] font-black px-1.5 py-0.5 bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 rounded uppercase">Current</span>
                       )}
                     </div>
                     {isAdmin && (
                       <Link
                         to={`/admin/tenants/${record.tenant.id}`}
-                        className="text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase shrink-0"
+                        className="text-brand-600 dark:text-brand-400 text-[10px] font-black uppercase shrink-0"
                         onClick={e => e.stopPropagation()}
                       >
                         Profile <i className="fa-solid fa-arrow-right text-[8px]"></i>
@@ -898,12 +898,12 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase ${record.isCurrent ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase ${record.isCurrent ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
                           {record.tenant.firstName[0]}
                         </div>
                         <span className="text-sm font-black text-slate-800 dark:text-slate-200">{record.tenant.firstName} {record.tenant.lastName}</span>
                         {record.isCurrent && (
-                          <span className="text-[8px] font-black px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded uppercase tracking-tighter">Current</span>
+                          <span className="text-[8px] font-black px-1.5 py-0.5 bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 rounded uppercase tracking-tighter">Current</span>
                         )}
                       </div>
                     </td>
@@ -915,7 +915,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                     </td>
                     <td className="px-6 py-4 text-right">
                       {isAdmin ? (
-                        <Link to={`/admin/tenants/${record.tenant.id}`} className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 text-[10px] font-black uppercase tracking-widest flex items-center justify-end gap-1">
+                        <Link to={`/admin/tenants/${record.tenant.id}`} className="text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 text-[10px] font-black uppercase tracking-widest flex items-center justify-end gap-1">
                           View Profile <i className="fa-solid fa-arrow-right text-[8px]"></i>
                         </Link>
                       ) : (
@@ -940,12 +940,12 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
              <div className="w-full max-w-lg aspect-video bg-slate-50 dark:bg-slate-800 rounded-3xl border-2 border-slate-200 dark:border-slate-700 relative flex items-center justify-center p-8">
                 {/* Visual Unit Representation */}
                 <div className="w-full h-full border-4 border-slate-300 dark:border-slate-600 rounded-xl relative grid grid-cols-4 grid-rows-3 gap-2 p-4">
-                   <div className="col-span-2 row-span-2 border-2 border-emerald-500/30 rounded flex items-center justify-center text-[10px] font-black uppercase text-slate-400">Living Room</div>
+                   <div className="col-span-2 row-span-2 border-2 border-brand-500/30 rounded flex items-center justify-center text-[10px] font-black uppercase text-slate-400">Living Room</div>
                    <div className="col-span-2 border-2 border-blue-500/30 rounded flex items-center justify-center text-[10px] font-black uppercase text-slate-400">Bedroom 1</div>
                    <div className="col-span-1 row-span-2 border-2 border-amber-500/30 rounded flex items-center justify-center text-[10px] font-black uppercase text-slate-400">Kitchen</div>
                    <div className="col-span-1 border-2 border-rose-500/30 rounded flex items-center justify-center text-[10px] font-black uppercase text-slate-400">Bath</div>
                 </div>
-                <div className="absolute top-4 right-4 text-[10px] font-black text-emerald-600 bg-emerald-100 px-2 py-1 rounded">North Facing</div>
+                <div className="absolute top-4 right-4 text-[10px] font-black text-brand-600 bg-brand-100 px-2 py-1 rounded">North Facing</div>
              </div>
              <p className="mt-8 text-sm text-slate-500 font-medium">Standard {unit.type} floorplan orientation within the building envelope.</p>
           </div>
@@ -961,7 +961,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
               {isAdmin && (
                 <button 
                   onClick={handleSeedPreventative}
-                  className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95 flex items-center gap-2"
+                  className="bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-100 transition-all border border-brand-100 dark:border-brand-900/30 active:scale-95 flex items-center gap-2"
                 >
                   <i className="fa-solid fa-seedling"></i> Seed Unit Tasks
                 </button>
@@ -983,7 +983,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                       <td className="px-6 py-4 text-xs font-bold text-slate-500">
                         {new Date(task.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                       </td>
-                      <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">
+                      <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-600 transition-colors">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-slate-50 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-400">
                             <i className={`fa-solid ${
@@ -1004,7 +1004,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-widest ${
-                          task.isCompleted ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                          task.isCompleted ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                         }`}>
                           {task.isCompleted ? 'Completed' : 'Upcoming'}
                         </span>
@@ -1040,7 +1040,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setShowTransferModal(true)}
-                      className="flex-1 sm:flex-none bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100 transition-all border border-emerald-100 dark:border-emerald-900/30 active:scale-95"
+                      className="flex-1 sm:flex-none bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-100 transition-all border border-brand-100 dark:border-brand-900/30 active:scale-95"
                     >
                       Internal Transfer
                     </button>
@@ -1055,7 +1055,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 {unit.status !== 'Occupied' && (
                   <button
                     onClick={() => setShowMoveInModal(true)}
-                    className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+                    className="bg-brand-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center justify-center gap-2"
                   >
                     <i className="fa-solid fa-plus"></i> Process Move-In
                   </button>
@@ -1067,7 +1067,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 {currentResidents.length > 0 ? currentResidents.map(resident => (
                   <div key={resident.id} className="flex items-center justify-between p-4 gap-3">
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs uppercase shrink-0 ${resident.id === unit.currentTenantId ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs uppercase shrink-0 ${resident.id === unit.currentTenantId ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
                         {resident.firstName[0]}
                       </div>
                       <div>
@@ -1078,7 +1078,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                       </div>
                     </div>
                     {isAdmin && (
-                      <Link to={`/admin/tenants/${resident.id}`} className="text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase shrink-0">
+                      <Link to={`/admin/tenants/${resident.id}`} className="text-brand-600 dark:text-brand-400 text-[10px] font-black uppercase shrink-0">
                         View <i className="fa-solid fa-arrow-right text-[8px]"></i>
                       </Link>
                     )}
@@ -1101,7 +1101,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                   {currentResidents.length > 0 ? currentResidents.map(resident => (
                     <tr key={resident.id} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase ${resident.id === unit.currentTenantId ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-slate-100 text-slate-500'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs uppercase ${resident.id === unit.currentTenantId ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-400' : 'bg-slate-100 text-slate-500'}`}>
                           {resident.firstName[0]}
                         </div>
                         <span className="text-sm font-black text-slate-800 dark:text-slate-200">{resident.firstName} {resident.lastName}</span>
@@ -1111,7 +1111,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                       </td>
                       <td className="px-6 py-4 text-right">
                         {isAdmin ? (
-                          <Link to={`/admin/tenants/${resident.id}`} className="text-emerald-600 hover:underline text-[10px] font-black uppercase">View Details</Link>
+                          <Link to={`/admin/tenants/${resident.id}`} className="text-brand-600 hover:underline text-[10px] font-black uppercase">View Details</Link>
                         ) : (
                           <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Member</span>
                         )}
@@ -1201,7 +1201,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 <select 
                   value={selectedTargetUnitId}
                   onChange={(e) => setSelectedTargetUnitId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-2xl px-5 py-3 text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-200"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-2xl px-5 py-3 text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-brand-500 text-slate-800 dark:text-slate-200"
                 >
                   <option value="">-- Choose Vacant Unit --</option>
                   {units.filter(u => u.status === 'Vacant' && u.id !== unit.id).map(u => (
@@ -1210,11 +1210,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 </select>
               </div>
 
-              <div className="bg-emerald-50 dark:bg-emerald-900/10 p-5 rounded-2xl border border-emerald-100 dark:border-emerald-800/50">
-                <p className="text-[10px] font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-tight mb-1">
+              <div className="bg-brand-50 dark:bg-brand-900/10 p-5 rounded-2xl border border-brand-100 dark:border-brand-800/50">
+                <p className="text-[10px] font-black text-brand-800 dark:text-brand-400 uppercase tracking-tight mb-1">
                   <i className="fa-solid fa-circle-info mr-1"></i> Transfer Logic
                 </p>
-                <p className="text-[10px] text-emerald-600 dark:text-emerald-500 font-medium leading-relaxed">
+                <p className="text-[10px] text-brand-600 dark:text-brand-500 font-medium leading-relaxed">
                   This will automatically make Unit {unit.number} vacant and move the resident into the selected unit. All residency history will be preserved.
                 </p>
               </div>
@@ -1225,7 +1225,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
               <button 
                 onClick={handleTransfer}
                 disabled={!selectedTargetUnitId}
-                className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-4 bg-brand-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm Transfer
               </button>
@@ -1248,7 +1248,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 <select 
                   value={selectedNewTenantId}
                   onChange={(e) => setSelectedNewTenantId(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-2xl px-5 py-3 text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 dark:text-slate-200"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-2xl px-5 py-3 text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-brand-500 text-slate-800 dark:text-slate-200"
                 >
                   <option value="">-- Choose Member --</option>
                   {tenants.filter(t => t.id !== unit.currentTenantId).map(t => {
@@ -1279,7 +1279,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
               <button 
                 onClick={handleMoveIn}
                 disabled={!selectedNewTenantId}
-                className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-4 bg-brand-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm Move-In
               </button>

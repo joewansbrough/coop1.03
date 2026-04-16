@@ -123,7 +123,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Policy Assistant</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">AI-powered guidance for BC Housing Co-operative regulations.</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+        <div className="flex items-center gap-2 px-4 py-2 bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full text-[10px] font-black uppercase tracking-widest">
           <Sparkles className="w-3 h-3" />
           Powered by Gemini AI
         </div>
@@ -134,7 +134,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
         <div className="hidden lg:flex flex-col lg:col-span-1">
           {/* Sidebar Row 1: How It Works */}
           <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 space-y-4 flex flex-col h-full">
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+            <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400">
               <Shield className="w-5 h-5" />
               <h4 className="text-xs font-black uppercase tracking-widest">How it works</h4>
             </div>
@@ -151,7 +151,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
                   <button
                     key={i}
                     onClick={() => setInput(q)}
-                    className="w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800"
+                    className="w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 dark:hover:text-brand-400 transition-all border border-transparent hover:border-brand-200 dark:hover:border-brand-800"
                   >
                     {q}
                   </button>
@@ -175,13 +175,13 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
                 >
                   <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${msg.role === 'user'
-                        ? 'bg-emerald-600 text-white'
+                        ? 'bg-brand-600 text-white'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
                       }`}>
                       {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                     </div>
                     <div className={`p-4 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
-                        ? 'bg-emerald-600 text-white rounded-tr-none'
+                        ? 'bg-brand-600 text-white rounded-tr-none'
                         : 'bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 rounded-tl-none border border-slate-100 dark:border-white/5'
                       }`}>
                       {msg.content}
@@ -198,9 +198,9 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
                   </div>
                   <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl rounded-tl-none border border-slate-100 dark:border-white/5">
                     <div className="flex gap-1">
-                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-brand-500 rounded-full" />
+                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-brand-500 rounded-full" />
+                      <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-brand-500 rounded-full" />
                     </div>
                   </div>
                 </div>
@@ -217,12 +217,12 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask about bylaws, rules, or occupancy agreements..."
-                className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-slate-900 dark:text-white"
+                className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || isLoading}
-                className="w-12 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
+                className="w-12 h-12 bg-brand-600 hover:bg-brand-700 text-white rounded-2xl flex items-center justify-center transition-all active:scale-90 disabled:opacity-50 disabled:pointer-events-none"
               >
                 <Send className="w-5 h-5" />
               </button>
@@ -239,7 +239,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
           </div>
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-brand-500 rounded-2xl flex items-center justify-center">
                 <i className="fa-solid fa-robot text-xl"></i>
               </div>
               <div>
@@ -250,7 +250,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
             <form onSubmit={handleResourceSearch} className="relative">
               <input
                 type="text"
-                className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-6 py-4 pr-32 outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm font-medium"
+                className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-6 py-4 pr-32 outline-none focus:ring-2 focus:ring-brand-500 transition-all text-sm font-medium"
                 placeholder="e.g., How many days notice for a general meeting?"
                 value={resourceQuestion}
                 onChange={(e) => setResourceQuestion(e.target.value)}
@@ -258,7 +258,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
               <button
                 type="submit"
                 disabled={isResourceSearching}
-                className="absolute right-2 top-2 bottom-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 active:scale-95"
+                className="absolute right-2 top-2 bottom-2 bg-brand-600 hover:bg-brand-700 text-white px-6 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 active:scale-95"
               >
                 {isResourceSearching ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-bolt"></i>}
                 Query
@@ -267,7 +267,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
             {resourceAiResponse && (
               <div className="mt-6 p-6 bg-white/5 border border-white/10 rounded-2xl text-sm leading-relaxed animate-in fade-in slide-in-from-top-2">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest border border-emerald-500/30 px-2 py-0.5 rounded">Search Result</span>
+                  <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest border border-brand-500/30 px-2 py-0.5 rounded">Search Result</span>
                 </div>
                 <p className="text-slate-200 font-medium leading-relaxed">{resourceAiResponse}</p>
               </div>

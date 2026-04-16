@@ -60,7 +60,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 transition-colors duration-200 animate-in fade-in duration-500">
       <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-sm mb-2">
-        <Link to="/admin/tenants" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1 font-bold">
+        <Link to="/admin/tenants" className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors flex items-center gap-1 font-bold">
           <i className="fa-solid fa-arrow-left"></i> Association Directory
         </Link>
         <span>/</span>
@@ -73,13 +73,13 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         </div>
 
         <div className="flex items-center gap-6 relative z-10">
-          <div className="w-24 h-24 rounded-2xl bg-slate-900 dark:bg-emerald-600 text-white flex items-center justify-center text-4xl font-black ring-4 ring-emerald-500/10">
+          <div className="w-24 h-24 rounded-2xl bg-slate-900 dark:bg-brand-600 text-white flex items-center justify-center text-4xl font-black ring-4 ring-brand-500/10">
             {tenant.firstName.charAt(0)}
           </div>
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-3xl font-black text-slate-900 dark:text-white">{tenant.firstName} {tenant.lastName}</h1>
-              <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800`}>
+              <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 border-brand-200 dark:border-brand-800`}>
                 Active Member
               </span>
             </div>
@@ -93,7 +93,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         <div className="flex gap-3 relative z-10">
           <button 
             onClick={() => setShowMsgModal(true)}
-            className="bg-slate-900 dark:bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center gap-2"
+            className="bg-slate-900 dark:bg-brand-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all flex items-center gap-2"
           >
             <i className="fa-solid fa-paper-plane"></i> Message
           </button>
@@ -115,7 +115,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
           <button 
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-8 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
+            className={`px-8 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id ? 'border-brand-600 text-brand-600 dark:text-brand-400 dark:border-brand-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
           >
             {tab.label}
           </button>
@@ -144,7 +144,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                 <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6">
                   <div className="flex justify-between items-center border-b border-slate-50 dark:border-white/5 pb-4">
                     <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px]">Current Unit Assignment</h3>
-                    <Link to={`/admin/units/${unit.id}`} className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:underline">View Unit Detail</Link>
+                    <Link to={`/admin/units/${unit.id}`} className="text-[10px] font-black text-brand-600 uppercase tracking-widest hover:underline">View Unit Detail</Link>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div>
@@ -157,7 +157,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                     </div>
                     <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Status</p>
-                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[10px] font-black uppercase">{unit.status}</span>
+                      <span className="px-2 py-1 bg-brand-100 text-brand-700 rounded text-[10px] font-black uppercase">{unit.status}</span>
                     </div>
                   </div>
                 </div>
@@ -199,8 +199,8 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
               </div>
 
               <div className="bg-slate-900 text-white p-8 rounded-3xl">
-                <h3 className="font-black uppercase text-[10px] tracking-widest text-emerald-400 mb-4">Board Notes</h3>
-                <p className="text-xs font-medium leading-relaxed opacity-70 italic border-l-2 border-emerald-500 pl-4">
+                <h3 className="font-black uppercase text-[10px] tracking-widest text-brand-400 mb-4">Board Notes</h3>
+                <p className="text-xs font-medium leading-relaxed opacity-70 italic border-l-2 border-brand-500 pl-4">
                   "Member in good standing. Active contributor to community initiatives. No reported infractions."
                 </p>
               </div>
@@ -212,7 +212,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
             {isLoadingHistory ? (
               <div className="p-12 text-center">
-                <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading History...</p>
               </div>
             ) : (
@@ -222,10 +222,10 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                   {history.length > 0 ? history.map(h => (
                     <div key={h.id} className="p-4 space-y-2">
                       <div className="flex items-center justify-between">
-                        <Link to={`/admin/units/${h.unitId}`} className="text-sm font-black text-slate-800 dark:text-slate-200 hover:text-emerald-600">
+                        <Link to={`/admin/units/${h.unitId}`} className="text-sm font-black text-slate-800 dark:text-slate-200 hover:text-brand-600">
                           Unit {h.unit?.number}
                         </Link>
-                        <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${!h.endDate ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                        <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${!h.endDate ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
                           {!h.endDate ? 'Current' : 'Past'}
                         </span>
                       </div>
@@ -255,14 +255,14 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                     {history.map(h => (
                       <tr key={h.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
                         <td className="px-6 py-4">
-                          <Link to={`/admin/units/${h.unitId}`} className="text-sm font-black text-slate-800 dark:text-slate-200 hover:text-emerald-600">Unit {h.unit?.number}</Link>
+                          <Link to={`/admin/units/${h.unitId}`} className="text-sm font-black text-slate-800 dark:text-slate-200 hover:text-brand-600">Unit {h.unit?.number}</Link>
                         </td>
                         <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">
                           {new Date(h.startDate).toLocaleDateString()} - {h.endDate ? new Date(h.endDate).toLocaleDateString() : 'Present'}
                         </td>
                         <td className="px-6 py-4 text-xs font-medium text-slate-500 italic">{h.moveReason || 'N/A'}</td>
                         <td className="px-6 py-4 text-right">
-                          <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${!h.endDate ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                          <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${!h.endDate ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500'}`}>
                             {!h.endDate ? 'Current' : 'Past'}
                           </span>
                         </td>
@@ -294,7 +294,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-sm font-bold text-slate-800 dark:text-slate-200 flex-1 line-clamp-2">{req.title}</p>
                     <span className={`text-[9px] font-black px-2 py-1 rounded uppercase shrink-0 ${
-                      req.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
+                      req.status === 'Completed' ? 'bg-brand-100 text-brand-700' :
                       req.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
                     }`}>
                       {req.status}
@@ -329,11 +329,11 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                     className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors cursor-pointer group"
                   >
                     <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">{req.title}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-600 transition-colors">{req.title}</td>
                     <td className="px-6 py-4 text-xs font-black text-slate-500 uppercase">{req.priority}</td>
                     <td className="px-6 py-4 text-right">
                       <span className={`text-[9px] font-black px-2 py-1 rounded uppercase ${
-                        req.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
+                        req.status === 'Completed' ? 'bg-brand-100 text-brand-700' :
                         req.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
                       }`}>
                         {req.status}
@@ -386,7 +386,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                   value={msgBody}
                   onChange={(e) => setMsgBody(e.target.value)}
                   placeholder="Type your message to the member..."
-                  className="w-full h-40 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-emerald-500 outline-none resize-none dark:text-white"
+                  className="w-full h-40 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm font-medium focus:ring-2 focus:ring-brand-500 outline-none resize-none dark:text-white"
                 />
               </div>
               <div className="flex gap-4">
@@ -400,7 +400,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
                 <button 
                   type="submit"
                   disabled={isSending || !msgBody.trim()}
-                  className="flex-1 py-4 bg-slate-900 dark:bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50"
+                  className="flex-1 py-4 bg-slate-900 dark:bg-brand-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50"
                 >
                   {isSending ? <i className="fa-solid fa-circle-notch fa-spin mr-2"></i> : <i className="fa-solid fa-paper-plane mr-2"></i>}
                   {isSending ? 'Sending...' : 'Dispatch Message'}

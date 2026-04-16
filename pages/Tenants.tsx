@@ -84,7 +84,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
         {isAdmin && (
           <button
             onClick={() => setShowAddForm(true)}
-            className="w-full sm:w-auto bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+            className="w-full sm:w-auto bg-brand-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 active:scale-95 transition-all flex items-center justify-center gap-2"
           >
             <i className="fa-solid fa-plus"></i> Add New Member
           </button>
@@ -105,20 +105,20 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">First Name</label>
-                  <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white" />
+                  <input type="text" required value={firstName} onChange={e => setFirstName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Last Name</label>
-                  <input type="text" required value={lastName} onChange={e => setLastName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white" />
+                  <input type="text" required value={lastName} onChange={e => setLastName(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white" />
                 </div>
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Email Address</label>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white" />
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white" />
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Phone Number</label>
-                <input type="text" required value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white" />
+                <input type="text" required value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -138,7 +138,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
               </div>
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 flex items-center justify-center gap-2">
+                <button type="submit" className="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 flex items-center justify-center gap-2">
                   <i className="fa-solid fa-plus"></i> Add Member
                 </button>
               </div>
@@ -167,7 +167,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
                 <span className="text-base font-black text-slate-900 dark:text-white">Unit {group.unit.number}</span>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter ml-2">{group.unit.type} · Floor {group.unit.floor}</span>
               </div>
-              <span className="text-[9px] font-black px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg uppercase">
+              <span className="text-[9px] font-black px-2 py-1 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-lg uppercase">
                 {group.members.length} {group.members.length === 1 ? 'Member' : 'Members'}
               </span>
             </div>
@@ -179,7 +179,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
                 onClick={() => navigate(isAdmin ? `/admin/tenants/${member.id}` : `/directory`)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-black uppercase shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center text-xs font-black uppercase shrink-0">
                     {member.firstName[0]}{member.lastName[0]}
                   </div>
                   <div>
@@ -261,7 +261,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
                   <div className="flex flex-col gap-2">
                     {group.members.map(member => (
                       <div key={member.id} className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-[10px] font-black uppercase shrink-0">
+                        <div className="w-6 h-6 rounded-lg bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center text-[10px] font-black uppercase shrink-0">
                           {member.firstName[0]}{member.lastName[0]}
                         </div>
                         <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{member.firstName} {member.lastName}</span>
@@ -293,7 +293,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
                       <button
                         key={member.id}
                         onClick={() => navigate(isAdmin ? `/admin/tenants/${member.id}` : `/directory`)}
-                        className="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500 transition-all shadow-sm"
+                        className="w-8 h-8 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-500 transition-all shadow-sm"
                       >
                         <i className="fa-solid fa-arrow-right-long text-xs"></i>
                       </button>
@@ -330,7 +330,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
                     <td className="px-8 py-6 text-right">
                       <button
                         onClick={() => navigate(isAdmin ? `/admin/tenants/${member.id}` : `/directory`)}
-                        className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 inline-flex items-center justify-center text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-500 transition-all shadow-sm"
+                        className="w-10 h-10 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 inline-flex items-center justify-center text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:border-brand-500 transition-all shadow-sm"
                       >
                         <i className="fa-solid fa-arrow-right-long"></i>
                       </button>

@@ -69,13 +69,13 @@ const Communications: React.FC<{
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl w-full sm:w-auto">
           <button
             onClick={() => { setActiveTab('announcements'); setSelectedThread(null); }}
-            className={`flex-1 sm:px-8 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'announcements' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
+            className={`flex-1 sm:px-8 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'announcements' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
           >
             Broadcasts
           </button>
           <button
             onClick={() => setActiveTab('messaging')}
-            className={`flex-1 sm:px-8 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'messaging' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
+            className={`flex-1 sm:px-8 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'messaging' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
           >
             Direct Inbox
           </button>
@@ -88,9 +88,9 @@ const Communications: React.FC<{
             {isAdmin && !showNewAnnouncement && (
               <button 
                 onClick={() => setShowNewAnnouncement(true)}
-                className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center text-center hover:border-emerald-400 hover:bg-emerald-50 transition-all group"
+                className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center text-center hover:border-brand-400 hover:bg-brand-50 transition-all group"
               >
-                <div className="w-14 h-14 bg-slate-50 group-hover:bg-emerald-100 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-emerald-500 mb-4">
+                <div className="w-14 h-14 bg-slate-50 group-hover:bg-brand-100 rounded-2xl flex items-center justify-center text-slate-300 group-hover:text-brand-500 mb-4">
                   <i className="fa-solid fa-plus text-2xl"></i>
                 </div>
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -101,9 +101,9 @@ const Communications: React.FC<{
             )}
 
             {isAdmin && showNewAnnouncement && (
-              <div className="bg-white p-6 rounded-3xl border-2 border-emerald-500 animate-in zoom-in-95 duration-200 flex flex-col h-full">
+              <div className="bg-white p-6 rounded-3xl border-2 border-brand-500 animate-in zoom-in-95 duration-200 flex flex-col h-full">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-black text-emerald-600 uppercase tracking-widest">Draft Announcement</h3>
+                  <h3 className="text-sm font-black text-brand-600 uppercase tracking-widest">Draft Announcement</h3>
                   <button onClick={() => setShowNewAnnouncement(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark"></i></button>
                 </div>
                 <form onSubmit={handleCreateAnnouncement} className="space-y-4 flex-1 flex flex-col">
@@ -113,7 +113,7 @@ const Communications: React.FC<{
                       placeholder="Announcement Title"
                       value={newAnnTitle}
                       onChange={(e) => setNewAnnTitle(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500"
                     />
                   </div>
                   <div className="flex-1">
@@ -121,7 +121,7 @@ const Communications: React.FC<{
                       placeholder="Write your message here..."
                       value={newAnnContent}
                       onChange={(e) => setNewAnnContent(e.target.value)}
-                      className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                      className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                     ></textarea>
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-auto pt-4">
@@ -135,7 +135,7 @@ const Communications: React.FC<{
                     </select>
                     <button 
                       type="submit"
-                      className="bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
+                      className="bg-brand-600 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
                     >
                       <i className="fa-solid fa-paper-plane"></i> Publish
                     </button>
@@ -171,10 +171,10 @@ const Communications: React.FC<{
               w-full md:w-80 border-r border-slate-100 flex-col shrink-0 transition-all
             `}>
               <div className="p-4 border-b border-slate-50 flex gap-2">
-                <input type="text" placeholder="Search mail..." className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-500" />
+                <input type="text" placeholder="Search mail..." className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-500" />
                 <button 
                   onClick={() => setShowNewMessageModal(true)}
-                  className="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center hover:bg-emerald-700 transition-all"
+                  className="w-10 h-10 bg-brand-600 text-white rounded-xl flex items-center justify-center hover:bg-brand-700 transition-all"
                   title="New Message"
                 >
                   <i className="fa-solid fa-pen-to-square text-xs"></i>
@@ -185,7 +185,7 @@ const Communications: React.FC<{
                   <button 
                     key={thread.id} 
                     onClick={() => setSelectedThread(thread.id)}
-                    className={`w-full p-5 flex gap-4 hover:bg-slate-50 text-left transition-colors border-b border-slate-50 ${selectedThread === thread.id ? 'bg-emerald-50/50' : ''}`}
+                    className={`w-full p-5 flex gap-4 hover:bg-slate-50 text-left transition-colors border-b border-slate-50 ${selectedThread === thread.id ? 'bg-brand-50/50' : ''}`}
                   >
                     <div className="w-12 h-12 bg-slate-100 rounded-2xl shrink-0 flex items-center justify-center text-slate-400 font-black text-xs">
                       {thread.participant.split(' ').map(n => n[0]).join('')}
@@ -213,11 +213,11 @@ const Communications: React.FC<{
                     <div className="flex items-center gap-3">
                       <button 
                         onClick={() => setSelectedThread(null)}
-                        className="md:hidden p-2 text-slate-400 hover:text-emerald-600"
+                        className="md:hidden p-2 text-slate-400 hover:text-brand-600"
                       >
                         <i className="fa-solid fa-chevron-left"></i>
                       </button>
-                      <div className="w-8 h-8 bg-emerald-600 text-white rounded-xl flex items-center justify-center font-black text-[10px] uppercase">
+                      <div className="w-8 h-8 bg-brand-600 text-white rounded-xl flex items-center justify-center font-black text-[10px] uppercase">
                         {selectedThread.substring(0,2)}
                       </div>
                       <h4 className="font-bold text-slate-800 text-sm">Case Support</h4>
@@ -245,15 +245,15 @@ const Communications: React.FC<{
                   </div>
                   <div className="p-4 bg-white border-t border-slate-100 shrink-0">
                     <div className="flex gap-2">
-                      <button className="p-2.5 text-slate-400 hover:text-emerald-600 bg-slate-50 rounded-xl"><i className="fa-solid fa-paperclip"></i></button>
+                      <button className="p-2.5 text-slate-400 hover:text-brand-600 bg-slate-50 rounded-xl"><i className="fa-solid fa-paperclip"></i></button>
                       <input 
                         type="text" 
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         placeholder="Aa" 
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500" 
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500" 
                       />
-                      <button className="bg-emerald-600 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
+                      <button className="bg-brand-600 text-white w-10 h-10 rounded-xl flex items-center justify-center hover:bg-brand-700 transition-all shadow-lg shadow-brand-200">
                         <i className="fa-solid fa-paper-plane text-xs"></i>
                       </button>
                     </div>
@@ -297,7 +297,7 @@ const Communications: React.FC<{
                 <button 
                   onClick={handleStartNewMessage} 
                   disabled={!selectedContactId}
-                  className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase hover:bg-emerald-700 disabled:opacity-50"
+                  className="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 disabled:opacity-50"
                 >
                   Start Chat
                 </button>

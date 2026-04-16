@@ -24,7 +24,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
         <input
           type="text"
           placeholder={searchPlaceholder}
-          className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-slate-900 dark:text-white"
+          className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all text-slate-900 dark:text-white"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />
@@ -34,7 +34,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
           <button
             key={f}
             onClick={() => onFilterChange(f)}
-            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${filter === f ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
+            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap ${filter === f ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
           >
             {f}
           </button>

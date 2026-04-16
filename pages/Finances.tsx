@@ -42,14 +42,14 @@ const Finances: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
           {isAdmin && (
             <button 
               onClick={() => setActiveTab('overview')}
-              className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'overview' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
+              className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'overview' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400' : 'text-slate-600 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
             >
               Executive Summary
             </button>
           )}
           <button 
             onClick={() => setActiveTab('ledger')}
-            className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'ledger' ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
+            className={`px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${activeTab === 'ledger' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400' : 'text-slate-600 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
           >
             Personal Ledger
           </button>
@@ -59,7 +59,7 @@ const Finances: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
       {activeTab === 'overview' && isAdmin ? (
         <div className="space-y-8 animate-in fade-in duration-500">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <StatCard label="Total Revenue (Monthly)" value={`$${coopIncome.toLocaleString()}`} icon="fa-sack-dollar" color="bg-emerald-500" />
+            <StatCard label="Total Revenue (Monthly)" value={`$${coopIncome.toLocaleString()}`} icon="fa-sack-dollar" color="bg-brand-500" />
             <StatCard label="Projected Burn" value="$0" icon="fa-file-invoice-dollar" color="bg-rose-500" />
             <StatCard label="Reserve Health" value="Stable" icon="fa-vault" color="bg-blue-500" />
           </div>
@@ -102,19 +102,19 @@ const Finances: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden transition-colors">
             <div className="absolute top-0 right-0 p-4 opacity-[0.03] text-[10rem] pointer-events-none dark:text-white"><i className="fa-solid fa-piggy-bank"></i></div>
             <div className="flex items-center gap-6 relative z-10">
-              <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-3xl border border-emerald-50 dark:border-emerald-900">
+              <div className="w-20 h-20 bg-brand-100 dark:bg-brand-900/30 rounded-2xl flex items-center justify-center text-brand-600 dark:text-brand-400 text-3xl border border-brand-50 dark:border-brand-900">
                 <i className="fa-solid fa-receipt"></i>
               </div>
               <div>
                 <h3 className="text-3xl font-black text-slate-900 dark:text-white">Balance: $0.00</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-tight mt-1">Next Settlement: <span className="text-emerald-600 dark:text-emerald-400">Apr 01, 2026</span></p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-tight mt-1">Next Settlement: <span className="text-brand-600 dark:text-brand-400">Apr 01, 2026</span></p>
               </div>
             </div>
             <button 
               onClick={handlePayment}
               disabled={isPaying}
               className={`w-full md:w-auto px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 ${
-                isPaying ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                isPaying ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-brand-600 text-white hover:bg-brand-700'
               }`}
             >
               {isPaying ? 'Processing...' : 'Submit Payment'}
@@ -124,7 +124,7 @@ const Finances: React.FC<{ isAdmin: boolean }> = ({ isAdmin }) => {
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden">
             <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col sm:flex-row justify-between items-center gap-4">
               <h4 className="font-black text-slate-800 dark:text-white text-xs uppercase tracking-widest">Historical Settlements</h4>
-              <button className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900 px-4 py-2 rounded-xl transition-all uppercase tracking-widest">Download PDF Summary</button>
+              <button className="text-[9px] font-black text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 border border-brand-100 dark:border-brand-900 px-4 py-2 rounded-xl transition-all uppercase tracking-widest">Download PDF Summary</button>
             </div>
 
             {/* Mobile: Cards */}

@@ -25,8 +25,8 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, onRestartTour })
         
         <div className="p-8 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button className="p-6 bg-slate-50 dark:bg-slate-950/30 rounded-3xl border border-slate-100 dark:border-white/5 hover:border-emerald-200 dark:hover:border-emerald-400 transition-all group text-left">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
+            <button className="p-6 bg-slate-50 dark:bg-slate-950/30 rounded-3xl border border-slate-100 dark:border-white/5 hover:border-brand-200 dark:hover:border-brand-400 transition-all group text-left">
+              <div className="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
                 <i className="fa-solid fa-book"></i>
               </div>
               <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight mb-1">Knowledge Base</h4>
@@ -34,7 +34,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, onRestartTour })
             </button>
             <button 
               onClick={() => { onRestartTour?.(); onClose(); }}
-              className="p-6 bg-slate-50 dark:bg-slate-950/30 rounded-3xl border border-slate-100 dark:border-white/5 hover:border-emerald-200 dark:hover:border-emerald-400 transition-all group text-left"
+              className="p-6 bg-slate-50 dark:bg-slate-950/30 rounded-3xl border border-slate-100 dark:border-white/5 hover:border-brand-200 dark:hover:border-brand-400 transition-all group text-left"
             >
               <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform">
                 <i className="fa-solid fa-map"></i>
@@ -44,20 +44,20 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, onRestartTour })
             </button>
           </div>
 
-          <div className="p-6 bg-emerald-50 dark:bg-emerald-900/10 rounded-3xl border border-emerald-100 dark:border-emerald-900/30">
+          <div className="p-6 bg-brand-50 dark:bg-brand-900/10 rounded-3xl border border-brand-100 dark:border-brand-900/30">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white">
+              <div className="w-10 h-10 rounded-full bg-brand-600 flex items-center justify-center text-white">
                 <i className="fa-solid fa-robot"></i>
               </div>
               <div>
-                <h4 className="text-sm font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-tight">AI Assistant</h4>
-                <p className="text-[10px] text-emerald-600/60 dark:text-emerald-400/60 font-bold uppercase tracking-widest">Powered by Gemini</p>
+                <h4 className="text-sm font-black text-brand-700 dark:text-brand-400 uppercase tracking-tight">AI Assistant</h4>
+                <p className="text-[10px] text-brand-600/60 dark:text-brand-400/60 font-bold uppercase tracking-widest">Powered by Gemini</p>
               </div>
             </div>
-            <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 leading-relaxed font-medium">
+            <p className="text-xs text-brand-700/80 dark:text-brand-400/80 leading-relaxed font-medium">
               Need help with co-op policies or maintenance? Use our AI assistant to get instant answers from your association's bylaws.
             </p>
-            <button className="mt-4 w-full py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all active:scale-95">
+            <button className="mt-4 w-full py-3 bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all active:scale-95">
               Launch Assistant
             </button>
           </div>

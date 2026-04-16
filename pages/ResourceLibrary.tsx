@@ -438,15 +438,15 @@ const ResourceLibrary: React.FC<{
               <div
                 key={doc.id}
                 onClick={() => handleViewDoc(doc)}
-                className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all group flex flex-col cursor-pointer active:scale-[0.98]"
+                className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-brand-300 dark:hover:border-brand-600 transition-all group flex flex-col cursor-pointer active:scale-[0.98]"
               >
                 <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-14 h-14 ${isCloud ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-slate-100 dark:bg-slate-800'} group-hover:bg-emerald-50 dark:group-hover:bg-emerald-900/20 rounded-2xl flex items-center justify-center ${isCloud ? 'text-blue-500' : 'text-slate-400'} group-hover:text-emerald-600 transition-all shrink-0`}>
+                  <div className={`w-14 h-14 ${isCloud ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-slate-100 dark:bg-slate-800'} group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 rounded-2xl flex items-center justify-center ${isCloud ? 'text-blue-500' : 'text-slate-400'} group-hover:text-brand-600 transition-all shrink-0`}>
                     <i className={`fa-solid ${doc.fileType === 'pdf' ? 'fa-file-pdf' : isCloud ? 'fa-brands fa-google-drive' : 'fa-file-lines'} text-2xl`}></i>
                   </div>
                   <div className="flex-1 overflow-hidden">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-black text-slate-800 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors truncate">{doc.title}</h4>
+                      <h4 className="text-sm font-black text-slate-800 dark:text-white group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors truncate">{doc.title}</h4>
                       {isCloud && (
                         <span className="flex items-center gap-1 text-[7px] font-black bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded-full uppercase tracking-tighter shrink-0 border border-blue-500/20">
                           Cloud Link
@@ -464,8 +464,8 @@ const ResourceLibrary: React.FC<{
                         key={tag}
                         onClick={(e) => handleTagClick(tag, e)}
                         className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter transition-all ${filter === tag
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-600'
+                          ? 'bg-brand-600 text-white'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-brand-100 dark:hover:bg-brand-900/30 hover:text-brand-600'
                           }`}
                       >
                         #{tag}
@@ -478,8 +478,8 @@ const ResourceLibrary: React.FC<{
                   <button
                     onClick={(e) => handleCategoryClick(doc.category, e)}
                     className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest border transition-all ${filter === doc.category
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-white/5 hover:border-emerald-300'
+                      ? 'bg-brand-600 text-white border-brand-600'
+                      : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-white/5 hover:border-brand-300'
                       }`}
                   >
                     {doc.category}
@@ -508,7 +508,7 @@ const ResourceLibrary: React.FC<{
                     )}
                     <button
                       onClick={(e) => handleDownload(doc, e)}
-                      className={`w-10 h-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-white rounded-xl flex items-center justify-center ${isCloud ? 'hover:bg-blue-600' : 'hover:bg-emerald-600'} transition-all active:scale-95`}
+                      className={`w-10 h-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-white rounded-xl flex items-center justify-center ${isCloud ? 'hover:bg-blue-600' : 'hover:bg-brand-600'} transition-all active:scale-95`}
                       title={isCloud ? 'Open in Google Drive' : 'Download'}
                     >
                       <i className={`fa-solid ${isCloud ? 'fa-arrow-up-right-from-square' : 'fa-download'}`}></i>
@@ -548,7 +548,7 @@ const ResourceLibrary: React.FC<{
               <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <div className="h-[400px] bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-white/10 rounded-[2rem] flex flex-col items-center justify-center text-center p-12">
-                    <div className={`w-20 h-20 ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-500/10 text-blue-500' : 'bg-emerald-500/10 text-emerald-500'} rounded-3xl flex items-center justify-center mb-6`}>
+                    <div className={`w-20 h-20 ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-500/10 text-blue-500' : 'bg-brand-500/10 text-brand-500'} rounded-3xl flex items-center justify-center mb-6`}>
                       <i className={`fa-solid ${reviewingDoc.url?.includes('drive.google.com') ? 'fa-brands fa-google-drive' : 'fa-file-shield'} text-3xl`}></i>
                     </div>
                     <h4 className="text-lg font-black text-slate-800 dark:text-white mb-2 uppercase tracking-tight">Streamlined Metadata View</h4>
@@ -569,15 +569,15 @@ const ResourceLibrary: React.FC<{
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
                         Document Metadata
                         {isAdmin && !isGuest && (
-                          <span className="ml-2 text-emerald-500">
+                          <span className="ml-2 text-brand-500">
                             <i className="fa-solid fa-pencil text-[8px]"></i> Editable
                           </span>
                         )}
                       </label>
                       <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors">
+                        <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600 hover:border-brand-400 dark:hover:border-brand-500 transition-colors">
                           <p className="text-[8px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1">
-                            <i className="fa-solid fa-file-lines text-emerald-500"></i> Title
+                            <i className="fa-solid fa-file-lines text-brand-500"></i> Title
                           </p>
                           <input
                             type="text"
@@ -588,9 +588,9 @@ const ResourceLibrary: React.FC<{
                             placeholder={isAdmin && !isGuest ? "Click to edit title..." : ""}
                           />
                         </div>
-                        <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors">
+                        <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600 hover:border-brand-400 dark:hover:border-brand-500 transition-colors">
                           <p className="text-[8px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1">
-                            <i className="fa-solid fa-folder text-emerald-500"></i> Category
+                            <i className="fa-solid fa-folder text-brand-500"></i> Category
                           </p>
                           <select
                             value={reviewingDoc.category}
@@ -602,9 +602,9 @@ const ResourceLibrary: React.FC<{
                           </select>
                         </div>
                       </div>
-                      <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600 hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors">
+                      <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600 hover:border-brand-400 dark:hover:border-brand-500 transition-colors">
                         <p className="text-[8px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1">
-                          <i className="fa-solid fa-users text-emerald-500"></i> Committee
+                          <i className="fa-solid fa-users text-brand-500"></i> Committee
                         </p>
                         <select
                           value={reviewingDoc.committee || ''}
@@ -622,7 +622,7 @@ const ResourceLibrary: React.FC<{
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
                         Semantic Tags
                         {isAnalyzing && (
-                          <span className="ml-2 text-emerald-500">
+                          <span className="ml-2 text-brand-500">
                             <i className="fa-solid fa-spinner animate-spin text-[8px]"></i> Generating tags...
                           </span>
                         )}
@@ -656,10 +656,10 @@ const ResourceLibrary: React.FC<{
                                   }
                                 }
                               }}
-                              className="w-full bg-white dark:bg-slate-700 border-2 border-emerald-400 dark:border-emerald-500 rounded-xl px-4 py-2 text-[10px] font-black text-slate-800 dark:text-white uppercase outline-none focus:ring-2 focus:ring-emerald-500 placeholder-slate-400"
+                              className="w-full bg-white dark:bg-slate-700 border-2 border-brand-400 dark:border-brand-500 rounded-xl px-4 py-2 text-[10px] font-black text-slate-800 dark:text-white uppercase outline-none focus:ring-2 focus:ring-brand-500 placeholder-slate-400"
                             />
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
-                              <i className="fa-solid fa-plus text-emerald-500"></i>
+                              <i className="fa-solid fa-plus text-brand-500"></i>
                             </div>
                           </div>
                         )}
@@ -679,7 +679,7 @@ const ResourceLibrary: React.FC<{
                 {isAdmin && !isGuest && (
                   <button
                     onClick={handleSaveReview}
-                    className="px-12 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                    className="px-12 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-brand-600 text-white hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95"
                   >
                     Save
                   </button>

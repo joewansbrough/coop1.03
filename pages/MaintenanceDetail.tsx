@@ -32,7 +32,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
         <i className="fa-solid fa-shield-halved text-5xl text-rose-500 mb-4 opacity-20"></i>
         <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Access Restricted</h2>
         <p className="text-slate-500 dark:text-slate-400 font-medium">You are only authorized to view service records for your assigned unit.</p>
-        <Link to="/maintenance" className="mt-8 inline-block bg-slate-900 dark:bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Return to Queue</Link>
+        <Link to="/maintenance" className="mt-8 inline-block bg-slate-900 dark:bg-brand-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Return to Queue</Link>
       </div>
     );
   }
@@ -181,7 +181,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-500">
       <div className="flex items-center justify-between gap-4 text-slate-500 text-sm mb-2">
-        <Link to="/maintenance" className="hover:text-emerald-600 transition-colors flex items-center gap-1 font-bold">
+        <Link to="/maintenance" className="hover:text-brand-600 transition-colors flex items-center gap-1 font-bold">
           <i className="fa-solid fa-arrow-left"></i> Maintenance Queue
         </Link>
         {isLocked && (
@@ -209,7 +209,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                     className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                       isActive 
                         ? `${
-                            status === RequestStatus.COMPLETED ? 'bg-emerald-600' :
+                            status === RequestStatus.COMPLETED ? 'bg-brand-600' :
                             status === RequestStatus.PENDING ? 'bg-amber-500' :
                             status === RequestStatus.CANCELLED ? 'bg-rose-600' :
                             'bg-blue-600'
@@ -269,13 +269,13 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                   <i className="fa-solid fa-tag mr-2"></i>{cat}
                 </span>
               ))}
-              {isAdmin && !isLocked && <button onClick={() => setIsEditingCategories(!isEditingCategories)} className="text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:border-emerald-500 transition-colors flex items-center gap-2"><i className="fa-solid fa-plus"></i> Edit Service Type</button>}
+              {isAdmin && !isLocked && <button onClick={() => setIsEditingCategories(!isEditingCategories)} className="text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:border-brand-500 transition-colors flex items-center gap-2"><i className="fa-solid fa-plus"></i> Edit Service Type</button>}
             </div>
 
             {isEditingCategories && (
               <div className="flex flex-wrap gap-2 mb-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
                 {availableCategories.map(cat => (
-                  <button key={cat} onClick={() => toggleCategory(cat)} className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${request.category.includes(cat) ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-400 hover:text-emerald-600 border border-slate-100 dark:border-white/5'}`}>
+                  <button key={cat} onClick={() => toggleCategory(cat)} className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${request.category.includes(cat) ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-600 border border-slate-100 dark:border-white/5'}`}>
                     {cat}
                   </button>
                 ))}
@@ -285,13 +285,13 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
             <h1 className="text-4xl font-black text-slate-900 dark:text-white leading-tight mb-8">{request.description}</h1>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-8 border-t border-slate-50 dark:border-white/5">
-              <Link to={`/admin/units/${unit?.id}`} className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent hover:border-emerald-500/50 transition-all">
-                <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
+              <Link to={`/admin/units/${unit?.id}`} className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent hover:border-brand-500/50 transition-all">
+                <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-brand-500 transition-colors">
                   <i className="fa-solid fa-door-open text-2xl"></i>
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Asset Location</p>
-                  <p className="text-xl font-black text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 transition-colors">Unit #{unit?.number || 'N/A'}</p>
+                  <p className="text-xl font-black text-slate-800 dark:text-slate-200 group-hover:text-brand-600 transition-colors">Unit #{unit?.number || 'N/A'}</p>
                 </div>
               </Link>
               {tenant ? (
@@ -326,7 +326,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
               {(request.notes || []).length > 3 && (
                 <button 
                   onClick={() => setShowAllNotes(!showAllNotes)}
-                  className="w-full py-2 mb-4 border-b border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-500 transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2 mb-4 border-b border-slate-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-brand-600 hover:text-brand-500 transition-colors flex items-center justify-center gap-2"
                 >
                   <i className={`fa-solid ${showAllNotes ? 'fa-chevron-up' : 'fa-clock-rotate-left'} transition-transform duration-300 ${showAllNotes ? 'rotate-0' : ''}`}></i>
                   {showAllNotes ? 'Collapse Older History' : `Show Older Messages (${(request.notes || []).length - 3} hidden)`}
@@ -385,13 +385,13 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
               {!isLocked && (
                 <form onSubmit={addNote} className="pt-4">
                   <textarea
-                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800 dark:text-slate-200"
+                    className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none text-slate-800 dark:text-slate-200"
                     placeholder={isAdmin ? "Log a new update or member contact..." : "Add a comment for the maintenance committee..."}
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                   />
                   <div className="flex justify-end mt-3">
-                    <button type="submit" className="bg-slate-900 dark:bg-emerald-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">Post Update</button>
+                    <button type="submit" className="bg-slate-900 dark:bg-brand-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">Post Update</button>
                   </div>
                 </form>
               )}
@@ -402,14 +402,14 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
             <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
               <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex justify-between items-center">
                 <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Incident Expenditure Ledger</h3>
-                <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">Total: ${totalExpenses.toFixed(2)}</p>
+                <p className="text-sm font-black text-brand-600 dark:text-brand-400">Total: ${totalExpenses.toFixed(2)}</p>
               </div>
               <div className="p-6">
                 {!isLocked && (
                   <form onSubmit={addExpense} className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 p-4 bg-slate-50 dark:bg-slate-950/30 rounded-2xl">
                      <input type="text" placeholder="Service/Part" className="col-span-1 bg-white dark:bg-slate-800 border dark:border-white/10 rounded-xl px-4 py-2 text-xs font-bold" value={newItem} onChange={e => setNewItem(e.target.value)} />
                      <input type="number" placeholder="0.00" className="col-span-1 bg-white dark:bg-slate-800 border dark:border-white/10 rounded-xl px-4 py-2 text-xs font-bold" value={newCost} onChange={e => setNewCost(e.target.value)} />
-                     <button type="submit" className="bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase shadow-emerald-500/10 dark:shadow-none flex items-center justify-center gap-2 px-4"><i className="fa-solid fa-plus"></i> Add Item</button>
+                     <button type="submit" className="bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase shadow-brand-500/10 dark:shadow-none flex items-center justify-center gap-2 px-4"><i className="fa-solid fa-plus"></i> Add Item</button>
                   </form>
                 )}
                 <div className="overflow-x-auto">
@@ -442,9 +442,9 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
 
         <div className="space-y-6">
           <div className="bg-slate-900 dark:bg-slate-950 text-white p-8 rounded-3xl">
-             <h3 className="text-emerald-400 font-black uppercase text-[10px] tracking-widest mb-6">Work Order Actions</h3>
+             <h3 className="text-brand-400 font-black uppercase text-[10px] tracking-widest mb-6">Work Order Actions</h3>
              <div className="space-y-3">
-                <button onClick={() => window.print()} className="w-full p-4 bg-emerald-600 text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-emerald-700 transition-all active:scale-95 group">
+                <button onClick={() => window.print()} className="w-full p-4 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-brand-700 transition-all active:scale-95 group">
                   <i className="fa-solid fa-print group-hover:scale-110 transition-transform"></i>
                   <span className="text-[10px] font-black uppercase tracking-widest">Print Order</span>
                 </button>
@@ -491,7 +491,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 animate-in zoom-in-95 duration-200 text-center">
             <div className={`w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center text-2xl ${
-              pendingStatus === RequestStatus.COMPLETED ? 'bg-emerald-100 text-emerald-600' :
+              pendingStatus === RequestStatus.COMPLETED ? 'bg-brand-100 text-brand-600' :
               pendingStatus === RequestStatus.CANCELLED ? 'bg-rose-100 text-rose-600' :
               pendingStatus === RequestStatus.IN_PROGRESS ? 'bg-blue-100 text-blue-600' :
               'bg-amber-100 text-amber-600'
@@ -512,7 +512,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
               <button 
                 onClick={confirmStatusChange} 
                 className={`flex-1 py-3 text-white rounded-xl text-xs font-black uppercase shadow-lg transition-all active:scale-95 ${
-                  pendingStatus === RequestStatus.COMPLETED ? 'bg-emerald-600 shadow-emerald-500/20' :
+                  pendingStatus === RequestStatus.COMPLETED ? 'bg-brand-600 shadow-brand-500/20' :
                   pendingStatus === RequestStatus.CANCELLED ? 'bg-rose-600 shadow-rose-500/20' :
                   pendingStatus === RequestStatus.IN_PROGRESS ? 'bg-blue-600 shadow-blue-500/20' :
                   'bg-amber-500 shadow-amber-500/20'

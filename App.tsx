@@ -59,7 +59,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Authenticating Session...</p>
         </div>
       </div>

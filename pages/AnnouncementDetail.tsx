@@ -12,7 +12,7 @@ const AnnouncementDetail: React.FC<{ announcements: Announcement[] }> = ({ annou
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-12 transition-colors duration-200">
       <div className="flex items-center gap-4 text-slate-500 text-sm mb-2">
-        <Link to="/" className="hover:text-emerald-600 transition-colors flex items-center gap-1 font-bold">
+        <Link to="/" className="hover:text-brand-600 transition-colors flex items-center gap-1 font-bold">
           <i className="fa-solid fa-arrow-left"></i> Dashboard
         </Link>
         <span>/</span>
@@ -41,12 +41,12 @@ const AnnouncementDetail: React.FC<{ announcements: Announcement[] }> = ({ annou
             </p>
             {/* Extended placeholder for long announcements */}
             <div className="space-y-6 text-slate-500 dark:text-slate-500 text-sm italic border-t border-slate-100 dark:border-white/5 pt-8">
-               <p>This bulletin was issued in accordance with the Co-operative Association Act of British Columbia. Members seeking full agenda packages or additional meeting documents should visit the <Link to="/documents" className="text-emerald-600 underline">Document Archive</Link>.</p>
+               <p>This bulletin was issued in accordance with the Co-operative Association Act of British Columbia. Members seeking full agenda packages or additional meeting documents should visit the <Link to="/documents" className="text-brand-600 underline">Document Archive</Link>.</p>
             </div>
           </div>
 
           <div className="mt-12 flex items-center gap-6 p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-white/5">
-             <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-emerald-600 text-white flex items-center justify-center font-black text-lg">
+             <div className="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-brand-600 text-white flex items-center justify-center font-black text-lg">
                 {announcement.author[0]}
              </div>
              <div>

@@ -237,7 +237,7 @@ const DriveExplorer: React.FC = () => {
                         {!isAtRootLevel && (
                             <button
                                 onClick={() => navigateToBreadcrumb(breadcrumbs[breadcrumbs.length - 2], breadcrumbs.length - 2)}
-                                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-emerald-500 transition-colors border border-slate-100 dark:border-white/5 sm:hidden"
+                                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-brand-500 transition-colors border border-slate-100 dark:border-white/5 sm:hidden"
                                 title="Up one level"
                             >
                                 <i className="fa-solid fa-arrow-left text-xs"></i>
@@ -256,7 +256,7 @@ const DriveExplorer: React.FC = () => {
                                     onClick={() => navigateToBreadcrumb(crumb, i)}
                                     className={`text-[10px] font-black uppercase tracking-tight truncate shrink-0 transition-colors ${i === breadcrumbs.length - 1
                                             ? 'text-slate-800 dark:text-white cursor-default'
-                                            : 'text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                                            : 'text-slate-400 hover:text-brand-600 dark:hover:text-brand-400'
                                         }`}
                                 >
                                     {crumb.name}
@@ -274,7 +274,7 @@ const DriveExplorer: React.FC = () => {
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Search documents…"
-                        className="pl-8 pr-4 py-2 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl outline-none focus:border-emerald-400 dark:focus:border-emerald-500 text-slate-800 dark:text-white placeholder-slate-400 w-48"
+                        className="pl-8 pr-4 py-2 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl outline-none focus:border-brand-400 dark:focus:border-brand-500 text-slate-800 dark:text-white placeholder-slate-400 w-48"
                     />
                     {searching && (
                         <i className="fa-solid fa-spinner animate-spin absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
@@ -295,7 +295,7 @@ const DriveExplorer: React.FC = () => {
                     <div className="flex flex-col items-center justify-center py-16 gap-3">
                         <i className="fa-solid fa-triangle-exclamation text-amber-400 text-2xl"></i>
                         <p className="text-xs text-slate-500 font-medium">{error}</p>
-                        <button onClick={loadRoot} className="text-xs font-black text-emerald-600 hover:underline uppercase tracking-wide">
+                        <button onClick={loadRoot} className="text-xs font-black text-brand-600 hover:underline uppercase tracking-wide">
                             Retry
                         </button>
                     </div>
@@ -311,10 +311,10 @@ const DriveExplorer: React.FC = () => {
                                 className="w-full flex items-center gap-4 px-6 py-3 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group text-left"
                             >
                                 <i className="fa-solid fa-folder-open text-blue-400 text-lg w-5 shrink-0"></i>
-                                <span className="flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors truncate">
+                                <span className="flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors truncate">
                                     {root.name}
                                 </span>
-                                <i className="fa-solid fa-chevron-right text-[10px] text-slate-300 dark:text-slate-600 group-hover:text-emerald-400 transition-colors shrink-0"></i>
+                                <i className="fa-solid fa-chevron-right text-[10px] text-slate-300 dark:text-slate-600 group-hover:text-brand-400 transition-colors shrink-0"></i>
                             </button>
                         ))}
 
@@ -325,12 +325,12 @@ const DriveExplorer: React.FC = () => {
                                 className="w-full flex items-center gap-4 px-6 py-2 bg-slate-50/50 dark:bg-white/[0.02] hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group text-left border-b border-slate-100 dark:border-white/5"
                             >
                                 <div className="w-5 flex justify-center shrink-0">
-                                    <i className="fa-solid fa-arrow-turn-up text-slate-400 dark:text-slate-500 group-hover:text-emerald-500 transition-colors text-xs"></i>
+                                    <i className="fa-solid fa-arrow-turn-up text-slate-400 dark:text-slate-500 group-hover:text-brand-500 transition-colors text-xs"></i>
                                 </div>
-                                <span className="flex-1 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 group-hover:text-emerald-600 transition-colors">
+                                <span className="flex-1 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 group-hover:text-brand-600 transition-colors">
                                     Up One Level
                                 </span>
-                                <i className="fa-solid fa-chevron-left text-[8px] text-slate-200 dark:text-slate-800 group-hover:text-emerald-400 transition-colors mr-1"></i>
+                                <i className="fa-solid fa-chevron-left text-[8px] text-slate-200 dark:text-slate-800 group-hover:text-brand-400 transition-colors mr-1"></i>
                             </button>
                         )}
 
@@ -342,10 +342,10 @@ const DriveExplorer: React.FC = () => {
                                 className="w-full flex items-center gap-4 px-6 py-3 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group text-left"
                             >
                                 <i className="fa-solid fa-folder text-amber-400 text-lg w-5 shrink-0"></i>
-                                <span className="flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors truncate">
+                                <span className="flex-1 text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors truncate">
                                     {folder.name}
                                 </span>
-                                <i className="fa-solid fa-chevron-right text-[10px] text-slate-300 dark:text-slate-600 group-hover:text-emerald-400 transition-colors shrink-0"></i>
+                                <i className="fa-solid fa-chevron-right text-[10px] text-slate-300 dark:text-slate-600 group-hover:text-brand-400 transition-colors shrink-0"></i>
                             </button>
                         ))}
 
@@ -357,7 +357,7 @@ const DriveExplorer: React.FC = () => {
                                 className="w-full flex items-center gap-4 px-6 py-3 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group text-left"
                             >
                                 <i className={`fa-solid ${getFileIcon(file.mimeType)} text-lg w-5 shrink-0`}></i>
-                                <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors truncate">
+                                <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors truncate">
                                     {file.name}
                                 </span>
                                 <div className="flex items-center gap-4 shrink-0">
@@ -369,7 +369,7 @@ const DriveExplorer: React.FC = () => {
                                     <span className="text-[10px] font-medium text-slate-400 hidden sm:block">
                                         {formatDate(file.modifiedTime)}
                                     </span>
-                                    <i className="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-300 dark:text-slate-600 group-hover:text-emerald-400 transition-colors"></i>
+                                    <i className="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-300 dark:text-slate-600 group-hover:text-brand-400 transition-colors"></i>
                                 </div>
                             </button>
                         ))}

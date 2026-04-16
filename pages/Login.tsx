@@ -92,7 +92,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background Decorative Elements */}
       <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/20 blur-[120px] rounded-full"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-500/20 blur-[120px] rounded-full"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/20 blur-[120px] rounded-full"></div>
       </div>
 
@@ -109,7 +109,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-brand-500 flex items-center justify-center">
                 <ShieldCheck className="w-7 h-7 text-white" />
               </div>
               <h1 className="text-2xl font-black tracking-tight">CoopConnect BC</h1>
@@ -117,7 +117,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
             <h2 className="text-4xl lg:text-5xl font-black leading-tight mb-8">
               The Future of <br />
-              <span className="text-emerald-400">Housing Co-op</span> <br />
+              <span className="text-brand-400">Housing Co-op</span> <br />
               Management.
             </h2>
 
@@ -152,7 +152,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <div className="text-center mb-12">
               <div 
                 onClick={toggleDebug}
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-4 cursor-pointer select-none"
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 text-[10px] font-black uppercase tracking-widest mb-4 cursor-pointer select-none"
               >
                 <Sparkles className="w-3 h-3" />
                 Secure Access
@@ -166,7 +166,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <button 
               onClick={handleGoogleLogin}
               disabled={isLoading || isVerifying}
-              className="w-full flex items-center justify-center gap-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-white/5 py-4 rounded-2xl hover:border-emerald-500 dark:hover:border-emerald-500 transition-all group active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full flex items-center justify-center gap-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-white/5 py-4 rounded-2xl hover:border-brand-500 dark:hover:border-brand-500 transition-all group active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
             >
               <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" />
               <span className="text-sm font-black text-slate-700 dark:text-white uppercase tracking-widest">
@@ -189,7 +189,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     setIsLoading(false);
                   }
                 }}
-                className="w-full py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-emerald-500 transition-colors border border-dashed border-slate-200 dark:border-white/5 rounded-xl"
+                className="w-full py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-brand-500 transition-colors border border-dashed border-slate-200 dark:border-white/5 rounded-xl"
               >
                 Development Bypass (Skip Sign-In)
               </button>
@@ -209,7 +209,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   <p className="text-[10px] font-black uppercase text-slate-500">Debug Info</p>
                   <button 
                     onClick={() => onLoginSuccess()}
-                    className="text-[8px] bg-emerald-500 text-white px-2 py-1 rounded font-black uppercase"
+                    className="text-[8px] bg-brand-500 text-white px-2 py-1 rounded font-black uppercase"
                   >
                     Manual Refresh
                   </button>
