@@ -110,12 +110,15 @@ const DriveExplorer: React.FC = () => {
         setSearch('');
         setSearchResults(null);
         try {
-            const isRoot = index === 0;
-            const res = await fetch(isRoot ? '/api/drive/root' : `/api/drive/folders/${crumb.id}/contents`);
-            if (!res.ok) throw new Error('Failed to navigate');
+            const isRootLevel = crumb.id === 'all_roots';
+            const res = await fetch(isRootLevel ? '/api/drive/root' : `/api/drive/folders/${crumb.id}/contents`);
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to navigate');
+            }
             const data = await res.json();
-            setContents(isRoot ? { folders: data.folders, files: data.files } : data);
-            setCurrentFolderId(crumb.id);
+            setContents(data); // data contains aggregated folders/files from root, or specific folder contents
+            setCurrentFolderId(isRootLevel ? null : crumb.id); // Set to null for aggregate root view
             setBreadcrumbs(prev => prev.slice(0, index + 1));
         } catch (e: any) {
             setError(e.message);
@@ -171,9 +174,11 @@ const DriveExplorer: React.FC = () => {
                                 {i > 0 && <i className="fa-solid fa-chevron-right text-[8px] text-slate-300 dark:text-slate-600 shrink-0"></i>}
                                 <button
                                     onClick={() => navigateToBreadcrumb(crumb, i)}
-                                    className={`text-xs font-black uppercase tracking-tight truncate max-w-[120px] transition-colors ${i === breadcrumbs.length - 1
-                                        ? 'text-slate-800 dark:text-white cursor-default'
-                                        : 'text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                                    className={`text-xs font-black uppercase tracking-tight truncate max-w-[120px] transition-colors ${crumb.id === 'all_roots' || crumb.id === 'no_roots'
+                                        ? 'text-slate-800 dark:text-white cursor-default' // Base 'Documents' or 'No Roots' level
+                                        : breadcrumbs.length - 1 === i
+                                            ? 'text-slate-800 dark:text-white cursor-default' // Current folder
+                                            : 'text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400' // Navigable parent
                                         }`}
                                 >
                                     {crumb.name}
