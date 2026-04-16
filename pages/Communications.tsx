@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import { MOCK_MESSAGES } from '../constants';
 import { Announcement } from '../types';
