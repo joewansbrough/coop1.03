@@ -397,12 +397,13 @@ const ResourceLibrary: React.FC<{
   };
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Documents</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Browse the co-op's shared document folder.</p>
         </div>
+      </div>
 
         <DriveExplorer />
 
