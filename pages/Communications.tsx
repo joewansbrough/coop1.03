@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import FilterBar from '../components/FilterBar';
 import { MOCK_MESSAGES } from '../constants';
 import { Announcement } from '../types';
 
@@ -11,6 +12,10 @@ const Communications: React.FC<{
   const [activeTab, setActiveTab] = useState<'announcements' | 'messaging'>('announcements');
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
+  
+  // Announcements filtering
+  const [annFilter, setAnnFilter] = useState('All');
+  const [annSearch, setAnnSearch] = useState('');
   
   // Announcements local UI state
   const [showNewAnnouncement, setShowNewAnnouncement] = useState(false);
@@ -88,9 +93,23 @@ const Communications: React.FC<{
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        {activeTab === 'announcements' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6 pb-8">
+      <div className="flex-1 overflow-hidden flex flex-col gap-6">
+        {activeTab === 'announcements' && (
+          <div className="animate-in slide-in-from-top-2 duration-500">
+            <FilterBar 
+              search={annSearch}
+              onSearchChange={setAnnSearch}
+              searchPlaceholder="Search broadcasts..."
+              filter={annFilter}
+              onFilterChange={setAnnFilter}
+              filterOptions={['All', 'Normal', 'Urgent']}
+            />
+          </div>
+        )}
+        
+        <div className="flex-1 overflow-y-auto pr-2 -mr-2 pb-12 pt-4">
+          {activeTab === 'announcements' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 lg:gap-10">
             {isAdmin && !showNewAnnouncement && (
               <button 
                 onClick={() => setShowNewAnnouncement(true)}
@@ -153,8 +172,15 @@ const Communications: React.FC<{
                 </form>
               </div>
             )}
-            {announcements.map(ann => (
-              <div key={ann.id} className="group bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 relative overflow-hidden flex flex-col h-full transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/[0.03] hover:-translate-y-1 hover:border-brand-300 dark:hover:border-brand-600 cursor-pointer active:scale-[0.98]">
+            {announcements
+              .filter(ann => {
+                const matchesSearch = ann.title.toLowerCase().includes(annSearch.toLowerCase()) || 
+                                    ann.content.toLowerCase().includes(annSearch.toLowerCase());
+                const matchesFilter = annFilter === 'All' || ann.priority === annFilter;
+                return matchesSearch && matchesFilter;
+              })
+              .map(ann => (
+              <div key={ann.id} className="group bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 relative overflow-hidden flex flex-col h-full transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/[0.03] hover:-translate-y-2 hover:border-brand-300 dark:hover:border-brand-600 cursor-pointer active:scale-[0.98] z-10 hover:z-20">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full -mr-16 -mt-16 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 {ann.priority === 'Urgent' && <div className="absolute top-0 left-0 right-0 h-1.5 bg-rose-500 dark:bg-rose-600"></div>}
                 <div className="flex justify-between items-center mb-6">
