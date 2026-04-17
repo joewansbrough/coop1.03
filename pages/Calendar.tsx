@@ -188,16 +188,32 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const monthName = viewDate.toLocaleString('default', { month: 'long' });
 
   // Robust date parsing to ensure consistent sorting across browsers
+  const formatEventDateOnly = (dateInput: string) => {
+    if (!dateInput) return '';
+    if (dateInput.includes('T')) return dateInput.split('T')[0];
+    return dateInput;
+  };
+
   const parseEventDate = (e: CoopEvent) => {
-    if (!e.date || !e.time) return new Date(0);
-    const [year, month, day] = e.date.split('-').map(Number);
+    const dateOnly = formatEventDateOnly(e.date);
+    if (!dateOnly || !e.time) return new Date(0);
+    const [year, month, day] = dateOnly.split('-').map(Number);
     const [hour, minute] = e.time.split(':').map(Number);
     return new Date(year, month - 1, day, hour, minute);
   };
 
+  const formatTime12h = (timeStr: string) => {
+    if (!timeStr) return '';
+    const [hours24, minutes] = timeStr.split(':');
+    const hours = parseInt(hours24, 10);
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${hours12}:${minutes} ${ampm}`;
+  };
+
   // Find closest upcoming event
   const now = new Date();
-  const nextEvent = [...events]
+  const nextEvent = [...allEvents]
     .filter(e => parseEventDate(e) >= now)
     .sort((a, b) => parseEventDate(a).getTime() - parseEventDate(b).getTime())[0];
 
@@ -337,7 +353,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
             {[...Array(daysInMonth)].map((_, i) => {
               const day = i + 1;
               const dateStr = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-              const hasEvents = allEvents.filter(e => e.date === dateStr);
+              const hasEvents = allEvents.filter(e => formatEventDateOnly(e.date) === dateStr);
               return (
                 <button
                   key={i}
@@ -419,7 +435,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                     <div className="w-6 h-6 rounded-lg bg-slate-50 dark:bg-white/5 flex items-center justify-center">
                       <i className="fa-solid fa-clock text-[10px]"></i>
                     </div>
-                    <span className="text-xs font-bold uppercase tracking-wider">{nextEvent.time}</span>
+                    <span className="text-xs font-bold uppercase tracking-wider">{formatTime12h(nextEvent.time)}</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-500">
                     <div className="w-6 h-6 rounded-lg bg-slate-50 dark:bg-white/5 flex items-center justify-center">
@@ -439,15 +455,15 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
             </h3>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-hide">
               {allEvents.filter(e => {
-                const eventDate = new Date(e.date);
+                const eventDate = parseEventDate(e);
                 return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
               }).length > 0 ? (
                 allEvents
                   .filter(e => {
-                    const eventDate = new Date(e.date);
+                    const eventDate = parseEventDate(e);
                     return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
                   })
-                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                  .sort((a, b) => parseEventDate(a).getTime() - parseEventDate(b).getTime())
                   .map(e => (
                   <div 
                     key={e.id} 
@@ -491,7 +507,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                            </div>
                          )}
                          <div className="flex flex-col items-end">
-                           <span className="text-[10px] font-black text-slate-400 uppercase">{e.time}</span>
+                           <span className="text-[10px] font-black text-slate-400 uppercase">{formatTime12h(e.time)}</span>
                            <span className="text-[8px] font-bold text-slate-400 uppercase">{new Date(e.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
                          </div>
                        </div>
