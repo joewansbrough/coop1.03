@@ -466,86 +466,99 @@ app.post('/api/units/:id/move-out', async (req, res) => {
   const { id } = req.params;
   const { date, reason } = req.body;
   try {
-    // Find all current residents of this unit
-    const residents = await getPrisma().tenant.findMany({ where: { unitId: id, status: 'Current' } });
+    await getPrisma().$transaction(async (tx) => {
+      // Find all current residents of this unit
+      const residents = await tx.tenant.findMany({ where: { unitId: id, status: 'Current' } });
 
-    for (const tenant of residents) {
-      // Close any open TenantHistory record for this unit
-      const openHistory = await getPrisma().tenantHistory.findFirst({
-        where: { tenantId: tenant.id, unitId: id, endDate: null }
-      });
-      if (openHistory) {
-        await getPrisma().tenantHistory.update({
-          where: { id: openHistory.id },
-          data: { endDate: new Date(date), moveReason: reason || 'Voluntary Household Departure' }
+      for (const tenant of residents) {
+        // Close any open TenantHistory record for this unit
+        const openHistory = await tx.tenantHistory.findFirst({
+          where: { tenantId: tenant.id, unitId: id, endDate: null },
+          orderBy: { startDate: 'desc' }
+        });
+        if (openHistory) {
+          await tx.tenantHistory.update({
+            where: { id: openHistory.id },
+            data: { endDate: new Date(date), moveReason: reason || 'Voluntary Household Departure' }
+          });
+        }
+        // Mark tenant as Past and unlink from unit
+        await tx.tenant.update({
+          where: { id: tenant.id },
+          data: { status: 'Past', unitId: null }
         });
       }
-      // Mark tenant as Past and unlink from unit
-      await getPrisma().tenant.update({
-        where: { id: tenant.id },
-        data: { status: 'Past', unitId: null }
-      });
-    }
 
-    // Mark unit as Vacant
-    await getPrisma().unit.update({
-      where: { id },
-      data: { status: 'Vacant', currentTenantId: null }
+      // Mark unit as Vacant
+      await tx.unit.update({
+        where: { id },
+        data: { status: 'Vacant', currentTenantId: null }
+      });
     });
 
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { 
+    console.error('Move-out error:', e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.post('/api/units/:id/move-in', async (req, res) => {
   const { id } = req.params;
   const { tenantId, date } = req.body;
   try {
-    const tenant = await getPrisma().tenant.findUnique({ where: { id: tenantId } });
-    if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+    await getPrisma().$transaction(async (tx) => {
+      const tenant = await tx.tenant.findUnique({ where: { id: tenantId } });
+      if (!tenant) throw new Error('Tenant not found');
 
-    // If internal transfer: close open history record on their previous unit
-    if (tenant.unitId && tenant.unitId !== id) {
-      const openHistory = await getPrisma().tenantHistory.findFirst({
-        where: { tenantId, unitId: tenant.unitId, endDate: null }
-      });
-      if (openHistory) {
-        await getPrisma().tenantHistory.update({
-          where: { id: openHistory.id },
-          data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
+      // If internal transfer: close open history record on their previous unit
+      if (tenant.unitId && tenant.unitId !== id) {
+        const openHistory = await tx.tenantHistory.findFirst({
+          where: { tenantId, unitId: tenant.unitId, endDate: null },
+          orderBy: { startDate: 'desc' }
+        });
+        if (openHistory) {
+          await tx.tenantHistory.update({
+            where: { id: openHistory.id },
+            data: { endDate: new Date(date), moveReason: 'Internal Transfer' }
+          });
+        }
+        // Vacate previous unit
+        await tx.unit.update({
+          where: { id: tenant.unitId },
+          data: { status: 'Vacant', currentTenantId: null }
         });
       }
-      // Vacate previous unit
-      await getPrisma().unit.update({
-        where: { id: tenant.unitId },
-        data: { status: 'Vacant', currentTenantId: null }
+
+      // Create new TenantHistory record for the new unit
+      await tx.tenantHistory.create({
+        data: {
+          tenantId: tenantId,
+          unitId: id,
+          cooperativeId: tenant.cooperativeId,
+          startDate: new Date(date),
+          moveReason: 'Move-In'
+        }
       });
-    }
 
-    // Create new TenantHistory record for the new unit
-    await getPrisma().tenantHistory.create({
-      data: {
-        tenant: { connect: { id: tenantId } },
-        unit: { connect: { id } },
-        cooperative: { connect: { id: tenant.cooperativeId } },
-        startDate: new Date(date)
-      }
-    });
+      // Update tenant
+      await tx.tenant.update({
+        where: { id: tenantId },
+        data: { unitId: id, status: 'Current', startDate: new Date(date) }
+      });
 
-    // Update tenant
-    await getPrisma().tenant.update({
-      where: { id: tenantId },
-      data: { unitId: id, status: 'Current', startDate: date }
-    });
-
-    // Update unit
-    await getPrisma().unit.update({
-      where: { id },
-      data: { status: 'Occupied', currentTenantId: tenantId }
+      // Update unit
+      await tx.unit.update({
+        where: { id },
+        data: { status: 'Occupied', currentTenantId: tenantId }
+      });
     });
 
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { 
+    console.error('Move-in error:', e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.post('/api/units/:id/transfer', async (req, res) => {
@@ -1143,6 +1156,17 @@ app.get('/api/seed', async (req, res) => {
         await p.unit.update({
           where: { id: unitMap[t.unit] },
           data: { currentTenantId: tenant.id },
+        });
+
+        // Create initial history record
+        await p.tenantHistory.create({
+          data: {
+            tenantId: tenant.id,
+            unitId: unitMap[t.unit],
+            cooperativeId: coopId,
+            startDate: new Date(t.startDate),
+            moveReason: 'Initial Seed Residency'
+          }
         });
       }
     }
