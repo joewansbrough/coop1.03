@@ -16,6 +16,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editEvent, setEditEvent] = useState<CoopEvent | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -23,6 +24,104 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState<'Meeting' | 'Social' | 'Maintenance' | 'Board'>('Meeting');
   const [description, setDescription] = useState('');
+
+  const handleExportICS = () => {
+    let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Co-op Management System//EN\n";
+    
+    events.forEach(event => {
+      const dtStart = event.date.replace(/-/g, '') + 'T' + event.time.replace(/:/g, '') + '00';
+      // Simple 1-hour duration for export
+      const startHour = parseInt(event.time.split(':')[0]);
+      const endHour = (startHour + 1).toString().padStart(2, '0');
+      const dtEnd = event.date.replace(/-/g, '') + 'T' + endHour + event.time.split(':')[1].replace(/:/g, '') + '00';
+
+      icsContent += "BEGIN:VEVENT\n";
+      icsContent += `SUMMARY:${event.title}\n`;
+      icsContent += `DTSTART:${dtStart}\n`;
+      icsContent += `DTEND:${dtEnd}\n`;
+      icsContent += `LOCATION:${event.location}\n`;
+      icsContent += `DESCRIPTION:${event.description.replace(/\n/g, '\\n')}\n`;
+      icsContent += `CATEGORIES:${event.category}\n`;
+      icsContent += "END:VEVENT\n";
+    });
+
+    icsContent += "END:VCALENDAR";
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', 'coop_events.ics');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportICS = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const content = event.target?.result as string;
+      const eventBlocks = content.split('BEGIN:VEVENT');
+      eventBlocks.shift(); // Remove header
+
+      const importedEvents = [];
+
+      for (const block of eventBlocks) {
+        const summary = block.match(/SUMMARY:(.*)/)?.[1]?.trim() || 'Imported Event';
+        const dtstart = block.match(/DTSTART[:;](.*)/)?.[1]?.trim();
+        const locationStr = block.match(/LOCATION:(.*)/)?.[1]?.trim() || 'Not Specified';
+        const descriptionStr = block.match(/DESCRIPTION:(.*)/)?.[1]?.trim()?.replace(/\\n/g, '\n') || '';
+        const categoryStr = block.match(/CATEGORIES:(.*)/)?.[1]?.trim() || 'Social';
+
+        if (dtstart) {
+          // Format: YYYYMMDDTHHMMSS
+          const year = dtstart.substring(0, 4);
+          const month = dtstart.substring(4, 6);
+          const day = dtstart.substring(6, 8);
+          const hour = dtstart.substring(9, 11) || '00';
+          const minute = dtstart.substring(11, 13) || '00';
+
+          const date = `${year}-${month}-${day}`;
+          const time = `${hour}:${minute}`;
+
+          try {
+            const res = await fetch('/api/events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: summary,
+                date,
+                time,
+                location: locationStr,
+                description: descriptionStr,
+                category: ['Meeting', 'Social', 'Maintenance', 'Board'].includes(categoryStr) ? categoryStr : 'Social'
+              })
+            });
+            if (res.ok) {
+              const data = await res.json();
+              importedEvents.push(data);
+            }
+          } catch (err) {
+            console.error('Failed to import event:', err);
+          }
+        }
+      }
+
+      if (importedEvents.length > 0) {
+        setEvents(prev => [...prev, ...importedEvents]);
+        alert(`Successfully imported ${importedEvents.length} events!`);
+      } else {
+        alert("No valid events found in the .ics file.");
+      }
+      setIsImporting(false);
+      // Reset input
+      e.target.value = '';
+    };
+    reader.readAsText(file);
+  };
 
   const currentMonth = viewDate.getMonth();
   const currentYear = viewDate.getFullYear();
@@ -115,12 +214,36 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium font-medium">Co-op meetings, social gatherings, and building maintenance events.</p>
         </div>
         {isAdmin && !isGuest && (
-          <button 
-            onClick={() => setShowAddForm(true)}
-            className="bg-brand-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center justify-center gap-2 active:scale-95"
-          >
-            <i className="fa-solid fa-calendar-plus"></i> Add New Event
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleExportICS}
+              className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/5 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
+              title="Export all events to .ics"
+            >
+              <i className="fa-solid fa-file-export"></i> Export
+            </button>
+            
+            <label className="cursor-pointer">
+              <input 
+                type="file" 
+                accept=".ics" 
+                onChange={handleImportICS} 
+                className="hidden" 
+                disabled={isImporting}
+              />
+              <div className={`bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/5 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm ${isImporting ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                <i className={`fa-solid ${isImporting ? 'fa-spinner fa-spin' : 'fa-file-import'}`}></i> 
+                {isImporting ? 'Importing...' : 'Import'}
+              </div>
+            </label>
+
+            <button 
+              onClick={() => setShowAddForm(true)}
+              className="bg-brand-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-brand-500/20"
+            >
+              <i className="fa-solid fa-calendar-plus"></i> Add Event
+            </button>
+          </div>
         )}
       </div>
 
