@@ -552,45 +552,63 @@ app.post('/api/units/:id/transfer', async (req, res) => {
   const { id } = req.params;
   const { toUnitId, date } = req.body;
   try {
-    // Find all residents of the source unit
-    const residents = await getPrisma().tenant.findMany({ where: { unitId: id, status: 'Current' } });
+    await getPrisma().$transaction(async (tx) => {
+      // Find all residents of the source unit
+      const residents = await tx.tenant.findMany({ where: { unitId: id, status: 'Current' } });
 
-    for (const tenant of residents) {
-      // Close open history on source unit
-      const openHistory = await getPrisma().tenantHistory.findFirst({
-        where: { tenantId: tenant.id, unitId: id, endDate: null }
-      });
-      if (openHistory) {
-        await getPrisma().tenantHistory.update({
-          where: { id: openHistory.id },
-          data: { endDate: new Date(date), moveReason: 'Internal Unit Transfer' }
+      if (residents.length === 0) {
+        throw new Error('No current residents found in source unit to transfer.');
+      }
+
+      for (const tenant of residents) {
+        // Close open history on source unit
+        const openHistory = await tx.tenantHistory.findFirst({
+          where: { tenantId: tenant.id, unitId: id, endDate: null },
+          orderBy: { startDate: 'desc' }
+        });
+        if (openHistory) {
+          await tx.tenantHistory.update({
+            where: { id: openHistory.id },
+            data: { endDate: new Date(date), moveReason: 'Internal Unit Transfer' }
+          });
+        }
+
+        // Open new history on destination unit
+        await tx.tenantHistory.create({
+          data: {
+            tenant: { connect: { id: tenant.id } },
+            unit: { connect: { id: toUnitId } },
+            cooperative: { connect: { id: tenant.cooperativeId } },
+            startDate: new Date(date),
+            moveReason: 'Internal Unit Transfer'
+          }
+        });
+
+        // Update tenant's unit
+        await tx.tenant.update({
+          where: { id: tenant.id },
+          data: { unitId: toUnitId, startDate: new Date(date) }
         });
       }
-      // Open new history on destination unit
-      await getPrisma().tenantHistory.create({
-        data: {
-          tenant: { connect: { id: tenant.id } },
-          unit: { connect: { id: toUnitId } },
-          cooperative: { connect: { id: tenant.cooperativeId } },
-          startDate: new Date(date)
-        }
-      });
-      // Update tenant's unit
-      await getPrisma().tenant.update({
-        where: { id: tenant.id },
-        data: { unitId: toUnitId, startDate: date }
-      });
-    }
 
-    // Vacate source unit, occupy destination unit
-    await getPrisma().unit.update({ where: { id }, data: { status: 'Vacant', currentTenantId: null } });
-    await getPrisma().unit.update({
-      where: { id: toUnitId },
-      data: { status: 'Occupied', currentTenantId: residents[0]?.id ?? null }
+      // Vacate source unit
+      await tx.unit.update({ 
+        where: { id }, 
+        data: { status: 'Vacant', currentTenantId: null } 
+      });
+
+      // Occupy destination unit
+      await tx.unit.update({
+        where: { id: toUnitId },
+        data: { status: 'Occupied', currentTenantId: residents[0].id }
+      });
     });
 
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { 
+    console.error('Transfer error:', e);
+    res.status(500).json({ error: e.message }); 
+  }
 });
 
 app.get('/api/maintenance', async (req, res) => {
