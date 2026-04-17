@@ -129,7 +129,46 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
         <div className="p-8 lg:p-12">
           {isEditing && isAdmin ? (
             <form onSubmit={handleSave} className="space-y-6">
-              {/* ... form content ... */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Title</label>
+                  <input 
+                    name="title"
+                    required
+                    className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white"
+                    defaultValue={event.title}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</label>
+                  <select name="category" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white" defaultValue={event.category}>
+                    <option value="Meeting">Meeting</option>
+                    <option value="Social">Social</option>
+                    <option value="Maintenance">Maintenance</option>
+                    <option value="Board">Board</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</label>
+                  <input name="date" type="date" required className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white" defaultValue={event.date.includes('T') ? event.date.split('T')[0] : event.date} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time</label>
+                  <input name="time" type="time" required className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white" defaultValue={event.time} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</label>
+                <input name="location" required className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white" defaultValue={event.location} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Description</label>
+                <textarea name="description" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white h-32" defaultValue={event.description}></textarea>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-500 bg-slate-100 dark:bg-slate-800 rounded-2xl transition-all hover:bg-slate-200 dark:hover:bg-slate-700">Cancel</button>
+                <button type="submit" className="flex-1 py-4 bg-brand-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-brand-700 shadow-lg shadow-brand-500/20 active:scale-95 transition-all">Save Changes</button>
+              </div>
             </form>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
