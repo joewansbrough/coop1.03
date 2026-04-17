@@ -41,17 +41,24 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isTemp) return;
     const form = e.target as HTMLFormElement;
     const payload = {
       title: (form.elements.namedItem('title') as HTMLInputElement).value,
-      category: (form.elements.namedItem('category') as HTMLSelectElement).value,
+      category: (form.elements.namedItem('category') as HTMLSelectElement).value as any,
       date: (form.elements.namedItem('date') as HTMLInputElement).value,
       time: (form.elements.namedItem('time') as HTMLInputElement).value,
       location: (form.elements.namedItem('location') as HTMLInputElement).value,
       description: (form.elements.namedItem('description') as HTMLTextAreaElement).value,
     };
-    
+
+    if (isTemp) {
+      const updatedTempEvent = { ...event, ...payload };
+      setEvents(events.map(ev => ev.id === event.id ? updatedTempEvent : ev));
+      setIsEditing(false);
+      alert("Temporary event updated for this session.");
+      return;
+    }
+
     try {
       const res = await fetch(`/api/events/${event.id}`, {
         method: 'PUT',
@@ -65,6 +72,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
     } catch (err) {
       console.error(err);
     }
+  };
   };
 
   const handleAttend = async () => {
@@ -120,7 +128,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
         </div>
 
         <div className="p-8 lg:p-12">
-          {isEditing && isAdmin && !isTemp ? (
+          {isEditing && isAdmin ? (
             <form onSubmit={handleSave} className="space-y-6">
               {/* ... form content ... */}
             </form>
@@ -173,7 +181,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
               </div>
 
               <div className="space-y-6">
-                {isAdmin && !isGuest && !isTemp && (
+                {isAdmin && !isGuest && (
                   <button 
                     onClick={() => setIsEditing(true)}
                     className="w-full bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95"

@@ -525,14 +525,6 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                 </div>
               )}
             </div>
-            {isAdmin && !isGuest && (
-               <button 
-                 onClick={() => setShowAddForm(true)}
-                 className="w-full mt-6 py-3 border border-dashed border-slate-200 dark:border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-brand-600 hover:border-brand-200 transition-all flex items-center justify-center gap-2"
-               >
-                 <i className="fa-solid fa-plus"></i> Fast Add Entry
-               </button>
-            )}
           </div>
         </div>
       </div>
