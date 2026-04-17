@@ -17,6 +17,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const [showAddForm, setShowAddForm] = useState(false);
   const [editEvent, setEditEvent] = useState<CoopEvent | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [tempEvents, setTempEvents] = useState<CoopEvent[]>([]);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -25,10 +26,13 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const [category, setCategory] = useState<'Meeting' | 'Social' | 'Maintenance' | 'Board'>('Meeting');
   const [description, setDescription] = useState('');
 
+  // Combine real events and session-only events
+  const allEvents = [...events, ...tempEvents];
+
   const handleExportICS = () => {
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Co-op Management System//EN\n";
     
-    events.forEach(event => {
+    allEvents.forEach(event => {
       const dtStart = event.date.replace(/-/g, '') + 'T' + event.time.replace(/:/g, '') + '00';
       // Simple 1-hour duration for export
       const startHour = parseInt(event.time.split(':')[0]);
@@ -67,7 +71,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
       const eventBlocks = content.split('BEGIN:VEVENT');
       eventBlocks.shift(); // Remove header
 
-      const importedEvents = [];
+      const newTempEvents: CoopEvent[] = [];
 
       for (const block of eventBlocks) {
         const summary = block.match(/SUMMARY:(.*)/)?.[1]?.trim() || 'Imported Event';
@@ -77,7 +81,6 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
         const categoryStr = block.match(/CATEGORIES:(.*)/)?.[1]?.trim() || 'Social';
 
         if (dtstart) {
-          // Format: YYYYMMDDTHHMMSS
           const year = dtstart.substring(0, 4);
           const month = dtstart.substring(4, 6);
           const day = dtstart.substring(6, 8);
@@ -87,37 +90,29 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
           const date = `${year}-${month}-${day}`;
           const time = `${hour}:${minute}`;
 
-          try {
-            const res = await fetch('/api/events', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                title: summary,
-                date,
-                time,
-                location: locationStr,
-                description: descriptionStr,
-                category: ['Meeting', 'Social', 'Maintenance', 'Board'].includes(categoryStr) ? categoryStr : 'Social'
-              })
-            });
-            if (res.ok) {
-              const data = await res.json();
-              importedEvents.push(data);
-            }
-          } catch (err) {
-            console.error('Failed to import event:', err);
-          }
+          // Create local-only event object without saving to DB
+          newTempEvents.push({
+            id: `temp-${Date.now()}-${Math.random()}`,
+            title: summary,
+            date,
+            time,
+            location: locationStr,
+            description: descriptionStr,
+            category: (['Meeting', 'Social', 'Maintenance', 'Board'].includes(categoryStr) ? categoryStr : 'Social') as any,
+            cooperativeId: 'session-temp',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
         }
       }
 
-      if (importedEvents.length > 0) {
-        setEvents(prev => [...prev, ...importedEvents]);
-        alert(`Successfully imported ${importedEvents.length} events!`);
+      if (newTempEvents.length > 0) {
+        setTempEvents(prev => [...prev, ...newTempEvents]);
+        alert(`Successfully imported ${newTempEvents.length} events for this session! Note: These events are temporary and will expire when you log out.`);
       } else {
         alert("No valid events found in the .ics file.");
       }
       setIsImporting(false);
-      // Reset input
       e.target.value = '';
     };
     reader.readAsText(file);
@@ -211,7 +206,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Community Calendar</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium font-medium">Co-op meetings, social gatherings, and building maintenance events.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Co-op meetings, social gatherings, and building maintenance events.</p>
         </div>
         {isAdmin && !isGuest && (
           <div className="flex gap-2">
@@ -246,6 +241,26 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
           </div>
         )}
       </div>
+
+      {tempEvents.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/50 p-4 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center text-amber-600 dark:text-amber-400">
+              <i className="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div>
+              <p className="text-xs font-black text-amber-800 dark:text-amber-400 uppercase tracking-widest">Session Events Active</p>
+              <p className="text-[10px] text-amber-600 dark:text-amber-500 font-bold uppercase">Imported events expire at the end of session.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setTempEvents([])}
+            className="text-[10px] font-black text-amber-700 hover:text-amber-900 uppercase tracking-widest px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg transition-colors"
+          >
+            Clear Temp
+          </button>
+        </div>
+      )}
 
       {(showAddForm || editEvent) && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -322,7 +337,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
             {[...Array(daysInMonth)].map((_, i) => {
               const day = i + 1;
               const dateStr = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-              const hasEvents = events.filter(e => e.date === dateStr);
+              const hasEvents = allEvents.filter(e => e.date === dateStr);
               return (
                 <button
                   key={i}
@@ -339,7 +354,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                           e.category === 'Meeting' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800' :
                           e.category === 'Social' ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 border-brand-100 dark:border-brand-800' :
                           'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-800'
-                        }`}
+                        } ${e.id.toString().startsWith('temp-') ? 'opacity-70 border-dashed ring-1 ring-amber-500/30' : ''}`}
                       >
                         {e.title}
                       </div>
@@ -423,11 +438,11 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                {monthName} Events
             </h3>
             <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-hide">
-              {events.filter(e => {
+              {allEvents.filter(e => {
                 const eventDate = new Date(e.date);
                 return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
               }).length > 0 ? (
-                events
+                allEvents
                   .filter(e => {
                     const eventDate = new Date(e.date);
                     return eventDate.getMonth() === currentMonth && eventDate.getFullYear() === currentYear;
@@ -441,19 +456,38 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                       e.date === selectedDate 
                         ? 'border-brand-500 bg-brand-50/30 dark:bg-brand-900/20' 
                         : 'border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-slate-800/30 hover:bg-white dark:hover:bg-slate-800 hover:border-brand-200 dark:hover:border-brand-500'
-                    }`}
+                    } ${e.id.toString().startsWith('temp-') ? 'border-dashed' : ''}`}
                   >
                     <div className="flex justify-between items-start mb-3">
-                       <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
-                         e.category === 'Meeting' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
-                         e.category === 'Social' ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400' :
-                         'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                       }`}>{e.category}</span>
+                       <div className="flex items-center gap-2">
+                         <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${
+                           e.category === 'Meeting' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                           e.category === 'Social' ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400' :
+                           'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                         }`}>{e.category}</span>
+                         {e.id.toString().startsWith('temp-') && (
+                           <span className="text-[7px] font-black px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-400 rounded uppercase">Temp</span>
+                         )}
+                       </div>
                        <div className="flex items-center gap-1">
                          {isAdmin && !isGuest && (
                            <div className="flex gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button onClick={(ev) => { ev.stopPropagation(); setEditEvent(e); }} className="p-1 text-amber-600 hover:bg-amber-50 rounded"><i className="fa-solid fa-pen text-[10px]"></i></button>
-                             <button onClick={(ev) => deleteEvent(e.id, ev)} className="p-1 text-rose-600 hover:bg-rose-50 rounded"><i className="fa-solid fa-trash text-[10px]"></i></button>
+                             {!e.id.toString().startsWith('temp-') && (
+                               <button onClick={(ev) => { ev.stopPropagation(); setEditEvent(e); }} className="p-1 text-amber-600 hover:bg-amber-50 rounded"><i className="fa-solid fa-pen text-[10px]"></i></button>
+                             )}
+                             <button 
+                               onClick={(ev) => {
+                                 ev.stopPropagation();
+                                 if (e.id.toString().startsWith('temp-')) {
+                                   setTempEvents(prev => prev.filter(te => te.id !== e.id));
+                                 } else {
+                                   deleteEvent(e.id, ev);
+                                 }
+                               }} 
+                               className="p-1 text-rose-600 hover:bg-rose-50 rounded"
+                             >
+                               <i className="fa-solid fa-trash text-[10px]"></i>
+                             </button>
                            </div>
                          )}
                          <div className="flex flex-col items-end">

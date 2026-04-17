@@ -1,0 +1,76 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Co-op Management System//EN
+BEGIN:VEVENT
+SUMMARY:Annual General Meeting
+DTSTART:20260515T190000
+DTEND:20260515T210000
+LOCATION:Common Room
+DESCRIPTION:Mandatory annual meeting to discuss co-op finances and elect new board members.
+CATEGORIES:Meeting
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Summer BBQ & Social
+DTSTART:20260704T120000
+DTEND:20260704T160000
+LOCATION:Courtyard
+DESCRIPTION:Community BBQ. Co-op will provide burgers and drinks. Please bring a side dish to share!
+CATEGORIES:Social
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Roof & Gutter Inspection
+DTSTART:20260910T090000
+DTEND:20260910T150000
+LOCATION:Building Exterior
+DESCRIPTION:Maintenance crew will be on the roof. Please ensure balconies are clear of debris.
+CATEGORIES:Maintenance
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Budget Planning Session
+DTSTART:20261020T183000
+DTEND:20261020T203000
+LOCATION:Meeting Room B
+DESCRIPTION:Board session to draft the 2027 operating budget.
+CATEGORIES:Board
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Winter Holiday Mixer
+DTSTART:20261218T200000
+DTEND:20261218T235900
+LOCATION:Common Room
+DESCRIPTION:Celebrate the holidays with your neighbors. Music, snacks, and festive drinks provided.
+CATEGORIES:Social
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Fire Safety Drill
+DTSTART:20270115T100000
+DTEND:20270115T110000
+LOCATION:Entire Building
+DESCRIPTION:Annual fire alarm testing and evacuation drill.
+CATEGORIES:Maintenance
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Spring Garden Workshop
+DTSTART:20270320T110000
+DTEND:20270320T130000
+LOCATION:Community Garden
+DESCRIPTION:Preparing the beds for spring planting. Seeds and tools provided.
+CATEGORIES:Social
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Quarterly Board Meeting
+DTSTART:20270415T190000
+DTEND:20270415T210000
+LOCATION:Zoom / Common Room
+DESCRIPTION:Review of Q1 maintenance and financial reports.
+CATEGORIES:Board
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Building Power Wash
+DTSTART:20270605T080000
+DTEND:20270605T170000
+LOCATION:Building Exterior
+DESCRIPTION:Exterior cleaning. Please keep all windows closed tightly throughout the day.
+CATEGORIES:Maintenance
+END:VEVENT
+END:VCALENDAR
