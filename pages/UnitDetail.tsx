@@ -167,23 +167,41 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedNewTenantId, setSelectedNewTenantId] = useState('');
   const [selectedTargetUnitId, setSelectedTargetUnitId] = useState('');
+  const [moveOutDate, setMoveOutDate] = useState(new Date().toISOString().split('T')[0]);
+  const [moveOutReason, setMoveOutReason] = useState('Voluntary Household Departure');
+  const [customReason, setCustomReason] = useState('');
+
+  const MOVE_OUT_REASONS = [
+    'Voluntary Household Departure',
+    'End of Lease',
+    'Notice to End Tenancy (Non-Payment)',
+    'Notice to End Tenancy (Cause)',
+    'Notice to End Tenancy (Landlord Use)',
+    'Mutual Agreement to End Tenancy',
+    'Death of Sole Member',
+    'Internal Transfer',
+    'Other'
+  ];
 
   const handleMoveOut = async () => {
     console.log("handleMoveOut triggered", { unit, primaryResident });
     if (!unit) return;
-    
-    const moveOutDate = new Date().toISOString().split('T')[0];
+
+    const finalReason = moveOutReason === 'Other' ? customReason : moveOutReason;
 
     try {
       await fetch(`/api/units/${unit.id}/move-out`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: moveOutDate, reason: 'Voluntary Household Departure' })
+        body: JSON.stringify({ 
+          date: moveOutDate, 
+          reason: finalReason || 'Voluntary Household Departure' 
+        })
       });
 
       // Update local state for ALL residents of the unit
       const residentsToMoveOut = tenants.filter(t => t.unitId === unit.id);
-      
+
       const updatedTenants = tenants.map(t => {
         if (residentsToMoveOut.some(r => r.id === t.id)) {
           return {
@@ -191,9 +209,9 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
             status: 'Past' as const,
             endDate: moveOutDate,
             unitId: null,
-            history: (t.history || []).map(rh => 
-              rh.unitId === unit.id && !rh.endDate 
-                ? { ...rh, endDate: moveOutDate } 
+            history: (t.history || []).map(rh =>
+              rh.unitId === unit.id && !rh.endDate
+                ? { ...rh, endDate: moveOutDate }
                 : rh
             )
           };
@@ -216,12 +234,16 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
       setShowMoveOutModal(false);
       setNotification({ message: `Move-out processed for entire household (${residentsToMoveOut.length} members).`, type: 'success' });
       setTimeout(() => setNotification(null), 5000);
+
+      // Reset modal state
+      setMoveOutReason('Voluntary Household Departure');
+      setCustomReason('');
+      setMoveOutDate(new Date().toISOString().split('T')[0]);
     } catch (err) {
       console.error(err);
       alert("Failed to process move-out.");
     }
   };
-
   const handleMoveIn = async () => {
     console.log("handleMoveIn triggered", { unit, selectedNewTenantId });
     if (!unit || !selectedNewTenantId) return;
@@ -1117,45 +1139,126 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
       {/* Turnover Management Modals - Moved outside tab blocks */}
       {showMoveOutModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-white/5">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-white/5 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-black text-slate-900 dark:text-white">Process Move-Out</h3>
-              <button onClick={() => setShowMoveOutModal(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-xl"></i></button>
+              <button onClick={() => setShowMoveOutModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <i className="fa-solid fa-xmark text-xl"></i>
+              </button>
             </div>
             
             <div className="space-y-6">
+              {/* Resident Warning Card */}
               <div className="p-6 bg-rose-50 dark:bg-rose-900/10 rounded-3xl border border-rose-100 dark:border-rose-800/50 flex items-center gap-4">
                 <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/30 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 text-xl shrink-0">
                   <i className="fa-solid fa-user-minus"></i>
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-rose-900 dark:text-rose-300">Confirm Move-Out</p>
-                  <p className="text-xs text-rose-600 dark:text-rose-500 font-medium">You are about to move out {primaryResident?.firstName} {primaryResident?.lastName} from Unit {unit.number}.</p>
+                  <p className="text-sm font-bold text-rose-900 dark:text-rose-300">Confirm Household Move-Out</p>
+                  <p className="text-xs text-rose-600 dark:text-rose-500 font-medium leading-relaxed">
+                    Moving out {primaryResident?.firstName} {primaryResident?.lastName} and all household members from Unit {unit.number}.
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Move-Out Date</p>
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{new Date().toLocaleDateString()}</p>
+              {/* Form Controls */}
+              <div className="space-y-5">
+                {/* Date Picker */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Effective Date</label>
+                  <div className="relative">
+                    <i className="fa-solid fa-calendar-day absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input 
+                      type="date"
+                      value={moveOutDate}
+                      onChange={(e) => setMoveOutDate(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-2xl pl-12 pr-5 py-3.5 text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-rose-500 text-slate-800 dark:text-slate-200 transition-all"
+                    />
+                  </div>
                 </div>
 
-                <div className="bg-amber-50 dark:bg-amber-900/10 p-5 rounded-2xl border border-amber-100 dark:border-amber-800/50">
-                  <p className="text-[10px] font-black text-amber-800 dark:text-amber-400 uppercase tracking-tight mb-1">
-                    <i className="fa-solid fa-triangle-exclamation mr-1"></i> Important Note
+                {/* Reason Dropdown */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Reason for Move-Out</label>
+                  <div className="relative">
+                    <i className="fa-solid fa-comment-dots absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <select 
+                      value={moveOutReason}
+                      onChange={(e) => setMoveOutReason(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-2xl pl-12 pr-5 py-3.5 text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-rose-500 text-slate-800 dark:text-slate-200 appearance-none transition-all"
+                    >
+                      {MOVE_OUT_REASONS.map(reason => (
+                        <option key={reason} value={reason}>{reason}</option>
+                      ))}
+                    </select>
+                    <i className="fa-solid fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[10px]"></i>
+                  </div>
+                </div>
+
+                {/* Custom Reason Field */}
+                {moveOutReason === 'Other' && (
+                  <div className="animate-in slide-in-from-top-2 duration-200">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Specify Reason</label>
+                    <textarea 
+                      placeholder="Type custom reason (max 200 chars)..."
+                      value={customReason}
+                      onChange={(e) => setCustomReason(e.target.value.substring(0, 200))}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-2xl px-5 py-3 text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-rose-500 text-slate-800 dark:text-slate-200 min-h-[80px] resize-none transition-all"
+                    />
+                    <div className="flex justify-end mt-1">
+                      <span className={`text-[9px] font-black uppercase ${customReason.length >= 190 ? 'text-rose-500' : 'text-slate-400'}`}>
+                        {customReason.length}/200
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Turnover Checklist */}
+                <div className="bg-slate-50 dark:bg-slate-950/40 p-5 rounded-3xl border border-slate-100 dark:border-white/5">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <i className="fa-solid fa-list-check text-rose-500"></i> Admin Checklist
                   </p>
-                  <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium leading-relaxed">
-                    This action will archive the residency record, update the member's status to "Past", and make the unit vacant. This cannot be easily undone.
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {[
+                      'Keys & fobs returned',
+                      'Share capital refund processed',
+                      'Final inspection scheduled',
+                      'Utilities notified'
+                    ].map(item => (
+                      <label key={item} className="flex items-center gap-3 cursor-pointer group">
+                        <div className="w-5 h-5 rounded-lg border-2 border-slate-200 dark:border-slate-800 group-hover:border-rose-500 transition-colors flex items-center justify-center shrink-0 overflow-hidden">
+                          <input type="checkbox" className="peer hidden" />
+                          <i className="fa-solid fa-check text-[10px] text-white opacity-0 peer-checked:opacity-100 transition-opacity bg-rose-500 w-full h-full flex items-center justify-center"></i>
+                        </div>
+                        <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{item}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Warning Footer */}
+                <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-2xl border border-amber-100 dark:border-amber-800/50">
+                  <p className="text-[9px] font-black text-amber-800 dark:text-amber-400 uppercase tracking-tight mb-1 flex items-center gap-1">
+                    <i className="fa-solid fa-triangle-exclamation"></i> Permanent Action
+                  </p>
+                  <p className="text-[9px] text-amber-600 dark:text-amber-500 font-medium leading-relaxed">
+                    Confirming will archive the residency record and mark the unit as Vacant. This is non-reversible.
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="flex gap-4 mt-10">
-              <button onClick={() => setShowMoveOutModal(false)} className="flex-1 py-4 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all">Cancel</button>
+              <button 
+                onClick={() => setShowMoveOutModal(false)} 
+                className="flex-1 py-4 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all"
+              >
+                Cancel
+              </button>
               <button 
                 onClick={handleMoveOut}
-                className="flex-1 py-4 bg-rose-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-rose-700 active:scale-95 transition-all"
+                disabled={moveOutReason === 'Other' && !customReason.trim()}
+                className="flex-1 py-4 bg-rose-600 text-white rounded-2xl text-xs font-black uppercase hover:bg-rose-700 active:scale-95 transition-all shadow-lg shadow-rose-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirm Move-Out
               </button>
