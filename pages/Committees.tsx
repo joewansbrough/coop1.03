@@ -83,7 +83,6 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
     }
   }, [location.search, committees]);
 
-  const selectedCommittee = Array.isArray(committees) ? committees.find(c => c.id === selectedId) : null;
   const committeeDocs = Array.isArray(documents) && selectedCommittee
     ? documents.filter(d => 
         d.committee === selectedCommittee.name || 
