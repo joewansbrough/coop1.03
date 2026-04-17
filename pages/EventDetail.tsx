@@ -73,7 +73,6 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       console.error(err);
     }
   };
-  };
 
   const handleAttend = async () => {
     if (isGuest) return;
