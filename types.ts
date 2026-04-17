@@ -127,6 +127,7 @@ export interface Committee {
   chair: string;
   icon: string;
   members?: any[];
+  events?: CoopEvent[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -140,6 +141,7 @@ export interface CoopEvent {
   location: string;
   category: string;
   description: string;
+  committeeId?: string;
   attendees?: Tenant[];
 }
 

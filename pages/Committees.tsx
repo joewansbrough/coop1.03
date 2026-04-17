@@ -5,13 +5,14 @@ import { Committee, Tenant, Document } from '../types';
 interface CommitteesProps {
   isAdmin: boolean;
   isGuest?: boolean;
+  user: any;
   committees: Committee[];
   setCommittees: React.Dispatch<React.SetStateAction<Committee[]>>;
   tenants: Tenant[];
   documents?: Document[];
 }
 
-const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, committees, setCommittees, tenants, documents = [] }) => {
+const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user, committees, setCommittees, tenants, documents = [] }) => {
   const location = useLocation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showContact, setShowContact] = useState(false);
@@ -26,6 +27,53 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
   const [newCommitteeDesc, setNewCommitteeDesc] = useState('');
   const [newCommitteeChair, setNewCommitteeChair] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
+
+  // Meeting scheduling state
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
+  const [meetingTitle, setMeetingTitle] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('19:00');
+  const [meetingLocation, setMeetingLocation] = useState('Common Room');
+  const [meetingDesc, setMeetingDesc] = useState('');
+
+  const selectedCommittee = Array.isArray(committees) ? committees.find(c => c.id === selectedId) : null;
+  const isChair = selectedCommittee && user?.name === selectedCommittee.chair;
+  const canSchedule = isAdmin || isChair;
+
+  const handleScheduleMeeting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCommittee) return;
+    
+    try {
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: meetingTitle,
+          date: meetingDate,
+          time: meetingTime,
+          location: meetingLocation,
+          description: meetingDesc,
+          category: 'Meeting',
+          committeeId: selectedCommittee.id
+        })
+      });
+      
+      if (res.ok) {
+        alert("Committee meeting scheduled successfully!");
+        setShowMeetingModal(false);
+        // Reset form
+        setMeetingTitle('');
+        setMeetingDate('');
+        setMeetingTime('19:00');
+        setMeetingLocation('Common Room');
+        setMeetingDesc('');
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to schedule meeting.");
+    }
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -183,6 +231,54 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
         </div>
       )}
 
+      {showMeetingModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl p-8 animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Schedule Committee Meeting</h3>
+              <button onClick={() => setShowMeetingModal(false)} className="text-slate-400 hover:text-slate-600"><i className="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form onSubmit={handleScheduleMeeting} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Meeting Title</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={meetingTitle} 
+                  onChange={e => setMeetingTitle(e.target.value)} 
+                  placeholder={`${selectedCommittee?.name} Meeting`}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white" 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date</label>
+                  <input type="date" required value={meetingDate} onChange={e => setMeetingDate(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time</label>
+                  <input type="time" required value={meetingTime} onChange={e => setMeetingTime(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</label>
+                <input type="text" required value={meetingLocation} onChange={e => setMeetingLocation(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Agenda / Details</label>
+                <textarea value={meetingDesc} onChange={e => setMeetingDesc(e.target.value)} rows={3} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white resize-none" />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setShowMeetingModal(false)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors">Cancel</button>
+                <button type="submit" className="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 flex items-center justify-center gap-2 active:scale-95 transition-all">
+                  <i className="fa-solid fa-calendar-check"></i> Schedule
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {!selectedId ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {committees.map(committee => (
@@ -259,12 +355,20 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
                     </div>
                     <div className="flex gap-2">
                        {isAdmin && !isGuest && (
-                         <button 
-                           onClick={() => setShowUpload(true)}
-                           className="px-4 py-2 bg-slate-900 dark:bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-brand-700 transition-all"
-                         >
-                           Upload Minutes
-                         </button>
+                         <>
+                           <button 
+                             onClick={() => setShowMeetingModal(true)}
+                             className="px-4 py-2 bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center gap-2"
+                           >
+                             <i className="fa-solid fa-calendar-plus"></i> Schedule Meeting
+                           </button>
+                           <button 
+                             onClick={() => setShowUpload(true)}
+                             className="px-4 py-2 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                           >
+                             Upload Minutes
+                           </button>
+                         </>
                        )}
                     </div>
                   </div>
@@ -314,6 +418,45 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, commi
                   </form>
                 </div>
               )}
+
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5">
+                 <div className="flex justify-between items-center mb-8">
+                   <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase tracking-tight">
+                     <i className="fa-solid fa-calendar-check text-brand-500"></i> Upcoming Meetings
+                   </h3>
+                 </div>
+                 <div className="space-y-4">
+                    {selectedCommittee?.events && selectedCommittee.events.length > 0 ? (
+                      selectedCommittee.events
+                        .filter(e => new Date(e.date) >= new Date())
+                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                        .map(event => (
+                          <div key={event.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+                            <div className="flex items-center gap-4">
+                              <div className="bg-white dark:bg-slate-900 p-2 rounded-xl text-center min-w-[50px] border dark:border-white/5">
+                                <p className="text-[8px] font-black text-slate-400 uppercase">{new Date(event.date).toLocaleDateString([], { month: 'short' })}</p>
+                                <p className="text-sm font-black text-slate-800 dark:text-white">{new Date(event.date).toLocaleDateString([], { day: 'numeric' })}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{event.title}</p>
+                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{event.time} • {event.location}</p>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => window.location.href = `/calendar/${event.id}`}
+                              className="p-2 text-slate-300 hover:text-brand-500 transition-colors"
+                            >
+                              <i className="fa-solid fa-circle-info"></i>
+                            </button>
+                          </div>
+                        ))
+                    ) : (
+                      <div className="text-center py-8 bg-slate-50/50 dark:bg-slate-950/20 rounded-2xl border border-dashed border-slate-100 dark:border-white/5">
+                        <p className="text-xs font-bold text-slate-400 uppercase">No upcoming meetings scheduled</p>
+                      </div>
+                    )}
+                 </div>
+              </div>
 
               <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5">
                  <div className="flex justify-between items-center mb-8">

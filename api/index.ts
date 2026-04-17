@@ -766,7 +766,10 @@ app.delete('/api/documents/:id', async (req, res) => {
 app.get('/api/committees', async (req, res) => {
   try {
     const committees = await getPrisma().committee.findMany({
-      include: { members: true }
+      include: { 
+        members: true,
+        events: true 
+      }
     });
     // UI expects members as an array of name strings
     const mapped = committees.map(c => ({
@@ -786,20 +789,36 @@ app.get('/api/events', async (req, res) => {
 });
 
 app.post('/api/events', async (req, res) => {
-  const { title, description, date, time, location, category } = req.body;
+  const { title, description, date, time, location, category, committeeId } = req.body;
   const event = await getPrisma().coopEvent.create({
     data: {
-      cooperativeId: await getCoopId(req, getPrisma()), title, description, date, time, location, category },
+      cooperativeId: await getCoopId(req, getPrisma()), 
+      title, 
+      description, 
+      date: new Date(date), 
+      time, 
+      location, 
+      category,
+      committeeId: committeeId || null
+    },
     include: { attendees: true }
   });
   res.json(event);
 });
 
 app.put('/api/events/:id', async (req, res) => {
-  const { title, description, date, time, location, category } = req.body;
+  const { title, description, date, time, location, category, committeeId } = req.body;
   const event = await getPrisma().coopEvent.update({
     where: { id: req.params.id },
-    data: { title, description, date, time, location, category },
+    data: { 
+      title, 
+      description, 
+      date: new Date(date), 
+      time, 
+      location, 
+      category,
+      committeeId: committeeId || null
+    },
     include: { attendees: true }
   });
   res.json(event);
