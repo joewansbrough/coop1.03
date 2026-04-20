@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Committee, Tenant, Document } from '../types';
+import FilterBar from '../components/FilterBar';
+import { formatDate } from '../utils/dateUtils';
 
 interface CommitteesProps {
   isAdmin: boolean;
@@ -27,6 +29,11 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
   const [newCommitteeDesc, setNewCommitteeDesc] = useState('');
   const [newCommitteeChair, setNewCommitteeChair] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
+
+  // Filtering for committee documents
+  const [docFilter, setDocFilter] = useState('All');
+  const [docSearch, setDocSearch] = useState('');
+  const docCategories = ['All', 'Minutes', 'Policy', 'Financial', 'Bylaws', 'Newsletters', 'Cloud'];
 
   // Meeting scheduling state
   const [showMeetingModal, setShowMeetingModal] = useState(false);
@@ -84,12 +91,20 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
   }, [location.search, committees]);
 
   const committeeDocs = Array.isArray(documents) && selectedCommittee
-    ? documents.filter(d => 
-        d.committee === selectedCommittee.name || 
-        (d.tags && d.tags.some(tag => tag.toLowerCase() === selectedCommittee.name.toLowerCase())) ||
-        d.category === selectedCommittee.name ||
-        d.title.toLowerCase().includes(selectedCommittee.name.toLowerCase())
-      )
+    ? documents.filter(d => {
+        const isForCommittee = d.committee === selectedCommittee.name || 
+          (d.tags && d.tags.some(tag => tag.toLowerCase() === selectedCommittee.name.toLowerCase())) ||
+          d.category === selectedCommittee.name ||
+          d.title.toLowerCase().includes(selectedCommittee.name.toLowerCase());
+        
+        if (!isForCommittee) return false;
+
+        const matchesFilter = docFilter === 'All' || d.category === docFilter || d.tags?.includes(docFilter);
+        const matchesSearch = d.title.toLowerCase().includes(docSearch.toLowerCase()) ||
+          d.tags?.some(t => t.toLowerCase().includes(docSearch.toLowerCase()));
+        
+        return matchesFilter && matchesSearch;
+      })
     : [];
 
   const handleSendMessage = (e: React.FormEvent) => {
@@ -222,7 +237,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowAssignMember(null)} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl">Cancel</button>
                 <button onClick={() => handleAssignMember(showAssignMember)} className="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 flex items-center justify-center gap-2">
-                  <i className="fa-solid fa-plus"></i> Assign Member
+                  <i className="fa-solid fa-user-plus"></i> Assign Member
                 </button>
               </div>
             </div>
@@ -371,7 +386,9 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                        )}
                     </div>
                   </div>
-                  <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tight">{selectedCommittee?.name} Committee</h1>
+                  <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tight">
+                    {selectedCommittee?.name.toLowerCase().endsWith('committee') ? selectedCommittee?.name : `${selectedCommittee?.name} Committee`}
+                  </h1>
                   <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed mb-10 max-w-2xl font-medium">{selectedCommittee?.description}</p>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -457,13 +474,23 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                  </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5">
-                 <div className="flex justify-between items-center mb-8">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5 space-y-8">
+                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                    <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase tracking-tight">
-                     <i className="fa-solid fa-file-contract text-brand-500"></i> Records & Archive
+                     <i className="fa-solid fa-file-contract text-brand-500"></i> Committee Documents
                    </h3>
                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">PIPA Compliant Storage</span>
                  </div>
+
+                 <FilterBar 
+                   search={docSearch}
+                   onSearchChange={setDocSearch}
+                   searchPlaceholder="Search docs..."
+                   filter={docFilter}
+                   onFilterChange={setDocFilter}
+                   filterOptions={docCategories}
+                 />
+
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {committeeDocs.length > 0 ? committeeDocs.map(doc => (
                       <div 
@@ -477,13 +504,13 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                            </div>
                            <div className="overflow-hidden">
                               <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{doc.title}</p>
-                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{doc.date} • {doc.author}</p>
+                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{formatDate(doc.date)} • {doc.author}</p>
                            </div>
                         </div>
                         <i className="fa-solid fa-arrow-up-right-from-square text-slate-300 group-hover:text-brand-500 group-hover:scale-110 transition-all p-2"></i>
                       </div>
                     )) : (
-                      <p className="col-span-2 text-center py-12 text-slate-300 italic text-sm border-2 border-dashed border-slate-100 dark:border-white/5 rounded-2xl">No archived records found.</p>
+                      <p className="col-span-2 text-center py-12 text-slate-300 italic text-sm border-2 border-dashed border-slate-100 dark:border-white/5 rounded-2xl">No documents found matching your criteria.</p>
                     )}
                  </div>
               </div>

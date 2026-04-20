@@ -650,18 +650,66 @@ const upload = multer({
     }
   });
 
+  app.post('/api/documents', requireAuth, async (req, res) => {
+    const body = req.body as Record<string, BodyValue>;
+    const title = ensureString(body.title, 'Untitled Document') as string;
+    const category = ensureString(body.category, 'General') as string;
+    const url = ensureString(body.url, '#') as string;
+    const fileType = ensureString(body.fileType, 'txt') as string;
+    const author = ensureString(body.author, (req as any).session?.user?.name || 'System') as string;
+    const date = ensureString(body.date, new Date().toISOString()) as string;
+    const tags = body.tags ? ensureArray(body.tags) : [];
+    const committee = optionalString(body.committee);
+    const content = optionalString(body.content);
+
+    const currentYear = new Date().getFullYear().toString();
+    const committeeTags = committee ? [committee] : [];
+    const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...tags]));
+
+    try {
+      const document = await prisma.document.create({
+        data: {
+          cooperativeId: await getCoopId(req, prisma),
+          title,
+          category,
+          url,
+          fileType,
+          author,
+          date,
+          tags: finalTags,
+          committee: committee || null,
+          content: content || null
+        }
+      });
+      res.json(document);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.put('/api/documents/:id', requireAuth, async (req, res) => {
     const body = req.body as Record<string, BodyValue>;
     const title = optionalString(body.title);
     const category = optionalString(body.category);
     const tags = body.tags ? ensureArray(body.tags) : undefined;
+    const committee = optionalString(body.committee);
     const content = optionalString(body.content);
     
-    const document = await prisma.document.update({
-      where: { id: req.params.id },
-      data: { title, category, tags: tags ? { set: tags } : undefined, content } as any
-    });
-    res.json(document);
+    try {
+      const document = await prisma.document.update({
+        where: { id: req.params.id },
+        data: { 
+          title, 
+          category, 
+          tags: tags ? { set: tags } : undefined, 
+          committee: committee !== undefined ? (committee || null) : undefined,
+          content 
+        }
+      });
+      res.json(document);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
 
