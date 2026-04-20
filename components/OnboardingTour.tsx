@@ -102,15 +102,31 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
   };
 
   const step = STEPS[currentStep];
-  const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+      <style>{`
+        @keyframes radar-pulse {
+          0% { transform: scale(1); opacity: 0.5; }
+          100% { transform: scale(2); opacity: 0; }
+        }
+        @keyframes breathing-glow {
+          0%, 100% { filter: drop-shadow(0 0 5px rgba(255,255,255,0.4)); }
+          50% { filter: drop-shadow(0 0 20px rgba(255,255,255,0.8)); }
+        }
+        @keyframes subtle-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-radar { animation: radar-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .animate-glow { animation: breathing-glow 3s ease-in-out infinite; }
+        .animate-float { animation: subtle-float 4s ease-in-out infinite; }
+      `}</style>
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[3rem] border border-slate-200 dark:border-white/10 overflow-hidden relative"
+        className="bg-white dark:bg-slate-900 w-full max-w-2xl min-h-[500px] md:h-[500px] rounded-[3rem] border border-slate-200 dark:border-white/10 overflow-hidden relative shadow-2xl"
       >
         {/* Close Button */}
         <button 
@@ -137,8 +153,12 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
                 transition={{ type: "spring", damping: 12 }}
                 className="relative z-10"
               >
-                <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center ring-4 ring-white/30">
-                  {step.icon}
+                <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center ring-4 ring-white/30 relative">
+                  {/* Animation Layers */}
+                  {currentStep === 1 && <div className="absolute inset-0 rounded-3xl border-2 border-white/50 animate-radar" />}
+                  <div className={`relative z-10 ${currentStep === 5 ? 'animate-glow' : 'animate-float'}`}>
+                    {step.icon}
+                  </div>
                 </div>
               </motion.div>
             </AnimatePresence>
@@ -157,7 +177,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* Right Side - Content */}
-          <div className="w-full md:w-3/5 p-12 flex flex-col justify-between bg-white dark:bg-slate-900">
+          <div className="w-full md:w-3/5 p-12 flex flex-col justify-between bg-white dark:bg-slate-900 overflow-y-auto">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
@@ -206,15 +226,6 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="absolute bottom-0 left-0 w-full h-1.5 bg-slate-100 dark:bg-white/5">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            className="h-full bg-brand-500"
-          />
         </div>
       </motion.div>
     </div>
