@@ -23,7 +23,7 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    title: "Welcome to CoopConnect BC",
+    title: "Welcome to CoopHub BC",
     description: "Your comprehensive platform for British Columbia housing co-operative management. Let's take a quick tour of your new Board Administrator tools.",
     icon: <ShieldCheck className="w-12 h-12" />,
     color: "bg-brand-500"

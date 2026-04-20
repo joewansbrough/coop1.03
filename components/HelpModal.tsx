@@ -16,7 +16,7 @@ const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose, onRestartTour })
         <div className="p-8 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
           <div>
             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Help & Support</h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Get assistance with CoopConnect BC</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Get assistance with CoopHub BC</p>
           </div>
           <button onClick={onClose} className="w-10 h-10 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center transition-colors">
             <i className="fa-solid fa-xmark text-slate-500"></i>
