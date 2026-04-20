@@ -394,6 +394,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
           isOpen={isProfileModalOpen} 
           onClose={() => setIsProfileModalOpen(false)} 
           onThemeChange={setTheme}
+          onRestartTour={() => setIsOnboardingOpen(true)}
           currentTheme={theme}
           user={{
             email: user.email,

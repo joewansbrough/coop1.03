@@ -5,6 +5,7 @@ interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onThemeChange: (theme: string) => void;
+  onRestartTour?: () => void;
   currentTheme: string;
   user: {
     email: string;
@@ -22,7 +23,7 @@ const THEMES = [
   { id: 'violet', name: 'Violet', color: 'bg-violet-500' },
 ];
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onThemeChange, currentTheme, user }) => {
+const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onThemeChange, onRestartTour, currentTheme, user }) => {
   const [displayName, setDisplayName] = useState(user.name);
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
 
@@ -128,7 +129,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onThemeCha
                 onClick={() => {
                   localStorage.removeItem('onboarding_hidden');
                   localStorage.removeItem('onboarding_completed');
-                  alert("Administrator Guide has been reset. It will appear on your next page refresh.");
+                  onRestartTour?.();
+                  onClose();
                 }}
                 className="w-full py-3 border border-dashed border-slate-200 dark:border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-brand-600 hover:border-brand-500 transition-all"
               >

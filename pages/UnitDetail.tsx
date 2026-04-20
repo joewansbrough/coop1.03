@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { RequestStatus, Unit, Tenant, MaintenanceRequest, Document, ScheduledMaintenance } from '../types';
-import { useRefreshData } from '../hooks/useCoopData';
+import { useRefreshData, useUser } from '../hooks/useCoopData';
 
 interface UnitDetailProps {
   isAdmin?: boolean;
@@ -16,6 +16,7 @@ interface UnitDetailProps {
 }
 
 const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnits, tenants, setTenants, requests: allRequests, setRequests, documents = [] }) => {
+  const { data: user } = useUser();
   const { unitId } = useParams<{ unitId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -100,10 +101,17 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
       return;
     }
 
+    // Reuse the access token from the login session if available
+    if ((user as any)?.accessToken) {
+      console.log('Reusing access token from session for Google Picker');
+      createPicker((user as any).accessToken);
+      return;
+    }
+
     try {
       const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: config.googleClientId,
-        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
         callback: (response: any) => {
           if (response.error !== undefined) return;
           createPicker(response.access_token);
@@ -133,7 +141,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
               url: driveDoc.url,
               fileType: driveDoc.type || 'gdoc',
               author: 'Google Drive',
-              date: new Date().toISOString().split('T')[0],
+              date: new Date().toISOString(),
               tags: ['Google Drive', 'Linked', `Unit ${unit?.number}`]
             };
 
