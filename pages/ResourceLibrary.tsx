@@ -7,6 +7,7 @@ import DriveExplorer from '../components/DriveExplorer';
 import FilterBar from '../components/FilterBar';
 
 import { useUser, useRefreshData } from '../hooks/useCoopData';
+import { formatDate } from '../utils/dateUtils';
 
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
@@ -478,7 +479,7 @@ const ResourceLibrary: React.FC<{
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">{doc.date} • {doc.author}</p>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">{formatDate(doc.date)} • {doc.author}</p>
                   </div>
                 </div>
 

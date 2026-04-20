@@ -5,6 +5,7 @@ import StatCard from '../components/StatCard';
 import { RequestStatus, Unit, MaintenancePriority } from '../types';
 import { useUnits, useTenants, useMaintenance, useAnnouncements, useEvents } from '../hooks/useCoopData';
 import { MOCK_ANNOUNCEMENTS, MOCK_DOCS, MOCK_UNITS, MOCK_TENANTS, MOCK_REQUESTS, MOCK_EVENTS, MOCK_COMMITTEES } from '../constants';
+import { formatDate, formatShortDate } from '../utils/dateUtils';
 
 interface DashboardProps {
   isAdmin: boolean;
@@ -115,7 +116,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
                       <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4">
                         <i className="fa-solid fa-calendar-day text-2xl"></i>
                       </div>
-                      <p className="text-3xl font-black mb-1">{new Date(nextMeeting.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
+                      <p className="text-3xl font-black mb-1">{formatShortDate(nextMeeting.date)}</p>
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">{nextMeeting.title}</p>
                     </Link>
                   ) : (
@@ -316,7 +317,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
                     <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4 group-hover:scale-110 transition-transform">
                       <i className="fa-solid fa-calendar-day text-2xl"></i>
                     </div>
-                    <p className="text-3xl font-black mb-1">{new Date(nextMeeting.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
+                    <p className="text-3xl font-black mb-1">{formatShortDate(nextMeeting.date)}</p>
                     <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">{nextMeeting.title}</p>
                     <div className="mt-6 pt-6 border-t border-white/5 w-full">
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{nextMeeting.time} • {nextMeeting.location}</p>
@@ -369,7 +370,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
                     </div>
                     <h3 className="text-sm font-black text-slate-800 dark:text-white mb-2 group-hover:text-brand-600 transition-colors line-clamp-1">{req.description}</h3>
                     <div className="mt-auto pt-3 border-t border-slate-200/50 dark:border-white/5 flex justify-between items-center">
-                      <span className="text-[8px] font-bold text-slate-400 uppercase">Filed {new Date(req.createdAt).toLocaleDateString()}</span>
+                      <span className="text-[8px] font-bold text-slate-400 uppercase">Filed {formatDate(req.createdAt)}</span>
                       <i className="fa-solid fa-arrow-right text-[10px] text-slate-300 group-hover:text-brand-500 transition-colors"></i>
                     </div>
                   </Link>
@@ -391,7 +392,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
                       <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest ${ann.priority === 'Urgent' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
                         {ann.priority}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{ann.date}</span>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{formatDate(ann.date)}</span>
                     </div>
                     <h3 className="text-lg font-black text-slate-800 dark:text-white mb-3 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors leading-tight">{ann.title}</h3>
                     <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed mb-8 flex-1 line-clamp-3">{ann.content}</p>
@@ -469,7 +470,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
                     className="flex gap-4 group cursor-pointer items-center"
                   >
                     <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center shrink-0 border border-slate-50 dark:border-white/5 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 transition-all">
-                      <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase">{new Date(event.date).toLocaleDateString('en-CA', { month: 'short' })}</span>
+                      <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase">{formatShortDate(event.date).split(' ')[0]}</span>
                       <span className="text-sm font-black text-slate-800 dark:text-white">{new Date(event.date).getDate()}</span>
                     </div>
                     <div className="flex-1 overflow-hidden">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Committee, Tenant, Document } from '../types';
 import FilterBar from '../components/FilterBar';
+import { formatDate } from '../utils/dateUtils';
 
 interface CommitteesProps {
   isAdmin: boolean;
@@ -503,7 +504,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                            </div>
                            <div className="overflow-hidden">
                               <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate pr-2">{doc.title}</p>
-                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{doc.date.split('T')[0]} • {doc.author}</p>
+                              <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{formatDate(doc.date)} • {doc.author}</p>
                            </div>
                         </div>
                         <i className="fa-solid fa-arrow-up-right-from-square text-slate-300 group-hover:text-brand-500 group-hover:scale-110 transition-all p-2"></i>

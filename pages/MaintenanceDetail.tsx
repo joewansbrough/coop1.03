@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { RequestStatus, MaintenanceNote, MaintenanceExpense, MaintenanceCategory, MaintenanceRequest, Unit, Tenant, MaintenancePriority } from '../types';
+import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 interface MaintenanceDetailProps {
   isAdmin?: boolean;
@@ -345,9 +346,9 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                           </div>
                           <div className="flex-1 pb-4 border-b border-slate-50 dark:border-white/5 last:border-0 last:pb-0">
                             <div className="flex justify-between items-start mb-1">
-                              <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
+                                  <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
                               <p className="text-[10px] text-slate-400 font-bold">
-                                {new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {formatDateTime(note.date)}
                               </p>
                             </div>
                             <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
@@ -371,9 +372,8 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                         <div className="flex justify-between items-start mb-1">
                           <p className="text-sm font-black text-slate-800 dark:text-white">{note.author}</p>
                           <p className="text-[10px] text-slate-400 font-bold">
-                            {new Date(note.date).toLocaleDateString()} {new Date(note.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
+                            {formatDateTime(note.date)}
+                          </p>                        </div>
                         <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400 font-medium">
                           {note.content}
                         </p>
@@ -424,7 +424,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                       <tbody className="divide-y divide-slate-50 dark:divide-white/5">
                          {(request.expenses || []).map(exp => (
                            <tr key={exp.id}>
-                              <td className="px-4 py-3 text-[10px] font-bold text-slate-500">{exp.date}</td>
+                              <td className="px-4 py-3 text-[10px] font-bold text-slate-500">{formatDate(exp.date)}</td>
                               <td className="px-4 py-3 text-xs font-black text-slate-800 dark:text-slate-200">{exp.item}</td>
                               <td className="px-4 py-3 text-sm font-black text-slate-900 dark:text-white text-right">${exp.cost.toFixed(2)}</td>
                            </tr>

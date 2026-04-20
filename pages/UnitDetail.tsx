@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { RequestStatus, Unit, Tenant, MaintenanceRequest, Document, ScheduledMaintenance } from '../types';
 import { useRefreshData, useUser } from '../hooks/useCoopData';
+import { formatDate } from '../utils/dateUtils';
 
 interface UnitDetailProps {
   isAdmin?: boolean;
@@ -463,7 +464,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
               <div className="flex items-center gap-3 mt-1.5">
                 <span className="text-[9px] font-black px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded uppercase">{req.category[0]}</span>
                 <span className="text-slate-300 dark:text-slate-600">·</span>
-                <span className="text-[10px] font-bold text-slate-400">{new Date(req.createdAt).toLocaleDateString()}</span>
+                <span className="text-[10px] font-bold text-slate-400">{formatDate(req.createdAt)}</span>
               </div>
             </div>
           )) : (
@@ -488,7 +489,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 onClick={() => navigate(`/admin/maintenance/${req.id}`)}
                 className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group cursor-pointer"
               >
-                <td className="px-6 py-4 text-xs font-bold text-slate-500">{new Date(req.createdAt).toLocaleDateString()}</td>
+                <td className="px-6 py-4 text-xs font-bold text-slate-500">{formatDate(req.createdAt)}</td>
                 <td className="px-6 py-4">
                   <span className="text-[9px] font-black px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg uppercase whitespace-nowrap">
                     {req.category[0]}
@@ -735,7 +736,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                     <span className="text-[8px] font-black px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded uppercase">{doc.category}</span>
                   </div>
                   <h4 className="font-bold text-slate-800 dark:text-slate-200 mb-1 line-clamp-1">{doc.title}</h4>
-                  <p className="text-[10px] text-slate-400 mb-4">{new Date(doc.date).toLocaleDateString()} • {doc.author}</p>
+                  <p className="text-[10px] text-slate-400 mb-4">{formatDate(doc.date)} • {doc.author}</p>
                   <a 
                     href={doc.url} 
                     target="_blank" 
@@ -785,7 +786,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                           </div>
                           <div className="flex flex-col justify-center">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resident Since</p>
-                            <p className="text-sm text-slate-700 dark:text-slate-300 font-bold">{new Date(resident.startDate).toLocaleDateString()}</p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300 font-bold">{formatDate(resident.startDate)}</p>
                           </div>
                         </div>
                       </div>
@@ -881,7 +882,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                     )}
                   </div>
                   <p className="text-xs font-bold text-slate-500 dark:text-slate-400 pl-10">
-                    {new Date(record.startDate).toLocaleDateString()} — {record.endDate ? new Date(record.endDate).toLocaleDateString() : 'Present'}
+                    {formatDate(record.startDate)} — {record.endDate ? formatDate(record.endDate) : 'Present'}
                   </p>
                   {record.moveReason && record.moveReason !== 'Current Residency' && (
                     <p className="text-xs text-slate-400 italic pl-10">{record.moveReason}</p>
@@ -907,7 +908,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 {unitHistory.length > 0 ? unitHistory.map((record, idx) => (
                   <tr key={`${record.tenant.id}-${idx}`} className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group">
                     <td className="px-6 py-4 text-xs font-bold text-slate-500">
-                      {new Date(record.startDate).toLocaleDateString()} - {record.endDate ? new Date(record.endDate).toLocaleDateString() : 'Present'}
+                      {formatDate(record.startDate)} - {record.endDate ? formatDate(record.endDate) : 'Present'}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -921,7 +922,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm font-bold text-slate-600 dark:text-slate-400">
-                      {record.endDate ? new Date(record.endDate).toLocaleDateString() : 'N/A'}
+                      {record.endDate ? formatDate(record.endDate) : 'N/A'}
                     </td>
                     <td className="px-6 py-4 text-xs font-medium text-slate-500 italic">
                       {record.moveReason || 'Not recorded'}

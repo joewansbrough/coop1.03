@@ -3,6 +3,7 @@ import { Tenant, Unit } from '../types';
 import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import axios from 'axios';
+import { formatDate, formatShortDate } from '../utils/dateUtils';
 
 interface TenantsProps {
   isAdmin?: boolean;
@@ -189,7 +190,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[9px] font-bold text-slate-400 uppercase hidden xs:block">
-                    Since {new Date(member.startDate).toLocaleDateString([], { month: 'short', year: 'numeric' })}
+                    Since {formatShortDate(member.startDate)}
                   </span>
                   <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400">
                     <i className="fa-solid fa-arrow-right-long text-xs"></i>
@@ -282,7 +283,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
                   <div className="flex flex-col gap-1">
                     {group.members.map(member => (
                       <span key={member.id} className="text-[10px] font-bold text-slate-400 uppercase">
-                        Since {new Date(member.startDate).toLocaleDateString([], { month: 'short', year: 'numeric' })}
+                        Since {formatShortDate(member.startDate)}
                       </span>
                     ))}
                   </div>
@@ -325,7 +326,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
                       <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{member.email}</span>
                     </td>
                     <td className="px-8 py-6">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Applied {new Date(member.startDate).toLocaleDateString()}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Applied {formatDate(member.startDate)}</span>
                     </td>
                     <td className="px-8 py-6 text-right">
                       <button
