@@ -736,27 +736,29 @@ app.post('/api/documents', async (req, res) => {
       url: url || '#',
       fileType: fileType || 'txt',
       author: author || ((req as any).session?.user?.name || 'System'),
-      date: date || new Date().toISOString().split('T')[0],
+      date: date || new Date().toISOString(),
       tags: finalTags,
+      committee: committee || null,
       content: content || null,
     } as any
   });
   res.json(document);
-});
+  });
 
-app.put('/api/documents/:id', async (req, res) => {
-  const { title, category, tags, content } = req.body;
+  app.put('/api/documents/:id', async (req, res) => {
+  const { title, category, tags, committee, content } = req.body;
   const document = await getPrisma().document.update({
     where: { id: req.params.id },
-    data: {
-      title,
-      category,
-      tags: tags ? { set: tags } : undefined,
-      content
+    data: { 
+      title, 
+      category, 
+      tags: tags ? { set: tags } : undefined, 
+      committee: committee !== undefined ? (committee || null) : undefined,
+      content 
     } as any
   });
   res.json(document);
-});
+  });
 
 app.delete('/api/documents/:id', async (req, res) => {
   await getPrisma().document.delete({ where: { id: req.params.id } });

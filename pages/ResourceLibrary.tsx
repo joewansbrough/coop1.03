@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import DriveExplorer from '../components/DriveExplorer';
 import FilterBar from '../components/FilterBar';
 
-import { useUser } from '../hooks/useCoopData';
+import { useUser, useRefreshData } from '../hooks/useCoopData';
 
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
@@ -16,6 +16,7 @@ const ResourceLibrary: React.FC<{
   committees?: Committee[]
 }> = ({ isAdmin, isGuest = false, documents, setDocuments, committees = [] }) => {
   const { data: user } = useUser();
+  const refreshData = useRefreshData();
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [question, setQuestion] = useState('');
@@ -180,6 +181,7 @@ const ResourceLibrary: React.FC<{
               }
 
               setDocuments(prev => [saved, ...prev]);
+              refreshData();
               setShowUpload(false);
               setUploadMode(null);
               setReviewingDoc(saved);
@@ -385,6 +387,7 @@ const ResourceLibrary: React.FC<{
       }
 
       setDocuments(prev => prev.map(d => d.id === data.id ? data : d));
+      refreshData();
       setReviewingDoc(null);
       alert("Document saved.");
 
@@ -401,6 +404,7 @@ const ResourceLibrary: React.FC<{
     try {
       await fetch(`/api/documents/${id}`, { method: 'DELETE' });
       setDocuments(prev => prev.filter(d => d.id !== id));
+      refreshData();
     } catch (err) {
       console.error(err);
     }
