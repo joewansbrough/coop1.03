@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import DriveExplorer from '../components/DriveExplorer';
 import FilterBar from '../components/FilterBar';
 
+import { useUser } from '../hooks/useCoopData';
+
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
   isGuest?: boolean,
@@ -13,6 +15,7 @@ const ResourceLibrary: React.FC<{
   setDocuments: React.Dispatch<React.SetStateAction<Document[]>>,
   committees?: Committee[]
 }> = ({ isAdmin, isGuest = false, documents, setDocuments, committees = [] }) => {
+  const { data: user } = useUser();
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [question, setQuestion] = useState('');
@@ -69,6 +72,13 @@ const ResourceLibrary: React.FC<{
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {
       alert(`Missing Google Configuration. Please check your environment variables.`);
+      return;
+    }
+
+    // Reuse the access token from the login session if available
+    if ((user as any)?.accessToken) {
+      console.log('Reusing access token from session for Google Picker');
+      createPicker((user as any).accessToken);
       return;
     }
 

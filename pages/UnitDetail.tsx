@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { RequestStatus, Unit, Tenant, MaintenanceRequest, Document, ScheduledMaintenance } from '../types';
-import { useRefreshData } from '../hooks/useCoopData';
+import { useRefreshData, useUser } from '../hooks/useCoopData';
 
 interface UnitDetailProps {
   isAdmin?: boolean;
@@ -16,6 +16,7 @@ interface UnitDetailProps {
 }
 
 const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnits, tenants, setTenants, requests: allRequests, setRequests, documents = [] }) => {
+  const { data: user } = useUser();
   const { unitId } = useParams<{ unitId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -97,6 +98,13 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {
       alert(`Missing Google Configuration. Please check your environment variables.`);
+      return;
+    }
+
+    // Reuse the access token from the login session if available
+    if ((user as any)?.accessToken) {
+      console.log('Reusing access token from session for Google Picker');
+      createPicker((user as any).accessToken);
       return;
     }
 

@@ -168,7 +168,7 @@ const upload = multer({
       client_id: process.env.GOOGLE_CLIENT_ID,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'openid email profile',
+      scope: 'openid email profile https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
       access_type: 'offline',
       prompt: 'select_account',
     });
@@ -225,7 +225,8 @@ const upload = multer({
         isAdmin,
         role: userInDb?.role || (isAdminByList ? 'ADMIN' : 'MEMBER'),
         tenantId: userInDb?.id || null,
-        unitNumber: userInDb?.unit?.number || null
+        unitNumber: userInDb?.unit?.number || null,
+        accessToken: access_token
       };
 
       res.send(`
