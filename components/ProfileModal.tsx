@@ -138,7 +138,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onThemeCha
               </button>
             </div>
           </div>
-          </div>
 
           <div className="pt-4 flex gap-3 sticky bottom-0 bg-white dark:bg-slate-900 py-4 border-t border-slate-100 dark:border-white/5">
             <button onClick={onClose} className="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-all">Dismiss</button>
