@@ -141,7 +141,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
               url: driveDoc.url,
               fileType: driveDoc.type || 'gdoc',
               author: 'Google Drive',
-              date: new Date().toISOString().split('T')[0],
+              date: new Date().toISOString(),
               tags: ['Google Drive', 'Linked', `Unit ${unit?.number}`]
             };
 
