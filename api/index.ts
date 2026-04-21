@@ -1,10 +1,8 @@
 import express from 'express';
-import cookieSession from 'cookie-session';
-import axios from 'axios';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
-import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
+import { createClient } from '../utils/supabase/server.js';
 import driveRoutes from './drive.js';
 
 const app = express();
@@ -12,7 +10,7 @@ const app = express();
 // Trust proxy for secure cookies on Vercel
 app.set('trust proxy', true);
 
-// Health check route (at the very top to bypass middleware if needed)
+// Health check route
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
@@ -20,32 +18,6 @@ app.get('/api/health', (req, res) => {
     env: process.env.NODE_ENV
   });
 });
-
-// Validation Middleware
-const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  try {
-    schema.parse(req.body);
-    next();
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation failed', details: error.errors });
-    } else {
-      next(error);
-    }
-  }
-};
-
-// Helper to sanitize strings for PostgreSQL (removes null bytes and invalid UTF-8 sequences)
-const sanitizeUtf8 = (str: string): string => {
-  if (!str) return "";
-  const cleaned = Buffer.from(str, 'utf8').toString('utf8');
-  return cleaned
-    .replace(/\u0000/g, '')
-    .replace(/\0/g, '')
-    // eslint-disable-next-line no-control-regex
-    .replace(/\x00/g, '')
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g, "");
-};
 
 // Prisma singleton helper
 let prismaInstance: PrismaClient;
@@ -59,40 +31,20 @@ const getPrisma = () => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Standard cookie-session middleware
-app.use(cookieSession({
-  name: 'session',
-  keys: [process.env.SESSION_SECRET || 'default_secret'],
-  maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  secure: true, // Always true on Vercel (HTTPS)
-  sameSite: 'none',
-  httpOnly: true,
-  signed: true,
-  overwrite: true,
-}));
+// Supabase Auth Middleware
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const supabase = createClient(req, res);
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-// Mock Data
-const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com'];
-
-
-const getCoopId = async (req: any, p: any = getPrisma()) => {
-  const sessionUser = req.session?.user;
-  if (sessionUser?.tenantId) {
-    const t = await p.tenant.findUnique({ where: { id: sessionUser.tenantId } });
-    if (t?.cooperativeId) return t.cooperativeId;
-  }
-  const first = await p.cooperative.findFirst();
-  if (!first) throw new Error("No cooperative found in the system.");
-  return first.id;
-};
-
-const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const hasUser = !!(req as any).session?.user;
-  if (!hasUser) {
+  if (error || !user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  (req as any).user = user;
   return next();
 };
+
+// ... (Rest of existing logic below requiring AUTH)
 
 // Robust Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
@@ -284,125 +236,7 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
 // With your other routes, under your auth middleware
 app.use('/api/drive', requireAuth, driveRoutes);
 
-app.get('/api/seed/preventative', async (req, res) => {
-  try {
-    const p = getPrisma();
-    const units = await p.unit.findMany({ include: { cooperative: true } }); // Fetch all units to get their IDs
-
-
-    // Create a map for quick lookup of existing scheduled maintenance tasks
-    const existingTasks = await p.scheduledMaintenance.findMany({
-      select: { unitId: true, task: true }
-    });
-    const existingTaskSet = new Set(existingTasks.map(t => `${t.unitId}-${t.task}`));
-    const tasksToInsert: any[] = [];
-
-
-    console.log('Seeding preventative maintenance tasks...');
-
-
-    // Generate mock tasks for each unit, ensuring variety
-    units.forEach(unit => {
-      const numTasks = Math.floor(Math.random() * 4) + 1;
-
-      for (let i = 0; i < numTasks; i++) {
-        // Create a fresh date for every calculation to avoid mutation bugs
-        const dateBase = new Date();
-        let task: string;
-        let dueDate: Date;
-        let frequency: string;
-        let assignedTo: string;
-        let category: string;
-
-        switch (i) {
-          case 0:
-            task = 'HVAC Filter Replacement';
-            dateBase.setMonth(dateBase.getMonth() + 1);
-            dueDate = new Date(dateBase);
-            frequency = Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY';
-            assignedTo = 'Building Management';
-            category = 'HVAC';
-            break;
-          case 1:
-            task = Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel';
-            dateBase.setMonth(dateBase.getMonth() + (Math.random() > 0.5 ? 3 : 6));
-            dueDate = new Date(dateBase);
-            frequency = Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL';
-            assignedTo = Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician';
-            category = Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL';
-            break;
-          // ... Repeat logic for other cases ensuring dueDate = new Date(dateBase)
-          default:
-            task = 'Annual Fire Alarm Test';
-            dateBase.setFullYear(dateBase.getFullYear() + 1);
-            dueDate = new Date(dateBase);
-            frequency = 'ANNUAL';
-            assignedTo = 'Safety Officer';
-            category = 'SAFETY';
-            break;
-        }
-
-        if (!existingTaskSet.has(`${unit.id}-${task}`)) {
-          tasksToInsert.push({
-            unitId: unit.id,
-            cooperativeId: unit.cooperativeId,
-            task,
-            dueDate,
-            frequency,
-            assignedTo,
-            category,
-            isCompleted: false,
-          });
-        }
-      }
-    });
-
-    // Bulk insert is MUCH safer and faster
-    const result = await p.scheduledMaintenance.createMany({
-      data: tasksToInsert,
-      skipDuplicates: true, // Extra safety layer
-    });
-
-    res.json({
-      success: true,
-      message: `Seeded ${result.count} new tasks.`,
-    });
-  } catch (e: any) {
-    console.error(e);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-app.delete('/api/seed/preventative', async (req, res) => {
-  try {
-    await getPrisma().scheduledMaintenance.deleteMany();
-    res.json({ success: true, message: "Preventative maintenance tasks cleared." });
-  } catch (e: any) {
-    console.error('Clear preventative tasks error:', e);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// Development Bypass Login
-app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
-  // Security check: Only allow in development or preview environments
-  const isProduction = process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV;
-  if (isProduction) {
-    return res.status(403).json({ error: 'Bypass not allowed in production' });
-  }
-
-  (req as any).session.user = {
-    email: 'guest@example.com',
-    name: 'Guest User',
-    picture: 'https://picsum.photos/seed/guest/200',
-    isAdmin: true,
-    isGuest: false,
-    tenantId: null,
-    unitNumber: 'GUEST-001'
-  };
-
-  res.json({ success: true, user: (req as any).session.user });
-});
+// Database API Routes ... (Keep existing routes)
 
 // --- Database API Routes ---
 
