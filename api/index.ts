@@ -508,10 +508,10 @@ app.get('/api/maintenance', requireAuth, async (req, res) => {
       include: { unit: true },
       orderBy: { createdAt: 'desc' }
     });
-    // UI expects category as an array. Split the comma-separated string from DB.
+    // UI expects category as an array. The DB stores it as a comma-separated string or a single value.
     const mapped = requests.map(r => ({
       ...r,
-      category: r.category ? r.category.split(', ') : []
+      category: r.category ? (r.category.includes(', ') ? r.category.split(', ') : [r.category]) : []
     }));
     res.json(mapped);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -519,39 +519,53 @@ app.get('/api/maintenance', requireAuth, async (req, res) => {
 
 app.post('/api/maintenance', requireAuth, async (req, res) => {
   const { title, description, status, priority, category, unitId, requestedBy, notes } = req.body;
-  const categoryString = Array.isArray(category) ? category.join(', ') : category;
-  const request = await getPrisma().maintenanceRequest.create({
-    data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
-      title,
-      description,
-      status,
-      priority,
-      category: categoryString,
-      unitId,
-      requestedBy,
-      notes: notes || []
-    }
-  });
-  res.json(request);
+  const categoryString = Array.isArray(category) ? category.join(', ') : (category || 'General');
+  
+  try {
+    const request = await getPrisma().maintenanceRequest.create({
+      data: {
+        cooperativeId: await getCoopId(req, getPrisma()),
+        title,
+        description,
+        status: status || 'Pending',
+        priority: priority || 'Medium',
+        category: categoryString,
+        unitId,
+        requestedBy,
+        notes: notes || []
+      }
+    });
+    res.json(request);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
-  const { title, description, status, priority, category, unitId, notes } = req.body;
-  const categoryString = Array.isArray(category) ? category.join(', ') : category;
-  const request = await getPrisma().maintenanceRequest.update({
-    where: { id: req.params.id },
-    data: {
-      title,
-      description,
-      status,
-      priority,
-      category: categoryString,
-      unitId,
-      notes: notes || []
-    }
-  });
-  res.json(request);
+  const body = req.body;
+  
+  const data: any = {};
+  if (body.title !== undefined) data.title = body.title;
+  if (body.description !== undefined) data.description = body.description;
+  if (body.status !== undefined) data.status = body.status;
+  if (body.priority !== undefined) data.priority = body.priority;
+  if (body.category !== undefined) {
+    data.category = Array.isArray(body.category) ? body.category.join(', ') : String(body.category);
+  }
+  if (body.unitId !== undefined) data.unitId = body.unitId;
+  if (body.requestedBy !== undefined) data.requestedBy = body.requestedBy;
+  if (body.notes !== undefined) data.notes = body.notes;
+  if (body.expenses !== undefined) data.expenses = body.expenses;
+
+  try {
+    const request = await getPrisma().maintenanceRequest.update({
+      where: { id: req.params.id },
+      data
+    });
+    res.json(request);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 

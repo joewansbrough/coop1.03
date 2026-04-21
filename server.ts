@@ -43,19 +43,16 @@ const getCoopId = async (req: any, p: any = prisma) => {
 };
 
 const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const host = req.get('x-forwarded-host') || req.get('host') || '';
-  const isLocal = host.includes('localhost') || 
-                  host.includes('127.0.0.1') || 
-                  req.ip === '::1' || 
-                  req.ip === '127.0.0.1' ||
-                  req.hostname === 'localhost';
-  
-  const hasUser = !!(req as any).session?.user;
-  if (!hasUser && !isLocal) {
-    console.log(`[Auth Blocked] Host: ${host}, IP: ${req.ip}, URL: ${req.originalUrl}`);
-    return res.status(401).json({ error: 'Unauthorized' });
+  if ((req as any).session?.user) {
+    (req as any).user = (req as any).session.user;
+    return next();
   }
-  return next();
+  
+  const host = req.get('x-forwarded-host') || req.get('host') || '';
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+  
+  if (isLocal) return next();
+  return res.status(401).json({ error: 'Unauthorized' });
 };
 
 type BodyValue = string | string[] | undefined;
@@ -429,51 +426,65 @@ const upload = multer({
         include: { unit: true },
         orderBy: { createdAt: 'desc' }
       });
-      // UI expects category as an array
-      const mapped = requests.map(r => ({ ...r, category: [r.category] }));
+      // UI expects category as an array. The DB might store it as a comma-separated string or a single value.
+      const mapped = requests.map(r => ({ 
+        ...r, 
+        category: r.category ? (r.category.includes(', ') ? r.category.split(', ') : [r.category]) : []
+      }));
       res.json(mapped);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
   app.post('/api/maintenance', requireAuth, validateRequest(maintenanceSchema), async (req, res) => {
-    const body = req.body as Record<string, BodyValue>;
+    const body = req.body as Record<string, any>;
     const title = ensureString(body.title) as string;
     const description = ensureString(body.description) as string;
     const status = ensureString(body.status, 'Pending') as string;
     const priority = ensureString(body.priority, 'Medium') as string;
-    const category = ensureString(body.category, 'General') as string;
+    const category = body.category;
+    const categoryString = Array.isArray(category) ? category.join(', ') : ensureString(category, 'General');
     const unitId = ensureString(body.unitId) as string;
     const requestedBy = optionalString(body.requestedBy);
-    const request = await prisma.maintenanceRequest.create({
-      data: {
-      cooperativeId: await getCoopId(req, prisma), title, description, status, priority, category, unitId, requestedBy }
-    });
-    res.json(request);
-  });
-
-  app.put('/api/maintenance/:id', requireAuth, validateRequest(maintenanceSchema.partial()), async (req, res) => {
-    const body = req.body as Record<string, BodyValue>;
-    const title = ensureString(body.title) as string;
-    const description = ensureString(body.description) as string;
-    const status = ensureString(body.status, 'Pending') as string;
-    const priority = ensureString(body.priority, 'Medium') as string;
-    const category = ensureString(body.category, 'General') as string;
-    const unitId = ensureString(body.unitId) as string;
-    const notes = body.notes;
-    const expenses = body.expenses;
+    
     try {
-      const request = await prisma.maintenanceRequest.update({
-        where: { id: req.params.id },
-        data: { 
+      const request = await prisma.maintenanceRequest.create({
+        data: {
+          cooperativeId: await getCoopId(req, prisma), 
           title, 
           description, 
           status, 
           priority, 
-          category, 
-          unitId: optionalString(unitId),
-          notes: notes ? (Array.isArray(notes) ? (notes as string[]) : [String(notes)]) : undefined,
-          expenses: expenses ? (Array.isArray(expenses) ? (expenses as string[]) : [String(expenses)]) : undefined
+          category: categoryString, 
+          unitId, 
+          requestedBy 
         }
+      });
+      res.json(request);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.put('/api/maintenance/:id', requireAuth, validateRequest(maintenanceSchema.partial()), async (req, res) => {
+    const body = req.body as Record<string, any>;
+    
+    const data: any = {};
+    if (body.title !== undefined) data.title = ensureString(body.title);
+    if (body.description !== undefined) data.description = ensureString(body.description);
+    if (body.status !== undefined) data.status = ensureString(body.status);
+    if (body.priority !== undefined) data.priority = ensureString(body.priority);
+    if (body.category !== undefined) {
+      data.category = Array.isArray(body.category) ? body.category.join(', ') : String(body.category);
+    }
+    if (body.unitId !== undefined) data.unitId = ensureString(body.unitId);
+    if (body.requestedBy !== undefined) data.requestedBy = optionalString(body.requestedBy);
+    if (body.notes !== undefined) data.notes = body.notes;
+    if (body.expenses !== undefined) data.expenses = body.expenses;
+
+    try {
+      const request = await prisma.maintenanceRequest.update({
+        where: { id: req.params.id },
+        data
       });
       res.json(request);
     } catch (e: any) {
