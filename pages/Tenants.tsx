@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Tenant, Unit } from '../types';
 import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
+import AppAlert from '../components/AppAlert';
 import axios from 'axios';
 import { formatDate, formatShortDate } from '../utils/dateUtils';
 
@@ -17,6 +18,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -24,6 +26,11 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
   const [phone, setPhone] = useState('');
   const [unitId, setUnitId] = useState('');
   const [status, setStatus] = useState<'Current' | 'Waitlist'>('Current');
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
 
   const handleAddTenant = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,10 +52,10 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
       setTenants([...tenants, newTenant]);
       setShowAddForm(false);
       setFirstName(''); setLastName(''); setEmail(''); setPhone(''); setUnitId('');
-      alert("New member registered in association directory.");
+      showAlert('New member registered in association directory.', 'success');
     } catch (error: any) {
       console.error('Failed to add member:', error);
-      alert("Error registering member: " + (error.response?.data?.error || error.message));
+      showAlert(`Error registering member: ${error.response?.data?.error || error.message}`, 'error');
     }
   };
 
@@ -71,6 +78,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

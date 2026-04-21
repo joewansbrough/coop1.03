@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import StatCard from '../components/StatCard';
+import AppAlert from '../components/AppAlert';
 import { Tenant, Unit, MaintenanceRequest, TenantHistory } from '../types';
 
 interface TenantDetailProps {
@@ -23,6 +24,12 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
   const [isSending, setIsSending] = useState(false);
   const [history, setHistory] = useState<TenantHistory[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
 
   useEffect(() => {
     if (tenantId && activeTab === 'tenancy') {
@@ -53,12 +60,13 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
       setIsSending(false);
       setShowMsgModal(false);
       setMsgBody('');
-      alert(`Message sent to ${tenant.firstName} ${tenant.lastName}!`);
+      showAlert(`Message sent to ${tenant.firstName} ${tenant.lastName}.`, 'success');
     }, 1500);
   };
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-sm mb-2">
         <Link to="/admin/tenants" className="hover:text-brand-600 dark:hover:text-brand-400 transition-colors flex items-center gap-1 font-bold">
           <i className="fa-solid fa-arrow-left"></i> Association Directory

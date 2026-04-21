@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { LogIn, ShieldCheck, Home, Users, Wrench, Bot, Sparkles } from 'lucide-react';
+import AppAlert from '../components/AppAlert';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -9,6 +10,7 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -22,7 +24,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      alert(`Login Error: ${error.message}`);
+      setErrorMessage(`Login error: ${error.message}`);
       setIsLoading(false);
     }
   };
@@ -94,6 +96,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 Please sign in with your registered Google account to access your co-op portal.
               </p>
             </div>
+
+            {errorMessage && (
+              <div className="mb-6">
+                <AppAlert message={errorMessage} type="error" onClose={() => setErrorMessage(null)} />
+              </div>
+            )}
 
             <button 
               onClick={handleGoogleLogin}
