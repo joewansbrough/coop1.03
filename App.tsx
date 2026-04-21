@@ -37,8 +37,8 @@ const AppContent: React.FC = () => {
   const queryClient = useQueryClient();
 
   const { data: user, isLoading: isUserLoading, refetch: fetchUser } = useUser();
-  const { data: units = [] } = useUnits();
-  const { data: tenants = [] } = useTenants();
+  const { data: units = [], isLoading: isUnitsLoading } = useUnits();
+  const { data: tenants = [], isLoading: isTenantsLoading } = useTenants();
   const { data: requests = [] } = useMaintenance();
   const { data: announcements = [] } = useAnnouncements();
   const { data: documents = [] } = useDocuments();
@@ -114,14 +114,14 @@ const AppContent: React.FC = () => {
           <Route path="/documents" element={<ResourceLibrary isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} committees={committees} />} />
           <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} announcements={announcements} />} />
           <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} announcements={announcements} setAnnouncements={setAnnouncements} />} />
-          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} tenants={tenants} setTenants={setTenants} units={units} />} />
+          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} />} />
           <Route path="/admin/units/:unitId" element={<UnitDetail isAdmin={effectiveIsAdmin} units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} setRequests={setRequests} documents={documents} />} />
           
           {/* Admin Routes */}
           {effectiveIsAdmin && (
             <>
               <Route path="/admin/units" element={<AdminUnits units={units} setUnits={setUnits} tenants={tenants} />} />
-              <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} tenants={tenants} setTenants={setTenants} units={units} />} />
+              <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} />} />
               <Route path="/admin/tenants/:tenantId" element={<TenantDetail tenants={tenants} units={units} requests={requests} />} />
               <Route path="/admin/waitlist" element={<Waitlist tenants={tenants} setTenants={setTenants} />} />
               <Route
