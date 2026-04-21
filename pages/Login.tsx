@@ -15,13 +15,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      if (error) throw error;
+      const response = await fetch('/api/auth/url');
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Could not get authentication URL');
+      }
     } catch (error: any) {
       console.error('Login error:', error);
       alert(`Login Error: ${error.message}`);

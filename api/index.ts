@@ -84,15 +84,26 @@ app.get('/api/health', (req, res) => {
 
 // Supabase Auth Middleware
 const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const supabase = createClient(req, res);
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  // 1. Check custom session first
+  if ((req as any).session?.user) {
+    (req as any).user = (req as any).session.user;
+    return next();
   }
 
-  (req as any).user = user;
-  return next();
+  // 2. Fallback to Supabase Auth
+  try {
+    const supabase = createClient(req, res);
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (!error && user) {
+      (req as any).user = user;
+      return next();
+    }
+  } catch (err) {
+    console.error('Supabase auth check failed:', err);
+  }
+
+  return res.status(401).json({ error: 'Unauthorized' });
 };
 
 // Robust Helper to get base URL
@@ -288,7 +299,7 @@ app.use('/api/drive', requireAuth, driveRoutes);
 
 // --- Database API Routes ---
 
-app.get('/api/units', async (req, res) => {
+app.get('/api/units', requireAuth, async (req, res) => {
   const units = await getPrisma().unit.findMany({
     include: {
       currentTenant: true,
@@ -301,7 +312,7 @@ app.get('/api/units', async (req, res) => {
   res.json(units);
 });
 
-app.get('/api/units/:id/scheduled-maintenance', async (req, res) => {
+app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) => {
   try {
     const tasks = await getPrisma().scheduledMaintenance.findMany({
       where: { unitId: req.params.id },
@@ -313,7 +324,7 @@ app.get('/api/units/:id/scheduled-maintenance', async (req, res) => {
   }
 });
 
-app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {
+app.post('/api/tenants', requireAuth, validateRequest(tenantSchema), async (req, res) => {
   try {
     const tenant = await getPrisma().tenant.create({
       data: req.body,
@@ -326,14 +337,14 @@ app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {
   }
 });
 
-app.get('/api/tenants', async (req, res) => {
+app.get('/api/tenants', requireAuth, async (req, res) => {
   const tenants = await getPrisma().tenant.findMany({
     include: { unit: true }
   });
   res.json(tenants);
 });
 
-app.get('/api/tenants/:id/history', async (req, res) => {
+app.get('/api/tenants/:id/history', requireAuth, async (req, res) => {
   const history = await getPrisma().tenantHistory.findMany({
     where: { tenantId: req.params.id },
     include: { unit: true },
@@ -344,7 +355,7 @@ app.get('/api/tenants/:id/history', async (req, res) => {
 
 // --- Unit Turnover Endpoints ---
 
-app.post('/api/units/:id/move-out', async (req, res) => {
+app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { date, reason } = req.body;
   try {
@@ -385,7 +396,7 @@ app.post('/api/units/:id/move-out', async (req, res) => {
   }
 });
 
-app.post('/api/units/:id/move-in', async (req, res) => {
+app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { tenantId, date } = req.body;
   try {
@@ -443,7 +454,7 @@ app.post('/api/units/:id/move-in', async (req, res) => {
   }
 });
 
-app.post('/api/units/:id/transfer', async (req, res) => {
+app.post('/api/units/:id/transfer', requireAuth, async (req, res) => {
   const { id } = req.params;
   const { toUnitId, date } = req.body;
   try {
@@ -506,7 +517,7 @@ app.post('/api/units/:id/transfer', async (req, res) => {
   }
 });
 
-app.get('/api/maintenance', async (req, res) => {
+app.get('/api/maintenance', requireAuth, async (req, res) => {
   try {
     const requests = await getPrisma().maintenanceRequest.findMany({
       include: { unit: true },
@@ -521,7 +532,7 @@ app.get('/api/maintenance', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/maintenance', async (req, res) => {
+app.post('/api/maintenance', requireAuth, async (req, res) => {
   const { title, description, status, priority, category, unitId, requestedBy, notes } = req.body;
   const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.create({
@@ -540,7 +551,7 @@ app.post('/api/maintenance', async (req, res) => {
   res.json(request);
 });
 
-app.put('/api/maintenance/:id', async (req, res) => {
+app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
   const { title, description, status, priority, category, unitId, notes } = req.body;
   const categoryString = Array.isArray(category) ? category.join(', ') : category;
   const request = await getPrisma().maintenanceRequest.update({
@@ -559,19 +570,19 @@ app.put('/api/maintenance/:id', async (req, res) => {
 });
 
 
-app.delete('/api/maintenance/:id', async (req, res) => {
+app.delete('/api/maintenance/:id', requireAuth, async (req, res) => {
   await getPrisma().maintenanceRequest.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
-app.get('/api/announcements', async (req, res) => {
+app.get('/api/announcements', requireAuth, async (req, res) => {
   const announcements = await getPrisma().announcement.findMany({
     orderBy: { createdAt: 'desc' }
   });
   res.json(announcements);
 });
 
-app.post('/api/announcements', async (req, res) => {
+app.post('/api/announcements', requireAuth, async (req, res) => {
   const { title, content, type, priority, author, date } = req.body;
   const announcement = await getPrisma().announcement.create({
     data: {
@@ -580,7 +591,7 @@ app.post('/api/announcements', async (req, res) => {
   res.json(announcement);
 });
 
-app.put('/api/announcements/:id', async (req, res) => {
+app.put('/api/announcements/:id', requireAuth, async (req, res) => {
   const { title, content, type, priority, date } = req.body;
   const announcement = await getPrisma().announcement.update({
     where: { id: req.params.id },
@@ -589,19 +600,19 @@ app.put('/api/announcements/:id', async (req, res) => {
   res.json(announcement);
 });
 
-app.delete('/api/announcements/:id', async (req, res) => {
+app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
   await getPrisma().announcement.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
-app.get('/api/documents', async (req, res) => {
+app.get('/api/documents', requireAuth, async (req, res) => {
   const documents = await getPrisma().document.findMany({
     orderBy: { createdAt: 'desc' }
   });
   res.json(documents);
 });
 
-app.post('/api/documents', async (req, res) => {
+app.post('/api/documents', requireAuth, async (req, res) => {
   const { title, category, url, fileType, author, date, tags, committee, content } = req.body;
 
   // Tag generation temporarily disabled for basic metadata sync
@@ -627,7 +638,7 @@ app.post('/api/documents', async (req, res) => {
   res.json(document);
   });
 
-  app.put('/api/documents/:id', async (req, res) => {
+  app.put('/api/documents/:id', requireAuth, async (req, res) => {
   const { title, category, tags, committee, content } = req.body;
   const document = await getPrisma().document.update({
     where: { id: req.params.id },
@@ -642,12 +653,12 @@ app.post('/api/documents', async (req, res) => {
   res.json(document);
   });
 
-app.delete('/api/documents/:id', async (req, res) => {
+app.delete('/api/documents/:id', requireAuth, async (req, res) => {
   await getPrisma().document.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
 
-app.get('/api/committees', async (req, res) => {
+app.get('/api/committees', requireAuth, async (req, res) => {
   try {
     const committees = await getPrisma().committee.findMany({
       include: { 
@@ -664,7 +675,7 @@ app.get('/api/committees', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/events', async (req, res) => {
+app.get('/api/events', requireAuth, async (req, res) => {
   const events = await getPrisma().coopEvent.findMany({
     include: { attendees: true },
     orderBy: { date: 'asc' }
@@ -672,7 +683,7 @@ app.get('/api/events', async (req, res) => {
   res.json(events);
 });
 
-app.post('/api/events', async (req, res) => {
+app.post('/api/events', requireAuth, async (req, res) => {
   const { title, description, date, time, location, category, committeeId } = req.body;
   const event = await getPrisma().coopEvent.create({
     data: {
@@ -690,7 +701,7 @@ app.post('/api/events', async (req, res) => {
   res.json(event);
 });
 
-app.put('/api/events/:id', async (req, res) => {
+app.put('/api/events/:id', requireAuth, async (req, res) => {
   const { title, description, date, time, location, category, committeeId } = req.body;
   const event = await getPrisma().coopEvent.update({
     where: { id: req.params.id },
@@ -708,7 +719,7 @@ app.put('/api/events/:id', async (req, res) => {
   res.json(event);
 });
 
-app.post('/api/events/:id/attend', async (req, res) => {
+app.post('/api/events/:id/attend', requireAuth, async (req, res) => {
   const user = (req as any).user || (req as any).session?.user;
   if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -731,7 +742,7 @@ app.post('/api/events/:id/attend', async (req, res) => {
   }
 });
 
-app.delete('/api/events/:id', async (req, res) => {
+app.delete('/api/events/:id', requireAuth, async (req, res) => {
   await getPrisma().coopEvent.delete({ where: { id: req.params.id } });
   res.json({ success: true });
 });
@@ -745,7 +756,7 @@ const getAI = () => {
   return new GoogleGenerativeAI(apiKey || '');
 };
 
-app.post('/api/ai/triage', async (req, res) => {
+app.post('/api/ai/triage', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
@@ -775,7 +786,7 @@ app.post('/api/ai/triage', async (req, res) => {
   }
 });
 
-app.post('/api/ai/policy', async (req, res) => {
+app.post('/api/ai/policy', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
@@ -795,7 +806,7 @@ app.post('/api/ai/policy', async (req, res) => {
   }
 });
 
-app.post('/api/ai/summarize', async (req, res) => {
+app.post('/api/ai/summarize', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;

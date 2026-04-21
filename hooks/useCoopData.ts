@@ -12,14 +12,27 @@ export const useUser = () => useQuery({
   queryKey: ['user'],
   queryFn: async () => {
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+    let supabaseUser = null;
     
-    // Fallback: Fetch user details from our API to maintain compatibility with existing user object structure
-    const res = await fetch('/api/auth/me');
-    if (!res.ok) return user;
-    const { user: userData } = await res.json();
-    return userData || user;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      supabaseUser = user;
+    } catch (e) {
+      console.warn('Supabase auth check skipped or failed');
+    }
+
+    // Always check our API for the full user object (role, tenantId, etc)
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const { user: sessionUser } = await res.json();
+        if (sessionUser) return sessionUser;
+      }
+    } catch (e) {
+      console.error('Session API check failed:', e);
+    }
+    
+    return supabaseUser;
   },
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
