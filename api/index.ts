@@ -3,21 +3,14 @@ import { PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import { createClient } from '../utils/supabase/server.js';
+import axios from 'axios';
+import cookieSession from 'cookie-session';
+import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import driveRoutes from './drive.js';
 
 const app = express();
 
-// Trust proxy for secure cookies on Vercel
-app.set('trust proxy', true);
-
-// Health check route
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV
-  });
-});
+const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
 
 // Prisma singleton helper
 let prismaInstance: PrismaClient;
@@ -28,8 +21,66 @@ const getPrisma = () => {
   return prismaInstance;
 };
 
+const sanitizeUtf8 = (str: any) => {
+  if (typeof str !== 'string') return str;
+  return str.replace(/\0/g, '');
+};
+
+const getCoopId = async (req: any, p: any = getPrisma()) => {
+  const user = (req as any).user || (req as any).session?.user;
+  const email = user?.email;
+  if (email) {
+    const t = await p.tenant.findUnique({ where: { email: email.toLowerCase() } });
+    if (t?.cooperativeId) return t.cooperativeId;
+  }
+  const first = await p.cooperative.findFirst();
+  if (!first) throw new Error("No cooperative found in the system.");
+  return first.id;
+};
+
+const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    schema.parse(req.body);
+    next();
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation failed', details: error.errors });
+    } else {
+      next(error);
+    }
+  }
+};
+
+// Trust proxy for secure cookies on Vercel
+app.set('trust proxy', true);
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+app.use((req, res, next) => {
+  const host = req.get('x-forwarded-host') || req.get('host') || '';
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+
+  cookieSession({
+    name: 'session',
+    keys: [SESSION_SECRET],
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    secure: !isLocal, 
+    sameSite: isLocal ? 'lax' : 'none',
+    httpOnly: true,
+    signed: true,
+    overwrite: true,
+  })(req, res, next);
+});
+
+// Health check route
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
+});
 
 // Supabase Auth Middleware
 const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -43,8 +94,6 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
   (req as any).user = user;
   return next();
 };
-
-// ... (Rest of existing logic below requiring AUTH)
 
 // Robust Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
@@ -189,6 +238,7 @@ app.get('/auth/callback', async (req, res) => {
       console.warn('[ModelResolver] Model listing failed, using fallback:', err);
     }
 
+    (req as any).session = (req as any).session || {};
     (req as any).session.user = {
       email,
       name: userData.name,
@@ -235,8 +285,6 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
 
 // With your other routes, under your auth middleware
 app.use('/api/drive', requireAuth, driveRoutes);
-
-// Database API Routes ... (Keep existing routes)
 
 // --- Database API Routes ---
 
@@ -569,7 +617,7 @@ app.post('/api/documents', async (req, res) => {
       category: category || 'General',
       url: url || '#',
       fileType: fileType || 'txt',
-      author: author || ((req as any).session?.user?.name || 'System'),
+      author: author || ((req as any).user?.name || 'System'),
       date: date || new Date().toISOString(),
       tags: finalTags,
       committee: committee || null,
@@ -661,7 +709,7 @@ app.put('/api/events/:id', async (req, res) => {
 });
 
 app.post('/api/events/:id/attend', async (req, res) => {
-  const user = (req as any).session?.user;
+  const user = (req as any).user || (req as any).session?.user;
   if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
@@ -700,7 +748,8 @@ const getAI = () => {
 app.post('/api/ai/triage', async (req, res) => {
   try {
     const genAI = getAI();
-    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
+    const user = (req as any).user || (req as any).session?.user;
+    const resolvedModel = user?.geminiModel || 'gemini-2.5-flash-lite';
     const model = genAI.getGenerativeModel({
       model: resolvedModel,
       generationConfig: {
@@ -729,7 +778,8 @@ app.post('/api/ai/triage', async (req, res) => {
 app.post('/api/ai/policy', async (req, res) => {
   try {
     const genAI = getAI();
-    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
+    const user = (req as any).user || (req as any).session?.user;
+    const resolvedModel = user?.geminiModel || 'gemini-2.5-flash-lite';
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { question, context } = req.body;
 
@@ -748,7 +798,8 @@ app.post('/api/ai/policy', async (req, res) => {
 app.post('/api/ai/summarize', async (req, res) => {
   try {
     const genAI = getAI();
-    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
+    const user = (req as any).user || (req as any).session?.user;
+    const resolvedModel = user?.geminiModel || 'gemini-2.5-flash-lite';
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { content } = req.body;
 
@@ -775,13 +826,9 @@ app.get('/api/migrate', async (req, res) => {
 
     // Check if seeding is needed
     const unitCount = await p.unit.count();
-    let seeded = false;
-
+    
     if (unitCount === 0) {
       console.log('Database empty, triggering auto-seed...');
-      // We can't easily call the /api/seed endpoint internally, so we'll just 
-      // suggest the user visit it, or we could move the logic to a helper.
-      // For simplicity and speed, let's just make the message clear.
       return res.json({
         success: true,
         message: "Database schema updated. Please now visit /api/seed once to restore your data."
@@ -843,7 +890,6 @@ app.get('/api/seed', async (req, res) => {
     ];
 
     const tenantData = [
-      // Couples in 102, 103, 104, 202, 205, 301, 305, 306, 309, 401, 403, 407
       { firstName: 'Margaret', lastName: 'Chen', email: 'margaret.chen@email.com', phone: '250-555-0101', startDate: '2019-03-15', status: 'Current', unit: '101' },
       { firstName: 'David', lastName: 'Okafor', email: 'david.okafor@email.com', phone: '250-555-0102', startDate: '2020-07-01', status: 'Current', unit: '102' },
       { firstName: 'Priya', lastName: 'Sharma', email: 'priya.sharma@email.com', phone: '250-555-0103', startDate: '2021-01-10', status: 'Current', unit: '102' },
@@ -993,7 +1039,6 @@ app.get('/api/seed', async (req, res) => {
     for (const t of tenantData) {
       const tenant = await p.tenant.create({
         data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
           firstName: sanitizeUtf8(t.firstName),
           lastName: sanitizeUtf8(t.lastName),
           email: sanitizeUtf8(t.email),
@@ -1030,7 +1075,7 @@ app.get('/api/seed', async (req, res) => {
     for (const m of maintenanceData) {
       await p.maintenanceRequest.create({
         data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
+          cooperativeId: await getCoopId(req, getPrisma()),
           title: sanitizeUtf8(m.title).trim(),
           description: sanitizeUtf8(m.description).trim(),
           status: m.status,
@@ -1039,7 +1084,6 @@ app.get('/api/seed', async (req, res) => {
           unitId: unitMap[m.unitNumber],
           tenantId: tenants[m.requestedBy]?.id || null,
           requestedBy: sanitizeUtf8(m.requestedBy),
-          cooperativeId: coopId
         }
       });
     }
@@ -1049,14 +1093,13 @@ app.get('/api/seed', async (req, res) => {
       const dt = new Date(e.date);
       await p.coopEvent.create({
         data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
+          cooperativeId: await getCoopId(req, getPrisma()),
           title: sanitizeUtf8(e.title).trim(),
           description: sanitizeUtf8(e.description).trim(),
           date: dt,
           time: dt.toISOString().split('T')[1].substring(0, 5),
           location: sanitizeUtf8(e.location).trim(),
           category: "General",
-          cooperativeId: coopId
         }
       });
     }
@@ -1065,14 +1108,13 @@ app.get('/api/seed', async (req, res) => {
     for (const a of announcementData) {
       await p.announcement.create({
         data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
+          cooperativeId: await getCoopId(req, getPrisma()),
           title: sanitizeUtf8(a.title).trim(),
           content: sanitizeUtf8(a.content).trim(),
           type: a.type,
           priority: a.priority,
           author: sanitizeUtf8(a.author).trim(),
           date: new Date(a.date),
-          cooperativeId: coopId
         }
       });
     }
