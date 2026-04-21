@@ -1,5 +1,10 @@
 {
   "version": 2,
+  "functions": {
+    "api/index.ts": {
+      "runtime": "nodejs22.x"
+    }
+  },
   "headers": [
     {
       "source": "/auth/callback",
@@ -13,16 +18,12 @@
   ],
   "rewrites": [
     {
-      "source": "/api/hello",
-      "destination": "/api/hello"
-    },
-    {
       "source": "/api/(.*)",
-      "destination": "/api/index"
+      "destination": "/api/index.ts"
     },
     {
       "source": "/auth/(.*)",
-      "destination": "/api/index"
+      "destination": "/api/index.ts"
     },
     {
       "source": "/(.*)",
