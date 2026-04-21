@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_wRyt2v4ThSm9fhIxoFu2syR2JccV",
+  "orgId": "team_EsRQUqf5ewL3gzptFMkZ9mFJ",
+  "projectName": "coop1-03",
+  "settings": {
+    "createdAt": 1772445700376,
+    "framework": "vite",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": null,
+    "outputDirectory": null,
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}
