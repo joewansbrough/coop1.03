@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent } from '../types';
-import { createClient } from '../utils/supabase/client.js';
 
 const fetchJson = async (url: string) => {
   const res = await fetch(url);
@@ -11,17 +10,7 @@ const fetchJson = async (url: string) => {
 export const useUser = () => useQuery({
   queryKey: ['user'],
   queryFn: async () => {
-    const supabase = createClient();
-    let supabaseUser = null;
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      supabaseUser = user;
-    } catch (e) {
-      console.warn('Supabase auth check skipped or failed');
-    }
-
-    // Always check our API for the full user object (role, tenantId, etc)
+    // Check our API for the full user object (role, tenantId, etc)
     try {
       const res = await fetch('/api/auth/me');
       if (res.ok) {
@@ -32,7 +21,7 @@ export const useUser = () => useQuery({
       console.error('Session API check failed:', e);
     }
     
-    return supabaseUser;
+    return null;
   },
   staleTime: 5 * 60 * 1000, // 5 minutes
 });

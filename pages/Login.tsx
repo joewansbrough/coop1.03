@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { LogIn, ShieldCheck, Home, Users, Wrench, Bot, Sparkles } from 'lucide-react';
-import { createClient } from '../utils/supabase/client.js';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -10,7 +9,6 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = createClient();
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);

@@ -2,7 +2,6 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
-import { createClient } from '../utils/supabase/server.js';
 import axios from 'axios';
 import cookieSession from 'cookie-session';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
@@ -82,25 +81,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Supabase Auth Middleware
+// Authentication Middleware
 const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  // 1. Check custom session first
   if ((req as any).session?.user) {
     (req as any).user = (req as any).session.user;
     return next();
-  }
-
-  // 2. Fallback to Supabase Auth
-  try {
-    const supabase = createClient(req, res);
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    if (!error && user) {
-      (req as any).user = user;
-      return next();
-    }
-  } catch (err) {
-    console.error('Supabase auth check failed:', err);
   }
 
   return res.status(401).json({ error: 'Unauthorized' });
