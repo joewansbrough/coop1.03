@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent } from '../types';
+import { createClient } from '../utils/supabase/client.js';
 
 const fetchJson = async (url: string) => {
   const res = await fetch(url);
@@ -9,7 +10,17 @@ const fetchJson = async (url: string) => {
 
 export const useUser = () => useQuery({
   queryKey: ['user'],
-  queryFn: () => fetchJson('/api/auth/me').then(data => data.user),
+  queryFn: async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    
+    // Fallback: Fetch user details from our API to maintain compatibility with existing user object structure
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) return user;
+    const { user: userData } = await res.json();
+    return userData || user;
+  },
   staleTime: 5 * 60 * 1000, // 5 minutes
 });
 
