@@ -38,8 +38,9 @@ const AppContent: React.FC = () => {
 
   const { data: user, isLoading: isUserLoading, refetch: fetchUser } = useUser();
   
-  // Clean & Efficient Gating: Only fetch system data once authentication is confirmed
-  const isEnabled = !!user;
+  // FIXED: Only fetch system data once authentication is fully confirmed
+  // Wait for user loading to complete AND ensure user exists
+  const isEnabled = !isUserLoading && !!user;
 
   const { 
     data: units = [], 

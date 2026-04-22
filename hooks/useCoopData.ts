@@ -25,7 +25,10 @@ export const useUser = (options?: Partial<UseQueryOptions<any>>) => useQuery({
   queryFn: async () => {
     // Check our API for the full user object (role, tenantId, etc)
     try {
-      const res = await fetch('/api/auth/me');
+      const res = await fetch('/api/auth/me', {
+        credentials: 'include', // Ensure cookies are sent
+        cache: 'no-cache', // Don't use cached response
+      });
       if (res.ok) {
         const { user: sessionUser } = await res.json();
         if (sessionUser) return sessionUser;
@@ -39,6 +42,7 @@ export const useUser = (options?: Partial<UseQueryOptions<any>>) => useQuery({
   staleTime: 5 * 60 * 1000, // 5 minutes
   cacheTime: 10 * 60 * 1000,
   retry: 1, // Only retry once for auth - fail fast
+  refetchOnMount: 'always', // Always check auth on mount
   ...options,
 });
 
