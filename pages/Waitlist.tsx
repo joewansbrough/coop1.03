@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Tenant } from '../types';
 import FilterBar from '../components/FilterBar';
+import AppAlert from '../components/AppAlert';
 import axios from 'axios';
 
 const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.SetStateAction<Tenant[]>> }> = ({ tenants, setTenants }) => {
@@ -12,6 +13,12 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [unitType, setUnitType] = useState('2BR');
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
 
   const waitlistMembers = tenants.filter(t => {
     if (t.status !== 'Waitlist') return false;
@@ -44,15 +51,16 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
       setLastName('');
       setEmail('');
       setPhone('');
-      alert("New application successfully added to the waitlist.");
+      showAlert('New application successfully added to the waitlist.', 'success');
     } catch (error: any) {
       console.error('Failed to add application:', error);
-      alert("Error adding application: " + (error.response?.data?.error || error.message));
+      showAlert(`Error adding application: ${error.response?.data?.error || error.message}`, 'error');
     }
   };
 
   return (
     <div className="space-y-6 pb-12 transition-colors duration-200">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Prospective Member Waitlist</h2>

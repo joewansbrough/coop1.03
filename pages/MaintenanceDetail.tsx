@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { RequestStatus, MaintenanceNote, MaintenanceExpense, MaintenanceCategory, MaintenanceRequest, Unit, Tenant, MaintenancePriority } from '../types';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
+import AppAlert from '../components/AppAlert';
 
 interface MaintenanceDetailProps {
   isAdmin?: boolean;
@@ -51,6 +52,12 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const [reopenReason, setReopenReason] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [showAllNotes, setShowAllNotes] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
 
   if (!request) return <div className="p-12 text-center text-slate-500 font-bold">Ticket not found in archive.</div>;
 
@@ -108,7 +115,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
     
     // Requirement: at least one category required
     if (isSelected && current.length <= 1) {
-      alert("At least one category is required.");
+      showAlert('At least one category is required.', 'error');
       return;
     }
     
@@ -146,7 +153,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
       
     } catch (error) {
       console.error("Failed to add note:", error);
-      alert("Failed to save note. Please try again.");
+      showAlert('Failed to save note. Please try again.', 'error');
       // Optionally: revert local state if backend fails
     } finally {
       setIsSavingNote(false); // Stop loading indicator
@@ -181,6 +188,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-500">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex items-center justify-between gap-4 text-slate-500 text-sm mb-2">
         <Link to="/maintenance" className="hover:text-brand-600 transition-colors flex items-center gap-1 font-bold">
           <i className="fa-solid fa-arrow-left"></i> Maintenance Queue
@@ -455,7 +463,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                   </button>
                 )}
                 {isAdmin && (
-                  <button onClick={() => alert("Resident has been notified via Portal and Email.")} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/10 transition-colors">
+                  <button onClick={() => showAlert('Resident has been notified via portal and email.', 'success')} className="w-full p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/10 transition-colors">
                     <i className="fa-solid fa-envelope text-blue-400"></i>
                     <span className="text-[10px] font-black text-white uppercase tracking-widest">Resend Alert</span>
                   </button>

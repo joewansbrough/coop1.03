@@ -5,6 +5,7 @@ import { Document, Committee } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import DriveExplorer from '../components/DriveExplorer';
 import FilterBar from '../components/FilterBar';
+import AppAlert from '../components/AppAlert';
 
 import { useUser, useRefreshData } from '../hooks/useCoopData';
 import { formatDate } from '../utils/dateUtils';
@@ -42,8 +43,14 @@ const ResourceLibrary: React.FC<{
   const [newDocCommittee, setNewDocCommittee] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const categories = ['All', 'Minutes', 'Policy', 'Financial', 'Bylaws', 'Newsletters', 'Cloud'];
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
 
   useEffect(() => {
     // Fetch Google Config
@@ -73,7 +80,7 @@ const ResourceLibrary: React.FC<{
 
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {
-      alert(`Missing Google Configuration. Please check your environment variables.`);
+      showAlert('Missing Google configuration. Please check your environment variables.', 'error');
       return;
     }
 
@@ -215,7 +222,7 @@ const ResourceLibrary: React.FC<{
               }
             } catch (err: any) {
               console.error('Failed to save drive doc:', err);
-              alert(err.message || 'Failed to link document. Please try again.');
+              showAlert(err.message || 'Failed to link document. Please try again.', 'error');
             }
           }
         })
@@ -247,7 +254,7 @@ const ResourceLibrary: React.FC<{
     if (doc.url && doc.url !== '#') {
       window.open(doc.url, '_blank');
     } else {
-      alert("This document is stored in the secure association vault. Please click to view.");
+      showAlert('This document is stored in the secure association vault. Open it from the viewer instead.', 'info');
     }
   };
 
@@ -312,7 +319,7 @@ const ResourceLibrary: React.FC<{
   const handleSimulatedUpload = async () => {
     if (isGuest || !selectedFile) return;
     if (!newDocTitle) {
-      alert("Please provide a document title.");
+      showAlert('Please provide a document title.', 'error');
       return;
     }
 
@@ -358,7 +365,7 @@ const ResourceLibrary: React.FC<{
       setReviewingDoc(data.document);
     } catch (err: any) {
       console.error(err);
-      alert(`File upload failed: ${err.message}`);
+      showAlert(`File upload failed: ${err.message}`, 'error');
       clearInterval(interval);
     } finally {
       setIsUploading(false);
@@ -390,11 +397,11 @@ const ResourceLibrary: React.FC<{
       setDocuments(prev => prev.map(d => d.id === data.id ? data : d));
       refreshData();
       setReviewingDoc(null);
-      alert("Document saved.");
+      showAlert('Document saved.', 'success');
 
     } catch (err: any) {
       console.error("Failed to save document:", err);
-      alert(`Failed to save document: ${err.message}`);
+      showAlert(`Failed to save document: ${err.message}`, 'error');
     }
   };
 
@@ -413,6 +420,7 @@ const ResourceLibrary: React.FC<{
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="space-y-2 lg:space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>

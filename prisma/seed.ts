@@ -14,6 +14,20 @@ async function main() {
   await prisma.tenant.deleteMany();
   await prisma.unit.deleteMany();
 
+  const coop = await prisma.cooperative.upsert({
+    where: { slug: 'oak-bay' },
+    update: {},
+    create: {
+      name: 'Oak Bay Housing Co-op',
+      slug: 'oak-bay',
+      address: '1234 Foul Bay Road',
+      city: 'Victoria',
+      province: 'BC',
+      adminEmail: 'admin@oakbaycoop.bc.ca',
+    },
+  });
+  const cooperativeId = coop.id;
+
   console.log('Seeding units...');
   const unitDefs = [
     // Floor 1
@@ -58,7 +72,7 @@ async function main() {
 
   const units: any[] = [];
   for (const u of unitDefs) {
-    const unit = await prisma.unit.create({ data: u });
+    const unit = await prisma.unit.create({ data: { ...u, cooperativeId } });
     units.push(unit);
   }
 
@@ -133,8 +147,9 @@ async function main() {
         lastName: t.lastName,
         email: t.email,
         phone: t.phone,
-        startDate: t.startDate,
+        startDate: new Date(t.startDate),
         status: t.status,
+        cooperativeId,
         unitId: t.unit ? unitMap[t.unit] : null,
         role: adminEmails.includes(t.email.toLowerCase()) ? 'ADMIN' : 'MEMBER',
       },
@@ -148,8 +163,9 @@ async function main() {
       });
       await prisma.tenantHistory.create({
         data: {
-          tenantId: tenant.id,
-          unitId: unitMap[t.unit],
+          tenant: { connect: { id: tenant.id } },
+          unit: { connect: { id: unitMap[t.unit] } },
+          cooperative: { connect: { id: cooperativeId } },
           startDate: new Date(t.startDate),
           moveReason: 'Initial occupancy',
         },
@@ -216,6 +232,7 @@ async function main() {
   for (const m of maintenanceData) {
     await prisma.maintenanceRequest.create({
       data: {
+        cooperativeId,
         title: m.title,
         description: m.description,
         status: m.status,
@@ -241,7 +258,7 @@ async function main() {
     { title: 'Fire Alarm System Test — March 14th', content: 'The building\'s fire alarm system will undergo its mandatory annual inspection on Friday March 14th between 10:00 AM and 3:00 PM. Expect brief alarm activations throughout the day. Please do not call 911 during testing periods.', type: 'Maintenance', priority: 'Normal', author: 'Board Administration', date: '2026-03-04', createdAt: new Date('2026-03-04') },
   ];
   for (const a of announcementData) {
-    await prisma.announcement.create({ data: a });
+    await prisma.announcement.create({ data: { ...a, cooperativeId, date: new Date(a.date) } });
   }
 
   console.log('Seeding documents...');
@@ -260,7 +277,7 @@ async function main() {
     { title: 'Reserve Fund Study 2024', category: 'Financials', url: 'https://storage.example.com/docs/reserve-fund-2024.pdf', fileType: 'pdf', author: 'Board Administration', date: '2024-06-15', createdAt: new Date('2024-06-15'), tags: ['reserve', 'future-planning'] },
   ];
   for (const d of documentData) {
-    await prisma.document.create({ data: d });
+    await prisma.document.create({ data: { ...d, cooperativeId, date: new Date(d.date) } });
   }
 
   console.log('Seeding committees...');
@@ -280,6 +297,7 @@ async function main() {
         description: c.description,
         chair: c.chair,
         icon: c.icon,
+        cooperativeId,
         members: {
           connect: c.members.map(email => ({ id: tenants[email].id })),
         },
@@ -309,12 +327,13 @@ async function main() {
 
       await prisma.coopEvent.create({
         data: {
+          cooperativeId,
           title: baseEvent.title,
           category: baseEvent.category,
           location: baseEvent.location,
           time: baseEvent.time,
           description: baseEvent.description,
-          date: eventDate.toISOString().split('T')[0],
+          date: eventDate,
         },
       });
     }

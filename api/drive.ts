@@ -19,6 +19,8 @@ if (ROOT_FOLDER_IDS.length === 0) {
     console.error('Error: GOOGLE_DRIVE_ROOT_FOLDER_IDS or GOOGLE_DRIVE_ROOT_FOLDER_ID must be set in environment variables.');
 }
 
+const getParam = (value: string | string[] | undefined): string => Array.isArray(value) ? value[0] ?? '' : value ?? '';
+
 // ─── Helper: verify a folder is a descendant of any configured root ──────────
 
 async function isFolderWithinRoot(folderId: string, cache?: Map<string, boolean>): Promise<boolean> {
@@ -118,7 +120,7 @@ router.get('/root', async (_req: Request, res: Response) => {
 // List contents of a folder
 router.get('/folders/:folderId/contents', async (req: Request, res: Response) => {
     try {
-        const { folderId } = req.params;
+        const folderId = getParam(req.params.folderId);
 
         const isAllowed = await isFolderWithinRoot(folderId); // ✅ fixed: no longer missing ROOT_FOLDER_IDS arg
         if (!isAllowed) {
@@ -150,10 +152,10 @@ router.get('/folders/:folderId/contents', async (req: Request, res: Response) =>
 // Get breadcrumb path for a folder
 router.get('/folders/:folderId/path', async (req: Request, res: Response) => {
     try {
-        const { folderId } = req.params;
+        const folderId = getParam(req.params.folderId);
         const drive = driveClient();
         const path: { id: string; name: string }[] = [];
-        let currentId = folderId;
+        let currentId: string | null = folderId;
         let rootFound = false;
 
         if (ROOT_FOLDER_IDS.includes(folderId)) {
@@ -198,7 +200,7 @@ router.get('/folders/:folderId/path', async (req: Request, res: Response) => {
 // Get metadata for a single file
 router.get('/files/:fileId', async (req: Request, res: Response) => {
     try {
-        const { fileId } = req.params;
+        const fileId = getParam(req.params.fileId);
         const drive = driveClient();
 
         const file = await drive.files.get({
@@ -223,7 +225,7 @@ router.get('/files/:fileId', async (req: Request, res: Response) => {
 // Download / stream a file
 router.get('/files/:fileId/download', async (req: Request, res: Response) => {
     try {
-        const { fileId } = req.params;
+        const fileId = getParam(req.params.fileId);
         const drive = driveClient();
 
         const meta = await drive.files.get({

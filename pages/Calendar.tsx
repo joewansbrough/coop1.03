@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CoopEvent } from '../types';
+import AppAlert from '../components/AppAlert';
 
 interface CalendarProps {
   isAdmin?: boolean;
@@ -18,6 +19,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const [editEvent, setEditEvent] = useState<CoopEvent | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [tempEvents, setTempEvents] = useState<CoopEvent[]>([]);
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -25,6 +27,11 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState<'Meeting' | 'Social' | 'Maintenance' | 'Board'>('Meeting');
   const [description, setDescription] = useState('');
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
 
   // Combine real events and session-only events
   const allEvents = [...events, ...tempEvents];
@@ -108,9 +115,9 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
 
       if (newTempEvents.length > 0) {
         setTempEvents(prev => [...prev, ...newTempEvents]);
-        alert(`Successfully imported ${newTempEvents.length} events for this session! Note: These events are temporary and will expire when you log out.`);
+        showAlert(`Imported ${newTempEvents.length} events for this session. These entries expire when you log out.`, 'success');
       } else {
-        alert("No valid events found in the .ics file.");
+        showAlert('No valid events found in the .ics file.', 'error');
       }
       setIsImporting(false);
       e.target.value = '';
@@ -149,9 +156,10 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
       setShowAddForm(false);
       setTitle('');
       setDescription('');
-      alert("Event added to community calendar!");
+      showAlert('Event added to community calendar.', 'success');
     } catch (err) {
       console.error(err);
+      showAlert('Failed to add event.', 'error');
     }
   };
 
@@ -168,8 +176,10 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
       const data = await res.json();
       setEvents(events.map(ev => ev.id === data.id ? data : ev));
       setEditEvent(null);
+      showAlert('Event updated successfully.', 'success');
     } catch (err) {
       console.error(err);
+      showAlert('Failed to update event.', 'error');
     }
   };
 
@@ -180,8 +190,10 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
     try {
       await fetch(`/api/events/${id}`, { method: 'DELETE' });
       setEvents(events.filter(ev => ev.id !== id));
+      showAlert('Event removed from the calendar.', 'success');
     } catch (err) {
       console.error(err);
+      showAlert('Failed to delete event.', 'error');
     }
   };
 
@@ -219,6 +231,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Community Calendar</h2>

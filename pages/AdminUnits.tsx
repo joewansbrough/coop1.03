@@ -3,17 +3,24 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Unit, Tenant } from '../types';
 import FilterBar from '../components/FilterBar';
+import AppAlert from '../components/AppAlert';
 
 const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetStateAction<Unit[]>>, tenants: Tenant[] }> = ({ units, setUnits, tenants }) => {
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'All' | 'Occupied' | 'Vacant' | 'Maintenance'>('All');
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   
   // Form State
   const [number, setNumber] = useState('');
   const [type, setType] = useState<'1BR' | '2BR' | '3BR' | '4BR'>('2BR');
   const [floor, setFloor] = useState(1);
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
 
   const handleAddUnit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +34,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
     setUnits([...units, newUnit]);
     setShowAddModal(false);
     setNumber('');
-    alert("New unit added to association inventory.");
+    showAlert('New unit added to association inventory.', 'success');
   };
 
   const sortedUnits = [...units]
@@ -50,6 +57,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">

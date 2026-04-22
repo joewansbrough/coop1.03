@@ -10,6 +10,7 @@ import driveRoutes from './drive.js';
 const app = express();
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
 
 // Prisma singleton helper
 let prismaInstance: PrismaClient;
@@ -24,6 +25,8 @@ const sanitizeUtf8 = (str: any) => {
   if (typeof str !== 'string') return str;
   return str.replace(/\0/g, '');
 };
+
+const getParam = (value: string | string[] | undefined): string => Array.isArray(value) ? value[0] ?? '' : value ?? '';
 
 const getCoopId = async (req: any, p: any = getPrisma()) => {
   const user = (req as any).user || (req as any).session?.user;
@@ -193,46 +196,7 @@ app.get('/auth/callback', async (req, res) => {
     const isAdmin = user?.role === 'ADMIN' || ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'].includes(email);
 
     // Dynamically resolve the best available Gemini model once at login
-    let resolvedModel = 'gemini-2.5-flash-lite'; // safe fallback
-    try {
-      const genAI = new GoogleGenerativeAI(process.env.API_KEY || '');
-      const { models } = await genAI.listModels();
-
-      // Skip known deprecated/unavailable model families
-      const DEPRECATED = ['gemini-1.0', 'gemini-1.5', 'gemini-2.0', 'gemini-pro', 'aqa', 'embedding'];
-
-      const contentModels = models.filter(m => {
-        const name = m.name.toLowerCase();
-        return (
-          m.supportedGenerationMethods?.includes('generateContent') &&
-          name.includes('gemini') &&
-          !DEPRECATED.some(d => name.includes(d))
-        );
-      });
-
-      // Score: prefer flash-lite > flash > pro, boosted by version number
-      const score = (name: string): number => {
-        let s = 0;
-        if (name.includes('flash-lite') || name.includes('flash_lite')) s += 30;
-        else if (name.includes('flash')) s += 20;
-        else if (name.includes('pro')) s += 10;
-        const versionMatch = name.match(/(\d+\.\d+)/);
-        if (versionMatch) s += parseFloat(versionMatch[0]) * 2;
-        return s;
-      };
-
-      const ranked = contentModels.sort((a, b) => score(b.name.toLowerCase()) - score(a.name.toLowerCase()));
-      console.log(`[ModelResolver] Candidates:`, contentModels.map(m => m.name));
-
-      if (ranked[0]?.name) {
-        resolvedModel = ranked[0].name.replace('models/', '');
-        console.log(`[ModelResolver] Selected model for ${email}: ${resolvedModel}`);
-      } else {
-        console.warn('[ModelResolver] No non-deprecated models found, using fallback:', resolvedModel);
-      }
-    } catch (err) {
-      console.warn('[ModelResolver] Model listing failed, using fallback:', err);
-    }
+    const resolvedModel = DEFAULT_GEMINI_MODEL;
 
     (req as any).session = (req as any).session || {};
     (req as any).session.user = {
@@ -299,8 +263,9 @@ app.get('/api/units', requireAuth, async (req, res) => {
 
 app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) => {
   try {
+    const unitId = getParam(req.params.id);
     const tasks = await getPrisma().scheduledMaintenance.findMany({
-      where: { unitId: req.params.id },
+      where: { unitId },
       orderBy: { dueDate: 'asc' }
     });
     res.json(tasks);
@@ -330,8 +295,9 @@ app.get('/api/tenants', requireAuth, async (req, res) => {
 });
 
 app.get('/api/tenants/:id/history', requireAuth, async (req, res) => {
+  const tenantId = getParam(req.params.id);
   const history = await getPrisma().tenantHistory.findMany({
-    where: { tenantId: req.params.id },
+    where: { tenantId },
     include: { unit: true },
     orderBy: { startDate: 'desc' }
   });
@@ -341,7 +307,7 @@ app.get('/api/tenants/:id/history', requireAuth, async (req, res) => {
 // --- Unit Turnover Endpoints ---
 
 app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
   const { date, reason } = req.body;
   try {
     await getPrisma().$transaction(async (tx) => {
@@ -382,7 +348,7 @@ app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
 });
 
 app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
   const { tenantId, date } = req.body;
   try {
     await getPrisma().$transaction(async (tx) => {
@@ -440,7 +406,7 @@ app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
 });
 
 app.post('/api/units/:id/transfer', requireAuth, async (req, res) => {
-  const { id } = req.params;
+  const id = getParam(req.params.id);
   const { toUnitId, date } = req.body;
   try {
     await getPrisma().$transaction(async (tx) => {
@@ -558,8 +524,9 @@ app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
   if (body.expenses !== undefined) data.expenses = body.expenses;
 
   try {
+    const maintenanceId = getParam(req.params.id);
     const request = await getPrisma().maintenanceRequest.update({
-      where: { id: req.params.id },
+      where: { id: maintenanceId },
       data
     });
     res.json(request);
@@ -570,7 +537,8 @@ app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
 
 
 app.delete('/api/maintenance/:id', requireAuth, async (req, res) => {
-  await getPrisma().maintenanceRequest.delete({ where: { id: req.params.id } });
+  const maintenanceId = getParam(req.params.id);
+  await getPrisma().maintenanceRequest.delete({ where: { id: maintenanceId } });
   res.json({ success: true });
 });
 
@@ -592,15 +560,17 @@ app.post('/api/announcements', requireAuth, async (req, res) => {
 
 app.put('/api/announcements/:id', requireAuth, async (req, res) => {
   const { title, content, type, priority, date } = req.body;
+  const announcementId = getParam(req.params.id);
   const announcement = await getPrisma().announcement.update({
-    where: { id: req.params.id },
+    where: { id: announcementId },
     data: { title, content, type, priority, date }
   });
   res.json(announcement);
 });
 
 app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
-  await getPrisma().announcement.delete({ where: { id: req.params.id } });
+  const announcementId = getParam(req.params.id);
+  await getPrisma().announcement.delete({ where: { id: announcementId } });
   res.json({ success: true });
 });
 
@@ -639,8 +609,9 @@ app.post('/api/documents', requireAuth, async (req, res) => {
 
   app.put('/api/documents/:id', requireAuth, async (req, res) => {
   const { title, category, tags, committee, content } = req.body;
+  const documentId = getParam(req.params.id);
   const document = await getPrisma().document.update({
-    where: { id: req.params.id },
+    where: { id: documentId },
     data: { 
       title, 
       category, 
@@ -653,7 +624,8 @@ app.post('/api/documents', requireAuth, async (req, res) => {
   });
 
 app.delete('/api/documents/:id', requireAuth, async (req, res) => {
-  await getPrisma().document.delete({ where: { id: req.params.id } });
+  const documentId = getParam(req.params.id);
+  await getPrisma().document.delete({ where: { id: documentId } });
   res.json({ success: true });
 });
 
@@ -702,8 +674,9 @@ app.post('/api/events', requireAuth, async (req, res) => {
 
 app.put('/api/events/:id', requireAuth, async (req, res) => {
   const { title, description, date, time, location, category, committeeId } = req.body;
+  const eventId = getParam(req.params.id);
   const event = await getPrisma().coopEvent.update({
-    where: { id: req.params.id },
+    where: { id: eventId },
     data: { 
       title, 
       description, 
@@ -723,11 +696,12 @@ app.post('/api/events/:id/attend', requireAuth, async (req, res) => {
   if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
+    const eventId = getParam(req.params.id);
     const tenant = await getPrisma().tenant.findUnique({ where: { email: user.email } });
     if (!tenant) return res.status(404).json({ error: 'Tenant record not found for this user' });
 
     const event = await getPrisma().coopEvent.update({
-      where: { id: req.params.id },
+      where: { id: eventId },
       data: {
         attendees: {
           connect: { id: tenant.id }
@@ -742,7 +716,8 @@ app.post('/api/events/:id/attend', requireAuth, async (req, res) => {
 });
 
 app.delete('/api/events/:id', requireAuth, async (req, res) => {
-  await getPrisma().coopEvent.delete({ where: { id: req.params.id } });
+  const eventId = getParam(req.params.id);
+  await getPrisma().coopEvent.delete({ where: { id: eventId } });
   res.json({ success: true });
 });
 
@@ -759,7 +734,7 @@ app.post('/api/ai/triage', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
-    const resolvedModel = user?.geminiModel || 'gemini-2.5-flash-lite';
+    const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
     const model = genAI.getGenerativeModel({
       model: resolvedModel,
       generationConfig: {
@@ -789,7 +764,7 @@ app.post('/api/ai/policy', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
-    const resolvedModel = user?.geminiModel || 'gemini-2.5-flash-lite';
+    const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { question, context } = req.body;
 
@@ -809,7 +784,7 @@ app.post('/api/ai/summarize', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
-    const resolvedModel = user?.geminiModel || 'gemini-2.5-flash-lite';
+    const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { content } = req.body;
 
