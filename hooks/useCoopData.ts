@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent } from '../types';
 
 const fetchJson = async (url: string) => {
@@ -7,7 +7,7 @@ const fetchJson = async (url: string) => {
   return res.json();
 };
 
-export const useUser = () => useQuery({
+export const useUser = (options?: Partial<UseQueryOptions<any>>) => useQuery({
   queryKey: ['user'],
   queryFn: async () => {
     // Check our API for the full user object (role, tenantId, etc)
@@ -24,41 +24,49 @@ export const useUser = () => useQuery({
     return null;
   },
   staleTime: 5 * 60 * 1000, // 5 minutes
+  ...options,
 });
 
-export const useUnits = () => useQuery<Unit[]>({
+export const useUnits = (options?: Partial<UseQueryOptions<Unit[]>>) => useQuery<Unit[]>({
   queryKey: ['units'],
   queryFn: () => fetchJson('/api/units'),
+  ...options,
 });
 
-export const useTenants = () => useQuery<Tenant[]>({
+export const useTenants = (options?: Partial<UseQueryOptions<Tenant[]>>) => useQuery<Tenant[]>({
   queryKey: ['tenants'],
   queryFn: () => fetchJson('/api/tenants'),
+  ...options,
 });
 
-export const useMaintenance = () => useQuery<MaintenanceRequest[]>({
+export const useMaintenance = (options?: Partial<UseQueryOptions<MaintenanceRequest[]>>) => useQuery<MaintenanceRequest[]>({
   queryKey: ['maintenance'],
   queryFn: () => fetchJson('/api/maintenance'),
+  ...options,
 });
 
-export const useAnnouncements = () => useQuery<Announcement[]>({
+export const useAnnouncements = (options?: Partial<UseQueryOptions<Announcement[]>>) => useQuery<Announcement[]>({
   queryKey: ['announcements'],
   queryFn: () => fetchJson('/api/announcements'),
+  ...options,
 });
 
-export const useDocuments = () => useQuery<Document[]>({
+export const useDocuments = (options?: Partial<UseQueryOptions<Document[]>>) => useQuery<Document[]>({
   queryKey: ['documents'],
   queryFn: () => fetchJson('/api/documents'),
+  ...options,
 });
 
-export const useCommittees = () => useQuery<Committee[]>({
+export const useCommittees = (options?: Partial<UseQueryOptions<Committee[]>>) => useQuery<Committee[]>({
   queryKey: ['committees'],
   queryFn: () => fetchJson('/api/committees'),
+  ...options,
 });
 
-export const useEvents = () => useQuery<CoopEvent[]>({
+export const useEvents = (options?: Partial<UseQueryOptions<CoopEvent[]>>) => useQuery<CoopEvent[]>({
   queryKey: ['events'],
   queryFn: () => fetchJson('/api/events'),
+  ...options,
 });
 
 // Mutations helper

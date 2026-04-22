@@ -37,13 +37,17 @@ const AppContent: React.FC = () => {
   const queryClient = useQueryClient();
 
   const { data: user, isLoading: isUserLoading, refetch: fetchUser } = useUser();
-  const { data: units = [], isLoading: isUnitsLoading } = useUnits();
-  const { data: tenants = [], isLoading: isTenantsLoading } = useTenants();
-  const { data: requests = [] } = useMaintenance();
-  const { data: announcements = [] } = useAnnouncements();
-  const { data: documents = [] } = useDocuments();
-  const { data: committees = [] } = useCommittees();
-  const { data: events = [] } = useEvents();
+  
+  // Clean & Efficient Gating: Only fetch system data once authentication is confirmed
+  const isEnabled = !!user;
+
+  const { data: units = [], isLoading: isUnitsLoading } = useUnits({ enabled: isEnabled });
+  const { data: tenants = [], isLoading: isTenantsLoading } = useTenants({ enabled: isEnabled });
+  const { data: requests = [] } = useMaintenance({ enabled: isEnabled });
+  const { data: announcements = [] } = useAnnouncements({ enabled: isEnabled });
+  const { data: documents = [] } = useDocuments({ enabled: isEnabled });
+  const { data: committees = [] } = useCommittees({ enabled: isEnabled });
+  const { data: events = [] } = useEvents({ enabled: isEnabled });
 
   const createQueryArraySetter = <T,>(queryKey: string[]) =>
     (value: React.SetStateAction<T[]>) => {

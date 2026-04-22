@@ -30,13 +30,30 @@ const getParam = (value: string | string[] | undefined): string => Array.isArray
 
 const getCoopId = async (req: any, p: any = getPrisma()) => {
   const user = (req as any).user || (req as any).session?.user;
+  
+  // 1. Direct session lookup (Most efficient)
+  if (user?.cooperativeId) return user.cooperativeId;
+
   const email = user?.email;
   if (email) {
     const t = await p.tenant.findUnique({ where: { email: email.toLowerCase() } });
-    if (t?.cooperativeId) return t.cooperativeId;
+    if (t?.cooperativeId) {
+      // Cache it in the session for subsequent requests in this session
+      if ((req as any).session?.user) {
+        (req as any).session.user.cooperativeId = t.cooperativeId;
+      }
+      return t.cooperativeId;
+    }
   }
+
+  // Fallback to first cooperative if none found
   const first = await p.cooperative.findFirst();
   if (!first) throw new Error("No cooperative found in the system.");
+  
+  // Cache the fallback too
+  if ((req as any).session?.user) {
+    (req as any).session.user.cooperativeId = first.id;
+  }
   return first.id;
 };
 
@@ -206,6 +223,7 @@ app.get('/auth/callback', async (req, res) => {
       isAdmin,
       tenantId: user?.id || null,
       unitNumber: user?.unit?.number || null,
+      cooperativeId: user?.cooperativeId || null,
       role: user?.role || 'MEMBER',
       geminiModel: resolvedModel,
     };
