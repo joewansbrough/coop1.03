@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Committee, Tenant, Document } from '../types';
 import FilterBar from '../components/FilterBar';
+import AppAlert from '../components/AppAlert';
 import { formatDate } from '../utils/dateUtils';
 
 interface CommitteesProps {
@@ -42,6 +43,12 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
   const [meetingTime, setMeetingTime] = useState('19:00');
   const [meetingLocation, setMeetingLocation] = useState('Common Room');
   const [meetingDesc, setMeetingDesc] = useState('');
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
 
   const selectedCommittee = Array.isArray(committees) ? committees.find(c => c.id === selectedId) : null;
   const isChair = selectedCommittee && user?.name === selectedCommittee.chair;
@@ -67,7 +74,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
       });
       
       if (res.ok) {
-        alert("Committee meeting scheduled successfully!");
+        showAlert('Committee meeting scheduled successfully.', 'success');
         setShowMeetingModal(false);
         // Reset form
         setMeetingTitle('');
@@ -78,7 +85,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
       }
     } catch (err) {
       console.error(err);
-      alert("Failed to schedule meeting.");
+      showAlert('Failed to schedule meeting.', 'error');
     }
   };
 
@@ -110,7 +117,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (isGuest) {
-      alert("Guest accounts cannot send inquiries.");
+      showAlert('Guest accounts cannot send inquiries.', 'error');
       return;
     }
     setSentStatus(true);
@@ -118,14 +125,14 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
       setSentStatus(false);
       setShowContact(false);
       setMsgBody('');
-      alert("Message broadcasted to committee members!");
+      showAlert('Message broadcasted to committee members.', 'success');
     }, 2000);
   };
 
   const handleUploadMinute = (e: React.FormEvent) => {
     e.preventDefault();
     if (isGuest) return;
-    alert("Minutes successfully uploaded to General Library. Members will be notified.");
+    showAlert('Minutes uploaded to the general library. Members will be notified.', 'success');
     setShowUpload(false);
   };
 
@@ -145,7 +152,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
     setNewCommitteeName('');
     setNewCommitteeDesc('');
     setNewCommitteeChair('');
-    alert("New committee successfully created.");
+    showAlert('New committee successfully created.', 'success');
   };
 
   const handleAssignMember = (committeeId: string) => {
@@ -158,7 +165,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
     setCommittees(committees.map(c => {
       if (c.id === committeeId) {
         if (c.members.includes(memberName)) {
-          alert("Member is already in this committee.");
+          showAlert('Member is already in this committee.', 'error');
           return c;
         }
         return { ...c, members: [...c.members, memberName] };
@@ -167,11 +174,12 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
     }));
     setShowAssignMember(null);
     setSelectedMemberId('');
-    alert(`${memberName} has been assigned to the committee.`);
+    showAlert(`${memberName} has been assigned to the committee.`, 'success');
   };
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Member Committees</h2>

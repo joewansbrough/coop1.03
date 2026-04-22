@@ -4,6 +4,7 @@ import { MaintenanceRequest, RequestStatus, RepairQuote, MaintenanceCategory, Un
 import { geminiService } from '../services/geminiService';
 import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
+import AppAlert from '../components/AppAlert';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface MaintenanceProps {
@@ -28,6 +29,12 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<{id: string, status: RequestStatus} | null>(null);
   const [urgency, setUrgency] = useState<string>('Medium');
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
   
   // Filter requests based on user role, search, and status filter
   const allFilteredRequests = (Array.isArray(requests) ? requests : [])
@@ -67,7 +74,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     e.preventDefault();
     
     if (!category || category.length === 0) {
-      alert("At least one category is required.");
+      showAlert('At least one category is required.', 'error');
       return;
     }
 
@@ -95,7 +102,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     setCategory(['Other']);
     setUrgency('Medium');
     if (isAdmin) setUnitId('');
-    alert("Maintenance request submitted successfully! Our maintenance committee will review it shortly.");
+    showAlert('Maintenance request submitted successfully. The maintenance committee will review it shortly.', 'success');
   };
 
   const confirmRequestStatus = async () => {
@@ -135,7 +142,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
 
   const approveQuote = (quoteId: string) => {
     setQuotes(quotes.map(q => q.id === quoteId ? { ...q, status: 'Approved' } : q));
-    alert("Quote approved. Vendor has been notified.");
+    showAlert('Quote approved. Vendor has been notified.', 'success');
   };
 
   const filteredQuotes = selectedRequestIdForQuotes 
@@ -144,6 +151,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">

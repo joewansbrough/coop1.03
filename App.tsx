@@ -37,13 +37,17 @@ const AppContent: React.FC = () => {
   const queryClient = useQueryClient();
 
   const { data: user, isLoading: isUserLoading, refetch: fetchUser } = useUser();
-  const { data: units = [] } = useUnits();
-  const { data: tenants = [] } = useTenants();
-  const { data: requests = [] } = useMaintenance();
-  const { data: announcements = [] } = useAnnouncements();
-  const { data: documents = [] } = useDocuments();
-  const { data: committees = [] } = useCommittees();
-  const { data: events = [] } = useEvents();
+  
+  // Clean & Efficient Gating: Only fetch system data once authentication is confirmed
+  const isEnabled = !!user;
+
+  const { data: units = [], isLoading: isUnitsLoading } = useUnits({ enabled: isEnabled });
+  const { data: tenants = [], isLoading: isTenantsLoading } = useTenants({ enabled: isEnabled });
+  const { data: requests = [] } = useMaintenance({ enabled: isEnabled });
+  const { data: announcements = [] } = useAnnouncements({ enabled: isEnabled });
+  const { data: documents = [] } = useDocuments({ enabled: isEnabled });
+  const { data: committees = [] } = useCommittees({ enabled: isEnabled });
+  const { data: events = [] } = useEvents({ enabled: isEnabled });
 
   const createQueryArraySetter = <T,>(queryKey: string[]) =>
     (value: React.SetStateAction<T[]>) => {
@@ -114,17 +118,26 @@ const AppContent: React.FC = () => {
           <Route path="/documents" element={<ResourceLibrary isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} committees={committees} />} />
           <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} announcements={announcements} />} />
           <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} announcements={announcements} setAnnouncements={setAnnouncements} />} />
-          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} tenants={tenants} setTenants={setTenants} units={units} />} />
+          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} />} />
           <Route path="/admin/units/:unitId" element={<UnitDetail isAdmin={effectiveIsAdmin} units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} setRequests={setRequests} documents={documents} />} />
           
           {/* Admin Routes */}
           {effectiveIsAdmin && (
             <>
               <Route path="/admin/units" element={<AdminUnits units={units} setUnits={setUnits} tenants={tenants} />} />
-              <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} tenants={tenants} setTenants={setTenants} units={units} />} />
+              <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} />} />
               <Route path="/admin/tenants/:tenantId" element={<TenantDetail tenants={tenants} units={units} requests={requests} />} />
               <Route path="/admin/waitlist" element={<Waitlist tenants={tenants} setTenants={setTenants} />} />
-              <Route path="/admin/reports" element={<Reports />} />
+              <Route
+                path="/admin/reports"
+                element={
+                  <Reports
+                    units={units}
+                    tenants={tenants}
+                    requests={requests}
+                  />
+                }
+              />
               <Route path="/admin/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
             </>
           )}

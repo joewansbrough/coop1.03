@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { MOCK_NOTIFICATIONS } from '../constants';
 import ProfileModal from './ProfileModal';
 import HelpModal from './HelpModal';
 import OnboardingTour from './OnboardingTour';
@@ -31,7 +30,6 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -109,7 +107,6 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     { label: 'Maintenance', path: '/maintenance', icon: 'fa-tools' },
     { label: 'Documents', path: '/documents', icon: 'fa-file-lines' },
     { label: 'Policy Assistant', path: '/policy-assistant', icon: 'fa-robot' },
-    // { label: 'Finances', path: '/finances', icon: 'fa-wallet' }, // Hidden at launch
     { label: 'Communications', path: '/communications', icon: 'fa-comments' },
     { label: 'Directory', path: '/directory', icon: 'fa-address-book' },
   ];
@@ -138,9 +135,6 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       window.location.reload();
     }
   };
-
-  const unreadNotificationsCount = MOCK_NOTIFICATIONS.filter(n => !n.isRead).length;
-
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans transition-colors duration-200">
       {/* Sidebar Backdrop */}
@@ -254,16 +248,6 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
             
-            <button 
-              onClick={() => setIsNotificationsOpen(true)}
-              className="p-2 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors relative active:scale-95"
-            >
-              <i className="fa-solid fa-bell"></i>
-              {unreadNotificationsCount > 0 && (
-                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>
-              )}
-            </button>
-
             <div className="relative" ref={profileRef}>
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -308,48 +292,6 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             </div>
           </div>
         </header>
-
-        {/* Notifications Slide-over */}
-        {isNotificationsOpen && (
-          <>
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
-            <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-white dark:bg-slate-900 z-50 animate-in slide-in-from-right duration-300 flex flex-col">
-              <div className="p-6 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
-                <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-xs">Communication Queue</h3>
-                <button onClick={() => setIsNotificationsOpen(false)} className="w-8 h-8 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center transition-colors">
-                  <i className="fa-solid fa-xmark text-slate-500"></i>
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {MOCK_NOTIFICATIONS.length > 0 ? MOCK_NOTIFICATIONS.map(n => (
-                  <div key={n.id} className={`p-4 rounded-2xl border transition-all hover:border-brand-200 dark:hover:border-brand-400 cursor-pointer group ${!n.isRead ? 'bg-brand-50/30 dark:bg-brand-900/10 border-brand-100 dark:border-brand-900/30' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-white/5 opacity-70'}`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${n.type === 'urgent' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
-                        {n.type}
-                      </span>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase">{n.timestamp}</span>
-                    </div>
-                    <h4 className="text-sm font-black text-slate-800 dark:text-white mb-1 group-hover:text-brand-700 dark:group-hover:text-brand-400">{n.title}</h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{n.body}</p>
-                  </div>
-                )) : (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-300 dark:text-slate-700">
-                    <i className="fa-solid fa-inbox text-5xl mb-4 opacity-10"></i>
-                    <p className="text-xs font-black uppercase tracking-widest">Inbox Clean</p>
-                  </div>
-                )}
-              </div>
-              <div className="p-4 border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50">
-                <button 
-                  onClick={() => alert("All notifications marked as read.")}
-                  className="w-full bg-slate-900 dark:bg-brand-600 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-brand-700 transition-all active:scale-95"
-                >
-                  Clear All Alerts
-                </button>
-              </div>
-            </div>
-          </>
-        )}
 
         {/* Search Modal */}
         {isSearchOpen && (
