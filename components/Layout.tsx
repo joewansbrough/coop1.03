@@ -141,7 +141,9 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 text-slate-800 dark:text-white flex flex-col transition-transform duration-300 transform lg:relative lg:translate-x-0 border-r border-slate-200 dark:border-white/5">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 text-slate-800 dark:text-white flex flex-col transition-transform duration-300 transform border-r border-slate-200 dark:border-white/5 ${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:relative lg:translate-x-0`}>
       <div className="p-6 flex justify-between items-center lg:block">
         <div>
           <h1 className="text-sm font-black flex items-center gap-2 tracking-tight whitespace-nowrap text-teal-accent">
