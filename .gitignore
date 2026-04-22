@@ -28,3 +28,4 @@ dev.db
 *.sw?
 
 /generated/prisma
+graphify-out/cache/
