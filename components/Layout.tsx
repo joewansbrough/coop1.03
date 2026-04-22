@@ -141,76 +141,75 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 dark:bg-slate-950 text-white flex flex-col transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 border-r border-white/5`}>
-        <div className="p-6 flex justify-between items-center lg:block">
-          <div>
-            <h1 className="text-sm font-black flex items-center gap-2 tracking-tight whitespace-nowrap">
-              <i className="fa-solid fa-house-signal text-brand-400 shrink-0"></i>
-              <span className="truncate">{coopName}</span>
-            </h1>
-            <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Co-op Management</p>
-          </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-400 hover:text-white">
-             <i className="fa-solid fa-xmark"></i>
-          </button>
+      <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 text-slate-800 dark:text-white flex flex-col transition-transform duration-300 transform lg:relative lg:translate-x-0 border-r border-slate-200 dark:border-white/5">
+      <div className="p-6 flex justify-between items-center lg:block">
+        <div>
+          <h1 className="text-sm font-black flex items-center gap-2 tracking-tight whitespace-nowrap text-teal-accent">
+            <i className="fa-solid fa-house-signal shrink-0"></i>
+            <span className="truncate text-slate-900 dark:text-white">{coopName}</span>
+          </h1>
+          <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Co-op Management</p>
         </div>
+        <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-400 hover:text-slate-900">
+           <i className="fa-solid fa-xmark"></i>
+        </button>
+      </div>
 
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto scrollbar-hide">
-          {navItems.map((item, index) => {
-            const isFirstAdminItem = isAdmin && item.isAdmin && !navItems[index - 1]?.isAdmin;
-            return (
-              <React.Fragment key={item.path}>
-                {isFirstAdminItem && (
-                  <div className="pt-6 pb-2 px-3">
-                    <p className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Board Administration</p>
-                  </div>
-                )}
-                <Link
-                  to={item.path}
-                  onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
-                    location.pathname === item.path 
-                      ? (item.isAdmin ? 'bg-amber-500 text-white' : 'bg-brand-600 text-white') 
-                      : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
-                  }`}
-                >
-                  <i className={`fa-solid ${item.icon} w-5 group-hover:scale-110 transition-transform ${location.pathname === item.path ? 'text-white' : (item.isAdmin ? 'text-amber-500/70' : 'text-slate-500')}`}></i>
-                  <span className="text-sm font-bold">{item.label}</span>
-                </Link>
-              </React.Fragment>
-            );
-          })}
-        </nav>
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto scrollbar-hide">
+        {navItems.map((item, index) => {
+          const isFirstAdminItem = isAdmin && item.isAdmin && !navItems[index - 1]?.isAdmin;
+          return (
+            <React.Fragment key={item.path}>
+              {isFirstAdminItem && (
+                <div className="pt-6 pb-2 px-3">
+                  <p className="text-[10px] font-black text-teal-accent uppercase tracking-[0.2em]">Board Administration</p>
+                </div>
+              )}
+              <Link
+                to={item.path}
+                onClick={() => setIsSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-[20px] transition-all group active:scale-95 ${
+                  location.pathname === item.path 
+                    ? 'bg-teal-accent text-white' 
+                    : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <i className={`fa-solid ${item.icon} w-5 ${location.pathname === item.path ? 'text-white' : 'text-slate-400'}`}></i>
+                <span className="text-sm font-bold">{item.label}</span>
+              </Link>
+            </React.Fragment>
+          );
+        })}
+      </nav>
 
-        <div className="p-4 border-t border-slate-800 space-y-2">
+      <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+        <button 
+          onClick={toggleDarkMode}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[20px] text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-teal-accent transition-all active:scale-95"
+        >
+          <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+          {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+        </button>
+        {isActualAdmin ? (
           <button 
-            onClick={toggleDarkMode}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-800 text-slate-400 hover:text-amber-400 transition-all"
+            onClick={onToggleAdminView} 
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${
+              isAdmin 
+                ? 'bg-amber-500 text-white hover:bg-amber-600' 
+                : 'bg-teal-accent text-white hover:bg-teal-700'
+            }`}
           >
-            <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
-            {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+            <i className={`fa-solid ${isAdmin ? 'fa-user-shield' : 'fa-user'}`}></i>
+            {isAdmin ? 'Switch to Tenant View' : 'Switch to Admin View'}
           </button>
-          {isActualAdmin ? (
-            <button 
-              onClick={onToggleAdminView} 
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${
-                isAdmin 
-                  ? 'bg-amber-500 text-white hover:bg-amber-600' 
-                  : 'bg-brand-600 text-white hover:bg-brand-700'
-              }`}
-            >
-              <i className={`fa-solid ${isAdmin ? 'fa-user-shield' : 'fa-user'}`}></i>
-              {isAdmin ? 'Switch to Tenant View' : 'Switch to Admin View'}
-            </button>
-          ) : (
-            <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-800 text-slate-500 cursor-default">
-              <i className="fa-solid fa-user"></i>
-              Resident Session
-            </div>
-          )}
-        </div>
+        ) : (
+          <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[20px] text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-default">
+            <i className="fa-solid fa-user"></i>
+            Resident Session
+          </div>
+        )}
+      </div>
       </aside>
-
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden w-full relative">
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 transition-colors duration-200">
