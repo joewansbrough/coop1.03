@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
-import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent } from '../types';
+import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent, ScheduledMaintenance } from '../types';
 import * as demoData from '../utils/demoData';
 
 const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
@@ -102,16 +102,9 @@ export const useEvents = (options?: Partial<UseQueryOptions<CoopEvent[]>>) => us
   ...options,
 });
 
-// Mutations helper
-export const useRefreshData = () => {
-  const queryClient = useQueryClient();
-  return () => {
-    queryClient.invalidateQueries({ queryKey: ['units'] });
-    queryClient.invalidateQueries({ queryKey: ['tenants'] });
-    queryClient.invalidateQueries({ queryKey: ['maintenance'] });
-    queryClient.invalidateQueries({ queryKey: ['announcements'] });
-    queryClient.invalidateQueries({ queryKey: ['documents'] });
-    queryClient.invalidateQueries({ queryKey: ['committees'] });
-    queryClient.invalidateQueries({ queryKey: ['events'] });
-  };
-};
+export const useScheduledMaintenance = (options?: Partial<UseQueryOptions<ScheduledMaintenance[]>>) => useQuery<ScheduledMaintenance[]>({
+  queryKey: ['scheduledMaintenance'],
+  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_SCHEDULED_MAINTENANCE) : fetchJson('/api/scheduled-maintenance'),
+  ...dataQueryConfig,
+  ...options,
+});

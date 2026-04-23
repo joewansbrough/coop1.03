@@ -39,8 +39,13 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, user, units, tenants, re
   
   // Find closest upcoming meeting
   const now = new Date();
+  now.setHours(0, 0, 0, 0); // Normalize to start of day
   const nextMeeting = events
-    .filter(e => (e.category === 'Meeting' || e.category === 'Board') && new Date(e.date) >= now)
+    .filter(e => {
+        const eventDate = new Date(e.date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= now;
+    })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
 
   const unitChartData = [
