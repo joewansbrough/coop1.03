@@ -108,3 +108,18 @@ export const useScheduledMaintenance = (options?: Partial<UseQueryOptions<Schedu
   ...dataQueryConfig,
   ...options,
 });
+
+// Mutations helper
+export const useRefreshData = () => {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({ queryKey: ['units'] });
+    queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+    queryClient.invalidateQueries({ queryKey: ['announcements'] });
+    queryClient.invalidateQueries({ queryKey: ['documents'] });
+    queryClient.invalidateQueries({ queryKey: ['committees'] });
+    queryClient.invalidateQueries({ queryKey: ['events'] });
+    queryClient.invalidateQueries({ queryKey: ['scheduledMaintenance'] });
+  };
+};
