@@ -95,11 +95,11 @@ export const MOCK_DOCUMENTS: Document[] = [
 ];
 
 export const MOCK_COMMITTEES: Committee[] = [
-  { id: 'c1', name: 'Board', description: 'Gov body.', chair: 'George Papadopoulos', icon: 'fa-landmark' },
-  { id: 'c2', name: 'Maintenance', description: 'Upkeep.', chair: 'Thomas Bergstrom', icon: 'fa-wrench' },
-  { id: 'c3', name: 'Finance', description: 'Budgeting.', chair: 'Patricia MacLeod', icon: 'fa-dollar-sign' },
-  { id: 'c4', name: 'Membership', description: 'Applications.', chair: 'Fatima Al-Hassan', icon: 'fa-users' },
-  { id: 'c5', name: 'Social', description: 'Events.', chair: 'Susan Tremblay', icon: 'fa-calendar' },
+  { id: 'c1', name: 'Board', description: 'Gov body.', chair: 'George Papadopoulos', icon: 'fa-landmark', members: ['George Papadopoulos', 'Thomas Bergstrom'] },
+  { id: 'c2', name: 'Maintenance', description: 'Upkeep.', chair: 'Thomas Bergstrom', icon: 'fa-wrench', members: ['Thomas Bergstrom', 'Brian Walsh'] },
+  { id: 'c3', name: 'Finance', description: 'Budgeting.', chair: 'Patricia MacLeod', icon: 'fa-dollar-sign', members: ['Patricia MacLeod', 'Ahmed Patel'] },
+  { id: 'c4', name: 'Membership', description: 'Applications.', chair: 'Fatima Al-Hassan', icon: 'fa-users', members: ['Fatima Al-Hassan', 'Aisha Mohammed'] },
+  { id: 'c5', name: 'Social', description: 'Events.', chair: 'Susan Tremblay', icon: 'fa-calendar', members: ['Susan Tremblay', 'Priya Sharma'] },
 ];
 
 export const MOCK_SCHEDULED_MAINTENANCE: ScheduledMaintenance[] = Array.from({ length: 10 }, (_, i) => ({

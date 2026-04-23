@@ -13,7 +13,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, icon, trend, color })
   return (
     <div className="bg-white dark:bg-slate-900 p-6 rounded-[20px] border border-slate-200 dark:border-white/5 transition-all duration-300 group flex flex-col h-full cursor-pointer hover:border-teal-accent hover:shadow-accent">
       <div className="flex items-center justify-between mb-6">
-        <div className={`w-12 h-12 rounded-[20px] ${color.includes('brand') ? 'bg-teal-accent/10 text-teal-accent' : color + ' text-white'} flex items-center justify-center text-xl transition-all duration-300 group-hover:scale-110`}>
+        <div className={`w-12 h-12 rounded-[20px] bg-teal-accent/10 text-teal-accent flex items-center justify-center text-xl transition-all duration-300 group-hover:scale-110`}>
           <i className={`fa-solid ${icon}`}></i>
         </div>
         {trend && (
