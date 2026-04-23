@@ -16,6 +16,12 @@ const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
 let prismaInstance: PrismaClient;
 const getPrisma = () => {
   if (!prismaInstance) {
+    const dbUrl = process.env.DATABASE_URL || '';
+    if (dbUrl) {
+      console.log('DATABASE_URL protocol:', dbUrl.split(':')[0]);
+    } else {
+      console.error('DATABASE_URL is MISSING');
+    }
     prismaInstance = new PrismaClient();
   }
   return prismaInstance;
