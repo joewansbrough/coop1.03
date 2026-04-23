@@ -117,8 +117,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     navItems.push(
       { label: 'Units', path: '/admin/units', icon: 'fa-house-chimney', isAdmin: true },
       { label: 'Tenants', path: '/admin/tenants', icon: 'fa-users', isAdmin: true },
-      { label: 'Waitlist', path: '/admin/waitlist', icon: 'fa-list-check', isAdmin: true },
-      { label: 'Reports', path: '/admin/reports', icon: 'fa-chart-pie', isAdmin: true }
+      { label: 'Waitlist', path: '/admin/waitlist', icon: 'fa-list-check', isAdmin: true }
     );
   }
 

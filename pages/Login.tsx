@@ -119,9 +119,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 localStorage.setItem('demo_mode', 'true');
                 onLoginSuccess();
               }}
-              className="w-full flex items-center justify-center gap-4 bg-slate-100 dark:bg-slate-800 py-3 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+              className="w-full flex items-center justify-center gap-4 bg-teal-600 hover:bg-teal-700 py-4 rounded-2xl transition-all active:scale-95"
             >
-              <span className="text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">
+              <span className="text-sm font-black text-white uppercase tracking-widest">
                 Try Demo Mode
               </span>
             </button>

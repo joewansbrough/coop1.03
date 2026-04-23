@@ -95,9 +95,6 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, user, units, tenants, re
                 <Link to="/maintenance" className="bg-teal-accent hover:bg-teal-700 text-white px-8 py-4 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95 shadow-lg shadow-teal-accent/20">
                   <i className="fa-solid fa-wrench"></i> Service Queue
                 </Link>
-                <Link to="/admin/reports" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3 active:scale-95">
-                  <i className="fa-solid fa-chart-line"></i> Financial Reports
-                </Link>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
