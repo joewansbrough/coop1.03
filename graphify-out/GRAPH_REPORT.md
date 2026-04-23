@@ -1,331 +1,208 @@
-# Graph Report - C:\Users\Joe\Desktop\Coop103\coop1.03  (2026-04-22)
+# Graph Report - reference materials/info  (2026-04-23)
 
 ## Corpus Check
-- 51 files · ~61,764 words
-- Verdict: corpus is large enough that graph structure adds value.
+- Corpus is ~0 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 179 nodes · 169 edges · 48 communities detected
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.8)
+- 72 nodes · 47 edges · 25 communities detected
+- Extraction: 64% EXTRACTED · 36% INFERRED · 0% AMBIGUOUS · INFERRED: 17 edges (avg confidence: 0.86)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
-- [[_COMMUNITY_Community 0|Community 0]]
-- [[_COMMUNITY_Community 1|Community 1]]
-- [[_COMMUNITY_Community 2|Community 2]]
-- [[_COMMUNITY_Community 3|Community 3]]
-- [[_COMMUNITY_Community 4|Community 4]]
-- [[_COMMUNITY_Community 5|Community 5]]
-- [[_COMMUNITY_Community 6|Community 6]]
-- [[_COMMUNITY_Community 7|Community 7]]
-- [[_COMMUNITY_Community 8|Community 8]]
-- [[_COMMUNITY_Community 9|Community 9]]
-- [[_COMMUNITY_Community 10|Community 10]]
-- [[_COMMUNITY_Community 11|Community 11]]
-- [[_COMMUNITY_Community 12|Community 12]]
-- [[_COMMUNITY_Community 13|Community 13]]
-- [[_COMMUNITY_Community 14|Community 14]]
-- [[_COMMUNITY_Community 15|Community 15]]
-- [[_COMMUNITY_Community 16|Community 16]]
-- [[_COMMUNITY_Community 17|Community 17]]
-- [[_COMMUNITY_Community 18|Community 18]]
-- [[_COMMUNITY_Community 19|Community 19]]
-- [[_COMMUNITY_Community 20|Community 20]]
-- [[_COMMUNITY_Community 21|Community 21]]
-- [[_COMMUNITY_Community 22|Community 22]]
-- [[_COMMUNITY_Community 23|Community 23]]
-- [[_COMMUNITY_Community 24|Community 24]]
-- [[_COMMUNITY_Community 25|Community 25]]
-- [[_COMMUNITY_Community 26|Community 26]]
-- [[_COMMUNITY_Community 27|Community 27]]
-- [[_COMMUNITY_Community 28|Community 28]]
-- [[_COMMUNITY_Community 29|Community 29]]
-- [[_COMMUNITY_Community 30|Community 30]]
-- [[_COMMUNITY_Community 31|Community 31]]
-- [[_COMMUNITY_Community 32|Community 32]]
-- [[_COMMUNITY_Community 33|Community 33]]
-- [[_COMMUNITY_Community 34|Community 34]]
-- [[_COMMUNITY_Community 35|Community 35]]
-- [[_COMMUNITY_Community 36|Community 36]]
-- [[_COMMUNITY_Community 37|Community 37]]
-- [[_COMMUNITY_Community 38|Community 38]]
-- [[_COMMUNITY_Community 39|Community 39]]
-- [[_COMMUNITY_Community 40|Community 40]]
-- [[_COMMUNITY_Community 41|Community 41]]
-- [[_COMMUNITY_Community 42|Community 42]]
-- [[_COMMUNITY_Community 43|Community 43]]
-- [[_COMMUNITY_Community 44|Community 44]]
-- [[_COMMUNITY_Community 45|Community 45]]
-- [[_COMMUNITY_Community 46|Community 46]]
-- [[_COMMUNITY_Community 47|Community 47]]
+- [[_COMMUNITY_Board Governance & Principles|Board Governance & Principles]]
+- [[_COMMUNITY_Privacy & Data Protection (PIPA)|Privacy & Data Protection (PIPA)]]
+- [[_COMMUNITY_Legal & Regulatory Framework (BC Co-op Act)|Legal & Regulatory Framework (BC Co-op Act)]]
+- [[_COMMUNITY_Meeting Types & Planning|Meeting Types & Planning]]
+- [[_COMMUNITY_Membership Termination & Appeals|Membership Termination & Appeals]]
+- [[_COMMUNITY_Election Workflow & Nominations|Election Workflow & Nominations]]
+- [[_COMMUNITY_Membership Application & Interviews|Membership Application & Interviews]]
+- [[_COMMUNITY_Board Fiduciary Duty & Minutes|Board Fiduciary Duty & Minutes]]
+- [[_COMMUNITY_Director Removal Process|Director Removal Process]]
+- [[_COMMUNITY_Member Care & Flowcharts|Member Care & Flowcharts]]
+- [[_COMMUNITY_Parking Policy & Consultations|Parking Policy & Consultations]]
+- [[_COMMUNITY_Pet Policy & Guidelines|Pet Policy & Guidelines]]
+- [[_COMMUNITY_Member Participation & Involvement|Member Participation & Involvement]]
+- [[_COMMUNITY_Sustainability & Environmental Actions|Sustainability & Environmental Actions]]
+- [[_COMMUNITY_Ballot Counting Processes|Ballot Counting Processes]]
+- [[_COMMUNITY_PIPA Audit Program|PIPA Audit Program]]
+- [[_COMMUNITY_Data Retention & Record Keeping|Data Retention & Record Keeping]]
+- [[_COMMUNITY_Privacy Regulatory Contacts|Privacy Regulatory Contacts]]
+- [[_COMMUNITY_Board Chair Role|Board Chair Role]]
+- [[_COMMUNITY_CHF BC Delegate Role|CHF BC Delegate Role]]
+- [[_COMMUNITY_Member Manuals|Member Manuals]]
+- [[_COMMUNITY_Quorum Rules|Quorum Rules]]
+- [[_COMMUNITY_Member Complaint Procedures|Member Complaint Procedures]]
+- [[_COMMUNITY_Video Surveillance Policy|Video Surveillance Policy]]
+- [[_COMMUNITY_Register of Directors|Register of Directors]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `showAlert()` - 6 edges
-2. `showNotification()` - 6 edges
-3. `persistUpdate()` - 5 edges
-4. `showAlert()` - 5 edges
-5. `showAlert()` - 4 edges
-6. `showAlert()` - 3 edges
-7. `showAlert()` - 3 edges
-8. `toggleCategory()` - 3 edges
-9. `addNote()` - 3 edges
-10. `handleOpenPicker()` - 3 edges
+1. `Personal Information Protection Act (PIPA)` - 6 edges
+2. `Board of Directors` - 5 edges
+3. `Model Rules 2.0` - 3 edges
+4. `Cooperative Association Act (BC)` - 3 edges
+5. `Special Resolution` - 3 edges
+6. `Checklist: Appeal of Membership Termination` - 3 edges
+7. `Agenda: Appeal of Membership Termination` - 3 edges
+8. `Overview: Information Meeting` - 3 edges
+9. `Membership Application Form` - 2 edges
+10. `Annual General Meeting (AGM)` - 2 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `isFolderWithinRoot()` --calls--> `driveClient()`  [INFERRED]
-  C:\Users\Joe\Desktop\Coop103\coop1.03\api\drive.ts → C:\Users\Joe\Desktop\Coop103\coop1.03\services\googleDrive.ts
+- `Privacy Officer Role` --rationale_for--> `Personal Information Protection Act (PIPA)`  [INFERRED]
+  reference materials/info/1570_A-Guide-to-B.pdf → reference materials/info/1290_PIPA_Overview-of-Contents.pdf
+- `Democratic Member Control` --conceptually_related_to--> `Board of Directors`  [INFERRED]
+  reference materials/info/1740_Co-op_principles.pdf → reference materials/info/1580_Board_of_Directors_Job_description_sample.pdf
+- `Overview: Town Hall Meeting` --semantically_similar_to--> `Overview: Information Meeting`  [INFERRED] [semantically similar]
+  reference materials/info/Meetings/520_Town-Hall-Meeting-Overview.pdf → reference materials/info/Meetings/490_Information-Meeting_Overview.pdf
+- `Flowchart: Member Placed in Care Procedure` --semantically_similar_to--> `Flowchart: Member Death Procedure`  [INFERRED] [semantically similar]
+  reference materials/info/Policies - Community/2380_Flowchart_Procedure_when_a_member_is_Placed_in_Care.pdf → reference materials/info/Policies - Community/2382_Flowchart_Procedure_when_a_member_dies.pdf
+- `Record of Ballot - Removal of Director` --semantically_similar_to--> `Record of Ballot - Appeal of Termination`  [INFERRED] [semantically similar]
+  reference materials/info/Voting/610_Record-of-Ballot-Counting_Removal-of-Director_Sample.pdf → reference materials/info/Voting/630_Record-of-Ballot-Counting_Appeal-of-Termination_Sample.pdf
+
+## Hyperedges (group relationships)
+- **PIPA Compliance Framework** — 1290_pipa_overview_of_contents_pipa, 1310_ten_principles_of_personal_information_protection_accountability, 1510_pipa_record_keeping_tips_data_retention, 1570_a_guide_to_b_privacy_officer [INFERRED 0.95]
+- **Board Governance Structure** — 1580_board_of_directors_job_description_sample_board_of_directors, 1600_board__president_and_vice_president_job_description_sample_president, 1660_board_treasurer_job_description_sample_treasurer, 1620__chair_job_description_sample_chair [EXTRACTED 1.00]
+- **General Meeting Governance** — 210_agm, 290_sagm, 300_sgm, 2830_quorum, 040_rules_of_order [INFERRED 0.95]
+- **Membership Termination Appeal Process** — 370_appeal_of_membership_termination_checklist_termination_appeal_checklist, 380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda, 400_appeal_of_membership_termination_breach_notice_sample_termination_appeal_breach_notice, 420_appeal_of_membership_termination_conduct_notice_sample_termination_appeal_conduct_notice [EXTRACTED 1.00]
+- **Removal of Director Process** — 440_removal_of_director_meeting_checklist_removal_of_director_checklist, 460_removal_of_director_meeting_notice_sample_removal_of_director_notice, 480_removal_of_director_meeting_agenda_sample_removal_of_director_agenda [EXTRACTED 1.00]
+- **Member Life Transition Procedures** — 2380_flowchart_procedure_when_a_member_is_placed_in_care_member_placed_in_care_flowchart, 2382_flowchart_procedure_when_a_member_dies_member_death_flowchart, 2390_community_care_guidelines_community_care_committee_guidelines [INFERRED 0.85]
+- **Election Governance Flow** — 680_preparing_for_the_election_election_workflow, 690_nominations_committee_committee_job_description, 770_candidates_declaration_candidate_eligibility, 840_arrears_report_disqualification_criteria [EXTRACTED 1.00]
+- **Member Involvement Framework** — 2480_good_policies_policy_guidelines, 2490_end_of_participation_participation_myths, 2500_beyond_participation_member_involvement [INFERRED 0.90]
 
 ## Communities
 
-### Community 0 - "Community 0"
-Cohesion: 0.17
-Nodes (6): createPicker(), handleDownload(), handleOpenPicker(), handleSaveReview(), handleSimulatedUpload(), showAlert()
+### Community 0 - "Board Governance & Principles"
+Cohesion: 0.25
+Nodes (8): Cooperative Association Act, Model Rules 2.0, Acknowledgement of Receipt of Rules and Occupancy Agreement, Board of Directors, Board President and Vice President, Board Treasurer, Ethical Conduct Declaration, Democratic Member Control
 
-### Community 1 - "Community 1"
-Cohesion: 0.17
-Nodes (0): 
+### Community 1 - "Privacy & Data Protection (PIPA)"
+Cohesion: 0.29
+Nodes (7): Personal Information Protection Act (PIPA), Accountability Principle, Consent Principle, Confidentiality Agreement Sample, Privacy Officer Role, Staff Confidentiality Agreement, Member Selection Process
 
-### Community 2 - "Community 2"
-Cohesion: 0.23
-Nodes (6): deleteEvent(), formatEventDateOnly(), handleAddEvent(), handleUpdateEvent(), parseEventDate(), showAlert()
+### Community 2 - "Legal & Regulatory Framework (BC Co-op Act)"
+Cohesion: 0.29
+Nodes (7): Rules of Order, Annual General Meeting (AGM), Cooperative Association Act (BC), Ordinary Resolution, Special Resolution, Semi-Annual General Meeting (SAGM), Special General Meeting (SGM)
 
-### Community 3 - "Community 3"
-Cohesion: 0.18
-Nodes (0): 
+### Community 3 - "Meeting Types & Planning"
+Cohesion: 0.33
+Nodes (6): Overview: Information Meeting, Invitation: Information Meeting, Overview: Town Hall Meeting, Agenda: Board of Directors Meeting, Checklist: First Board Meeting After AGM, Concept: Asset Management Plan
 
-### Community 4 - "Community 4"
-Cohesion: 0.22
-Nodes (0): 
+### Community 4 - "Membership Termination & Appeals"
+Cohesion: 0.33
+Nodes (6): Checklist: Appeal of Membership Termination, Agenda: Appeal of Membership Termination, Notice: Termination Appeal (Breach of Material Condition), Notice: Termination Appeal (Conduct Detrimental), Entity: CHF BC, Entity: Personal Information Protection Act (PIPA)
 
-### Community 5 - "Community 5"
-Cohesion: 0.42
-Nodes (8): addExpense(), addNote(), confirmStatusChange(), handleReopen(), handleStatusChange(), persistUpdate(), showAlert(), toggleCategory()
-
-### Community 6 - "Community 6"
-Cohesion: 0.39
-Nodes (7): createPicker(), handleMoveIn(), handleMoveOut(), handleOpenPicker(), handleSeedPreventative(), handleTransfer(), showNotification()
-
-### Community 7 - "Community 7"
-Cohesion: 0.43
-Nodes (6): handleAddCommittee(), handleAssignMember(), handleScheduleMeeting(), handleSendMessage(), handleUploadMinute(), showAlert()
-
-### Community 8 - "Community 8"
-Cohesion: 0.38
-Nodes (3): approveQuote(), handleSubmit(), showAlert()
-
-### Community 9 - "Community 9"
-Cohesion: 0.47
-Nodes (3): isFolderWithinRoot(), driveClient(), getAuthClient()
-
-### Community 10 - "Community 10"
+### Community 5 - "Election Workflow & Nominations"
 Cohesion: 0.5
-Nodes (2): handleComplete(), handleNext()
+Nodes (4): Election Preparation Workflow, Nominations Committee Job Description, Candidate's Declaration and Eligibility, Arrears Report and Disqualification
 
-### Community 11 - "Community 11"
-Cohesion: 0.5
-Nodes (0): 
-
-### Community 12 - "Community 12"
+### Community 6 - "Membership Application & Interviews"
 Cohesion: 0.67
-Nodes (2): handleAttend(), showAlert()
+Nodes (3): Co-op Marketing Strategies, Membership Application Form, Interviewer's Guide
 
-### Community 13 - "Community 13"
-Cohesion: 0.5
-Nodes (0): 
+### Community 7 - "Board Fiduciary Duty & Minutes"
+Cohesion: 0.67
+Nodes (3): Meeting Minutes, Board of Directors, Fiduciary Duty
 
-### Community 14 - "Community 14"
-Cohesion: 0.5
-Nodes (0): 
+### Community 8 - "Director Removal Process"
+Cohesion: 0.67
+Nodes (3): Checklist: Removal of Director, Notice: Removal of Director Meeting, Agenda: Removal of Director Meeting
 
-### Community 15 - "Community 15"
-Cohesion: 0.5
-Nodes (0): 
+### Community 9 - "Member Care & Flowcharts"
+Cohesion: 0.67
+Nodes (3): Flowchart: Member Placed in Care Procedure, Flowchart: Member Death Procedure, Guidelines: Community Care Committee
 
-### Community 16 - "Community 16"
+### Community 10 - "Parking Policy & Consultations"
+Cohesion: 0.67
+Nodes (3): Policy: Parking, Rationale: Parking Policy Discussion Notes, Invitation: Town Hall Meeting (Parking Policy)
+
+### Community 11 - "Pet Policy & Guidelines"
+Cohesion: 0.67
+Nodes (3): Pet Policy Sample, Pet Policy Rationale, Good Policies Guidelines
+
+### Community 12 - "Member Participation & Involvement"
 Cohesion: 1.0
-Nodes (2): handleAddUnit(), showAlert()
+Nodes (2): Seven Myths of Participation, Real Member Involvement
 
-### Community 17 - "Community 17"
+### Community 13 - "Sustainability & Environmental Actions"
 Cohesion: 1.0
-Nodes (2): calculateAverageDaysOpen(), Reports()
+Nodes (2): Sustainability Policy Principles, Sustainability Sample Actions
 
-### Community 18 - "Community 18"
+### Community 14 - "Ballot Counting Processes"
 Cohesion: 1.0
-Nodes (2): handleAddTenant(), showAlert()
+Nodes (2): Record of Ballot - Removal of Director, Record of Ballot - Appeal of Termination
 
-### Community 19 - "Community 19"
+### Community 15 - "PIPA Audit Program"
 Cohesion: 1.0
-Nodes (2): handleAddApplication(), showAlert()
+Nodes (1): PIPA Audit Program
 
-### Community 20 - "Community 20"
+### Community 16 - "Data Retention & Record Keeping"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): PIPA Record Keeping Tips
 
-### Community 21 - "Community 21"
+### Community 17 - "Privacy Regulatory Contacts"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Office of the Information and Privacy Commissioner (OIPC)
 
-### Community 22 - "Community 22"
+### Community 18 - "Board Chair Role"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Meeting Chair
 
-### Community 23 - "Community 23"
+### Community 19 - "CHF BC Delegate Role"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): CHF BC Delegate
 
-### Community 24 - "Community 24"
+### Community 20 - "Member Manuals"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Member Manual
 
-### Community 25 - "Community 25"
+### Community 21 - "Quorum Rules"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Quorum
 
-### Community 26 - "Community 26"
+### Community 22 - "Member Complaint Procedures"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Member Complaint Form
 
-### Community 27 - "Community 27"
+### Community 23 - "Video Surveillance Policy"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Video Surveillance Discussion Notes
 
-### Community 28 - "Community 28"
+### Community 24 - "Register of Directors"
 Cohesion: 1.0
-Nodes (0): 
-
-### Community 29 - "Community 29"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 30 - "Community 30"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 31 - "Community 31"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 32 - "Community 32"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 33 - "Community 33"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 34 - "Community 34"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 35 - "Community 35"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 36 - "Community 36"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 37 - "Community 37"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 38 - "Community 38"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 39 - "Community 39"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 40 - "Community 40"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 41 - "Community 41"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 42 - "Community 42"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 43 - "Community 43"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 44 - "Community 44"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 45 - "Community 45"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 46 - "Community 46"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 47 - "Community 47"
-Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Register of Directors
 
 ## Knowledge Gaps
-- **Thin community `Community 20`** (2 nodes): `createQueryArraySetter()`, `App.tsx`
+- **53 isolated node(s):** `Cooperative Association Act`, `Acknowledgement of Receipt of Rules and Occupancy Agreement`, `Accountability Principle`, `Consent Principle`, `PIPA Audit Program` (+48 more)
+  These have ≤1 connection - possible missing edges or undocumented components.
+- **Thin community `Member Participation & Involvement`** (2 nodes): `Seven Myths of Participation`, `Real Member Involvement`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 21`** (2 nodes): `patch_api_coop.py`, `patch_api_file()`
+- **Thin community `Sustainability & Environmental Actions`** (2 nodes): `Sustainability Policy Principles`, `Sustainability Sample Actions`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 22`** (2 nodes): `patch_api_tenant.py`, `patch_api_file()`
+- **Thin community `Ballot Counting Processes`** (2 nodes): `Record of Ballot - Removal of Director`, `Record of Ballot - Appeal of Termination`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 23`** (2 nodes): `patch_server_coop.py`, `patch_server_file()`
+- **Thin community `PIPA Audit Program`** (1 nodes): `PIPA Audit Program`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 24`** (2 nodes): `HelpModal.tsx`, `goTo()`
+- **Thin community `Data Retention & Record Keeping`** (1 nodes): `PIPA Record Keeping Tips`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 25`** (2 nodes): `ScrollToTop.tsx`, `ScrollToTop()`
+- **Thin community `Privacy Regulatory Contacts`** (1 nodes): `Office of the Information and Privacy Commissioner (OIPC)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 26`** (2 nodes): `AnnouncementDetail()`, `AnnouncementDetail.tsx`
+- **Thin community `Board Chair Role`** (1 nodes): `Meeting Chair`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 27`** (2 nodes): `Communications.tsx`, `handleCreateAnnouncement()`
+- **Thin community `CHF BC Delegate Role`** (1 nodes): `CHF BC Delegate`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 28`** (2 nodes): `Login.tsx`, `handleGoogleLogin()`
+- **Thin community `Member Manuals`** (1 nodes): `Member Manual`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 29`** (2 nodes): `seed.ts`, `main()`
+- **Thin community `Quorum Rules`** (1 nodes): `Quorum`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 30`** (2 nodes): `auditUnit()`, `audit_unit_history.mjs`
+- **Thin community `Member Complaint Procedures`** (1 nodes): `Member Complaint Form`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 31`** (2 nodes): `verify_residency_logic.mjs`, `runTests()`
+- **Thin community `Video Surveillance Policy`** (1 nodes): `Video Surveillance Discussion Notes`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 32`** (2 nodes): `fix_db.mjs`, `main()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 33`** (2 nodes): `fix_db_prisma.mjs`, `main()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 34`** (2 nodes): `test_assistant_api.ts`, `testAssistant()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 35`** (1 nodes): `compare_patch.py`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 36`** (1 nodes): `index.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 37`** (1 nodes): `patch_seed.py`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 38`** (1 nodes): `prisma.config.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 39`** (1 nodes): `types.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 40`** (1 nodes): `vite.config.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 41`** (1 nodes): `hello.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 42`** (1 nodes): `AppAlert.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 43`** (1 nodes): `FilterBar.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 44`** (1 nodes): `ProfileModal.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 45`** (1 nodes): `StatCard.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 46`** (1 nodes): `Dashboard.tsx`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 47`** (1 nodes): `geminiService.ts`
+- **Thin community `Register of Directors`** (1 nodes): `Register of Directors`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
-_Not enough signal to generate questions. This usually means the corpus has no AMBIGUOUS edges, no bridge nodes, no INFERRED relationships, and all communities are tightly cohesive. Add more files or run with --mode deep to extract richer edges._
+_Questions this graph is uniquely positioned to answer:_
+
+- **What connects `Cooperative Association Act`, `Acknowledgement of Receipt of Rules and Occupancy Agreement`, `Accountability Principle` to the rest of the system?**
+  _53 weakly-connected nodes found - possible documentation gaps or missing edges._

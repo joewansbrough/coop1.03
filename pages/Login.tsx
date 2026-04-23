@@ -106,11 +106,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <button 
               onClick={handleGoogleLogin}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-white/5 py-4 rounded-2xl hover:border-brand-500 dark:hover:border-brand-500 transition-all group active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full flex items-center justify-center gap-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-white/5 py-4 rounded-2xl hover:border-brand-500 dark:hover:border-brand-500 transition-all group active:scale-95 disabled:opacity-50 disabled:pointer-events-none mb-4"
             >
               <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 group-hover:scale-110 transition-transform" />
               <span className="text-sm font-black text-slate-700 dark:text-white uppercase tracking-widest">
                 {isLoading ? 'Connecting...' : 'Continue with Google'}
+              </span>
+            </button>
+
+            <button 
+              onClick={() => {
+                localStorage.setItem('demo_mode', 'true');
+                onLoginSuccess();
+              }}
+              className="w-full flex items-center justify-center gap-4 bg-slate-100 dark:bg-slate-800 py-3 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+            >
+              <span className="text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">
+                Try Demo Mode
               </span>
             </button>
           </div>

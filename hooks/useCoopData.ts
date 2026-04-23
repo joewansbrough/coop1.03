@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent } from '../types';
+import * as demoData from '../utils/demoData';
+
+const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
 
 const fetchJson = async (url: string) => {
   const res = await fetch(url);
@@ -23,6 +26,10 @@ const dataQueryConfig = {
 export const useUser = (options?: Partial<UseQueryOptions<any>>) => useQuery({
   queryKey: ['user'],
   queryFn: async () => {
+    if (isDemoMode()) {
+      return demoData.MOCK_USER;
+    }
+
     // Check our API for the full user object (role, tenantId, etc)
     try {
       const res = await fetch('/api/auth/me', {
@@ -48,49 +55,49 @@ export const useUser = (options?: Partial<UseQueryOptions<any>>) => useQuery({
 
 export const useUnits = (options?: Partial<UseQueryOptions<Unit[]>>) => useQuery<Unit[]>({
   queryKey: ['units'],
-  queryFn: () => fetchJson('/api/units'),
+  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_UNITS) : fetchJson('/api/units'),
   ...dataQueryConfig,
   ...options,
 });
 
 export const useTenants = (options?: Partial<UseQueryOptions<Tenant[]>>) => useQuery<Tenant[]>({
   queryKey: ['tenants'],
-  queryFn: () => fetchJson('/api/tenants'),
+  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_TENANTS) : fetchJson('/api/tenants'),
   ...dataQueryConfig,
   ...options,
 });
 
 export const useMaintenance = (options?: Partial<UseQueryOptions<MaintenanceRequest[]>>) => useQuery<MaintenanceRequest[]>({
   queryKey: ['maintenance'],
-  queryFn: () => fetchJson('/api/maintenance'),
+  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_MAINTENANCE) : fetchJson('/api/maintenance'),
   ...dataQueryConfig,
   ...options,
 });
 
 export const useAnnouncements = (options?: Partial<UseQueryOptions<Announcement[]>>) => useQuery<Announcement[]>({
   queryKey: ['announcements'],
-  queryFn: () => fetchJson('/api/announcements'),
+  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_ANNOUNCEMENTS) : fetchJson('/api/announcements'),
   ...dataQueryConfig,
   ...options,
 });
 
 export const useDocuments = (options?: Partial<UseQueryOptions<Document[]>>) => useQuery<Document[]>({
   queryKey: ['documents'],
-  queryFn: () => fetchJson('/api/documents'),
+  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_DOCUMENTS) : fetchJson('/api/documents'),
   ...dataQueryConfig,
   ...options,
 });
 
 export const useCommittees = (options?: Partial<UseQueryOptions<Committee[]>>) => useQuery<Committee[]>({
   queryKey: ['committees'],
-  queryFn: () => fetchJson('/api/committees'),
+  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_COMMITTEES) : fetchJson('/api/committees'),
   ...dataQueryConfig,
   ...options,
 });
 
 export const useEvents = (options?: Partial<UseQueryOptions<CoopEvent[]>>) => useQuery<CoopEvent[]>({
   queryKey: ['events'],
-  queryFn: () => fetchJson('/api/events'),
+  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_EVENTS) : fetchJson('/api/events'),
   ...dataQueryConfig,
   ...options,
 });
