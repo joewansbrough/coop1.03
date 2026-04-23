@@ -64,8 +64,13 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, isLoading = false, t
     const matchesSearch =
       `${t.firstName} ${t.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
       t.email.toLowerCase().includes(search.toLowerCase()) ||
-      (t.unit?.number?.includes(search) || units.find(u => u.id === t.unitId)?.number.includes(search));
-    const matchesFilter = filter === 'All' || t.status === filter;
+      (units.find(u => u.id === t.unitId)?.number.includes(search));
+    
+    // Improved filter logic
+    const matchesFilter = filter === 'All' || 
+                         (filter === 'Current' && t.status === 'Current') ||
+                         (filter === 'Waitlist' && t.status === 'Waitlist') ||
+                         (filter === 'Past' && t.status === 'Past');
     return matchesSearch && matchesFilter;
   });
 
