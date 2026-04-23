@@ -58,30 +58,35 @@ const AppContent: React.FC = () => {
   
   const { 
     data: requests = [],
+    isLoading: isRequestsLoading,
     isError: isRequestsError,
     error: requestsError 
   } = useMaintenance({ enabled: isEnabled });
   
   const { 
     data: announcements = [],
+    isLoading: isAnnouncementsLoading,
     isError: isAnnouncementsError,
     error: announcementsError 
   } = useAnnouncements({ enabled: isEnabled });
   
   const { 
     data: documents = [],
+    isLoading: isDocumentsLoading,
     isError: isDocumentsError,
     error: documentsError 
   } = useDocuments({ enabled: isEnabled });
   
   const { 
     data: committees = [],
+    isLoading: isCommitteesLoading,
     isError: isCommitteesError,
     error: committeesError 
   } = useCommittees({ enabled: isEnabled });
   
   const { 
     data: events = [],
+    isLoading: isEventsLoading,
     isError: isEventsError,
     error: eventsError 
   } = useEvents({ enabled: isEnabled });
@@ -156,23 +161,32 @@ const AppContent: React.FC = () => {
                 isAdmin={effectiveIsAdmin}
                 user={user}
                 units={units}
+                isUnitsLoading={isUnitsLoading}
+                isUnitsError={isUnitsError}
                 tenants={tenants}
+                isTenantsLoading={isTenantsLoading}
+                isTenantsError={isTenantsError}
                 requests={requests}
+                isRequestsLoading={isRequestsLoading}
+                isRequestsError={isRequestsError}
                 announcements={announcements}
+                isAnnouncementsLoading={isAnnouncementsLoading}
+                isAnnouncementsError={isAnnouncementsError}
                 events={events}
+                isEventsLoading={isEventsLoading}
+                isEventsError={isEventsError}
               />
             }
           />
-          <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} isGuest={isGuest} events={events} setEvents={setEvents} />} />
-          <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} events={events} setEvents={setEvents} />} />
-          <Route path="/announcements/:annId" element={<AnnouncementDetail announcements={announcements} />} />
-          <Route path="/committees" element={<Committees isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} committees={committees} setCommittees={setCommittees} tenants={tenants} documents={documents} />} />
-          <Route path="/maintenance" element={<Maintenance isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} />} />
+          <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} isGuest={isGuest} events={events} setEvents={setEvents} isEventsLoading={isEventsLoading} isEventsError={isEventsError} />} />
+          <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} events={events} setEvents={setEvents} isEventsLoading={isEventsLoading} isEventsError={isEventsError} />} />          <Route path="/announcements/:annId" element={<AnnouncementDetail announcements={announcements} isAnnouncementsLoading={isAnnouncementsLoading} isAnnouncementsError={isAnnouncementsError} />} />
+          <Route path="/committees" element={<Committees isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} committees={committees} setCommittees={setCommittees} tenants={tenants} documents={documents} isCommitteesLoading={isCommitteesLoading} isCommitteesError={isCommitteesError} />} />
+          <Route path="/maintenance" element={<Maintenance isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} isRequestsLoading={isRequestsLoading} isRequestsError={isRequestsError} />} />
           <Route path="/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
-          <Route path="/documents" element={<ResourceLibrary isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} committees={committees} />} />
+          <Route path="/documents" element={<ResourceLibrary isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} committees={committees} isDocumentsLoading={isDocumentsLoading} isDocumentsError={isDocumentsError} />} />
           <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} announcements={announcements} />} />
           <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} announcements={announcements} setAnnouncements={setAnnouncements} />} />
-          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} />} />
+          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} isTenantsLoading={isTenantsLoading} isTenantsError={isTenantsError} />} />
           <Route path="/admin/units/:unitId" element={<UnitDetail isAdmin={effectiveIsAdmin} units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} setRequests={setRequests} documents={documents} />} />
           
           {/* Admin Routes */}
