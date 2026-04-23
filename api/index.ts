@@ -267,16 +267,23 @@ app.use('/api/drive', requireAuth, driveRoutes);
 // --- Database API Routes ---
 
 app.get('/api/units', requireAuth, async (req, res) => {
-  const units = await getPrisma().unit.findMany({
-    include: {
-      currentTenant: true,
-      occupancyHistory: {
-        include: { tenant: true },
-        orderBy: { startDate: 'desc' }
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const units = await p.unit.findMany({
+      where: { cooperativeId: coopId },
+      include: {
+        currentTenant: true,
+        occupancyHistory: {
+          include: { tenant: true },
+          orderBy: { startDate: 'desc' }
+        }
       }
-    }
-  });
-  res.json(units);
+    });
+    res.json(units);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) => {
@@ -295,7 +302,11 @@ app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) =>
 app.post('/api/tenants', requireAuth, validateRequest(tenantSchema), async (req, res) => {
   try {
     const tenant = await getPrisma().tenant.create({
-      data: req.body,
+      data: {
+        ...req.body,
+        cooperativeId: await getCoopId(req, getPrisma()),
+        startDate: new Date(req.body.startDate),
+      },
       include: { unit: true }
     });
     res.json(tenant);
@@ -306,10 +317,17 @@ app.post('/api/tenants', requireAuth, validateRequest(tenantSchema), async (req,
 });
 
 app.get('/api/tenants', requireAuth, async (req, res) => {
-  const tenants = await getPrisma().tenant.findMany({
-    include: { unit: true }
-  });
-  res.json(tenants);
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const tenants = await p.tenant.findMany({
+      where: { cooperativeId: coopId },
+      include: { unit: true }
+    });
+    res.json(tenants);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/api/tenants/:id/history', requireAuth, async (req, res) => {
@@ -488,7 +506,10 @@ app.post('/api/units/:id/transfer', requireAuth, async (req, res) => {
 
 app.get('/api/maintenance', requireAuth, async (req, res) => {
   try {
-    const requests = await getPrisma().maintenanceRequest.findMany({
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const requests = await p.maintenanceRequest.findMany({
+      where: { cooperativeId: coopId },
       include: { unit: true },
       orderBy: { createdAt: 'desc' }
     });
@@ -506,16 +527,26 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
   const categoryString = Array.isArray(category) ? category.join(', ') : (category || 'General');
   
   try {
-    const request = await getPrisma().maintenanceRequest.create({
+    const p = getPrisma();
+    const user = (req as any).user;
+    let tenantId = null;
+    
+    if (user?.email) {
+      const t = await p.tenant.findUnique({ where: { email: user.email } });
+      tenantId = t?.id || null;
+    }
+
+    const request = await p.maintenanceRequest.create({
       data: {
-        cooperativeId: await getCoopId(req, getPrisma()),
+        cooperativeId: await getCoopId(req, p),
         title,
         description,
         status: status || 'Pending',
         priority: priority || 'Medium',
         category: categoryString,
         unitId,
-        requestedBy,
+        tenantId: tenantId,
+        requestedBy: requestedBy || user?.email,
         notes: notes || []
       }
     });
@@ -561,95 +592,122 @@ app.delete('/api/maintenance/:id', requireAuth, async (req, res) => {
 });
 
 app.get('/api/announcements', requireAuth, async (req, res) => {
-  const announcements = await getPrisma().announcement.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(announcements);
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const announcements = await p.announcement.findMany({
+      where: { cooperativeId: coopId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(announcements);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/announcements', requireAuth, async (req, res) => {
   const { title, content, type, priority, author, date } = req.body;
-  const announcement = await getPrisma().announcement.create({
-    data: {
-      cooperativeId: await getCoopId(req, getPrisma()), title, content, type, priority, author, date }
-  });
-  res.json(announcement);
+  try {
+    const p = getPrisma();
+    const announcement = await p.announcement.create({
+      data: {
+        cooperativeId: await getCoopId(req, p), title, content, type, priority, author, date }
+    });
+    res.json(announcement);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.put('/api/announcements/:id', requireAuth, async (req, res) => {
   const { title, content, type, priority, date } = req.body;
-  const announcementId = getParam(req.params.id);
-  const announcement = await getPrisma().announcement.update({
-    where: { id: announcementId },
-    data: { title, content, type, priority, date }
-  });
-  res.json(announcement);
+  try {
+    const announcementId = getParam(req.params.id);
+    const announcement = await getPrisma().announcement.update({
+      where: { id: announcementId },
+      data: { title, content, type, priority, date }
+    });
+    res.json(announcement);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
-  const announcementId = getParam(req.params.id);
-  await getPrisma().announcement.delete({ where: { id: announcementId } });
-  res.json({ success: true });
+  try {
+    const announcementId = getParam(req.params.id);
+    await getPrisma().announcement.delete({ where: { id: announcementId } });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/documents', requireAuth, async (req, res) => {
-  const documents = await getPrisma().document.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(documents);
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const documents = await p.document.findMany({
+      where: { cooperativeId: coopId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(documents);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/documents', requireAuth, async (req, res) => {
   const { title, category, url, fileType, author, date, tags, committee, content } = req.body;
 
-  // Tag generation temporarily disabled for basic metadata sync
-  const currentYear = new Date().getFullYear().toString();
-  const committeeTags = committee ? [committee] : [];
-  const providedTags = Array.isArray(tags) ? tags : [];
-  const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
+  try {
+    const p = getPrisma();
+    // Tag generation temporarily disabled for basic metadata sync
+    const currentYear = new Date().getFullYear().toString();
+    const committeeTags = committee ? [committee] : [];
+    const providedTags = Array.isArray(tags) ? tags : [];
+    const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
 
-  const document = await getPrisma().document.create({
-    data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
-      title: title || 'Untitled Document',
-      category: category || 'General',
-      url: url || '#',
-      fileType: fileType || 'txt',
-      author: author || ((req as any).user?.name || 'System'),
-      date: date || new Date().toISOString(),
-      tags: finalTags,
-      committee: committee || null,
-      content: content || null,
-    } as any
-  });
-  res.json(document);
-  });
+    const document = await p.document.create({
+      data: {
+        cooperativeId: await getCoopId(req, p),
+        title: title || 'Untitled Document',
+        category: category || 'General',
+        url: url || '#',
+        fileType: fileType || 'txt',
+        author: author || ((req as any).user?.name || 'System'),
+        date: date || new Date().toISOString(),
+        tags: finalTags,
+        committee: committee || null,
+        content: content || null,
+      } as any
+    });
+    res.json(document);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
 
   app.put('/api/documents/:id', requireAuth, async (req, res) => {
   const { title, category, tags, committee, content } = req.body;
-  const documentId = getParam(req.params.id);
-  const document = await getPrisma().document.update({
-    where: { id: documentId },
-    data: { 
-      title, 
-      category, 
-      tags: tags ? { set: tags } : undefined, 
-      committee: committee !== undefined ? (committee || null) : undefined,
-      content 
-    } as any
-  });
-  res.json(document);
+  try {
+    const documentId = getParam(req.params.id);
+    const document = await getPrisma().document.update({
+      where: { id: documentId },
+      data: { 
+        title, 
+        category, 
+        tags: tags ? { set: tags } : undefined, 
+        committee: committee !== undefined ? (committee || null) : undefined,
+        content 
+      } as any
+    });
+    res.json(document);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
 app.delete('/api/documents/:id', requireAuth, async (req, res) => {
-  const documentId = getParam(req.params.id);
-  await getPrisma().document.delete({ where: { id: documentId } });
-  res.json({ success: true });
+  try {
+    const documentId = getParam(req.params.id);
+    await getPrisma().document.delete({ where: { id: documentId } });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/committees', requireAuth, async (req, res) => {
   try {
-    const committees = await getPrisma().committee.findMany({
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const committees = await p.committee.findMany({
+      where: { cooperativeId: coopId },
       include: { 
         members: true,
         events: true 
@@ -665,11 +723,16 @@ app.get('/api/committees', requireAuth, async (req, res) => {
 });
 
 app.get('/api/events', requireAuth, async (req, res) => {
-  const events = await getPrisma().coopEvent.findMany({
-    include: { attendees: true },
-    orderBy: { date: 'asc' }
-  });
-  res.json(events);
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const events = await p.coopEvent.findMany({
+      where: { cooperativeId: coopId },
+      include: { attendees: true },
+      orderBy: { date: 'asc' }
+    });
+    res.json(events);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/events', requireAuth, async (req, res) => {
@@ -819,22 +882,83 @@ app.get('/api/migrate', async (req, res) => {
   try {
     const p = getPrisma();
 
-    console.log('Running raw SQL migrations...');
+    console.log('Running robust SQL migrations...');
+    
+    // 1. Create Cooperative table
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Cooperative" (
+        "id" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "slug" TEXT NOT NULL,
+        "address" TEXT,
+        "city" TEXT,
+        "province" TEXT NOT NULL DEFAULT 'BC',
+        "adminEmail" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "Cooperative_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Cooperative_slug_key" ON "Cooperative"("slug");`);
+
+    // 2. Add cooperativeId to all models
+    const tables = [
+      "Unit", "Tenant", "TenantHistory", "MaintenanceRequest", 
+      "Announcement", "Document", "CoopEvent", "Committee"
+    ];
+    for (const table of tables) {
+      await p.$executeRawUnsafe(`ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS "cooperativeId" TEXT;`);
+    }
+
+    // 3. Add specific missing columns
     await p.$executeRawUnsafe(`ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT 'MEMBER';`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committee" TEXT DEFAULT '';`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
-
-    // Explicitly DROP columns if they exist to match metadata-only goal
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "content" TEXT;`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "isPrivate";`);
+
+    // 4. Handle Enums and ScheduledMaintenance
+    // Check if types exist before creating
+    try {
+      await p.$executeRawUnsafe(`CREATE TYPE "MaintenanceFrequency" AS ENUM ('MONTHLY', 'QUARTERLY', 'ANNUAL');`);
+    } catch (e) { /* ignore if exists */ }
+    
+    try {
+      await p.$executeRawUnsafe(`CREATE TYPE "MaintenanceCategory" AS ENUM ('PLUMBING', 'ELECTRICAL', 'HVAC', 'SAFETY', 'GENERAL', 'OTHER');`);
+    } catch (e) { /* ignore if exists */ }
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ScheduledMaintenance" (
+        "id" TEXT NOT NULL,
+        "unitId" TEXT NOT NULL,
+        "task" TEXT NOT NULL,
+        "description" TEXT,
+        "frequency" "MaintenanceFrequency" NOT NULL,
+        "dueDate" TIMESTAMP(3) NOT NULL,
+        "lastCompleted" TIMESTAMP(3),
+        "assignedTo" TEXT NOT NULL,
+        "isCompleted" BOOLEAN NOT NULL DEFAULT false,
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "category" "MaintenanceCategory" NOT NULL,
+        "cooperativeId" TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "ScheduledMaintenance_pkey" PRIMARY KEY ("id")
+      );
+    `);
+
+    // 5. Foreign Key Constraints (Ensure they exist or add them)
+    // Note: We skip complex FK management here to avoid errors if they already exist, 
+    // focusing on structure first.
 
     // Check if seeding is needed
     const unitCount = await p.unit.count();
     
     if (unitCount === 0) {
-      console.log('Database empty, triggering auto-seed...');
+      console.log('Database empty, triggering auto-seed info...');
       return res.json({
         success: true,
-        message: "Database schema updated. Please now visit /api/seed once to restore your data."
+        message: "Database schema updated successfully. Please now visit /api/seed to restore your data."
       });
     }
 
