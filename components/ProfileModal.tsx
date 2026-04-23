@@ -42,10 +42,10 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onThemeCha
           <div className="flex items-center gap-6 p-6 bg-slate-50 dark:bg-slate-950/30 rounded-3xl border border-slate-100 dark:border-white/5">
             <div className="relative text-center">
               {user.picture ? (
-                <img src={user.picture} alt={user.name} className="w-20 h-20 rounded-3xl object-cover" referrerPolicy="no-referrer" />
+                <img src={user.picture} alt={user.name || 'User'} className="w-20 h-20 rounded-3xl object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <div className="w-20 h-20 rounded-3xl bg-brand-600 flex items-center justify-center text-white text-3xl font-black">
-                  {user.name.charAt(0)}
+                  {(user.name || 'User').charAt(0)}
                 </div>
               )}
             </div>

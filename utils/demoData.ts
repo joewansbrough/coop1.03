@@ -5,6 +5,7 @@ export const MOCK_USER = {
   id: 'demo-user-id',
   firstName: 'Demo',
   lastName: 'Admin',
+  name: 'Demo Admin',
   email: 'demo@coophub.bc.ca',
   role: 'ADMIN',
   isAdmin: true,

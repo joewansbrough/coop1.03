@@ -255,10 +255,10 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
                 className="flex items-center gap-2 pl-2 lg:pl-4 border-l border-slate-200 dark:border-white/5 ml-2 active:scale-95"
               >
                 {user.picture ? (
-                  <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-xl" referrerPolicy="no-referrer" />
+                  <img src={user.picture} alt={user.name || 'User'} className="w-8 h-8 rounded-xl" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-8 h-8 rounded-xl bg-slate-900 dark:bg-brand-600 flex items-center justify-center text-white font-black text-xs hover:bg-brand-600 transition-colors">
-                    {user.name.charAt(0)}
+                    {(user.name || 'User').charAt(0)}
                   </div>
                 )}
                 <i className={`fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`}></i>
