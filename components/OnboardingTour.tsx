@@ -1,21 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   LayoutDashboard, 
   Home, 
+  Users,
   Wrench, 
   FileText, 
   Bot, 
   ChevronRight, 
-  ChevronLeft, 
+  ChevronLeft,
   X,
-  Sparkles,
-  ShieldCheck
-} from 'lucide-react';
+  Sparkles
+  } from 'lucide-react';
 
 interface Step {
-  title: string;
+  title: string | React.ReactNode;
   description: string;
   icon: React.ReactNode;
   color: string;
@@ -29,10 +28,9 @@ const STEPS: Step[] = [
       </>
     ),
     description: "Your comprehensive platform for British Columbia housing co-operative management. Let's take a quick tour of your new Board Administrator tools.",
-    icon: <ShieldCheck className="w-12 h-12" />,
+    icon: <Home className="w-12 h-12" />,
     color: "bg-brand-500"
   },
-
   {
     title: "Mission Control Dashboard",
     description: "Get a high-level view of your co-op. Monitor occupancy rates, pending maintenance, and recent announcements all in one place.",
@@ -42,7 +40,7 @@ const STEPS: Step[] = [
   {
     title: "Unit & Tenant Management",
     description: "Manage the co-op's physical assets and resident records. Track move-ins, move-outs, and unit history with precision.",
-    icon: <Home className="w-12 h-12" />,
+    icon: <Users className="w-12 h-12" />,
     color: "bg-amber-500"
   },
   {
