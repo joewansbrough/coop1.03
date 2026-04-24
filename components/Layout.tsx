@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Home } from 'lucide-react';
 import ProfileModal from './ProfileModal';
 import HelpModal from './HelpModal';
 import OnboardingTour from './OnboardingTour';
@@ -144,8 +145,11 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:relative lg:translate-x-0`}>
       <div className="p-6">
-        <Link to="/" className="text-2xl font-black flex items-center gap-0 tracking-tight whitespace-nowrap">
-          <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span>&nbsp;<span className="text-slate-900 dark:text-slate-100">BC</span>
+        <Link to="/" className="text-2xl font-black flex items-center gap-3 tracking-tight whitespace-nowrap">
+          <Home className="w-7 h-7 text-teal-600 dark:text-teal-400" />
+          <div className="flex items-center gap-0">
+            <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span>&nbsp;<span className="text-slate-900 dark:text-slate-100">BC</span>
+          </div>
         </Link>
         <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Co-op Management</p>
       </div>
@@ -236,8 +240,11 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
 
           {/* Centered Logo for Mobile */}
           <div className="absolute inset-0 flex items-center justify-center lg:hidden pointer-events-none">
-            <Link to="/" className="text-2xl font-black flex items-center gap-0 tracking-tight pointer-events-auto">
-              <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span>&nbsp;<span className="text-slate-900 dark:text-slate-100">BC</span>
+            <Link to="/" className="text-2xl font-black flex items-center gap-2 tracking-tight pointer-events-auto">
+              <Home className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+              <div className="flex items-center gap-0">
+                <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span>&nbsp;<span className="text-slate-900 dark:text-slate-100">BC</span>
+              </div>
             </Link>
           </div>
 
