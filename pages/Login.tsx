@@ -37,7 +37,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/20 blur-[120px] rounded-full"></div>
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200 dark:border-white/10 overflow-hidden relative z-10"
@@ -58,7 +58,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
             <h2 className="text-4xl lg:text-5xl font-black leading-tight mb-8">
               The Future of <br />
-              <span className="text-brand-400">Housing Co-op</span> <br />
+              <span className="text-brand-400">Co-op Housing</span> <br />
               Management.
             </h2>
 
@@ -81,7 +81,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
           <div className="mt-12 pt-8 border-t border-white/10 relative z-10">
             <p className="text-slate-400 text-xs font-medium leading-relaxed">
-              coopHUB BC is a secure platform designed specifically for British Columbia housing co-operatives. 
+              coopHUB BC is a secure platform designed specifically for British Columbia housing co-operatives.
               Access is restricted to registered members and board administrators.
             </p>
           </div>
@@ -103,7 +103,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </div>
             )}
 
-            <button 
+            <button
               onClick={handleGoogleLogin}
               disabled={isLoading}
               className="w-full flex items-center justify-center gap-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-white/5 py-4 rounded-2xl hover:border-brand-500 dark:hover:border-brand-500 transition-all group active:scale-95 disabled:opacity-50 disabled:pointer-events-none mb-4"
@@ -114,7 +114,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </span>
             </button>
 
-            <button 
+            <button
               onClick={() => {
                 localStorage.setItem('demo_mode', 'true');
                 onLoginSuccess();
