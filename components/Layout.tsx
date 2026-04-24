@@ -207,15 +207,12 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       </aside>
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden w-full relative">
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 transition-colors duration-200">
-          <div className="flex items-center gap-3">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 transition-colors duration-200 relative">
+          <div className="flex items-center gap-3 z-10">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-brand-600 active:scale-95">
               <i className="fa-solid fa-bars-staggered text-xl"></i>
             </button>
-            <Link to="/" className="lg:hidden text-xl font-black flex items-center tracking-tight">
-              <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span> <span className="text-slate-900 dark:text-slate-100">BC</span>
-            </Link>
-            <div className="hidden sm:flex flex-col">
+            <div className="hidden lg:flex flex-col">
               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">
                 <Link to="/" className="hover:text-brand-500 transition-colors">Home</Link>
                 {location.pathname !== '/' && (
@@ -237,7 +234,14 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             </div>
           </div>
 
-          <div className="flex items-center gap-1 lg:gap-3">
+          {/* Centered Logo for Mobile */}
+          <div className="absolute inset-0 flex items-center justify-center lg:hidden pointer-events-none">
+            <Link to="/" className="text-xl font-black flex items-center tracking-tight pointer-events-auto">
+              <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span> <span className="text-slate-900 dark:text-slate-100">BC</span>
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-1 lg:gap-3 z-10">
             <button 
               onClick={() => setIsSearchOpen(true)}
               className="p-2 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors hidden sm:block active:scale-95"
