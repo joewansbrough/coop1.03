@@ -1,21 +1,13 @@
 {
-  "version": 2,
-  "rewrites": [
+  "headers": [
     {
-      "source": "/api/hello",
-      "destination": "/api/hello"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index"
-    },
-    {
-      "source": "/auth/(.*)",
-      "destination": "/api/index"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "source": "/auth/callback",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "unsafe-none"
+        }
+      ]
     }
   ]
 }
