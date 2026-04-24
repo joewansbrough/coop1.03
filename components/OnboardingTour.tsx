@@ -126,13 +126,13 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] rounded-[2rem] sm:rounded-[3rem] border border-slate-200 dark:border-white/10 overflow-hidden relative shadow-2xl flex flex-col sm:block"
+        className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] rounded-[2.5rem] sm:rounded-[4rem] border-[4px] border-slate-200 dark:border-white/10 overflow-hidden relative shadow-2xl flex flex-col sm:block"
       >
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 sm:bg-slate-100 dark:sm:bg-white/5 flex items-center justify-center text-slate-700 sm:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors z-20"
+          className="absolute top-4 right-4 sm:top-8 sm:right-8 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors z-20"
         >
-          <X size={16} />
+          <X size={20} />
         </button>
 
         <div className="flex flex-col sm:flex-row h-full">
