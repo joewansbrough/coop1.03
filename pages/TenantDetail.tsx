@@ -36,9 +36,14 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
       const fetchHistory = async () => {
         setIsLoadingHistory(true);
         try {
-          const res = await fetch(`/api/tenants/${tenantId}/history`);
-          const data = await res.json();
-          setHistory(data);
+          if (localStorage.getItem('demo_mode') === 'true') {
+             // Mock history data for demo
+             setHistory([{ id: 'h1', unitId: 'u1', startDate: tenant?.startDate || '2019-03-15', endDate: null, moveReason: 'Initial move-in', unit: units.find(u => u.id === 'u1') }]);
+          } else {
+            const res = await fetch(`/api/tenants/${tenantId}/history`);
+            const data = await res.json();
+            setHistory(data);
+          }
         } catch (e) {
           console.error('Failed to fetch history:', e);
         } finally {
@@ -47,7 +52,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
       };
       fetchHistory();
     }
-  }, [tenantId, activeTab]);
+  }, [tenantId, activeTab, tenant?.startDate, units]);
 
   if (!tenant) return <div className="p-8 text-center text-slate-500 dark:text-slate-400 font-bold">Member profile not found.</div>;
 
