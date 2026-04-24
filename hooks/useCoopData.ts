@@ -190,51 +190,10 @@ const tenantsHooks = createDataHooks<Tenant>(
   demoStorage.deleteTenant
 );
 
-// Re-export specific hooks for clean API
-export const useUnits = unitsHooks.useAll;
-export const useCreateUnit = unitsHooks.useCreate;
-export const useUpdateUnit = unitsHooks.useUpdate;
-
-export const useEvents = eventsHooks.useAll;
-export const useCreateEvent = eventsHooks.useCreate;
-export const useUpdateEvent = eventsHooks.useUpdate;
-export const useDeleteEvent = eventsHooks.useDelete;
-
-export const useMaintenance = maintenanceHooks.useAll;
-export const useCreateMaintenance = maintenanceHooks.useCreate;
-export const useUpdateMaintenance = maintenanceHooks.useUpdate;
-export const useDeleteMaintenance = maintenanceHooks.useDelete;
-
-export const useAnnouncements = announcementsHooks.useAll;
-export const useCreateAnnouncement = announcementsHooks.useCreate;
-export const useUpdateAnnouncement = announcementsHooks.useUpdate;
-export const useDeleteAnnouncement = announcementsHooks.useDelete;
-
-export const useTenants = tenantsHooks.useAll;
-export const useCreateTenant = tenantsHooks.useCreate;
-export const useUpdateTenant = tenantsHooks.useUpdate;
-export const useDeleteTenant = tenantsHooks.useDelete;
-
-export const useDocuments = (options?: Partial<UseQueryOptions<Document[]>>) => useQuery<Document[]>({
-  queryKey: ['documents'],
-  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_DOCUMENTS) : fetchJson('/api/documents'),
-  ...dataQueryConfig,
-  ...options,
-});
-
-export const useCommittees = (options?: Partial<UseQueryOptions<Committee[]>>) => useQuery<Committee[]>({
-  queryKey: ['committees'],
-  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_COMMITTEES) : fetchJson('/api/committees'),
-  ...dataQueryConfig,
-  ...options,
-});
-
-export const useScheduledMaintenance = (options?: Partial<UseQueryOptions<ScheduledMaintenance[]>>) => useQuery<ScheduledMaintenance[]>({
-  queryKey: ['scheduledMaintenance'],
-  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_SCHEDULED_MAINTENANCE) : fetchJson('/api/scheduled-maintenance'),
-  ...dataQueryConfig,
-  ...options,
-});
+export const useRefreshData = () => {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries();
+};
 
 export const useMoveIn = () => {
   const queryClient = useQueryClient();
