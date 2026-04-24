@@ -43,23 +43,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200 dark:border-white/10 overflow-hidden relative z-10"
       >
         {/* Left Side - Hero/Info */}
-        <div className="bg-slate-900 p-12 lg:p-16 flex flex-col justify-between text-white relative overflow-hidden items-center lg:items-start text-center lg:text-left">
+        <div className="bg-slate-900 p-12 lg:p-14 flex flex-col justify-between text-white relative overflow-hidden items-center lg:items-start text-center lg:text-left">
           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-[length:32px_32px]"></div>
           </div>
 
           <div className="relative z-10 w-full flex flex-col items-center lg:items-start">
-            <div className="flex items-center gap-1 mb-6">
+            <div className="flex items-center gap-1 mb-5">
               <Home className="w-10 h-10 text-teal-400" />
               <h1 className="text-4xl font-black tracking-tight text-white">
                 <span className="text-white">coop</span><span className="text-teal-400">HUB</span>&nbsp;<span className="text-white">BC</span>
               </h1>
             </div>
 
-            <div className="w-full border-t border-white/10 mb-8"></div>
+            <div className="w-full border-t border-white/10 mb-6"></div>
 
 
-            <h2 className="text-4xl lg:text-5xl font-black leading-tight mb-8">
+            <h2 className="text-4xl lg:text-5xl font-black leading-tight mb-6">
               The Future of <br />
               <span className="text-brand-400">Co-op Housing</span> <br />
               Management.
@@ -70,17 +70,17 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 localStorage.setItem('demo_mode', 'true');
                 onLoginSuccess();
               }}
-              className="w-full py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 group mb-12"
+              className="w-full py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 group mb-10"
             >
               <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
               <span className="text-sm font-black uppercase tracking-widest">Try Demo Mode</span>
             </button>
 
-            <div className="mb-6">
+            <div className="mb-5">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-400">Key Features:</h3>
             </div>
 
-            <div className="space-y-6 w-full max-w-sm lg:max-w-none">
+            <div className="space-y-5 w-full max-w-sm lg:max-w-none">
               {[
                 { icon: <Home className="w-5 h-5" />, text: "Unit & Tenant Management" },
                 { icon: <Wrench className="w-5 h-5" />, text: "Maintenance Workflows" },
@@ -97,7 +97,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
-          <div className="mt-12 pt-8 border-t border-white/10 relative z-10">
+          <div className="mt-10 pt-6 border-t border-white/10 relative z-10">
             <p className="text-slate-400 text-xs font-medium leading-relaxed">
               <span className="text-white">coop</span><span className="text-teal-400">HUB</span><span className="text-white"> BC</span> is a secure platform designed specifically for British Columbia housing co-operatives.
               Access is restricted to registered members and board administrators.
@@ -106,9 +106,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         </div>
 
         {/* Right Side - Login Form */}
-        <div className="p-12 lg:p-16 flex flex-col items-center justify-center bg-white dark:bg-slate-900">
+        <div className="p-12 lg:p-14 flex flex-col items-center justify-center bg-white dark:bg-slate-900">
           <div className="w-full max-w-sm">
-            <div className="text-center mb-12">
+            <div className="text-center mb-10">
               <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-4">Welcome Back</h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
                 Please sign in with your registered Google account to access your co-op portal.
@@ -116,7 +116,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
 
             {errorMessage && (
-              <div className="mb-6">
+              <div className="mb-5">
                 <AppAlert message={errorMessage} type="error" onClose={() => setErrorMessage(null)} />
               </div>
             )}
