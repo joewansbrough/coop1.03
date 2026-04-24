@@ -54,7 +54,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 <ShieldCheck className="w-7 h-7 text-white" />
               </div>
               <h1 className="text-2xl font-black tracking-tight text-white">
-                <span className="text-white">coop</span><span className="text-teal-400">HUB</span><span className="text-white"> BC</span>
+                <span className="text-white">coop</span><span className="text-teal-400">HUB</span>&nbsp;<span className="text-white">BC</span>
               </h1>
             </div>
 
@@ -70,7 +70,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 localStorage.setItem('demo_mode', 'true');
                 onLoginSuccess();
               }}
-              className="px-8 py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl transition-all active:scale-95 flex items-center gap-3 group mb-12"
+              className="w-full py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 group mb-12"
             >
               <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
               <span className="text-sm font-black uppercase tracking-widest">Try Demo Mode</span>
@@ -147,8 +147,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         </div>
       </motion.div>
 
-      <div className="mt-8 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
-        &copy; 2026 <span className="text-white">coop</span><span className="text-teal-400">HUB</span><span className="text-white"> BC</span> &bull; All Rights Reserved
+      <div className="mt-8 text-center text-slate-400 text-[10px] font-black tracking-widest uppercase">
+        &copy; 2026 <span className="text-slate-900 dark:text-white lowercase">coop</span><span className="text-teal-400 uppercase">HUB</span>&nbsp;<span className="text-slate-900 dark:text-white uppercase">BC</span> &bull; All Rights Reserved
       </div>
     </div>
   );
