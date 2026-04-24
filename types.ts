@@ -64,6 +64,7 @@ export interface Tenant {
   balance?: number;
   shareCapital?: number;
   split?: any;
+  notes?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -142,7 +143,10 @@ export interface CoopEvent {
   category: string;
   description: string;
   committeeId?: string;
+  cooperativeId?: string;
   attendees?: Tenant[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Transaction {

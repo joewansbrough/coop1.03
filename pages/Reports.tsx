@@ -1,97 +1,86 @@
-
-import React, { useState, useMemo } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+import React, { useMemo } from 'react';
 import StatCard from '../components/StatCard';
-import { MOCK_UNITS, MOCK_REQUESTS } from '../constants';
-import { MaintenanceCategory, MaintenancePriority } from '../types';
-import { Link } from 'react-router-dom';
+import { MaintenanceRequest, RequestStatus, Tenant, Unit } from '../types';
 
-const Reports: React.FC = () => {
-  // Maintenance Expenditure States
-  const [maintCategory, setMaintCategory] = useState<string>('All');
-  const [maintUnit, setMaintUnit] = useState<string>('All');
-  const [maintPriority, setMaintPriority] = useState<string>('All');
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
+interface ReportsProps {
+  units: Unit[];
+  tenants: Tenant[];
+  requests: MaintenanceRequest[];
+}
 
-  const occupancyData: { month: string; rate: number }[] = [];
+const calculateAverageDaysOpen = (requests: MaintenanceRequest[]) => {
+  const closedRequests = requests.filter(
+    (request) => request.status === RequestStatus.COMPLETED && request.createdAt && request.updatedAt
+  );
 
-  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#6366f1', '#ec4899', '#94a3b8'];
+  if (closedRequests.length === 0) {
+    return 'N/A';
+  }
 
-  // Analytical Logic for Maintenance Spending
-  const filteredMaintData = useMemo(() => {
-    return MOCK_REQUESTS.filter(req => {
-      const matchCat = maintCategory === 'All' || req.category.includes(maintCategory as MaintenanceCategory);
-      const matchUnit = maintUnit === 'All' || req.unitId === maintUnit;
-      const matchPriority = maintPriority === 'All' || req.priority === maintPriority;
-      const date = new Date(req.createdAt).getTime();
-      const matchStart = !startDate || date >= new Date(startDate).getTime();
-      const matchEnd = !endDate || date <= new Date(endDate).getTime();
-      return matchCat && matchUnit && matchPriority && matchStart && matchEnd;
-    });
-  }, [maintCategory, maintUnit, maintPriority, startDate, endDate]);
+  const totalDays = closedRequests.reduce((sum, request) => {
+    const openedAt = new Date(request.createdAt as string).getTime();
+    const closedAt = new Date(request.updatedAt as string).getTime();
+    return sum + Math.max(0, closedAt - openedAt) / (1000 * 60 * 60 * 24);
+  }, 0);
 
-  const totalSpend = useMemo(() => {
-    return filteredMaintData.reduce((acc, req) => 
-      acc + req.expenses.reduce((eAcc, exp) => eAcc + exp.cost, 0), 0
-    );
-  }, [filteredMaintData]);
+  return `${Math.round(totalDays / closedRequests.length)}d`;
+};
 
-  const avgCost = filteredMaintData.length > 0 ? totalSpend / filteredMaintData.length : 0;
+const Reports: React.FC<ReportsProps> = ({ units, tenants, requests }) => {
+  const currentResidents = useMemo(
+    () => tenants.filter((tenant) => tenant.status === 'Current'),
+    [tenants]
+  );
 
-  const costByCategoryData = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredMaintData.forEach(req => {
-      const reqSpend = req.expenses.reduce((acc, exp) => acc + exp.cost, 0);
-      req.category.forEach(cat => {
-        map[cat] = (map[cat] || 0) + (reqSpend / req.category.length);
-      });
-    });
-    return Object.entries(map).map(([name, spend]) => ({ name, spend }));
-  }, [filteredMaintData]);
+  const waitlistCount = useMemo(
+    () => tenants.filter((tenant) => tenant.status === 'Waitlist').length,
+    [tenants]
+  );
 
-  const topSpendingUnit = useMemo(() => {
-    const map: Record<string, number> = {};
-    filteredMaintData.forEach(req => {
-      const spend = req.expenses.reduce((acc, exp) => acc + exp.cost, 0);
-      map[req.unitId] = (map[req.unitId] || 0) + spend;
-    });
-    const top = Object.entries(map).sort((a,b) => b[1] - a[1])[0];
-    if (!top) return 'N/A';
-    const unit = MOCK_UNITS.find(u => u.id === top[0]);
-    return `Unit ${unit?.number || top[0]}`;
-  }, [filteredMaintData]);
+  const occupiedUnits = useMemo(
+    () => units.filter((unit) => unit.status === 'Occupied').length,
+    [units]
+  );
+
+  const occupancyRate = units.length > 0 ? Math.round((occupiedUnits / units.length) * 100) : 0;
+  const activeRequests = requests.filter(
+    (request) => request.status !== RequestStatus.COMPLETED && request.status !== RequestStatus.CANCELLED
+  );
+  const urgentRequests = activeRequests.filter((request) => request.priority === 'Emergency').length;
+  const averageResolutionTime = calculateAverageDaysOpen(requests);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-12 transition-colors duration-200">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Board Insight Center</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium font-medium">Strategic operational data for governance and long-term planning.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Strategic operational data for governance and long-term planning.</p>
         </div>
-        <button 
-          onClick={() => {
-            alert("Generating PDF Export... Your report will be available for download in a few moments.");
-            setTimeout(() => {
-              const link = document.createElement('a');
-              link.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent('Mock PDF content for Board Insight Center Report');
-              link.download = 'Coop_Insight_Report.pdf';
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }, 1500);
-          }} 
-          className="bg-brand-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center gap-2 active:scale-95"
-        >
-          <i className="fa-solid fa-file-export"></i> Generate PDF Export
-        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard label="Response Time" value="N/A" icon="fa-clock" color="bg-brand-500" />
-        <StatCard label="Waitlist Volume" value="0 Families" icon="fa-users-line" color="bg-blue-500" />
-        <StatCard label="Occupancy Rate" value={`${MOCK_UNITS.length > 0 ? Math.round((MOCK_UNITS.filter(u => u.status === 'Occupied').length / MOCK_UNITS.length) * 100) : 0}%`} icon="fa-building-circle-check" color="bg-purple-500" />
-        <StatCard label="Active Service" value={MOCK_REQUESTS.filter(r => r.status !== 'Completed' && r.status !== 'Cancelled').length} icon="fa-wrench" color="bg-rose-500" />
+        <StatCard label="Avg Resolution" value={averageResolutionTime} icon="fa-clock" color="bg-brand-500" />
+        <StatCard label="Waitlist Volume" value={`${waitlistCount} Households`} icon="fa-users-line" color="bg-blue-500" />
+        <StatCard label="Occupancy Rate" value={`${occupancyRate}%`} icon="fa-building-circle-check" color="bg-purple-500" />
+        <StatCard label="Active Service" value={activeRequests.length} icon="fa-wrench" color="bg-rose-500" />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 p-6">
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Resident Snapshot</p>
+          <p className="text-3xl font-black text-slate-900 dark:text-white">{currentResidents.length}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Current residents with live directory records.</p>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 p-6">
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Urgent Requests</p>
+          <p className="text-3xl font-black text-slate-900 dark:text-white">{urgentRequests}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Emergency-priority issues still active in the queue.</p>
+        </div>
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 p-6">
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Vacant Units</p>
+          <p className="text-3xl font-black text-slate-900 dark:text-white">{Math.max(0, units.length - occupiedUnits)}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Inventory currently not assigned to an occupied household.</p>
+        </div>
       </div>
     </div>
   );

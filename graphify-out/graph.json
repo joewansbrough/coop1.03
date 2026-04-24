@@ -1,0 +1,1409 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {
+    "hyperedges": [
+      {
+        "id": "pipa_compliance_framework",
+        "label": "PIPA Compliance Framework",
+        "nodes": [
+          "1290_pipa_overview_of_contents_pipa",
+          "1310_ten_principles_of_personal_information_protection_accountability",
+          "1510_pipa_record_keeping_tips_data_retention",
+          "1570_a_guide_to_b_privacy_officer"
+        ],
+        "relation": "form",
+        "confidence": "INFERRED",
+        "confidence_score": 0.95,
+        "source_file": "reference materials/info/1290_PIPA_Overview-of-Contents.pdf"
+      },
+      {
+        "id": "board_governance_structure",
+        "label": "Board Governance Structure",
+        "nodes": [
+          "1580_board_of_directors_job_description_sample_board_of_directors",
+          "1600_board__president_and_vice_president_job_description_sample_president",
+          "1660_board_treasurer_job_description_sample_treasurer",
+          "1620__chair_job_description_sample_chair"
+        ],
+        "relation": "participate_in",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "reference materials/info/1580_Board_of_Directors_Job_description_sample.pdf"
+      },
+      {
+        "id": "meeting_governance",
+        "label": "General Meeting Governance",
+        "nodes": [
+          "210_agm",
+          "290_sagm",
+          "300_sgm",
+          "2830_quorum",
+          "040_rules_of_order"
+        ],
+        "relation": "participate_in",
+        "confidence": "INFERRED",
+        "confidence_score": 0.95,
+        "source_file": "reference materials/info/Meetings/210_AGM_Overview.pdf"
+      },
+      {
+        "id": "membership_termination_appeal_process",
+        "label": "Membership Termination Appeal Process",
+        "nodes": [
+          "370_appeal_of_membership_termination_checklist_termination_appeal_checklist",
+          "380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda",
+          "400_appeal_of_membership_termination_breach_notice_sample_termination_appeal_breach_notice",
+          "420_appeal_of_membership_termination_conduct_notice_sample_termination_appeal_conduct_notice"
+        ],
+        "relation": "participate_in",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "reference materials/info/Meetings/370_Appeal_of_Membership_Termination_Checklist.pdf"
+      },
+      {
+        "id": "removal_of_director_process",
+        "label": "Removal of Director Process",
+        "nodes": [
+          "440_removal_of_director_meeting_checklist_removal_of_director_checklist",
+          "460_removal_of_director_meeting_notice_sample_removal_of_director_notice",
+          "480_removal_of_director_meeting_agenda_sample_removal_of_director_agenda"
+        ],
+        "relation": "participate_in",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "reference materials/info/Meetings/440_Removal-of-Director-Meeting_Checklist.pdf"
+      },
+      {
+        "id": "member_transition_procedures",
+        "label": "Member Life Transition Procedures",
+        "nodes": [
+          "2380_flowchart_procedure_when_a_member_is_placed_in_care_member_placed_in_care_flowchart",
+          "2382_flowchart_procedure_when_a_member_dies_member_death_flowchart",
+          "2390_community_care_guidelines_community_care_committee_guidelines"
+        ],
+        "relation": "participate_in",
+        "confidence": "INFERRED",
+        "confidence_score": 0.85,
+        "source_file": "reference materials/info/Policies - Community/2380_Flowchart_Procedure_when_a_member_is_Placed_in_Care.pdf"
+      },
+      {
+        "id": "election_governance_flow",
+        "label": "Election Governance Flow",
+        "nodes": [
+          "680_preparing_for_the_election_election_workflow",
+          "690_nominations_committee_committee_job_description",
+          "770_candidates_declaration_candidate_eligibility",
+          "840_arrears_report_disqualification_criteria"
+        ],
+        "relation": "form",
+        "confidence": "EXTRACTED",
+        "confidence_score": 1.0,
+        "source_file": "reference materials/info/Voting/Election/680_Preparing-For-The-Election_Step-By-Step.pdf"
+      },
+      {
+        "id": "member_involvement_framework",
+        "label": "Member Involvement Framework",
+        "nodes": [
+          "2480_good_policies_policy_guidelines",
+          "2490_end_of_participation_participation_myths",
+          "2500_beyond_participation_member_involvement"
+        ],
+        "relation": "participate_in",
+        "confidence": "INFERRED",
+        "confidence_score": 0.9,
+        "source_file": "reference materials/info/Policies - Community/2500_Beyond-Participation-a-foundation-for-real-member-involvement-2010.pdf"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "label": "Model Rules 2.0",
+      "file_type": "document",
+      "source_file": "reference materials/info/0910_Step_By_Step-Guide.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "0910_step_by_step_guide_model_rules_2_0",
+      "community": 0,
+      "norm_label": "model rules 2.0"
+    },
+    {
+      "label": "Cooperative Association Act",
+      "file_type": "document",
+      "source_file": "reference materials/info/0910_Step_By_Step-Guide.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "0910_step_by_step_guide_coop_act",
+      "community": 0,
+      "norm_label": "cooperative association act"
+    },
+    {
+      "label": "Acknowledgement of Receipt of Rules and Occupancy Agreement",
+      "file_type": "document",
+      "source_file": "reference materials/info/1150_Acknowledgement-of-Receipt-of-Rules-and-Occupancy-Agreement_Instructions.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1150_acknowledgement_of_receipt_of_rules_and_occupancy_agreement_instructions_form_receipt",
+      "community": 0,
+      "norm_label": "acknowledgement of receipt of rules and occupancy agreement"
+    },
+    {
+      "label": "Personal Information Protection Act (PIPA)",
+      "file_type": "document",
+      "source_file": "reference materials/info/1290_PIPA_Overview-of-Contents.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1290_pipa_overview_of_contents_pipa",
+      "community": 1,
+      "norm_label": "personal information protection act (pipa)"
+    },
+    {
+      "label": "Accountability Principle",
+      "file_type": "document",
+      "source_file": "reference materials/info/1310_Ten-Principles-of-Personal-Information-Protection.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1310_ten_principles_of_personal_information_protection_accountability",
+      "community": 1,
+      "norm_label": "accountability principle"
+    },
+    {
+      "label": "Consent Principle",
+      "file_type": "document",
+      "source_file": "reference materials/info/1310_Ten-Principles-of-Personal-Information-Protection.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1310_ten_principles_of_personal_information_protection_consent",
+      "community": 1,
+      "norm_label": "consent principle"
+    },
+    {
+      "label": "PIPA Audit Program",
+      "file_type": "document",
+      "source_file": "reference materials/info/1320_PIPA_Checklist.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1320_pipa_checklist_audit_program",
+      "community": 15,
+      "norm_label": "pipa audit program"
+    },
+    {
+      "label": "Confidentiality Agreement Sample",
+      "file_type": "document",
+      "source_file": "reference materials/info/1370_Confidentiality-Agreement_Sample.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1370_confidentiality_agreement_sample_confidentiality_agreement",
+      "community": 1,
+      "norm_label": "confidentiality agreement sample"
+    },
+    {
+      "label": "PIPA Record Keeping Tips",
+      "file_type": "document",
+      "source_file": "reference materials/info/1510_PIPA_Record-Keeping-Tips.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1510_pipa_record_keeping_tips_data_retention",
+      "community": 16,
+      "norm_label": "pipa record keeping tips"
+    },
+    {
+      "label": "Office of the Information and Privacy Commissioner (OIPC)",
+      "file_type": "document",
+      "source_file": "reference materials/info/1560_PIPA_Useful-Websites-and-Contacts.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1560_pipa_useful_websites_and_contacts_oipc",
+      "community": 17,
+      "norm_label": "office of the information and privacy commissioner (oipc)"
+    },
+    {
+      "label": "Privacy Officer Role",
+      "file_type": "document",
+      "source_file": "reference materials/info/1570_A-Guide-to-B.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1570_a_guide_to_b_privacy_officer",
+      "community": 1,
+      "norm_label": "privacy officer role"
+    },
+    {
+      "label": "Board of Directors",
+      "file_type": "document",
+      "source_file": "reference materials/info/1580_Board_of_Directors_Job_description_sample.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1580_board_of_directors_job_description_sample_board_of_directors",
+      "community": 0,
+      "norm_label": "board of directors"
+    },
+    {
+      "label": "Board President and Vice President",
+      "file_type": "document",
+      "source_file": "reference materials/info/1600_Board_-president_and_vice_president_Job_description_sample.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1600_board__president_and_vice_president_job_description_sample_president",
+      "community": 0,
+      "norm_label": "board president and vice president"
+    },
+    {
+      "label": "Meeting Chair",
+      "file_type": "document",
+      "source_file": "reference materials/info/1620_-Chair_Job_description_sample.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1620__chair_job_description_sample_chair",
+      "community": 18,
+      "norm_label": "meeting chair"
+    },
+    {
+      "label": "CHF BC Delegate",
+      "file_type": "document",
+      "source_file": "reference materials/info/1640_-CHF_BC_delegate_Job_description_sample.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1640__chf_bc_delegate_job_description_sample_chf_bc_delegate",
+      "community": 19,
+      "norm_label": "chf bc delegate"
+    },
+    {
+      "label": "Board Treasurer",
+      "file_type": "document",
+      "source_file": "reference materials/info/1660_Board_Treasurer_job_description_sample.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1660_board_treasurer_job_description_sample_treasurer",
+      "community": 0,
+      "norm_label": "board treasurer"
+    },
+    {
+      "label": "Staff Confidentiality Agreement",
+      "file_type": "document",
+      "source_file": "reference materials/info/1700_Staff_and_designated_members__Confidentiality_Agreement_sample.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1700_staff_and_designated_members__confidentiality_agreement_sample_staff_confidentiality",
+      "community": 1,
+      "norm_label": "staff confidentiality agreement"
+    },
+    {
+      "label": "Ethical Conduct Declaration",
+      "file_type": "document",
+      "source_file": "reference materials/info/1720_Board_Directors_Ethical_Conduct_Declaration_sample.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1720_board_directors_ethical_conduct_declaration_sample_ethical_conduct_declaration",
+      "community": 0,
+      "norm_label": "ethical conduct declaration"
+    },
+    {
+      "label": "Democratic Member Control",
+      "file_type": "document",
+      "source_file": "reference materials/info/1740_Co-op_principles.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "1740_co_op_principles_democratic_control",
+      "community": 0,
+      "norm_label": "democratic member control"
+    },
+    {
+      "label": "Member Selection Process",
+      "file_type": "document",
+      "source_file": "reference materials/info/2240_Managing-Applications_Discussion_Notes.pdf",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "id": "2240_managing_applications_discussion_notes_member_selection",
+      "community": 1,
+      "norm_label": "member selection process"
+    },
+    {
+      "label": "Membership Application Form",
+      "file_type": "document",
+      "source_file": "reference materials/info/2530_Membership_Application-Form_Guide-1.pdf",
+      "id": "2530_membership_application_form",
+      "community": 6,
+      "norm_label": "membership application form"
+    },
+    {
+      "label": "Co-op Marketing Strategies",
+      "file_type": "document",
+      "source_file": "reference materials/info/2530_Membership_Application-Form_Guide-1.pdf",
+      "id": "2530_marketing_strategies",
+      "community": 6,
+      "norm_label": "co-op marketing strategies"
+    },
+    {
+      "label": "Interviewer's Guide",
+      "file_type": "document",
+      "source_file": "reference materials/info/2540_Assessing-Potential-Members-Interviewera-s-Guide.pdf",
+      "id": "2540_interview_guide",
+      "community": 6,
+      "norm_label": "interviewer's guide"
+    },
+    {
+      "label": "Member Manual",
+      "file_type": "document",
+      "source_file": "reference materials/info/2570_Thoughts-on-Members-Manuals.pdf",
+      "id": "2570_member_manual",
+      "community": 20,
+      "norm_label": "member manual"
+    },
+    {
+      "label": "Cooperative Association Act (BC)",
+      "file_type": "document",
+      "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
+      "id": "2830_co_op_act",
+      "community": 2,
+      "norm_label": "cooperative association act (bc)"
+    },
+    {
+      "label": "Ordinary Resolution",
+      "file_type": "document",
+      "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
+      "id": "2830_ordinary_resolution",
+      "community": 2,
+      "norm_label": "ordinary resolution"
+    },
+    {
+      "label": "Special Resolution",
+      "file_type": "document",
+      "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
+      "id": "2830_special_resolution",
+      "community": 2,
+      "norm_label": "special resolution"
+    },
+    {
+      "label": "Fiduciary Duty",
+      "file_type": "document",
+      "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
+      "id": "2830_fiduciary_duty",
+      "community": 7,
+      "norm_label": "fiduciary duty"
+    },
+    {
+      "label": "Rules of Order",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/040_Rules_of_Order_Sample.pdf",
+      "id": "040_rules_of_order",
+      "community": 2,
+      "norm_label": "rules of order"
+    },
+    {
+      "label": "Meeting Minutes",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/140_Minutes_Board_Meetings_Sample.pdf",
+      "id": "140_meeting_minutes",
+      "community": 7,
+      "norm_label": "meeting minutes"
+    },
+    {
+      "label": "Annual General Meeting (AGM)",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/210_AGM_Overview.pdf",
+      "id": "210_agm",
+      "community": 2,
+      "norm_label": "annual general meeting (agm)"
+    },
+    {
+      "label": "Semi-Annual General Meeting (SAGM)",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/290_SAGM_Overview.pdf",
+      "id": "290_sagm",
+      "community": 2,
+      "norm_label": "semi-annual general meeting (sagm)"
+    },
+    {
+      "label": "Special General Meeting (SGM)",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/300_Special_General_Meeting_Overview.pdf",
+      "id": "300_sgm",
+      "community": 2,
+      "norm_label": "special general meeting (sgm)"
+    },
+    {
+      "label": "Quorum",
+      "file_type": "document",
+      "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
+      "id": "2830_quorum",
+      "community": 21,
+      "norm_label": "quorum"
+    },
+    {
+      "label": "Board of Directors",
+      "file_type": "document",
+      "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
+      "id": "2830_board_of_directors",
+      "community": 7,
+      "norm_label": "board of directors"
+    },
+    {
+      "label": "Checklist: Appeal of Membership Termination",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/370_Appeal_of_Membership_Termination_Checklist.pdf",
+      "id": "370_appeal_of_membership_termination_checklist_termination_appeal_checklist",
+      "community": 4,
+      "norm_label": "checklist: appeal of membership termination"
+    },
+    {
+      "label": "Agenda: Appeal of Membership Termination",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/380_Appeal_of_Membership_Termination_Agenda_Sample-Copy.pdf",
+      "id": "380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda",
+      "community": 4,
+      "norm_label": "agenda: appeal of membership termination"
+    },
+    {
+      "label": "Notice: Termination Appeal (Breach of Material Condition)",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/400_Appeal_of_Membership_Termination_Breach_Notice_Sample.pdf",
+      "id": "400_appeal_of_membership_termination_breach_notice_sample_termination_appeal_breach_notice",
+      "community": 4,
+      "norm_label": "notice: termination appeal (breach of material condition)"
+    },
+    {
+      "label": "Notice: Termination Appeal (Conduct Detrimental)",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/420_Appeal-of-Membership-Termination-Conduct_Notice_Sample.pdf",
+      "id": "420_appeal_of_membership_termination_conduct_notice_sample_termination_appeal_conduct_notice",
+      "community": 4,
+      "norm_label": "notice: termination appeal (conduct detrimental)"
+    },
+    {
+      "label": "Checklist: Removal of Director",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/440_Removal-of-Director-Meeting_Checklist.pdf",
+      "id": "440_removal_of_director_meeting_checklist_removal_of_director_checklist",
+      "community": 8,
+      "norm_label": "checklist: removal of director"
+    },
+    {
+      "label": "Notice: Removal of Director Meeting",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/460_Removal-of-Director-Meeting_Notice_Sample.pdf",
+      "id": "460_removal_of_director_meeting_notice_sample_removal_of_director_notice",
+      "community": 8,
+      "norm_label": "notice: removal of director meeting"
+    },
+    {
+      "label": "Agenda: Removal of Director Meeting",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/480_Removal_of_Director_Meeting_Agenda_Sample.pdf",
+      "id": "480_removal_of_director_meeting_agenda_sample_removal_of_director_agenda",
+      "community": 8,
+      "norm_label": "agenda: removal of director meeting"
+    },
+    {
+      "label": "Overview: Information Meeting",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/490_Information-Meeting_Overview.pdf",
+      "id": "490_information_meeting_overview_information_meeting_overview",
+      "community": 3,
+      "norm_label": "overview: information meeting"
+    },
+    {
+      "label": "Invitation: Information Meeting",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/500_Information-Meeting_Invitation_Sample.pdf",
+      "id": "500_information_meeting_invitation_sample_information_meeting_invitation",
+      "community": 3,
+      "norm_label": "invitation: information meeting"
+    },
+    {
+      "label": "Overview: Town Hall Meeting",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/520_Town-Hall-Meeting-Overview.pdf",
+      "id": "520_town_hall_meeting_overview_town_hall_meeting_overview",
+      "community": 3,
+      "norm_label": "overview: town hall meeting"
+    },
+    {
+      "label": "Invitation: Town Hall Meeting (Parking Policy)",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/530_Town-Hall-Meeting_Invitation_Sample.pdf",
+      "id": "530_town_hall_meeting_invitation_sample_town_hall_meeting_invitation",
+      "community": 10,
+      "norm_label": "invitation: town hall meeting (parking policy)"
+    },
+    {
+      "label": "Agenda: Board of Directors Meeting",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/560_Board-Meeting_Agenda_Sample.pdf",
+      "id": "560_board_meeting_agenda_sample_board_meeting_agenda",
+      "community": 3,
+      "norm_label": "agenda: board of directors meeting"
+    },
+    {
+      "label": "Checklist: First Board Meeting After AGM",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/581_Board-Meeting_First-Meeting-After-AGM_-Checklist.pdf",
+      "id": "581_board_meeting_first_meeting_after_agm_checklist_first_board_meeting_checklist",
+      "community": 3,
+      "norm_label": "checklist: first board meeting after agm"
+    },
+    {
+      "label": "Flowchart: Member Placed in Care Procedure",
+      "file_type": "document",
+      "source_file": "reference materials/info/Policies - Community/2380_Flowchart_Procedure_when_a_member_is_Placed_in_Care.pdf",
+      "id": "2380_flowchart_procedure_when_a_member_is_placed_in_care_member_placed_in_care_flowchart",
+      "community": 9,
+      "norm_label": "flowchart: member placed in care procedure"
+    },
+    {
+      "label": "Flowchart: Member Death Procedure",
+      "file_type": "document",
+      "source_file": "reference materials/info/Policies - Community/2382_Flowchart_Procedure_when_a_member_dies.pdf",
+      "id": "2382_flowchart_procedure_when_a_member_dies_member_death_flowchart",
+      "community": 9,
+      "norm_label": "flowchart: member death procedure"
+    },
+    {
+      "label": "Guidelines: Community Care Committee",
+      "file_type": "document",
+      "source_file": "reference materials/info/Policies - Community/2390_Community_Care_Guidelines.pdf",
+      "id": "2390_community_care_guidelines_community_care_committee_guidelines",
+      "community": 9,
+      "norm_label": "guidelines: community care committee"
+    },
+    {
+      "label": "Policy: Parking",
+      "file_type": "document",
+      "source_file": "reference materials/info/Policies - Community/2400_Parking_Policy_Sample.pdf",
+      "id": "2400_parking_policy_sample_parking_policy",
+      "community": 10,
+      "norm_label": "policy: parking"
+    },
+    {
+      "label": "Rationale: Parking Policy Discussion Notes",
+      "file_type": "document",
+      "source_file": "reference materials/info/Policies - Community/2420_Parking_Policy_Discussion-Notes.pdf",
+      "id": "2420_parking_policy_discussion_notes_parking_policy_rationale",
+      "community": 10,
+      "norm_label": "rationale: parking policy discussion notes"
+    },
+    {
+      "label": "Concept: Asset Management Plan",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/490_Information-Meeting_Overview.pdf",
+      "id": "shared_concept_asset_management_plan",
+      "community": 3,
+      "norm_label": "concept: asset management plan"
+    },
+    {
+      "label": "Entity: Personal Information Protection Act (PIPA)",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/370_Appeal_of_Membership_Termination_Checklist.pdf",
+      "id": "shared_concept_pipa",
+      "community": 4,
+      "norm_label": "entity: personal information protection act (pipa)"
+    },
+    {
+      "label": "Entity: CHF BC",
+      "file_type": "document",
+      "source_file": "reference materials/info/Meetings/370_Appeal_of_Membership_Termination_Checklist.pdf",
+      "id": "shared_concept_chf_bc",
+      "community": 4,
+      "norm_label": "entity: chf bc"
+    },
+    {
+      "label": "Pet Policy Sample",
+      "file_type": "document",
+      "source_file": "reference materials/info/Policies - Community/2430_Pet_Policy_Sample.pdf",
+      "id": "2430_pet_policy_sample_pet_policy",
+      "community": 11,
+      "norm_label": "pet policy sample"
+    },
+    {
+      "label": "Pet Policy Rationale",
+      "file_type": "document",
+      "source_file": "reference materials/info/Policies - Community/2450_Pet_Policy_Discussion-Notes.pdf",
+      "id": "2450_pet_policy_discussion_notes_pet_rationale",
+      "community": 11,
+      "norm_label": "pet policy rationale"
+    },
+    {
+      "label": "Member Complaint Form",
+      "file_type": "document",
+      "source_file": "reference materials/info/Policies - Community/2460_Complaint-Form_sample.pdf",
+      "id": "2460_complaint_form_sample_complaint_form",
+      "community": 22,
+      "norm_label": "member complaint form"
+    },
+    {
+      "label": "Good Policies Guidelines",
+      "file_type": "document",
+      "author": "Thom Armstrong",
+      "source_file": "reference materials/info/Policies - Community/2480_Good-policies.pdf",
+      "id": "2480_good_policies_policy_guidelines",
+      "community": 11,
+      "norm_label": "good policies guidelines"
+    },
+    {
+      "label": "Real Member Involvement",
+      "file_type": "document",
+      "author": "Thom Armstrong, Nicholas Gazzard",
+      "source_file": "reference materials/info/Policies - Community/2500_Beyond-Participation-a-foundation-for-real-member-involvement-2010.pdf",
+      "id": "2500_beyond_participation_member_involvement",
+      "community": 12,
+      "norm_label": "real member involvement"
+    },
+    {
+      "label": "Seven Myths of Participation",
+      "file_type": "document",
+      "author": "Thom Armstrong, Nicholas Gazzard",
+      "source_file": "reference materials/info/Policies - Community/2490-End-of-Participation-Newsbriefs-2008.pdf",
+      "id": "2490_end_of_participation_participation_myths",
+      "community": 12,
+      "norm_label": "seven myths of participation"
+    },
+    {
+      "label": "Video Surveillance Discussion Notes",
+      "file_type": "document",
+      "source_file": "reference materials/info/Policies - Community/2700_Video-Surveillance_Discussion-Notes.pdf",
+      "id": "2700_video_surveillance_discussion_notes_surveillance_policy",
+      "community": 23,
+      "norm_label": "video surveillance discussion notes"
+    },
+    {
+      "label": "Sustainability Policy Principles",
+      "file_type": "document",
+      "source_file": "reference materials/info/Sustainability/2580-Model-Sustainability-Policy-Discussion-Notes.pdf",
+      "id": "2580_model_sustainability_policy_sustainability_principles",
+      "community": 13,
+      "norm_label": "sustainability policy principles"
+    },
+    {
+      "label": "Sustainability Sample Actions",
+      "file_type": "document",
+      "source_file": "reference materials/info/Sustainability/Sustainability-Sample-Actions.pdf",
+      "id": "sustainability_sample_actions_action_list",
+      "community": 13,
+      "norm_label": "sustainability sample actions"
+    },
+    {
+      "label": "Record of Ballot - Removal of Director",
+      "file_type": "document",
+      "source_file": "reference materials/info/Voting/610_Record-of-Ballot-Counting_Removal-of-Director_Sample.pdf",
+      "id": "610_removal_of_director_removal_ballot",
+      "community": 14,
+      "norm_label": "record of ballot - removal of director"
+    },
+    {
+      "label": "Record of Ballot - Appeal of Termination",
+      "file_type": "document",
+      "source_file": "reference materials/info/Voting/630_Record-of-Ballot-Counting_Appeal-of-Termination_Sample.pdf",
+      "id": "630_appeal_of_termination_appeal_ballot",
+      "community": 14,
+      "norm_label": "record of ballot - appeal of termination"
+    },
+    {
+      "label": "Election Preparation Workflow",
+      "file_type": "document",
+      "source_file": "reference materials/info/Voting/Election/680_Preparing-For-The-Election_Step-By-Step.pdf",
+      "id": "680_preparing_for_the_election_election_workflow",
+      "community": 5,
+      "norm_label": "election preparation workflow"
+    },
+    {
+      "label": "Nominations Committee Job Description",
+      "file_type": "document",
+      "source_file": "reference materials/info/Voting/Election/690_Nominations-Committee_Job-Description_Sample.pdf",
+      "id": "690_nominations_committee_committee_job_description",
+      "community": 5,
+      "norm_label": "nominations committee job description"
+    },
+    {
+      "label": "Register of Directors",
+      "file_type": "document",
+      "source_file": "reference materials/info/Voting/Election/740_Register-of-Directors_Sample.pdf",
+      "id": "740_register_of_directors_director_register",
+      "community": 24,
+      "norm_label": "register of directors"
+    },
+    {
+      "label": "Candidate's Declaration and Eligibility",
+      "file_type": "document",
+      "source_file": "reference materials/info/Voting/Election/770_Candidates-Declaration_Sample.pdf",
+      "id": "770_candidates_declaration_candidate_eligibility",
+      "community": 5,
+      "norm_label": "candidate's declaration and eligibility"
+    },
+    {
+      "label": "Arrears Report and Disqualification",
+      "file_type": "document",
+      "source_file": "reference materials/info/Voting/Election/840_Arrears-Report_Sample.pdf",
+      "id": "840_arrears_report_disqualification_criteria",
+      "community": 5,
+      "norm_label": "arrears report and disqualification"
+    }
+  ],
+  "links": [
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/0910_Step_By_Step-Guide.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "0910_step_by_step_guide_model_rules_2_0",
+      "_tgt": "0910_step_by_step_guide_coop_act",
+      "source": "0910_step_by_step_guide_model_rules_2_0",
+      "target": "0910_step_by_step_guide_coop_act"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/1150_Acknowledgement-of-Receipt-of-Rules-and-Occupancy-Agreement_Instructions.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1150_acknowledgement_of_receipt_of_rules_and_occupancy_agreement_instructions_form_receipt",
+      "_tgt": "0910_step_by_step_guide_model_rules_2_0",
+      "source": "0910_step_by_step_guide_model_rules_2_0",
+      "target": "1150_acknowledgement_of_receipt_of_rules_and_occupancy_agreement_instructions_form_receipt"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/1580_Board_of_Directors_Job_description_sample.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1580_board_of_directors_job_description_sample_board_of_directors",
+      "_tgt": "0910_step_by_step_guide_model_rules_2_0",
+      "source": "0910_step_by_step_guide_model_rules_2_0",
+      "target": "1580_board_of_directors_job_description_sample_board_of_directors"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/1290_PIPA_Overview-of-Contents.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1290_pipa_overview_of_contents_pipa",
+      "_tgt": "1310_ten_principles_of_personal_information_protection_accountability",
+      "source": "1290_pipa_overview_of_contents_pipa",
+      "target": "1310_ten_principles_of_personal_information_protection_accountability"
+    },
+    {
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/1310_Ten-Principles-of-Personal-Information-Protection.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1310_ten_principles_of_personal_information_protection_consent",
+      "_tgt": "1290_pipa_overview_of_contents_pipa",
+      "source": "1290_pipa_overview_of_contents_pipa",
+      "target": "1310_ten_principles_of_personal_information_protection_consent"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "reference materials/info/1570_A-Guide-to-B.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1570_a_guide_to_b_privacy_officer",
+      "_tgt": "1290_pipa_overview_of_contents_pipa",
+      "source": "1290_pipa_overview_of_contents_pipa",
+      "target": "1570_a_guide_to_b_privacy_officer"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/2240_Managing-Applications_Discussion_Notes.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "2240_managing_applications_discussion_notes_member_selection",
+      "_tgt": "1290_pipa_overview_of_contents_pipa",
+      "source": "1290_pipa_overview_of_contents_pipa",
+      "target": "2240_managing_applications_discussion_notes_member_selection"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/1370_Confidentiality-Agreement_Sample.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1370_confidentiality_agreement_sample_confidentiality_agreement",
+      "_tgt": "1290_pipa_overview_of_contents_pipa",
+      "source": "1290_pipa_overview_of_contents_pipa",
+      "target": "1370_confidentiality_agreement_sample_confidentiality_agreement"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/1700_Staff_and_designated_members__Confidentiality_Agreement_sample.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1700_staff_and_designated_members__confidentiality_agreement_sample_staff_confidentiality",
+      "_tgt": "1290_pipa_overview_of_contents_pipa",
+      "source": "1290_pipa_overview_of_contents_pipa",
+      "target": "1700_staff_and_designated_members__confidentiality_agreement_sample_staff_confidentiality"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/1600_Board_-president_and_vice_president_Job_description_sample.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1600_board__president_and_vice_president_job_description_sample_president",
+      "_tgt": "1580_board_of_directors_job_description_sample_board_of_directors",
+      "source": "1580_board_of_directors_job_description_sample_board_of_directors",
+      "target": "1600_board__president_and_vice_president_job_description_sample_president"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/1660_Board_Treasurer_job_description_sample.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1660_board_treasurer_job_description_sample_treasurer",
+      "_tgt": "1580_board_of_directors_job_description_sample_board_of_directors",
+      "source": "1580_board_of_directors_job_description_sample_board_of_directors",
+      "target": "1660_board_treasurer_job_description_sample_treasurer"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "reference materials/info/1740_Co-op_principles.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1740_co_op_principles_democratic_control",
+      "_tgt": "1580_board_of_directors_job_description_sample_board_of_directors",
+      "source": "1580_board_of_directors_job_description_sample_board_of_directors",
+      "target": "1740_co_op_principles_democratic_control"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/1720_Board_Directors_Ethical_Conduct_Declaration_sample.pdf",
+      "source_location": null,
+      "weight": 1.0,
+      "_src": "1720_board_directors_ethical_conduct_declaration_sample_ethical_conduct_declaration",
+      "_tgt": "1580_board_of_directors_job_description_sample_board_of_directors",
+      "source": "1580_board_of_directors_job_description_sample_board_of_directors",
+      "target": "1720_board_directors_ethical_conduct_declaration_sample_ethical_conduct_declaration"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/2530_Membership_Application-Form_Guide-1.pdf",
+      "_src": "2530_membership_application_form",
+      "_tgt": "2530_marketing_strategies",
+      "source": "2530_membership_application_form",
+      "target": "2530_marketing_strategies"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/2540_Assessing-Potential-Members-Interviewera-s-Guide.pdf",
+      "_src": "2540_interview_guide",
+      "_tgt": "2530_membership_application_form",
+      "source": "2530_membership_application_form",
+      "target": "2540_interview_guide"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
+      "_src": "2830_co_op_act",
+      "_tgt": "2830_ordinary_resolution",
+      "source": "2830_co_op_act",
+      "target": "2830_ordinary_resolution"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
+      "_src": "2830_co_op_act",
+      "_tgt": "2830_special_resolution",
+      "source": "2830_co_op_act",
+      "target": "2830_special_resolution"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/210_AGM_Overview.pdf",
+      "_src": "210_agm",
+      "_tgt": "2830_co_op_act",
+      "source": "2830_co_op_act",
+      "target": "210_agm"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/040_Rules_of_Order_Sample.pdf",
+      "_src": "040_rules_of_order",
+      "_tgt": "2830_special_resolution",
+      "source": "2830_special_resolution",
+      "target": "040_rules_of_order"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/300_Special_General_Meeting_Overview.pdf",
+      "_src": "300_sgm",
+      "_tgt": "2830_special_resolution",
+      "source": "2830_special_resolution",
+      "target": "300_sgm"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
+      "_src": "2830_fiduciary_duty",
+      "_tgt": "2830_board_of_directors",
+      "source": "2830_fiduciary_duty",
+      "target": "2830_board_of_directors"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/140_Minutes_Board_Meetings_Sample.pdf",
+      "_src": "140_meeting_minutes",
+      "_tgt": "2830_board_of_directors",
+      "source": "140_meeting_minutes",
+      "target": "2830_board_of_directors"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "reference materials/info/Meetings/290_SAGM_Overview.pdf",
+      "_src": "290_sagm",
+      "_tgt": "210_agm",
+      "source": "210_agm",
+      "target": "290_sagm"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/370_Appeal_of_Membership_Termination_Checklist.pdf",
+      "_src": "370_appeal_of_membership_termination_checklist_termination_appeal_checklist",
+      "_tgt": "shared_concept_pipa",
+      "source": "370_appeal_of_membership_termination_checklist_termination_appeal_checklist",
+      "target": "shared_concept_pipa"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/370_Appeal_of_Membership_Termination_Checklist.pdf",
+      "_src": "370_appeal_of_membership_termination_checklist_termination_appeal_checklist",
+      "_tgt": "shared_concept_chf_bc",
+      "source": "370_appeal_of_membership_termination_checklist_termination_appeal_checklist",
+      "target": "shared_concept_chf_bc"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "reference materials/info/Meetings/380_Appeal_of_Membership_Termination_Agenda_Sample-Copy.pdf",
+      "_src": "380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda",
+      "_tgt": "370_appeal_of_membership_termination_checklist_termination_appeal_checklist",
+      "source": "370_appeal_of_membership_termination_checklist_termination_appeal_checklist",
+      "target": "380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "reference materials/info/Meetings/400_Appeal_of_Membership_Termination_Breach_Notice_Sample.pdf",
+      "_src": "400_appeal_of_membership_termination_breach_notice_sample_termination_appeal_breach_notice",
+      "_tgt": "380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda",
+      "source": "380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda",
+      "target": "400_appeal_of_membership_termination_breach_notice_sample_termination_appeal_breach_notice"
+    },
+    {
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "reference materials/info/Meetings/420_Appeal-of-Membership-Termination-Conduct_Notice_Sample.pdf",
+      "_src": "420_appeal_of_membership_termination_conduct_notice_sample_termination_appeal_conduct_notice",
+      "_tgt": "380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda",
+      "source": "380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda",
+      "target": "420_appeal_of_membership_termination_conduct_notice_sample_termination_appeal_conduct_notice"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "reference materials/info/Meetings/460_Removal-of-Director-Meeting_Notice_Sample.pdf",
+      "_src": "460_removal_of_director_meeting_notice_sample_removal_of_director_notice",
+      "_tgt": "440_removal_of_director_meeting_checklist_removal_of_director_checklist",
+      "source": "440_removal_of_director_meeting_checklist_removal_of_director_checklist",
+      "target": "460_removal_of_director_meeting_notice_sample_removal_of_director_notice"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "reference materials/info/Meetings/480_Removal_of_Director_Meeting_Agenda_Sample.pdf",
+      "_src": "480_removal_of_director_meeting_agenda_sample_removal_of_director_agenda",
+      "_tgt": "440_removal_of_director_meeting_checklist_removal_of_director_checklist",
+      "source": "440_removal_of_director_meeting_checklist_removal_of_director_checklist",
+      "target": "480_removal_of_director_meeting_agenda_sample_removal_of_director_agenda"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/490_Information-Meeting_Overview.pdf",
+      "_src": "490_information_meeting_overview_information_meeting_overview",
+      "_tgt": "shared_concept_asset_management_plan",
+      "source": "490_information_meeting_overview_information_meeting_overview",
+      "target": "shared_concept_asset_management_plan"
+    },
+    {
+      "relation": "implements",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "reference materials/info/Meetings/500_Information-Meeting_Invitation_Sample.pdf",
+      "_src": "500_information_meeting_invitation_sample_information_meeting_invitation",
+      "_tgt": "490_information_meeting_overview_information_meeting_overview",
+      "source": "490_information_meeting_overview_information_meeting_overview",
+      "target": "500_information_meeting_invitation_sample_information_meeting_invitation"
+    },
+    {
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "reference materials/info/Meetings/520_Town-Hall-Meeting-Overview.pdf",
+      "_src": "520_town_hall_meeting_overview_town_hall_meeting_overview",
+      "_tgt": "490_information_meeting_overview_information_meeting_overview",
+      "source": "490_information_meeting_overview_information_meeting_overview",
+      "target": "520_town_hall_meeting_overview_town_hall_meeting_overview"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/530_Town-Hall-Meeting_Invitation_Sample.pdf",
+      "_src": "530_town_hall_meeting_invitation_sample_town_hall_meeting_invitation",
+      "_tgt": "2400_parking_policy_sample_parking_policy",
+      "source": "530_town_hall_meeting_invitation_sample_town_hall_meeting_invitation",
+      "target": "2400_parking_policy_sample_parking_policy"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/560_Board-Meeting_Agenda_Sample.pdf",
+      "_src": "560_board_meeting_agenda_sample_board_meeting_agenda",
+      "_tgt": "shared_concept_asset_management_plan",
+      "source": "560_board_meeting_agenda_sample_board_meeting_agenda",
+      "target": "shared_concept_asset_management_plan"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "reference materials/info/Meetings/581_Board-Meeting_First-Meeting-After-AGM_-Checklist.pdf",
+      "_src": "581_board_meeting_first_meeting_after_agm_checklist_first_board_meeting_checklist",
+      "_tgt": "560_board_meeting_agenda_sample_board_meeting_agenda",
+      "source": "560_board_meeting_agenda_sample_board_meeting_agenda",
+      "target": "581_board_meeting_first_meeting_after_agm_checklist_first_board_meeting_checklist"
+    },
+    {
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "reference materials/info/Policies - Community/2380_Flowchart_Procedure_when_a_member_is_Placed_in_Care.pdf",
+      "_src": "2380_flowchart_procedure_when_a_member_is_placed_in_care_member_placed_in_care_flowchart",
+      "_tgt": "2382_flowchart_procedure_when_a_member_dies_member_death_flowchart",
+      "source": "2380_flowchart_procedure_when_a_member_is_placed_in_care_member_placed_in_care_flowchart",
+      "target": "2382_flowchart_procedure_when_a_member_dies_member_death_flowchart"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "reference materials/info/Policies - Community/2390_Community_Care_Guidelines.pdf",
+      "_src": "2390_community_care_guidelines_community_care_committee_guidelines",
+      "_tgt": "2380_flowchart_procedure_when_a_member_is_placed_in_care_member_placed_in_care_flowchart",
+      "source": "2380_flowchart_procedure_when_a_member_is_placed_in_care_member_placed_in_care_flowchart",
+      "target": "2390_community_care_guidelines_community_care_committee_guidelines"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Policies - Community/2420_Parking_Policy_Discussion-Notes.pdf",
+      "_src": "2420_parking_policy_discussion_notes_parking_policy_rationale",
+      "_tgt": "2400_parking_policy_sample_parking_policy",
+      "source": "2400_parking_policy_sample_parking_policy",
+      "target": "2420_parking_policy_discussion_notes_parking_policy_rationale"
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Policies - Community/2450_Pet_Policy_Discussion-Notes.pdf",
+      "_src": "2450_pet_policy_discussion_notes_pet_rationale",
+      "_tgt": "2430_pet_policy_sample_pet_policy",
+      "source": "2430_pet_policy_sample_pet_policy",
+      "target": "2450_pet_policy_discussion_notes_pet_rationale"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "reference materials/info/Policies - Community/2480_Good-policies.pdf",
+      "_src": "2480_good_policies_policy_guidelines",
+      "_tgt": "2430_pet_policy_sample_pet_policy",
+      "source": "2430_pet_policy_sample_pet_policy",
+      "target": "2480_good_policies_policy_guidelines"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Policies - Community/2500_Beyond-Participation-a-foundation-for-real-member-involvement-2010.pdf",
+      "_src": "2500_beyond_participation_member_involvement",
+      "_tgt": "2490_end_of_participation_participation_myths",
+      "source": "2500_beyond_participation_member_involvement",
+      "target": "2490_end_of_participation_participation_myths"
+    },
+    {
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "reference materials/info/Sustainability/2580-Model-Sustainability-Policy-Discussion-Notes.pdf",
+      "_src": "2580_model_sustainability_policy_sustainability_principles",
+      "_tgt": "sustainability_sample_actions_action_list",
+      "source": "2580_model_sustainability_policy_sustainability_principles",
+      "target": "sustainability_sample_actions_action_list"
+    },
+    {
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "reference materials/info/Voting/610_Record-of-Ballot-Counting_Removal-of-Director_Sample.pdf",
+      "_src": "610_removal_of_director_removal_ballot",
+      "_tgt": "630_appeal_of_termination_appeal_ballot",
+      "source": "610_removal_of_director_removal_ballot",
+      "target": "630_appeal_of_termination_appeal_ballot"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Voting/Election/680_Preparing-For-The-Election_Step-By-Step.pdf",
+      "_src": "680_preparing_for_the_election_election_workflow",
+      "_tgt": "690_nominations_committee_committee_job_description",
+      "source": "680_preparing_for_the_election_election_workflow",
+      "target": "690_nominations_committee_committee_job_description"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Voting/Election/680_Preparing-For-The-Election_Step-By-Step.pdf",
+      "_src": "680_preparing_for_the_election_election_workflow",
+      "_tgt": "840_arrears_report_disqualification_criteria",
+      "source": "680_preparing_for_the_election_election_workflow",
+      "target": "840_arrears_report_disqualification_criteria"
+    },
+    {
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "reference materials/info/Voting/Election/770_Candidates-Declaration_Sample.pdf",
+      "_src": "770_candidates_declaration_candidate_eligibility",
+      "_tgt": "840_arrears_report_disqualification_criteria",
+      "source": "770_candidates_declaration_candidate_eligibility",
+      "target": "840_arrears_report_disqualification_criteria"
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "pipa_compliance_framework",
+      "label": "PIPA Compliance Framework",
+      "nodes": [
+        "1290_pipa_overview_of_contents_pipa",
+        "1310_ten_principles_of_personal_information_protection_accountability",
+        "1510_pipa_record_keeping_tips_data_retention",
+        "1570_a_guide_to_b_privacy_officer"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "reference materials/info/1290_PIPA_Overview-of-Contents.pdf"
+    },
+    {
+      "id": "board_governance_structure",
+      "label": "Board Governance Structure",
+      "nodes": [
+        "1580_board_of_directors_job_description_sample_board_of_directors",
+        "1600_board__president_and_vice_president_job_description_sample_president",
+        "1660_board_treasurer_job_description_sample_treasurer",
+        "1620__chair_job_description_sample_chair"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/1580_Board_of_Directors_Job_description_sample.pdf"
+    },
+    {
+      "id": "meeting_governance",
+      "label": "General Meeting Governance",
+      "nodes": [
+        "210_agm",
+        "290_sagm",
+        "300_sgm",
+        "2830_quorum",
+        "040_rules_of_order"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "reference materials/info/Meetings/210_AGM_Overview.pdf"
+    },
+    {
+      "id": "membership_termination_appeal_process",
+      "label": "Membership Termination Appeal Process",
+      "nodes": [
+        "370_appeal_of_membership_termination_checklist_termination_appeal_checklist",
+        "380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda",
+        "400_appeal_of_membership_termination_breach_notice_sample_termination_appeal_breach_notice",
+        "420_appeal_of_membership_termination_conduct_notice_sample_termination_appeal_conduct_notice"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/370_Appeal_of_Membership_Termination_Checklist.pdf"
+    },
+    {
+      "id": "removal_of_director_process",
+      "label": "Removal of Director Process",
+      "nodes": [
+        "440_removal_of_director_meeting_checklist_removal_of_director_checklist",
+        "460_removal_of_director_meeting_notice_sample_removal_of_director_notice",
+        "480_removal_of_director_meeting_agenda_sample_removal_of_director_agenda"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Meetings/440_Removal-of-Director-Meeting_Checklist.pdf"
+    },
+    {
+      "id": "member_transition_procedures",
+      "label": "Member Life Transition Procedures",
+      "nodes": [
+        "2380_flowchart_procedure_when_a_member_is_placed_in_care_member_placed_in_care_flowchart",
+        "2382_flowchart_procedure_when_a_member_dies_member_death_flowchart",
+        "2390_community_care_guidelines_community_care_committee_guidelines"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "reference materials/info/Policies - Community/2380_Flowchart_Procedure_when_a_member_is_Placed_in_Care.pdf"
+    },
+    {
+      "id": "election_governance_flow",
+      "label": "Election Governance Flow",
+      "nodes": [
+        "680_preparing_for_the_election_election_workflow",
+        "690_nominations_committee_committee_job_description",
+        "770_candidates_declaration_candidate_eligibility",
+        "840_arrears_report_disqualification_criteria"
+      ],
+      "relation": "form",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "reference materials/info/Voting/Election/680_Preparing-For-The-Election_Step-By-Step.pdf"
+    },
+    {
+      "id": "member_involvement_framework",
+      "label": "Member Involvement Framework",
+      "nodes": [
+        "2480_good_policies_policy_guidelines",
+        "2490_end_of_participation_participation_myths",
+        "2500_beyond_participation_member_involvement"
+      ],
+      "relation": "participate_in",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "reference materials/info/Policies - Community/2500_Beyond-Participation-a-foundation-for-real-member-involvement-2010.pdf"
+    }
+  ]
+}

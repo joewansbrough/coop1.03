@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
@@ -19,8 +19,7 @@ import TenantDetail from './pages/TenantDetail';
 import Waitlist from './pages/Waitlist';
 import PolicyAssistant from './pages/PolicyAssistant';
 import Login from './pages/Login';
-import { MOCK_ANNOUNCEMENTS, MOCK_DOCS, MOCK_UNITS, MOCK_TENANTS, MOCK_REQUESTS, MOCK_EVENTS, MOCK_COMMITTEES } from './constants';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useUser, useUnits, useTenants, useMaintenance, useAnnouncements, useDocuments, useCommittees, useEvents } from './hooks/useCoopData';
 
 const queryClient = new QueryClient({
@@ -34,26 +33,97 @@ const queryClient = new QueryClient({
 
 const AppContent: React.FC = () => {
   const [isAdminOverride, setIsAdminOverride] = useState(false);
-  const [coopName] = useState('Your Housing Co-op');
-  
-  // React Query hooks replace manual fetch/useEffect
-  const { data: user, isLoading: isUserLoading, refetch: fetchUser } = useUser();
-  const { data: units = MOCK_UNITS } = useUnits();
-  const { data: tenants = MOCK_TENANTS } = useTenants();
-  const { data: requests = MOCK_REQUESTS } = useMaintenance();
-  const { data: announcements = MOCK_ANNOUNCEMENTS } = useAnnouncements();
-  const { data: documents = MOCK_DOCS } = useDocuments();
-  const { data: committees = MOCK_COMMITTEES } = useCommittees();
-  const { data: events = MOCK_EVENTS } = useEvents();
+  const [coopName] = useState('coopHUB BC');
+  const queryClient = useQueryClient();
 
-  // Placeholder setters for backward compatibility during transition
-  const setUnits = () => {};
-  const setTenants = () => {};
-  const setRequests = () => {};
-  const setAnnouncements = () => {};
-  const setDocuments = () => {};
-  const setCommittees = () => {};
-  const setEvents = () => {};
+  const { data: user, isLoading: isUserLoading, refetch: fetchUser } = useUser();
+
+  // FIXED: Only fetch system data once authentication is fully confirmed
+  // Wait for user loading to complete AND ensure user exists
+  const isEnabled = !isUserLoading && !!user;
+
+  const {
+    data: units = [],
+    isLoading: isUnitsLoading,
+    isError: isUnitsError,
+    error: unitsError
+  } = useUnits({ enabled: isEnabled });
+
+  const {
+    data: tenants = [],
+    isLoading: isTenantsLoading,
+    isError: isTenantsError,
+    error: tenantsError
+  } = useTenants({ enabled: isEnabled });
+
+  const {
+    data: requests = [],
+    isLoading: isRequestsLoading,
+    isError: isRequestsError,
+    error: requestsError
+  } = useMaintenance({ enabled: isEnabled });
+
+  const {
+    data: announcements = [],
+    isLoading: isAnnouncementsLoading,
+    isError: isAnnouncementsError,
+    error: announcementsError
+  } = useAnnouncements({ enabled: isEnabled });
+
+  const {
+    data: documents = [],
+    isLoading: isDocumentsLoading,
+    isError: isDocumentsError,
+    error: documentsError
+  } = useDocuments({ enabled: isEnabled });
+
+  const {
+    data: committees = [],
+    isLoading: isCommitteesLoading,
+    isError: isCommitteesError,
+    error: committeesError
+  } = useCommittees({ enabled: isEnabled });
+
+  const {
+    data: events = [],
+    isLoading: isEventsLoading,
+    isError: isEventsError,
+    error: eventsError
+  } = useEvents({ enabled: isEnabled });
+
+  const createQueryArraySetter = <T,>(queryKey: string[]) =>
+    (value: React.SetStateAction<T[]>) => {
+      queryClient.setQueryData<T[]>(queryKey, (previous = []) =>
+        typeof value === 'function'
+          ? (value as (current: T[]) => T[])(previous)
+          : value
+      );
+    };
+
+  const setUnits = createQueryArraySetter<typeof units[number]>(['units']);
+  const setTenants = createQueryArraySetter<typeof tenants[number]>(['tenants']);
+  const setRequests = createQueryArraySetter<typeof requests[number]>(['maintenance']);
+  const setAnnouncements = createQueryArraySetter<typeof announcements[number]>(['announcements']);
+  const setDocuments = createQueryArraySetter<typeof documents[number]>(['documents']);
+  const setCommittees = createQueryArraySetter<typeof committees[number]>(['committees']);
+  const setEvents = createQueryArraySetter<typeof events[number]>(['events']);
+
+  // Error logging for debugging
+  useEffect(() => {
+    const errors = [
+      { name: 'Units', error: unitsError },
+      { name: 'Tenants', error: tenantsError },
+      { name: 'Maintenance', error: requestsError },
+      { name: 'Announcements', error: announcementsError },
+      { name: 'Documents', error: documentsError },
+      { name: 'Committees', error: committeesError },
+      { name: 'Events', error: eventsError },
+    ].filter(e => e.error);
+
+    if (errors.length > 0) {
+      console.error('Data loading errors:', errors);
+    }
+  }, [unitsError, tenantsError, requestsError, announcementsError, documentsError, committeesError, eventsError]);
 
   if (isUserLoading) {
     return (
@@ -76,37 +146,67 @@ const AppContent: React.FC = () => {
   return (
     <HashRouter>
       <ScrollToTop />
-      <Layout 
-        isAdmin={effectiveIsAdmin} 
+      <Layout
+        isAdmin={effectiveIsAdmin}
         isActualAdmin={user.isAdmin}
-        isGuest={isGuest}
         onToggleAdminView={() => setIsAdminOverride(!isAdminOverride)}
-        user={user} 
+        user={user}
         coopName={coopName}
       >
         <Routes>
-          <Route path="/" element={<Dashboard isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} announcements={announcements} units={units} tenants={tenants} requests={requests} events={events} />} />
-          <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} isGuest={isGuest} events={events} setEvents={setEvents} />} />
-          <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} events={events} setEvents={setEvents} />} />
-          <Route path="/announcements/:annId" element={<AnnouncementDetail announcements={announcements} />} />
-          <Route path="/committees" element={<Committees isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} committees={committees} setCommittees={setCommittees} tenants={tenants} documents={documents} />} />
-          <Route path="/maintenance" element={<Maintenance isAdmin={effectiveIsAdmin} isGuest={isGuest} requests={requests} setRequests={setRequests} units={units} />} />
-          <Route path="/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
-          <Route path="/documents" element={<ResourceLibrary isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} committees={committees} />} />
+          <Route
+            path="/"
+            element={
+              <Dashboard
+                isAdmin={effectiveIsAdmin}
+                user={user}
+                units={units}
+                isUnitsLoading={isUnitsLoading}
+                isUnitsError={isUnitsError}
+                tenants={tenants}
+                isTenantsLoading={isTenantsLoading}
+                isTenantsError={isTenantsError}
+                requests={requests}
+                isRequestsLoading={isRequestsLoading}
+                isRequestsError={isRequestsError}
+                announcements={announcements}
+                isAnnouncementsLoading={isAnnouncementsLoading}
+                isAnnouncementsError={isAnnouncementsError}
+                events={events}
+                isEventsLoading={isEventsLoading}
+                isEventsError={isEventsError}
+              />
+            }
+          />
+          <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} isGuest={isGuest} events={events} setEvents={setEvents} isEventsLoading={isEventsLoading} isEventsError={isEventsError} />} />
+          <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} events={events} setEvents={setEvents} isEventsLoading={isEventsLoading} isEventsError={isEventsError} />} />          <Route path="/announcements/:annId" element={<AnnouncementDetail announcements={announcements} isAnnouncementsLoading={isAnnouncementsLoading} isAnnouncementsError={isAnnouncementsError} />} />
+          <Route path="/committees" element={<Committees isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} committees={committees} setCommittees={setCommittees} tenants={tenants} documents={documents} isCommitteesLoading={isCommitteesLoading} isCommitteesError={isCommitteesError} />} />
+          <Route path="/maintenance" element={<Maintenance isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} isRequestsLoading={isRequestsLoading} isRequestsError={isRequestsError} />} />
+          <Route path="/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
+          <Route path="/documents" element={<ResourceLibrary isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} committees={committees} isDocumentsLoading={isDocumentsLoading} isDocumentsError={isDocumentsError} />} />
           <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} announcements={announcements} />} />
-          <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} isGuest={isGuest} announcements={announcements} setAnnouncements={setAnnouncements} />} />
-          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isGuest={isGuest} tenants={tenants} setTenants={setTenants} units={units} />} />
+          <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} announcements={announcements} setAnnouncements={setAnnouncements} />} />
+          <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} isTenantsLoading={isTenantsLoading} isTenantsError={isTenantsError} />} />
           <Route path="/admin/units/:unitId" element={<UnitDetail isAdmin={effectiveIsAdmin} units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} setRequests={setRequests} documents={documents} />} />
-          
+
           {/* Admin Routes */}
           {effectiveIsAdmin && (
             <>
               <Route path="/admin/units" element={<AdminUnits units={units} setUnits={setUnits} tenants={tenants} />} />
-              <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} isGuest={isGuest} tenants={tenants} setTenants={setTenants} units={units} />} />
+              <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} />} />
               <Route path="/admin/tenants/:tenantId" element={<TenantDetail tenants={tenants} units={units} requests={requests} />} />
               <Route path="/admin/waitlist" element={<Waitlist tenants={tenants} setTenants={setTenants} />} />
-              <Route path="/admin/reports" element={<Reports />} />
-              <Route path="/admin/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
+              <Route
+                path="/admin/reports"
+                element={
+                  <Reports
+                    units={units}
+                    tenants={tenants}
+                    requests={requests}
+                  />
+                }
+              />
+              <Route path="/admin/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
             </>
           )}
 

@@ -1,27 +1,68 @@
 import express from 'express';
-import cookieSession from 'cookie-session';
-import axios from 'axios';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
+import axios from 'axios';
+import cookieSession from 'cookie-session';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import driveRoutes from './drive.js';
 
 const app = express();
 
-// Trust proxy for secure cookies on Vercel
-app.set('trust proxy', true);
+const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
 
-// Health check route (at the very top to bypass middleware if needed)
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV
-  });
-});
+// Prisma singleton helper
+let prismaInstance: PrismaClient;
+const getPrisma = () => {
+  if (!prismaInstance) {
+    const dbUrl = process.env.DATABASE_URL || '';
+    if (dbUrl) {
+      console.log('DATABASE_URL protocol:', dbUrl.split(':')[0]);
+    } else {
+      console.error('DATABASE_URL is MISSING');
+    }
+    prismaInstance = new PrismaClient();
+  }
+  return prismaInstance;
+};
 
-// Validation Middleware
+const sanitizeUtf8 = (str: any) => {
+  if (typeof str !== 'string') return str;
+  return str.replace(/\0/g, '');
+};
+
+const getParam = (value: string | string[] | undefined): string => Array.isArray(value) ? value[0] ?? '' : value ?? '';
+
+const getCoopId = async (req: any, p: any = getPrisma()) => {
+  const user = (req as any).user || (req as any).session?.user;
+  
+  // 1. Direct session lookup (Most efficient)
+  if (user?.cooperativeId) return user.cooperativeId;
+
+  const email = user?.email;
+  if (email) {
+    const t = await p.tenant.findUnique({ where: { email: email.toLowerCase() } });
+    if (t?.cooperativeId) {
+      // Cache it in the session for subsequent requests in this session
+      if ((req as any).session?.user) {
+        (req as any).session.user.cooperativeId = t.cooperativeId;
+      }
+      return t.cooperativeId;
+    }
+  }
+
+  // Fallback to first cooperative if none found
+  const first = await p.cooperative.findFirst();
+  if (!first) throw new Error("No cooperative found in the system.");
+  
+  // Cache the fallback too
+  if ((req as any).session?.user) {
+    (req as any).session.user.cooperativeId = first.id;
+  }
+  return first.id;
+};
+
 const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
   try {
     schema.parse(req.body);
@@ -35,63 +76,45 @@ const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: exp
   }
 };
 
-// Helper to sanitize strings for PostgreSQL (removes null bytes and invalid UTF-8 sequences)
-const sanitizeUtf8 = (str: string): string => {
-  if (!str) return "";
-  const cleaned = Buffer.from(str, 'utf8').toString('utf8');
-  return cleaned
-    .replace(/\u0000/g, '')
-    .replace(/\0/g, '')
-    // eslint-disable-next-line no-control-regex
-    .replace(/\x00/g, '')
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g, "");
-};
-
-// Prisma singleton helper
-let prismaInstance: PrismaClient;
-const getPrisma = () => {
-  if (!prismaInstance) {
-    prismaInstance = new PrismaClient();
-  }
-  return prismaInstance;
-};
+// Trust proxy for secure cookies on Vercel
+app.set('trust proxy', true);
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Standard cookie-session middleware
-app.use(cookieSession({
-  name: 'session',
-  keys: [process.env.SESSION_SECRET || 'default_secret'],
-  maxAge: 24 * 60 * 60 * 1000, // 24 hours
-  secure: true, // Always true on Vercel (HTTPS)
-  sameSite: 'none',
-  httpOnly: true,
-  signed: true,
-  overwrite: true,
-}));
+app.use((req, res, next) => {
+  const host = req.get('x-forwarded-host') || req.get('host') || '';
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
 
-// Mock Data
-const ADMIN_EMAILS = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com'];
+  cookieSession({
+    name: 'session',
+    keys: [SESSION_SECRET],
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    secure: !isLocal, 
+    sameSite: isLocal ? 'lax' : 'none',
+    httpOnly: true,
+    signed: true,
+    overwrite: true,
+  })(req, res, next);
+});
 
+// Health check route
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
+});
 
-const getCoopId = async (req: any, p: any = getPrisma()) => {
-  const sessionUser = req.session?.user;
-  if (sessionUser?.tenantId) {
-    const t = await p.tenant.findUnique({ where: { id: sessionUser.tenantId } });
-    if (t?.cooperativeId) return t.cooperativeId;
+// Authentication Middleware
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if ((req as any).session?.user) {
+    (req as any).user = (req as any).session.user;
+    return next();
   }
-  const first = await p.cooperative.findFirst();
-  if (!first) throw new Error("No cooperative found in the system.");
-  return first.id;
-};
 
-const requireAuth = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const hasUser = !!(req as any).session?.user;
-  if (!hasUser) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  return next();
+  return res.status(401).json({ error: 'Unauthorized' });
 };
 
 // Robust Helper to get base URL
@@ -196,47 +219,9 @@ app.get('/auth/callback', async (req, res) => {
     const isAdmin = user?.role === 'ADMIN' || ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'].includes(email);
 
     // Dynamically resolve the best available Gemini model once at login
-    let resolvedModel = 'gemini-2.5-flash-lite'; // safe fallback
-    try {
-      const genAI = new GoogleGenerativeAI(process.env.API_KEY || '');
-      const { models } = await genAI.listModels();
+    const resolvedModel = DEFAULT_GEMINI_MODEL;
 
-      // Skip known deprecated/unavailable model families
-      const DEPRECATED = ['gemini-1.0', 'gemini-1.5', 'gemini-2.0', 'gemini-pro', 'aqa', 'embedding'];
-
-      const contentModels = models.filter(m => {
-        const name = m.name.toLowerCase();
-        return (
-          m.supportedGenerationMethods?.includes('generateContent') &&
-          name.includes('gemini') &&
-          !DEPRECATED.some(d => name.includes(d))
-        );
-      });
-
-      // Score: prefer flash-lite > flash > pro, boosted by version number
-      const score = (name: string): number => {
-        let s = 0;
-        if (name.includes('flash-lite') || name.includes('flash_lite')) s += 30;
-        else if (name.includes('flash')) s += 20;
-        else if (name.includes('pro')) s += 10;
-        const versionMatch = name.match(/(\d+\.\d+)/);
-        if (versionMatch) s += parseFloat(versionMatch[0]) * 2;
-        return s;
-      };
-
-      const ranked = contentModels.sort((a, b) => score(b.name.toLowerCase()) - score(a.name.toLowerCase()));
-      console.log(`[ModelResolver] Candidates:`, contentModels.map(m => m.name));
-
-      if (ranked[0]?.name) {
-        resolvedModel = ranked[0].name.replace('models/', '');
-        console.log(`[ModelResolver] Selected model for ${email}: ${resolvedModel}`);
-      } else {
-        console.warn('[ModelResolver] No non-deprecated models found, using fallback:', resolvedModel);
-      }
-    } catch (err) {
-      console.warn('[ModelResolver] Model listing failed, using fallback:', err);
-    }
-
+    (req as any).session = (req as any).session || {};
     (req as any).session.user = {
       email,
       name: userData.name,
@@ -244,6 +229,7 @@ app.get('/auth/callback', async (req, res) => {
       isAdmin,
       tenantId: user?.id || null,
       unitNumber: user?.unit?.number || null,
+      cooperativeId: user?.cooperativeId || null,
       role: user?.role || 'MEMBER',
       geminiModel: resolvedModel,
     };
@@ -284,145 +270,33 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
 // With your other routes, under your auth middleware
 app.use('/api/drive', requireAuth, driveRoutes);
 
-app.get('/api/seed/preventative', async (req, res) => {
-  try {
-    const p = getPrisma();
-    const units = await p.unit.findMany({ include: { cooperative: true } }); // Fetch all units to get their IDs
-
-
-    // Create a map for quick lookup of existing scheduled maintenance tasks
-    const existingTasks = await p.scheduledMaintenance.findMany({
-      select: { unitId: true, task: true }
-    });
-    const existingTaskSet = new Set(existingTasks.map(t => `${t.unitId}-${t.task}`));
-    const tasksToInsert: any[] = [];
-
-
-    console.log('Seeding preventative maintenance tasks...');
-
-
-    // Generate mock tasks for each unit, ensuring variety
-    units.forEach(unit => {
-      const numTasks = Math.floor(Math.random() * 4) + 1;
-
-      for (let i = 0; i < numTasks; i++) {
-        // Create a fresh date for every calculation to avoid mutation bugs
-        const dateBase = new Date();
-        let task: string;
-        let dueDate: Date;
-        let frequency: string;
-        let assignedTo: string;
-        let category: string;
-
-        switch (i) {
-          case 0:
-            task = 'HVAC Filter Replacement';
-            dateBase.setMonth(dateBase.getMonth() + 1);
-            dueDate = new Date(dateBase);
-            frequency = Math.random() > 0.5 ? 'MONTHLY' : 'QUARTERLY';
-            assignedTo = 'Building Management';
-            category = 'HVAC';
-            break;
-          case 1:
-            task = Math.random() > 0.5 ? 'Water Heater Flush' : 'Inspect Electrical Panel';
-            dateBase.setMonth(dateBase.getMonth() + (Math.random() > 0.5 ? 3 : 6));
-            dueDate = new Date(dateBase);
-            frequency = Math.random() > 0.5 ? 'QUARTERLY' : 'ANNUAL';
-            assignedTo = Math.random() > 0.5 ? 'Maintenance Team' : 'Electrician';
-            category = Math.random() > 0.5 ? 'PLUMBING' : 'ELECTRICAL';
-            break;
-          // ... Repeat logic for other cases ensuring dueDate = new Date(dateBase)
-          default:
-            task = 'Annual Fire Alarm Test';
-            dateBase.setFullYear(dateBase.getFullYear() + 1);
-            dueDate = new Date(dateBase);
-            frequency = 'ANNUAL';
-            assignedTo = 'Safety Officer';
-            category = 'SAFETY';
-            break;
-        }
-
-        if (!existingTaskSet.has(`${unit.id}-${task}`)) {
-          tasksToInsert.push({
-            unitId: unit.id,
-            cooperativeId: unit.cooperativeId,
-            task,
-            dueDate,
-            frequency,
-            assignedTo,
-            category,
-            isCompleted: false,
-          });
-        }
-      }
-    });
-
-    // Bulk insert is MUCH safer and faster
-    const result = await p.scheduledMaintenance.createMany({
-      data: tasksToInsert,
-      skipDuplicates: true, // Extra safety layer
-    });
-
-    res.json({
-      success: true,
-      message: `Seeded ${result.count} new tasks.`,
-    });
-  } catch (e: any) {
-    console.error(e);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-app.delete('/api/seed/preventative', async (req, res) => {
-  try {
-    await getPrisma().scheduledMaintenance.deleteMany();
-    res.json({ success: true, message: "Preventative maintenance tasks cleared." });
-  } catch (e: any) {
-    console.error('Clear preventative tasks error:', e);
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// Development Bypass Login
-app.post(['/api/auth/bypass', '/auth/bypass'], (req, res) => {
-  // Security check: Only allow in development or preview environments
-  const isProduction = process.env.NODE_ENV === 'production' && !process.env.VERCEL_ENV;
-  if (isProduction) {
-    return res.status(403).json({ error: 'Bypass not allowed in production' });
-  }
-
-  (req as any).session.user = {
-    email: 'guest@example.com',
-    name: 'Guest User',
-    picture: 'https://picsum.photos/seed/guest/200',
-    isAdmin: true,
-    isGuest: false,
-    tenantId: null,
-    unitNumber: 'GUEST-001'
-  };
-
-  res.json({ success: true, user: (req as any).session.user });
-});
-
 // --- Database API Routes ---
 
-app.get('/api/units', async (req, res) => {
-  const units = await getPrisma().unit.findMany({
-    include: {
-      currentTenant: true,
-      occupancyHistory: {
-        include: { tenant: true },
-        orderBy: { startDate: 'desc' }
+app.get('/api/units', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const units = await p.unit.findMany({
+      where: { cooperativeId: coopId },
+      include: {
+        currentTenant: true,
+        occupancyHistory: {
+          include: { tenant: true },
+          orderBy: { startDate: 'desc' }
+        }
       }
-    }
-  });
-  res.json(units);
+    });
+    res.json(units);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-app.get('/api/units/:id/scheduled-maintenance', async (req, res) => {
+app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) => {
   try {
+    const unitId = getParam(req.params.id);
     const tasks = await getPrisma().scheduledMaintenance.findMany({
-      where: { unitId: req.params.id },
+      where: { unitId },
       orderBy: { dueDate: 'asc' }
     });
     res.json(tasks);
@@ -431,10 +305,14 @@ app.get('/api/units/:id/scheduled-maintenance', async (req, res) => {
   }
 });
 
-app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {
+app.post('/api/tenants', requireAuth, validateRequest(tenantSchema), async (req, res) => {
   try {
     const tenant = await getPrisma().tenant.create({
-      data: req.body,
+      data: {
+        ...req.body,
+        cooperativeId: await getCoopId(req, getPrisma()),
+        startDate: new Date(req.body.startDate),
+      },
       include: { unit: true }
     });
     res.json(tenant);
@@ -444,16 +322,24 @@ app.post('/api/tenants', validateRequest(tenantSchema), async (req, res) => {
   }
 });
 
-app.get('/api/tenants', async (req, res) => {
-  const tenants = await getPrisma().tenant.findMany({
-    include: { unit: true }
-  });
-  res.json(tenants);
+app.get('/api/tenants', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const tenants = await p.tenant.findMany({
+      where: { cooperativeId: coopId },
+      include: { unit: true }
+    });
+    res.json(tenants);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-app.get('/api/tenants/:id/history', async (req, res) => {
+app.get('/api/tenants/:id/history', requireAuth, async (req, res) => {
+  const tenantId = getParam(req.params.id);
   const history = await getPrisma().tenantHistory.findMany({
-    where: { tenantId: req.params.id },
+    where: { tenantId },
     include: { unit: true },
     orderBy: { startDate: 'desc' }
   });
@@ -462,8 +348,8 @@ app.get('/api/tenants/:id/history', async (req, res) => {
 
 // --- Unit Turnover Endpoints ---
 
-app.post('/api/units/:id/move-out', async (req, res) => {
-  const { id } = req.params;
+app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
+  const id = getParam(req.params.id);
   const { date, reason } = req.body;
   try {
     await getPrisma().$transaction(async (tx) => {
@@ -503,8 +389,8 @@ app.post('/api/units/:id/move-out', async (req, res) => {
   }
 });
 
-app.post('/api/units/:id/move-in', async (req, res) => {
-  const { id } = req.params;
+app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
+  const id = getParam(req.params.id);
   const { tenantId, date } = req.body;
   try {
     await getPrisma().$transaction(async (tx) => {
@@ -561,8 +447,8 @@ app.post('/api/units/:id/move-in', async (req, res) => {
   }
 });
 
-app.post('/api/units/:id/transfer', async (req, res) => {
-  const { id } = req.params;
+app.post('/api/units/:id/transfer', requireAuth, async (req, res) => {
+  const id = getParam(req.params.id);
   const { toUnitId, date } = req.body;
   try {
     await getPrisma().$transaction(async (tx) => {
@@ -624,150 +510,210 @@ app.post('/api/units/:id/transfer', async (req, res) => {
   }
 });
 
-app.get('/api/maintenance', async (req, res) => {
+app.get('/api/maintenance', requireAuth, async (req, res) => {
   try {
-    const requests = await getPrisma().maintenanceRequest.findMany({
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const requests = await p.maintenanceRequest.findMany({
+      where: { cooperativeId: coopId },
       include: { unit: true },
       orderBy: { createdAt: 'desc' }
     });
-    // UI expects category as an array. Split the comma-separated string from DB.
+    // UI expects category as an array. The DB stores it as a comma-separated string or a single value.
     const mapped = requests.map(r => ({
       ...r,
-      category: r.category ? r.category.split(', ') : []
+      category: r.category ? (r.category.includes(', ') ? r.category.split(', ') : [r.category]) : []
     }));
     res.json(mapped);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/maintenance', async (req, res) => {
+app.post('/api/maintenance', requireAuth, async (req, res) => {
   const { title, description, status, priority, category, unitId, requestedBy, notes } = req.body;
-  const categoryString = Array.isArray(category) ? category.join(', ') : category;
-  const request = await getPrisma().maintenanceRequest.create({
-    data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
-      title,
-      description,
-      status,
-      priority,
-      category: categoryString,
-      unitId,
-      requestedBy,
-      notes: notes || []
+  const categoryString = Array.isArray(category) ? category.join(', ') : (category || 'General');
+  
+  try {
+    const p = getPrisma();
+    const user = (req as any).user;
+    let tenantId = null;
+    
+    if (user?.email) {
+      const t = await p.tenant.findUnique({ where: { email: user.email } });
+      tenantId = t?.id || null;
     }
-  });
-  res.json(request);
+
+    const request = await p.maintenanceRequest.create({
+      data: {
+        cooperativeId: await getCoopId(req, p),
+        title,
+        description,
+        status: status || 'Pending',
+        priority: priority || 'Medium',
+        category: categoryString,
+        unitId,
+        tenantId: tenantId,
+        requestedBy: requestedBy || user?.email,
+        notes: notes || []
+      }
+    });
+    res.json(request);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-app.put('/api/maintenance/:id', async (req, res) => {
-  const { title, description, status, priority, category, unitId, notes } = req.body;
-  const categoryString = Array.isArray(category) ? category.join(', ') : category;
-  const request = await getPrisma().maintenanceRequest.update({
-    where: { id: req.params.id },
-    data: {
-      title,
-      description,
-      status,
-      priority,
-      category: categoryString,
-      unitId,
-      notes: notes || []
-    }
-  });
-  res.json(request);
+app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
+  const body = req.body;
+  
+  const data: any = {};
+  if (body.title !== undefined) data.title = body.title;
+  if (body.description !== undefined) data.description = body.description;
+  if (body.status !== undefined) data.status = body.status;
+  if (body.priority !== undefined) data.priority = body.priority;
+  if (body.category !== undefined) {
+    data.category = Array.isArray(body.category) ? body.category.join(', ') : String(body.category);
+  }
+  if (body.unitId !== undefined) data.unitId = body.unitId;
+  if (body.requestedBy !== undefined) data.requestedBy = body.requestedBy;
+  if (body.notes !== undefined) data.notes = body.notes;
+  if (body.expenses !== undefined) data.expenses = body.expenses;
+
+  try {
+    const maintenanceId = getParam(req.params.id);
+    const request = await getPrisma().maintenanceRequest.update({
+      where: { id: maintenanceId },
+      data
+    });
+    res.json(request);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 
-app.delete('/api/maintenance/:id', async (req, res) => {
-  await getPrisma().maintenanceRequest.delete({ where: { id: req.params.id } });
+app.delete('/api/maintenance/:id', requireAuth, async (req, res) => {
+  const maintenanceId = getParam(req.params.id);
+  await getPrisma().maintenanceRequest.delete({ where: { id: maintenanceId } });
   res.json({ success: true });
 });
 
-app.get('/api/announcements', async (req, res) => {
-  const announcements = await getPrisma().announcement.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(announcements);
+app.get('/api/announcements', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const announcements = await p.announcement.findMany({
+      where: { cooperativeId: coopId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(announcements);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/announcements', async (req, res) => {
+app.post('/api/announcements', requireAuth, async (req, res) => {
   const { title, content, type, priority, author, date } = req.body;
-  const announcement = await getPrisma().announcement.create({
-    data: {
-      cooperativeId: await getCoopId(req, getPrisma()), title, content, type, priority, author, date }
-  });
-  res.json(announcement);
+  try {
+    const p = getPrisma();
+    const announcement = await p.announcement.create({
+      data: {
+        cooperativeId: await getCoopId(req, p), title, content, type, priority, author, date }
+    });
+    res.json(announcement);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/announcements/:id', async (req, res) => {
+app.put('/api/announcements/:id', requireAuth, async (req, res) => {
   const { title, content, type, priority, date } = req.body;
-  const announcement = await getPrisma().announcement.update({
-    where: { id: req.params.id },
-    data: { title, content, type, priority, date }
-  });
-  res.json(announcement);
+  try {
+    const announcementId = getParam(req.params.id);
+    const announcement = await getPrisma().announcement.update({
+      where: { id: announcementId },
+      data: { title, content, type, priority, date }
+    });
+    res.json(announcement);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/announcements/:id', async (req, res) => {
-  await getPrisma().announcement.delete({ where: { id: req.params.id } });
-  res.json({ success: true });
+app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
+  try {
+    const announcementId = getParam(req.params.id);
+    await getPrisma().announcement.delete({ where: { id: announcementId } });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/documents', async (req, res) => {
-  const documents = await getPrisma().document.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
-  res.json(documents);
+app.get('/api/documents', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const documents = await p.document.findMany({
+      where: { cooperativeId: coopId },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(documents);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/documents', async (req, res) => {
+app.post('/api/documents', requireAuth, async (req, res) => {
   const { title, category, url, fileType, author, date, tags, committee, content } = req.body;
 
-  // Tag generation temporarily disabled for basic metadata sync
-  const currentYear = new Date().getFullYear().toString();
-  const committeeTags = committee ? [committee] : [];
-  const providedTags = Array.isArray(tags) ? tags : [];
-  const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
+  try {
+    const p = getPrisma();
+    // Tag generation temporarily disabled for basic metadata sync
+    const currentYear = new Date().getFullYear().toString();
+    const committeeTags = committee ? [committee] : [];
+    const providedTags = Array.isArray(tags) ? tags : [];
+    const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
 
-  const document = await getPrisma().document.create({
-    data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
-      title: title || 'Untitled Document',
-      category: category || 'General',
-      url: url || '#',
-      fileType: fileType || 'txt',
-      author: author || ((req as any).session?.user?.name || 'System'),
-      date: date || new Date().toISOString(),
-      tags: finalTags,
-      committee: committee || null,
-      content: content || null,
-    } as any
-  });
-  res.json(document);
-  });
-
-  app.put('/api/documents/:id', async (req, res) => {
-  const { title, category, tags, committee, content } = req.body;
-  const document = await getPrisma().document.update({
-    where: { id: req.params.id },
-    data: { 
-      title, 
-      category, 
-      tags: tags ? { set: tags } : undefined, 
-      committee: committee !== undefined ? (committee || null) : undefined,
-      content 
-    } as any
-  });
-  res.json(document);
-  });
-
-app.delete('/api/documents/:id', async (req, res) => {
-  await getPrisma().document.delete({ where: { id: req.params.id } });
-  res.json({ success: true });
+    const document = await p.document.create({
+      data: {
+        cooperativeId: await getCoopId(req, p),
+        title: title || 'Untitled Document',
+        category: category || 'General',
+        url: url || '#',
+        fileType: fileType || 'txt',
+        author: author || ((req as any).user?.name || 'System'),
+        date: date || new Date().toISOString(),
+        tags: finalTags,
+        committee: committee || null,
+        content: content || null,
+      } as any
+    });
+    res.json(document);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/committees', async (req, res) => {
+  app.put('/api/documents/:id', requireAuth, async (req, res) => {
+  const { title, category, tags, committee, content } = req.body;
   try {
-    const committees = await getPrisma().committee.findMany({
+    const documentId = getParam(req.params.id);
+    const document = await getPrisma().document.update({
+      where: { id: documentId },
+      data: { 
+        title, 
+        category, 
+        tags: tags ? { set: tags } : undefined, 
+        committee: committee !== undefined ? (committee || null) : undefined,
+        content 
+      } as any
+    });
+    res.json(document);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+app.delete('/api/documents/:id', requireAuth, async (req, res) => {
+  try {
+    const documentId = getParam(req.params.id);
+    await getPrisma().document.delete({ where: { id: documentId } });
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/committees', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const committees = await p.committee.findMany({
+      where: { cooperativeId: coopId },
       include: { 
         members: true,
         events: true 
@@ -782,15 +728,20 @@ app.get('/api/committees', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/events', async (req, res) => {
-  const events = await getPrisma().coopEvent.findMany({
-    include: { attendees: true },
-    orderBy: { date: 'asc' }
-  });
-  res.json(events);
+app.get('/api/events', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const events = await p.coopEvent.findMany({
+      where: { cooperativeId: coopId },
+      include: { attendees: true },
+      orderBy: { date: 'asc' }
+    });
+    res.json(events);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/events', async (req, res) => {
+app.post('/api/events', requireAuth, async (req, res) => {
   const { title, description, date, time, location, category, committeeId } = req.body;
   const event = await getPrisma().coopEvent.create({
     data: {
@@ -808,10 +759,11 @@ app.post('/api/events', async (req, res) => {
   res.json(event);
 });
 
-app.put('/api/events/:id', async (req, res) => {
+app.put('/api/events/:id', requireAuth, async (req, res) => {
   const { title, description, date, time, location, category, committeeId } = req.body;
+  const eventId = getParam(req.params.id);
   const event = await getPrisma().coopEvent.update({
-    where: { id: req.params.id },
+    where: { id: eventId },
     data: { 
       title, 
       description, 
@@ -826,16 +778,17 @@ app.put('/api/events/:id', async (req, res) => {
   res.json(event);
 });
 
-app.post('/api/events/:id/attend', async (req, res) => {
-  const user = (req as any).session?.user;
+app.post('/api/events/:id/attend', requireAuth, async (req, res) => {
+  const user = (req as any).user || (req as any).session?.user;
   if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
+    const eventId = getParam(req.params.id);
     const tenant = await getPrisma().tenant.findUnique({ where: { email: user.email } });
     if (!tenant) return res.status(404).json({ error: 'Tenant record not found for this user' });
 
     const event = await getPrisma().coopEvent.update({
-      where: { id: req.params.id },
+      where: { id: eventId },
       data: {
         attendees: {
           connect: { id: tenant.id }
@@ -849,8 +802,9 @@ app.post('/api/events/:id/attend', async (req, res) => {
   }
 });
 
-app.delete('/api/events/:id', async (req, res) => {
-  await getPrisma().coopEvent.delete({ where: { id: req.params.id } });
+app.delete('/api/events/:id', requireAuth, async (req, res) => {
+  const eventId = getParam(req.params.id);
+  await getPrisma().coopEvent.delete({ where: { id: eventId } });
   res.json({ success: true });
 });
 
@@ -863,10 +817,11 @@ const getAI = () => {
   return new GoogleGenerativeAI(apiKey || '');
 };
 
-app.post('/api/ai/triage', async (req, res) => {
+app.post('/api/ai/triage', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
-    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
+    const user = (req as any).user || (req as any).session?.user;
+    const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
     const model = genAI.getGenerativeModel({
       model: resolvedModel,
       generationConfig: {
@@ -892,10 +847,11 @@ app.post('/api/ai/triage', async (req, res) => {
   }
 });
 
-app.post('/api/ai/policy', async (req, res) => {
+app.post('/api/ai/policy', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
-    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
+    const user = (req as any).user || (req as any).session?.user;
+    const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { question, context } = req.body;
 
@@ -911,10 +867,11 @@ app.post('/api/ai/policy', async (req, res) => {
   }
 });
 
-app.post('/api/ai/summarize', async (req, res) => {
+app.post('/api/ai/summarize', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
-    const resolvedModel = (req as any).session?.user?.geminiModel || 'gemini-2.5-flash-lite';
+    const user = (req as any).user || (req as any).session?.user;
+    const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { content } = req.body;
 
@@ -931,26 +888,83 @@ app.get('/api/migrate', async (req, res) => {
   try {
     const p = getPrisma();
 
-    console.log('Running raw SQL migrations...');
+    console.log('Running robust SQL migrations...');
+    
+    // 1. Create Cooperative table
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Cooperative" (
+        "id" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "slug" TEXT NOT NULL,
+        "address" TEXT,
+        "city" TEXT,
+        "province" TEXT NOT NULL DEFAULT 'BC',
+        "adminEmail" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "Cooperative_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Cooperative_slug_key" ON "Cooperative"("slug");`);
+
+    // 2. Add cooperativeId to all models
+    const tables = [
+      "Unit", "Tenant", "TenantHistory", "MaintenanceRequest", 
+      "Announcement", "Document", "CoopEvent", "Committee"
+    ];
+    for (const table of tables) {
+      await p.$executeRawUnsafe(`ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS "cooperativeId" TEXT;`);
+    }
+
+    // 3. Add specific missing columns
     await p.$executeRawUnsafe(`ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT 'MEMBER';`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committee" TEXT DEFAULT '';`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
-
-    // Explicitly DROP columns if they exist to match metadata-only goal
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "content" TEXT;`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "isPrivate";`);
+
+    // 4. Handle Enums and ScheduledMaintenance
+    // Check if types exist before creating
+    try {
+      await p.$executeRawUnsafe(`CREATE TYPE "MaintenanceFrequency" AS ENUM ('MONTHLY', 'QUARTERLY', 'ANNUAL');`);
+    } catch (e) { /* ignore if exists */ }
+    
+    try {
+      await p.$executeRawUnsafe(`CREATE TYPE "MaintenanceCategory" AS ENUM ('PLUMBING', 'ELECTRICAL', 'HVAC', 'SAFETY', 'GENERAL', 'OTHER');`);
+    } catch (e) { /* ignore if exists */ }
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "ScheduledMaintenance" (
+        "id" TEXT NOT NULL,
+        "unitId" TEXT NOT NULL,
+        "task" TEXT NOT NULL,
+        "description" TEXT,
+        "frequency" "MaintenanceFrequency" NOT NULL,
+        "dueDate" TIMESTAMP(3) NOT NULL,
+        "lastCompleted" TIMESTAMP(3),
+        "assignedTo" TEXT NOT NULL,
+        "isCompleted" BOOLEAN NOT NULL DEFAULT false,
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "category" "MaintenanceCategory" NOT NULL,
+        "cooperativeId" TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "ScheduledMaintenance_pkey" PRIMARY KEY ("id")
+      );
+    `);
+
+    // 5. Foreign Key Constraints (Ensure they exist or add them)
+    // Note: We skip complex FK management here to avoid errors if they already exist, 
+    // focusing on structure first.
 
     // Check if seeding is needed
     const unitCount = await p.unit.count();
-    let seeded = false;
-
+    
     if (unitCount === 0) {
-      console.log('Database empty, triggering auto-seed...');
-      // We can't easily call the /api/seed endpoint internally, so we'll just 
-      // suggest the user visit it, or we could move the logic to a helper.
-      // For simplicity and speed, let's just make the message clear.
+      console.log('Database empty, triggering auto-seed info...');
       return res.json({
         success: true,
-        message: "Database schema updated. Please now visit /api/seed once to restore your data."
+        message: "Database schema updated successfully. Please now visit /api/seed to restore your data."
       });
     }
 
@@ -1009,7 +1023,6 @@ app.get('/api/seed', async (req, res) => {
     ];
 
     const tenantData = [
-      // Couples in 102, 103, 104, 202, 205, 301, 305, 306, 309, 401, 403, 407
       { firstName: 'Margaret', lastName: 'Chen', email: 'margaret.chen@email.com', phone: '250-555-0101', startDate: '2019-03-15', status: 'Current', unit: '101' },
       { firstName: 'David', lastName: 'Okafor', email: 'david.okafor@email.com', phone: '250-555-0102', startDate: '2020-07-01', status: 'Current', unit: '102' },
       { firstName: 'Priya', lastName: 'Sharma', email: 'priya.sharma@email.com', phone: '250-555-0103', startDate: '2021-01-10', status: 'Current', unit: '102' },
@@ -1159,7 +1172,6 @@ app.get('/api/seed', async (req, res) => {
     for (const t of tenantData) {
       const tenant = await p.tenant.create({
         data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
           firstName: sanitizeUtf8(t.firstName),
           lastName: sanitizeUtf8(t.lastName),
           email: sanitizeUtf8(t.email),
@@ -1196,7 +1208,7 @@ app.get('/api/seed', async (req, res) => {
     for (const m of maintenanceData) {
       await p.maintenanceRequest.create({
         data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
+          cooperativeId: await getCoopId(req, getPrisma()),
           title: sanitizeUtf8(m.title).trim(),
           description: sanitizeUtf8(m.description).trim(),
           status: m.status,
@@ -1205,7 +1217,6 @@ app.get('/api/seed', async (req, res) => {
           unitId: unitMap[m.unitNumber],
           tenantId: tenants[m.requestedBy]?.id || null,
           requestedBy: sanitizeUtf8(m.requestedBy),
-          cooperativeId: coopId
         }
       });
     }
@@ -1215,14 +1226,13 @@ app.get('/api/seed', async (req, res) => {
       const dt = new Date(e.date);
       await p.coopEvent.create({
         data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
+          cooperativeId: await getCoopId(req, getPrisma()),
           title: sanitizeUtf8(e.title).trim(),
           description: sanitizeUtf8(e.description).trim(),
           date: dt,
           time: dt.toISOString().split('T')[1].substring(0, 5),
           location: sanitizeUtf8(e.location).trim(),
           category: "General",
-          cooperativeId: coopId
         }
       });
     }
@@ -1231,14 +1241,13 @@ app.get('/api/seed', async (req, res) => {
     for (const a of announcementData) {
       await p.announcement.create({
         data: {
-      cooperativeId: await getCoopId(req, getPrisma()),
+          cooperativeId: await getCoopId(req, getPrisma()),
           title: sanitizeUtf8(a.title).trim(),
           content: sanitizeUtf8(a.content).trim(),
           type: a.type,
           priority: a.priority,
           author: sanitizeUtf8(a.author).trim(),
           date: new Date(a.date),
-          cooperativeId: coopId
         }
       });
     }

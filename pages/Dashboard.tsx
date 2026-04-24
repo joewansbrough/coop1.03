@@ -2,26 +2,23 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import StatCard from '../components/StatCard';
-import { RequestStatus, Unit, MaintenancePriority } from '../types';
-import { useUnits, useTenants, useMaintenance, useAnnouncements, useEvents } from '../hooks/useCoopData';
-import { MOCK_ANNOUNCEMENTS, MOCK_DOCS, MOCK_UNITS, MOCK_TENANTS, MOCK_REQUESTS, MOCK_EVENTS, MOCK_COMMITTEES } from '../constants';
+import { RequestStatus, Unit, MaintenancePriority, Tenant, MaintenanceRequest, Announcement, CoopEvent } from '../types';
 import { formatDate, formatShortDate } from '../utils/dateUtils';
 
 interface DashboardProps {
   isAdmin: boolean;
-  isGuest?: boolean;
   user: {
     name: string;
     [key: string]: any;
   };
+  units: Unit[];
+  tenants: Tenant[];
+  requests: MaintenanceRequest[];
+  announcements: Announcement[];
+  events: CoopEvent[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
-  const { data: units = MOCK_UNITS } = useUnits();
-  const { data: tenants = MOCK_TENANTS } = useTenants();
-  const { data: requests = MOCK_REQUESTS } = useMaintenance();
-  const { data: announcements = MOCK_ANNOUNCEMENTS } = useAnnouncements();
-  const { data: events = MOCK_EVENTS } = useEvents();
+const Dashboard: React.FC<DashboardProps> = ({ isAdmin, user, units, tenants, requests, announcements, events }) => {
   const navigate = useNavigate();
 
   const firstName = user?.name ? user.name.split(' ')[0] : '';
@@ -42,8 +39,13 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
   
   // Find closest upcoming meeting
   const now = new Date();
+  now.setHours(0, 0, 0, 0); // Normalize to start of day
   const nextMeeting = events
-    .filter(e => (e.category === 'Meeting' || e.category === 'Board') && new Date(e.date) >= now)
+    .filter(e => {
+        const eventDate = new Date(e.date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= now;
+    })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
 
   const unitChartData = [
@@ -78,11 +80,11 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
     return (
       <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 transition-colors duration-200">
         {/* Admin Welcome Header */}
-        <div className="relative overflow-hidden bg-slate-900 dark:bg-slate-950 rounded-[2.5rem] p-8 lg:p-12 text-white border border-white/5 shadow-2xl shadow-brand-500/10">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-500/10 rounded-full -mr-40 -mt-40 blur-[100px] pointer-events-none opacity-50"></div>
+        <div className="relative overflow-hidden bg-slate-900 dark:bg-slate-950 rounded-[20px] p-8 lg:p-12 text-white border border-white/5 shadow-2xl shadow-teal-accent/20">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-teal-accent/20 rounded-full -mr-40 -mt-40 blur-[100px] pointer-events-none opacity-50"></div>
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-500/10 text-brand-400 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 border border-brand-500/20">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-accent/20 text-teal-accent rounded-[20px] text-[10px] font-black uppercase tracking-widest mb-6 border border-teal-accent/20">
                 <i className="fa-solid fa-shield-halved"></i> Co-Operative Housing Association Admin Hub
               </div>
               <h1 className="text-4xl lg:text-6xl font-black mb-6 leading-tight">Welcome home, {firstName}.</h1>
@@ -90,39 +92,36 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin, isGuest, user }) => {
                 Manage units, residents, and maintenance across your co-op community.
               </p>
               <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link to="/maintenance" className="bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95 shadow-lg shadow-brand-500/20">
+                <Link to="/maintenance" className="bg-teal-accent hover:bg-teal-700 text-white px-8 py-4 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 active:scale-95 shadow-lg shadow-teal-accent/20">
                   <i className="fa-solid fa-wrench"></i> Service Queue
-                </Link>
-                <Link to="/admin/reports" className="bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all backdrop-blur-xl border border-white/10 flex items-center justify-center gap-3">
-                  <i className="fa-solid fa-chart-line"></i> Financial Reports
                 </Link>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid grid-rows-2 gap-4">
-                  <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
-                    <p className="text-[10px] font-black text-brand-400 uppercase tracking-widest mb-2">Managed Units</p>
+                  <div className="bg-white/5 p-6 rounded-[20px] border border-white/5 backdrop-blur-md flex flex-col justify-center">
+                    <p className="text-[10px] font-black text-teal-accent uppercase tracking-widest mb-2">Managed Units</p>
                     <p className="text-2xl font-black">{units.length}</p>
                   </div>
-                  <div className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center">
-                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Residents</p>
+                  <div className="bg-white/5 p-6 rounded-[20px] border border-white/5 backdrop-blur-md flex flex-col justify-center">
+                    <p className="text-[10px] font-black text-teal-accent uppercase tracking-widest mb-2">Residents</p>
                     <p className="text-2xl font-black">{tenants.filter(t => t.status === 'Current').length}</p>
                   </div>
               </div>
               <div className="flex h-full">
                   {nextMeeting ? (
-                    <Link to={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center">
+                    <Link to={`/calendar/${nextMeeting.id}`} className="w-full bg-white/5 p-8 rounded-[20px] border border-white/5 backdrop-blur-md hover:bg-white/10 transition-all hover:scale-[1.02] active:scale-95 flex flex-col justify-center items-center text-center">
                       <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-4">Next Meeting</p>
-                      <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-400 mb-4">
+                      <div className="w-16 h-16 bg-amber-500/20 rounded-[20px] flex items-center justify-center text-amber-400 mb-4">
                         <i className="fa-solid fa-calendar-day text-2xl"></i>
                       </div>
                       <p className="text-3xl font-black mb-1">{formatShortDate(nextMeeting.date)}</p>
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-tight line-clamp-2">{nextMeeting.title}</p>
                     </Link>
                   ) : (
-                    <div className="w-full bg-white/5 p-8 rounded-3xl border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
+                    <div className="w-full bg-white/5 p-8 rounded-[20px] border border-white/5 backdrop-blur-md flex flex-col justify-center items-center text-center">
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Next Meeting</p>
-                      <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-slate-600 mb-4">
+                      <div className="w-16 h-16 bg-white/5 rounded-[20px] flex items-center justify-center text-slate-600 mb-4">
                         <i className="fa-solid fa-calendar-xmark text-2xl"></i>
                       </div>
                       <p className="text-xl font-black">TBD</p>

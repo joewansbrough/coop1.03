@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { CoopEvent, Tenant } from '../types';
+import AppAlert from '../components/AppAlert';
 
 interface EventDetailProps {
   isAdmin: boolean;
@@ -17,6 +18,12 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   const [event, setEvent] = useState(events.find(e => e.id === eventId));
   const [isEditing, setIsEditing] = useState(false);
   const [isAttending, setIsAttending] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
   
   const isTemp = event?.id.toString().startsWith('temp-');
 
@@ -55,7 +62,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       const updatedTempEvent = { ...event, ...payload };
       setEvents(events.map(ev => ev.id === event.id ? updatedTempEvent : ev));
       setIsEditing(false);
-      alert("Temporary event updated for this session.");
+      showAlert('Temporary event updated for this session.', 'success');
       return;
     }
 
@@ -68,9 +75,10 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       const data = await res.json();
       setEvents(events.map(ev => ev.id === event.id ? data : ev));
       setIsEditing(false);
-      alert("Event details updated successfully!");
+      showAlert('Event details updated successfully.', 'success');
     } catch (err) {
       console.error(err);
+      showAlert('Failed to update event details.', 'error');
     }
   };
 
@@ -85,16 +93,19 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       if (res.ok) {
         setEvents(events.map(ev => ev.id === event.id ? data : ev));
         setIsAttending(true);
+        showAlert('Attendance confirmed.', 'success');
       } else {
-        alert(data.error || "Failed to confirm attendance.");
+        showAlert(data.error || 'Failed to confirm attendance.', 'error');
       }
     } catch (err) {
       console.error(err);
+      showAlert('Failed to confirm attendance.', 'error');
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12 transition-colors duration-200">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex items-center gap-4 text-slate-500 text-sm mb-2">
         <Link to="/calendar" className="hover:text-brand-600 transition-colors flex items-center gap-1">
           <i className="fa-solid fa-arrow-left"></i> Back to Calendar

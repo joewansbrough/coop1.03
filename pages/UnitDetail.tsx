@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { RequestStatus, Unit, Tenant, MaintenanceRequest, Document, ScheduledMaintenance } from '../types';
 import { useRefreshData, useUser } from '../hooks/useCoopData';
 import { formatDate } from '../utils/dateUtils';
+import AppAlert from '../components/AppAlert';
 
 interface UnitDetailProps {
   isAdmin?: boolean;
@@ -63,7 +64,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   const [activeTab, setActiveTab] = useState<'overview' | 'maintenance' | 'schedule' | 'occupancy' | 'history' | 'layout' | 'documents'>('overview');
   const [showUpload, setShowUpload] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+  const [notification, setNotification] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
   
   // Google Drive integration states
   const [isScriptsReady, setIsScriptsReady] = useState(false);
@@ -98,7 +99,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
 
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {
-      alert(`Missing Google Configuration. Please check your environment variables.`);
+      showNotification('Missing Google configuration. Please check your environment variables.', 'error');
       return;
     }
 
@@ -153,15 +154,14 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 body: JSON.stringify(newDoc)
               });
               if (res.ok) {
-                setNotification({ message: 'Document linked successfully from Google Drive.', type: 'success' });
+                showNotification('Document linked successfully from Google Drive.', 'success');
                 setShowUpload(false);
-                setTimeout(() => setNotification(null), 5000);
               } else {
                 throw new Error('Failed to save document reference');
               }
             } catch (err) {
               console.error('Failed to save drive doc:', err);
-              setNotification({ message: 'Failed to link document.', type: 'error' });
+              showNotification('Failed to link document.', 'error');
             }
           }
         })
@@ -179,6 +179,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   const [moveOutDate, setMoveOutDate] = useState(new Date().toISOString().split('T')[0]);
   const [moveOutReason, setMoveOutReason] = useState('Voluntary Household Departure');
   const [customReason, setCustomReason] = useState('');
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setNotification({ message, type });
+    window.setTimeout(() => setNotification(null), 5000);
+  };
 
   const MOVE_OUT_REASONS = [
     'Voluntary Household Departure',
@@ -241,8 +246,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
 
       refreshData();
       setShowMoveOutModal(false);
-      setNotification({ message: `Move-out processed for entire household (${residentsToMoveOut.length} members).`, type: 'success' });
-      setTimeout(() => setNotification(null), 5000);
+      showNotification(`Move-out processed for entire household (${residentsToMoveOut.length} members).`, 'success');
 
       // Reset modal state
       setMoveOutReason('Voluntary Household Departure');
@@ -250,7 +254,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
       setMoveOutDate(new Date().toISOString().split('T')[0]);
     } catch (err) {
       console.error(err);
-      alert("Failed to process move-out.");
+      showNotification('Failed to process move-out.', 'error');
     }
   };
   const handleMoveIn = async () => {
@@ -329,11 +333,10 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
         ? `Internal transfer processed. ${newTenant.firstName} has moved from Unit ${units.find(u => u.id === previousUnitId)?.number} to Unit ${unit.number}.`
         : `Move-in processed. ${newTenant.firstName} ${newTenant.lastName} is now the primary resident of Unit ${unit.number}.`;
       
-      setNotification({ message, type: 'success' });
-      setTimeout(() => setNotification(null), 5000);
+      showNotification(message, 'success');
     } catch (err) {
       console.error(err);
-      alert("Failed to process move-in.");
+      showNotification('Failed to process move-in.', 'error');
     }
   };
 
@@ -341,8 +344,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
     try {
       const res = await fetch('/api/seed/preventative');
       if (res.ok) {
-        setNotification({ message: 'Preventative maintenance tasks seeded for all units.', type: 'success' });
-        setTimeout(() => setNotification(null), 5000);
+        showNotification('Preventative maintenance tasks seeded for all units.', 'success');
         // Reload tasks for current unit
         const tasksRes = await fetch(`/api/units/${unitId}/scheduled-maintenance`);
         if (tasksRes.ok) {
@@ -354,8 +356,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
       }
     } catch (err) {
       console.error(err);
-      setNotification({ message: 'Failed to seed preventative tasks.', type: 'error' });
-      setTimeout(() => setNotification(null), 5000);
+      showNotification('Failed to seed preventative tasks.', 'error');
     }
   };
 
@@ -417,12 +418,11 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
       refreshData();
       setShowTransferModal(false);
       setSelectedTargetUnitId('');
-      setNotification({ message: `Internal transfer successful. Household (${residentsToMove.length} members) has moved to Unit ${targetUnit.number}.`, type: 'success' });
-      setTimeout(() => setNotification(null), 5000);
+      showNotification(`Internal transfer successful. Household (${residentsToMove.length} members) has moved to Unit ${targetUnit.number}.`, 'success');
       navigate(`/admin/units/${targetUnit.id}`);
     } catch (err) {
       console.error(err);
-      alert("Failed to process transfer.");
+      showNotification('Failed to process transfer.', 'error');
     }
   };
 
@@ -614,23 +614,12 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
         </div>
       </header>
 
-      {/* In-App Notifications */}
-      {notification && (
-        <div className={`fixed top-6 right-6 z-[200] animate-in slide-in-from-right-8 duration-300 p-4 rounded-2xl border flex items-center gap-4 max-w-md ${
-          notification.type === 'success' ? 'bg-brand-600 border-brand-500 text-white' : 'bg-rose-600 border-rose-500 text-white'
-        }`}>
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-            <i className={`fa-solid ${notification.type === 'success' ? 'fa-circle-check' : 'fa-circle-exclamation'}`}></i>
+        {/* In-App Notifications */}
+        {notification && (
+          <div className="fixed top-6 right-6 z-[200] w-full max-w-md px-4 sm:px-0">
+            <AppAlert message={notification.message} type={notification.type} onClose={() => setNotification(null)} />
           </div>
-          <div className="flex-1">
-            <p className="text-xs font-black uppercase tracking-widest opacity-70 mb-0.5">{notification.type}</p>
-            <p className="text-sm font-bold leading-tight">{notification.message}</p>
-          </div>
-          <button onClick={() => setNotification(null)} className="text-white/60 hover:text-white transition-colors">
-            <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-      )}
+        )}
 
       {/* Unit Settings Modal - Fixed Z-index and visibility */}
       {showSettings && (

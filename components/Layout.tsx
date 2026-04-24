@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { MOCK_NOTIFICATIONS } from '../constants';
+import { Home } from 'lucide-react';
 import ProfileModal from './ProfileModal';
 import HelpModal from './HelpModal';
 import OnboardingTour from './OnboardingTour';
@@ -31,7 +31,6 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -109,7 +108,6 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     { label: 'Maintenance', path: '/maintenance', icon: 'fa-tools' },
     { label: 'Documents', path: '/documents', icon: 'fa-file-lines' },
     { label: 'Policy Assistant', path: '/policy-assistant', icon: 'fa-robot' },
-    // { label: 'Finances', path: '/finances', icon: 'fa-wallet' }, // Hidden at launch
     { label: 'Communications', path: '/communications', icon: 'fa-comments' },
     { label: 'Directory', path: '/directory', icon: 'fa-address-book' },
   ];
@@ -120,8 +118,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     navItems.push(
       { label: 'Units', path: '/admin/units', icon: 'fa-house-chimney', isAdmin: true },
       { label: 'Tenants', path: '/admin/tenants', icon: 'fa-users', isAdmin: true },
-      { label: 'Waitlist', path: '/admin/waitlist', icon: 'fa-list-check', isAdmin: true },
-      { label: 'Reports', path: '/admin/reports', icon: 'fa-chart-pie', isAdmin: true }
+      { label: 'Waitlist', path: '/admin/waitlist', icon: 'fa-list-check', isAdmin: true }
     );
   }
 
@@ -138,93 +135,88 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       window.location.reload();
     }
   };
-
-  const unreadNotificationsCount = MOCK_NOTIFICATIONS.filter(n => !n.isRead).length;
-
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans transition-colors duration-200">
       {/* Sidebar Backdrop */}
       {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 dark:bg-slate-950 text-white flex flex-col transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 border-r border-white/5`}>
-        <div className="p-6 flex justify-between items-center lg:block">
-          <div>
-            <h1 className="text-sm font-black flex items-center gap-2 tracking-tight whitespace-nowrap">
-              <i className="fa-solid fa-house-signal text-brand-400 shrink-0"></i>
-              <span className="truncate">{coopName}</span>
-            </h1>
-            <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Co-op Management</p>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 text-slate-800 dark:text-white flex flex-col transition-transform duration-300 transform border-r border-slate-200 dark:border-white/5 ${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:relative lg:translate-x-0`}>
+      <div className="p-6">
+        <Link to="/" className="text-2xl font-black flex items-center gap-1 tracking-tight whitespace-nowrap">
+          <Home className="w-7 h-7 text-teal-600 dark:text-teal-400" />
+          <div className="flex items-center gap-0">
+            <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span>&nbsp;<span className="text-slate-900 dark:text-slate-100">BC</span>
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-400 hover:text-white">
-             <i className="fa-solid fa-xmark"></i>
-          </button>
-        </div>
+        </Link>
+        <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Co-op Management</p>
+      </div>
 
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto scrollbar-hide">
-          {navItems.map((item, index) => {
-            const isFirstAdminItem = isAdmin && item.isAdmin && !navItems[index - 1]?.isAdmin;
-            return (
-              <React.Fragment key={item.path}>
-                {isFirstAdminItem && (
-                  <div className="pt-6 pb-2 px-3">
-                    <p className="text-[10px] font-black text-brand-500 uppercase tracking-[0.2em]">Board Administration</p>
-                  </div>
-                )}
-                <Link
-                  to={item.path}
-                  onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${
-                    location.pathname === item.path 
-                      ? (item.isAdmin ? 'bg-amber-500 text-white' : 'bg-brand-600 text-white') 
-                      : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
-                  }`}
-                >
-                  <i className={`fa-solid ${item.icon} w-5 group-hover:scale-110 transition-transform ${location.pathname === item.path ? 'text-white' : (item.isAdmin ? 'text-amber-500/70' : 'text-slate-500')}`}></i>
-                  <span className="text-sm font-bold">{item.label}</span>
-                </Link>
-              </React.Fragment>
-            );
-          })}
-        </nav>
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto scrollbar-hide">
+        {navItems.map((item, index) => {
+          const isFirstAdminItem = isAdmin && item.isAdmin && !navItems[index - 1]?.isAdmin;
+          return (
+            <React.Fragment key={item.path}>
+              {isFirstAdminItem && (
+                <div className="pt-6 pb-2 px-3">
+                  <p className="text-[10px] font-black text-teal-accent uppercase tracking-[0.2em]">Board Administration</p>
+                </div>
+              )}
+              <Link
+                to={item.path}
+                onClick={() => setIsSidebarOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-[20px] transition-all group active:scale-95 ${
+                  location.pathname === item.path 
+                    ? 'bg-teal-accent text-white' 
+                    : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <i className={`fa-solid ${item.icon} w-5 ${location.pathname === item.path ? 'text-white' : 'text-slate-400'}`}></i>
+                <span className="text-sm font-bold">{item.label}</span>
+              </Link>
+            </React.Fragment>
+          );
+        })}
+      </nav>
 
-        <div className="p-4 border-t border-slate-800 space-y-2">
+      <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+        <button 
+          onClick={toggleDarkMode}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[20px] text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-teal-accent transition-all active:scale-95"
+        >
+          <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+          {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+        </button>
+        {isActualAdmin ? (
           <button 
-            onClick={toggleDarkMode}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-800 text-slate-400 hover:text-amber-400 transition-all"
+            onClick={onToggleAdminView} 
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${
+              isAdmin 
+                ? 'bg-amber-500 text-white hover:bg-amber-600' 
+                : 'bg-teal-accent text-white hover:bg-teal-700'
+            }`}
           >
-            <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
-            {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+            <i className={`fa-solid ${isAdmin ? 'fa-user-shield' : 'fa-user'}`}></i>
+            {isAdmin ? 'Switch to Tenant View' : 'Switch to Admin View'}
           </button>
-          {isActualAdmin ? (
-            <button 
-              onClick={onToggleAdminView} 
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${
-                isAdmin 
-                  ? 'bg-amber-500 text-white hover:bg-amber-600' 
-                  : 'bg-brand-600 text-white hover:bg-brand-700'
-              }`}
-            >
-              <i className={`fa-solid ${isAdmin ? 'fa-user-shield' : 'fa-user'}`}></i>
-              {isAdmin ? 'Switch to Tenant View' : 'Switch to Admin View'}
-            </button>
-          ) : (
-            <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-800 text-slate-500 cursor-default">
-              <i className="fa-solid fa-user"></i>
-              Resident Session
-            </div>
-          )}
-        </div>
+        ) : (
+          <div className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[20px] text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-default">
+            <i className="fa-solid fa-user"></i>
+            Resident Session
+          </div>
+        )}
+      </div>
       </aside>
-
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden w-full relative">
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 transition-colors duration-200">
-          <div className="flex items-center gap-3">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 transition-colors duration-200 relative">
+          <div className="flex items-center gap-3 z-10">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-brand-600 active:scale-95">
               <i className="fa-solid fa-bars-staggered text-xl"></i>
             </button>
-            <div className="hidden sm:flex flex-col">
+            <div className="hidden lg:flex flex-col">
               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">
                 <Link to="/" className="hover:text-brand-500 transition-colors">Home</Link>
                 {location.pathname !== '/' && (
@@ -246,7 +238,17 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             </div>
           </div>
 
-          <div className="flex items-center gap-1 lg:gap-3">
+          {/* Centered Logo for Mobile */}
+          <div className="absolute inset-0 flex items-center justify-center lg:hidden pointer-events-none">
+            <Link to="/" className="text-2xl font-black flex items-center gap-2 tracking-tight pointer-events-auto">
+              <Home className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+              <div className="flex items-center gap-0">
+                <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span>&nbsp;<span className="text-slate-900 dark:text-slate-100">BC</span>
+              </div>
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-1 lg:gap-3 z-10">
             <button 
               onClick={() => setIsSearchOpen(true)}
               className="p-2 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors hidden sm:block active:scale-95"
@@ -254,26 +256,16 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
             
-            <button 
-              onClick={() => setIsNotificationsOpen(true)}
-              className="p-2 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors relative active:scale-95"
-            >
-              <i className="fa-solid fa-bell"></i>
-              {unreadNotificationsCount > 0 && (
-                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900 animate-pulse"></span>
-              )}
-            </button>
-
             <div className="relative" ref={profileRef}>
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center gap-2 pl-2 lg:pl-4 border-l border-slate-200 dark:border-white/5 ml-2 active:scale-95"
               >
                 {user.picture ? (
-                  <img src={user.picture} alt={user.name} className="w-8 h-8 rounded-xl" referrerPolicy="no-referrer" />
+                  <img src={user.picture} alt={user.name || 'User'} className="w-8 h-8 rounded-xl" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-8 h-8 rounded-xl bg-slate-900 dark:bg-brand-600 flex items-center justify-center text-white font-black text-xs hover:bg-brand-600 transition-colors">
-                    {user.name.charAt(0)}
+                    {(user.name || 'User').charAt(0)}
                   </div>
                 )}
                 <i className={`fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`}></i>
@@ -308,48 +300,6 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             </div>
           </div>
         </header>
-
-        {/* Notifications Slide-over */}
-        {isNotificationsOpen && (
-          <>
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 transition-opacity" onClick={() => setIsNotificationsOpen(false)} />
-            <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-white dark:bg-slate-900 z-50 animate-in slide-in-from-right duration-300 flex flex-col">
-              <div className="p-6 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50">
-                <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-xs">Communication Queue</h3>
-                <button onClick={() => setIsNotificationsOpen(false)} className="w-8 h-8 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center transition-colors">
-                  <i className="fa-solid fa-xmark text-slate-500"></i>
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {MOCK_NOTIFICATIONS.length > 0 ? MOCK_NOTIFICATIONS.map(n => (
-                  <div key={n.id} className={`p-4 rounded-2xl border transition-all hover:border-brand-200 dark:hover:border-brand-400 cursor-pointer group ${!n.isRead ? 'bg-brand-50/30 dark:bg-brand-900/10 border-brand-100 dark:border-brand-900/30' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-white/5 opacity-70'}`}>
-                    <div className="flex justify-between items-start mb-2">
-                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${n.type === 'urgent' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'}`}>
-                        {n.type}
-                      </span>
-                      <span className="text-[9px] text-slate-400 font-bold uppercase">{n.timestamp}</span>
-                    </div>
-                    <h4 className="text-sm font-black text-slate-800 dark:text-white mb-1 group-hover:text-brand-700 dark:group-hover:text-brand-400">{n.title}</h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{n.body}</p>
-                  </div>
-                )) : (
-                  <div className="flex flex-col items-center justify-center h-full text-slate-300 dark:text-slate-700">
-                    <i className="fa-solid fa-inbox text-5xl mb-4 opacity-10"></i>
-                    <p className="text-xs font-black uppercase tracking-widest">Inbox Clean</p>
-                  </div>
-                )}
-              </div>
-              <div className="p-4 border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50">
-                <button 
-                  onClick={() => alert("All notifications marked as read.")}
-                  className="w-full bg-slate-900 dark:bg-brand-600 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-brand-700 transition-all active:scale-95"
-                >
-                  Clear All Alerts
-                </button>
-              </div>
-            </div>
-          </>
-        )}
 
         {/* Search Modal */}
         {isSearchOpen && (

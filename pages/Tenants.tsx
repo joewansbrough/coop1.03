@@ -2,21 +2,24 @@ import React, { useState } from 'react';
 import { Tenant, Unit } from '../types';
 import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
+import AppAlert from '../components/AppAlert';
 import axios from 'axios';
 import { formatDate, formatShortDate } from '../utils/dateUtils';
 
 interface TenantsProps {
   isAdmin?: boolean;
+  isLoading?: boolean;
   tenants: Tenant[];
   setTenants: React.Dispatch<React.SetStateAction<Tenant[]>>;
   units: Unit[];
 }
 
-const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants, units }) => {
+const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, isLoading = false, tenants, setTenants, units }) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -24,6 +27,11 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
   const [phone, setPhone] = useState('');
   const [unitId, setUnitId] = useState('');
   const [status, setStatus] = useState<'Current' | 'Waitlist'>('Current');
+
+  const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertMessage({ message, type });
+    window.setTimeout(() => setAlertMessage(null), 5000);
+  };
 
   const handleAddTenant = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,10 +53,10 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
       setTenants([...tenants, newTenant]);
       setShowAddForm(false);
       setFirstName(''); setLastName(''); setEmail(''); setPhone(''); setUnitId('');
-      alert("New member registered in association directory.");
+      showAlert('New member registered in association directory.', 'success');
     } catch (error: any) {
       console.error('Failed to add member:', error);
-      alert("Error registering member: " + (error.response?.data?.error || error.message));
+      showAlert(`Error registering member: ${error.response?.data?.error || error.message}`, 'error');
     }
   };
 
@@ -56,21 +64,42 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
     const matchesSearch =
       `${t.firstName} ${t.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
       t.email.toLowerCase().includes(search.toLowerCase()) ||
-      (t.unitId && units.find(u => u.id === t.unitId)?.number.includes(search));
-    const matchesFilter = filter === 'All' || t.status === filter;
+      (units.find(u => u.id === t.unitId)?.number.includes(search));
+    
+    // Improved filter logic
+    const matchesFilter = filter === 'All' || 
+                         (filter === 'Current' && t.status === 'Current') ||
+                         (filter === 'Waitlist' && t.status === 'Waitlist') ||
+                         (filter === 'Past' && t.status === 'Past');
     return matchesSearch && matchesFilter;
   });
 
-  const unitGroups = units.map(unit => {
-    const members = filteredTenants.filter(t => t.unitId === unit.id);
-    return { unit, members };
-  }).filter(g => g.members.length > 0)
-    .sort((a, b) => a.unit.number.localeCompare(b.unit.number, undefined, { numeric: true }));
+  const unitGroups = Object.values(
+    filteredTenants
+      .filter((tenant) => tenant.status === 'Current' && tenant.unitId)
+      .reduce((groups, tenant) => {
+        const key = tenant.unitId as string;
+        const fallbackUnit = units.find((unit) => unit.id === key);
+        const resolvedUnit = tenant.unit || fallbackUnit;
 
-  const waitlistMembers = filteredTenants.filter(t => !t.unitId);
+        if (!resolvedUnit) {
+          return groups;
+        }
+
+        if (!groups[key]) {
+          groups[key] = { unit: resolvedUnit, members: [] as Tenant[] };
+        }
+
+        groups[key].members.push(tenant);
+        return groups;
+      }, {} as Record<string, { unit: Unit; members: Tenant[] }>)
+  ).sort((a, b) => a.unit.number.localeCompare(b.unit.number, undefined, { numeric: true }));
+
+  const waitlistMembers = filteredTenants.filter(t => t.status === 'Waitlist');
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+      {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -159,7 +188,14 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
       />
 
       {/* ── Mobile: Card List ── */}
-      <div className="sm:hidden space-y-3">
+      {isLoading && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 px-6 py-12 text-center">
+          <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading member directory...</p>
+        </div>
+      )}
+
+      {!isLoading && <div className="sm:hidden space-y-3">
         {unitGroups.map(group => (
           <div key={group.unit.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 overflow-hidden">
             {/* Unit header */}
@@ -235,10 +271,10 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
             No member records found matching your criteria.
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Desktop: Table ── */}
-      <div className="hidden sm:block bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+      {!isLoading && <div className="hidden sm:block bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-white/5">
@@ -350,7 +386,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, tenants, setTenants,
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
     </div>
   );
 };
