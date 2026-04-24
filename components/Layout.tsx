@@ -145,7 +145,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:relative lg:translate-x-0`}>
       <div className="p-6">
-        <Link to="/" className="text-2xl font-black flex items-center gap-2 tracking-tight whitespace-nowrap">
+        <Link to="/" className="text-2xl font-black flex items-center gap-1 tracking-tight whitespace-nowrap">
           <Home className="w-7 h-7 text-teal-600 dark:text-teal-400" />
           <div className="flex items-center gap-0">
             <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span>&nbsp;<span className="text-slate-900 dark:text-slate-100">BC</span>
