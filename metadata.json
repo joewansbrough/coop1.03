@@ -1,5 +1,5 @@
 {
-  "name": "Test branch: <span class="text-slate-900 dark:text-white">coop</span><span class="text-teal-600 dark:text-teal-400">HUB</span><span class="text-slate-900 dark:text-white"> BC</span> - 1.04",
+  "name": "Test branch: coopHUB BC - 1.04",
   "description": "A comprehensive management platform for British Columbia housing co-operatives, featuring tenant tracking, maintenance workflows, document management, and AI-powered policy assistance.",
   "requestFramePermissions": []
 }

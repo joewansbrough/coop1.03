@@ -139,23 +139,12 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       {/* Sidebar Backdrop */}
       {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
-      {/* Header for Mobile */}
-      <header className="lg:hidden h-16 flex items-center justify-between px-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 z-20">
-        <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-500 hover:text-brand-600 active:scale-95">
-          <i className="fa-solid fa-bars-staggered text-xl"></i>
-        </button>
-        <Link to="/" className="text-sm font-black flex items-center gap-0 tracking-tight">
-          <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-slate-100">BC</span>
-        </Link>
-        <div className="w-8"></div>
-      </header>
-
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 text-slate-800 dark:text-white flex flex-col transition-transform duration-300 transform border-r border-slate-200 dark:border-white/5 ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:relative lg:translate-x-0`}>
       <div className="p-6">
-        <Link to="/" className="text-sm font-black flex items-center gap-1 tracking-tight whitespace-nowrap">
+        <Link to="/" className="text-sm font-black flex items-center gap-0 tracking-tight whitespace-nowrap">
           <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-slate-100"> BC</span>
         </Link>
         <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Co-op Management</p>
@@ -223,6 +212,9 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-brand-600 active:scale-95">
               <i className="fa-solid fa-bars-staggered text-xl"></i>
             </button>
+            <Link to="/" className="lg:hidden text-sm font-black flex items-center gap-0 tracking-tight">
+              <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-slate-100"> BC</span>
+            </Link>
             <div className="hidden sm:flex flex-col">
               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">
                 <Link to="/" className="hover:text-brand-500 transition-colors">Home</Link>

@@ -33,62 +33,62 @@ const queryClient = new QueryClient({
 
 const AppContent: React.FC = () => {
   const [isAdminOverride, setIsAdminOverride] = useState(false);
-  const [coopName] = useState('Your Housing Co-op');
+  const [coopName] = useState('coopHUB BC');
   const queryClient = useQueryClient();
 
   const { data: user, isLoading: isUserLoading, refetch: fetchUser } = useUser();
-  
+
   // FIXED: Only fetch system data once authentication is fully confirmed
   // Wait for user loading to complete AND ensure user exists
   const isEnabled = !isUserLoading && !!user;
 
-  const { 
-    data: units = [], 
+  const {
+    data: units = [],
     isLoading: isUnitsLoading,
     isError: isUnitsError,
-    error: unitsError 
+    error: unitsError
   } = useUnits({ enabled: isEnabled });
-  
-  const { 
-    data: tenants = [], 
+
+  const {
+    data: tenants = [],
     isLoading: isTenantsLoading,
     isError: isTenantsError,
-    error: tenantsError 
+    error: tenantsError
   } = useTenants({ enabled: isEnabled });
-  
-  const { 
+
+  const {
     data: requests = [],
     isLoading: isRequestsLoading,
     isError: isRequestsError,
-    error: requestsError 
+    error: requestsError
   } = useMaintenance({ enabled: isEnabled });
-  
-  const { 
+
+  const {
     data: announcements = [],
     isLoading: isAnnouncementsLoading,
     isError: isAnnouncementsError,
-    error: announcementsError 
+    error: announcementsError
   } = useAnnouncements({ enabled: isEnabled });
-  
-  const { 
+
+  const {
     data: documents = [],
     isLoading: isDocumentsLoading,
     isError: isDocumentsError,
-    error: documentsError 
+    error: documentsError
   } = useDocuments({ enabled: isEnabled });
-  
-  const { 
+
+  const {
     data: committees = [],
     isLoading: isCommitteesLoading,
     isError: isCommitteesError,
-    error: committeesError 
+    error: committeesError
   } = useCommittees({ enabled: isEnabled });
-  
-  const { 
+
+  const {
     data: events = [],
     isLoading: isEventsLoading,
     isError: isEventsError,
-    error: eventsError 
+    error: eventsError
   } = useEvents({ enabled: isEnabled });
 
   const createQueryArraySetter = <T,>(queryKey: string[]) =>
@@ -146,11 +146,11 @@ const AppContent: React.FC = () => {
   return (
     <HashRouter>
       <ScrollToTop />
-      <Layout 
+      <Layout
         isAdmin={effectiveIsAdmin}
         isActualAdmin={user.isAdmin}
         onToggleAdminView={() => setIsAdminOverride(!isAdminOverride)}
-        user={user} 
+        user={user}
         coopName={coopName}
       >
         <Routes>
@@ -188,7 +188,7 @@ const AppContent: React.FC = () => {
           <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} announcements={announcements} setAnnouncements={setAnnouncements} />} />
           <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} isTenantsLoading={isTenantsLoading} isTenantsError={isTenantsError} />} />
           <Route path="/admin/units/:unitId" element={<UnitDetail isAdmin={effectiveIsAdmin} units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} setRequests={setRequests} documents={documents} />} />
-          
+
           {/* Admin Routes */}
           {effectiveIsAdmin && (
             <>
@@ -209,7 +209,7 @@ const AppContent: React.FC = () => {
               <Route path="/admin/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} tenants={tenants} />} />
             </>
           )}
-          
+
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Layout>
