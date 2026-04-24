@@ -49,7 +49,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </div>
 
           <div className="relative z-10 w-full flex flex-col items-center lg:items-start">
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-2 mb-6">
               <Home className="w-10 h-10 text-teal-400" />
               <h1 className="text-4xl font-black tracking-tight text-white">
                 <span className="text-white">coop</span><span className="text-teal-400">HUB</span>&nbsp;<span className="text-white">BC</span>
