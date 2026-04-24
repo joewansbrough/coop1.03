@@ -84,7 +84,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
           <div className="mt-12 pt-8 border-t border-white/10 relative z-10">
             <p className="text-slate-400 text-xs font-medium leading-relaxed">
-              <span className=\"text-white\">coop</span><span className=\"text-teal-400\">HUB</span><span className=\"text-white\"> BC</span> is a secure platform designed specifically for British Columbia housing co-operatives.
+              <span className="text-white">coop</span><span className="text-teal-400">HUB</span><span className="text-white"> BC</span> is a secure platform designed specifically for British Columbia housing co-operatives.
               Access is restricted to registered members and board administrators.
             </p>
           </div>
@@ -133,7 +133,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       </motion.div>
 
       <div className="mt-8 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
-        &copy; 2026 <span className=\"text-white\">coop</span><span className=\"text-teal-400\">HUB</span><span className=\"text-white\"> BC</span> &bull; All Rights Reserved
+        &copy; 2026 <span className="text-white">coop</span><span className="text-teal-400">HUB</span><span className="text-white"> BC</span> &bull; All Rights Reserved
       </div>
     </div>
   );
