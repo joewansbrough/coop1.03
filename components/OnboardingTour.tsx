@@ -97,14 +97,14 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
 
   const handleComplete = () => {
     localStorage.setItem('onboarding_completed', 'true');
-    localStorage.removeItem('onboarding_hidden'); // Clear hidden if completed
+    localStorage.removeItem('onboarding_hidden');
     onClose();
   };
 
   const step = STEPS[currentStep];
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-md">
       <style>{`
         @keyframes radar-pulse {
           0% { transform: scale(1); opacity: 0.5; }
@@ -126,22 +126,19 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-white dark:bg-slate-900 w-full max-w-2xl min-h-[500px] md:h-[500px] rounded-[3rem] border border-slate-200 dark:border-white/10 overflow-hidden relative shadow-2xl"
+        className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] rounded-[2rem] sm:rounded-[3rem] border border-slate-200 dark:border-white/10 overflow-hidden relative shadow-2xl flex flex-col sm:block"
       >
-        {/* Close Button */}
         <button 
           onClick={onClose}
-          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors z-10"
+          className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 sm:bg-slate-100 dark:sm:bg-white/5 flex items-center justify-center text-slate-700 sm:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors z-20"
         >
-          <X size={20} />
+          <X size={16} />
         </button>
 
-        <div className="flex flex-col md:flex-row h-full">
-          {/* Left Side - Visual */}
-          <div className={`w-full md:w-2/5 ${step.color} p-12 flex flex-col items-center justify-center text-white relative overflow-hidden transition-colors duration-500`}>
-            {/* Decorative Background Elements */}
+        <div className="flex flex-col sm:flex-row h-full">
+          <div className={`w-full sm:w-2/5 ${step.color} p-6 sm:p-12 flex flex-col items-center justify-center text-white relative overflow-hidden transition-colors duration-500`}>
             <div className="absolute top-0 left-0 w-full h-full opacity-10">
-              <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-[length:24px_24px]"></div>
+              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-[length:24px_24px]"></div>
             </div>
             
             <AnimatePresence mode="wait">
@@ -153,31 +150,29 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
                 transition={{ type: "spring", damping: 12 }}
                 className="relative z-10"
               >
-                <div className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center ring-4 ring-white/30 relative">
-                  {/* Animation Layers */}
-                  {currentStep === 1 && <div className="absolute inset-0 rounded-3xl border-2 border-white/50 animate-radar" />}
-                  <div className={`relative z-10 ${currentStep === 5 ? 'animate-glow' : 'animate-float'}`}>
+                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-2xl sm:rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center ring-2 sm:ring-4 ring-white/30 relative">
+                  {currentStep === 1 && <div className="absolute inset-0 rounded-2xl sm:rounded-3xl border-2 border-white/50 animate-radar" />}
+                  <div className={`relative z-10 scale-75 sm:scale-100 ${currentStep === 5 ? 'animate-glow' : 'animate-float'}`}>
                     {step.icon}
                   </div>
                 </div>
               </motion.div>
             </AnimatePresence>
 
-            <div className="mt-8 text-center relative z-10">
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Step {currentStep + 1} of {STEPS.length}</p>
-              <div className="mt-4 flex gap-1.5 justify-center">
+            <div className="mt-6 sm:mt-8 text-center relative z-10">
+              <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] opacity-60">Step {currentStep + 1} of {STEPS.length}</p>
+              <div className="mt-2 sm:mt-4 flex gap-1.5 justify-center">
                 {STEPS.map((_, i) => (
                   <div 
                     key={i} 
-                    className={`h-1.5 rounded-full transition-all duration-300 ${i === currentStep ? 'w-8 bg-white' : 'w-1.5 bg-white/30'}`}
+                    className={`h-1 sm:h-1.5 rounded-full transition-all duration-300 ${i === currentStep ? 'w-6 sm:w-8 bg-white' : 'w-1 sm:w-1.5 bg-white/30'}`}
                   />
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Right Side - Content */}
-          <div className="w-full md:w-3/5 p-12 flex flex-col justify-between bg-white dark:bg-slate-900 overflow-y-auto">
+          <div className="w-full sm:w-3/5 p-6 sm:p-12 flex flex-col justify-between bg-white dark:bg-slate-900 overflow-y-auto">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
@@ -186,42 +181,42 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
                 exit={{ x: -20, opacity: 0 }}
                 className="flex-1"
               >
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="w-4 h-4 text-brand-500" />
-                  <span className="text-[10px] font-black text-brand-500 uppercase tracking-widest">Administrator Guide</span>
+                <div className="flex items-center gap-2 mb-2 sm:mb-4">
+                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-brand-500" />
+                  <span className="text-[9px] sm:text-[10px] font-black text-brand-500 uppercase tracking-widest">Administrator Guide</span>
                 </div>
-                <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-tight mb-6">
+                <h2 className="text-xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight mb-3 sm:mb-6">
                   {step.title}
                 </h2>
-                <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                   {step.description}
                 </p>
               </motion.div>
             </AnimatePresence>
 
-            <div className="mt-12 flex items-center justify-between">
+            <div className="mt-6 sm:mt-12 flex items-center justify-between">
               <button 
                 onClick={handleBack}
                 disabled={currentStep === 0}
-                className={`flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-all ${currentStep === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
+                className={`flex items-center gap-2 text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${currentStep === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
               >
-                <ChevronLeft size={16} />
+                <ChevronLeft size={14} />
                 Back
               </button>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 <button 
                   onClick={handleSkip}
-                  className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                  className="px-4 sm:px-6 py-3 sm:py-4 text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
                   Skip
                 </button>
                 <button 
                   onClick={handleNext}
-                  className="px-8 py-4 bg-slate-900 dark:bg-brand-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-brand-700 transition-all flex items-center gap-2 group active:scale-95"
+                  className="px-6 sm:px-8 py-3 sm:py-4 bg-slate-900 dark:bg-brand-600 text-white rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-black dark:hover:bg-brand-700 transition-all flex items-center gap-2 group active:scale-95"
                 >
-                  {currentStep === STEPS.length - 1 ? 'Get Started' : 'Next Step'}
-                  <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  {currentStep === STEPS.length - 1 ? 'Get Started' : 'Next'}
+                  <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
             </div>
