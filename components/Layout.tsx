@@ -144,8 +144,8 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:relative lg:translate-x-0`}>
       <div className="p-6">
-        <Link to="/" className="text-sm font-black flex items-center gap-0 tracking-tight whitespace-nowrap">
-          <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-slate-100"> BC</span>
+        <Link to="/" className="text-xl font-black flex items-center tracking-tight whitespace-nowrap">
+          <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span> <span className="text-slate-900 dark:text-slate-100">BC</span>
         </Link>
         <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Co-op Management</p>
       </div>
@@ -212,8 +212,8 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-brand-600 active:scale-95">
               <i className="fa-solid fa-bars-staggered text-xl"></i>
             </button>
-            <Link to="/" className="lg:hidden text-sm font-black flex items-center gap-0 tracking-tight">
-              <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-slate-100"> BC</span>
+            <Link to="/" className="lg:hidden text-xl font-black flex items-center tracking-tight">
+              <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span> <span className="text-slate-900 dark:text-slate-100">BC</span>
             </Link>
             <div className="hidden sm:flex flex-col">
               <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">
