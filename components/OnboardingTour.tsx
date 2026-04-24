@@ -25,7 +25,7 @@ const STEPS: Step[] = [
   {
     title: (
       <>
-        Welcome to <span className="text-slate-900 dark:text-white">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-white"> BC</span>
+        Welcome to <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-slate-100"> BC</span>
       </>
     ),
     description: "Your comprehensive platform for British Columbia housing co-operative management. Let's take a quick tour of your new Board Administrator tools.",
