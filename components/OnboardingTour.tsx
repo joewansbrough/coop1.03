@@ -104,7 +104,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
   const step = STEPS[currentStep];
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
       <style>{`
         @keyframes radar-pulse {
           0% { transform: scale(1); opacity: 0.5; }
@@ -126,7 +126,7 @@ const OnboardingTour: React.FC<OnboardingTourProps> = ({ isOpen, onClose }) => {
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] rounded-[2.5rem] sm:rounded-[4rem] border-[4px] border-slate-200 dark:border-white/10 overflow-hidden relative shadow-2xl flex flex-col sm:block"
+        className="bg-white dark:bg-slate-900 w-full max-w-xl sm:max-w-2xl max-h-[85vh] rounded-[2.5rem] sm:rounded-[4rem] border-[4px] border-slate-200 dark:border-white/10 overflow-hidden relative shadow-2xl flex flex-col sm:block"
       >
         <button 
           onClick={onClose}
