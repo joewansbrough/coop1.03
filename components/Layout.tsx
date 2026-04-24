@@ -141,11 +141,11 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
 
       {/* Header for Mobile */}
       <header className="lg:hidden h-16 flex items-center justify-between px-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 z-20">
-        <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-500">
-          <i className="fa-solid fa-bars"></i>
+        <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-500 hover:text-brand-600 active:scale-95">
+          <i className="fa-solid fa-bars-staggered text-xl"></i>
         </button>
-        <Link to="/" className="text-sm font-black flex items-center gap-1 tracking-tight">
-          <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-slate-100"> BC</span>
+        <Link to="/" className="text-sm font-black flex items-center gap-0 tracking-tight">
+          <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-slate-100">BC</span>
         </Link>
         <div className="w-8"></div>
       </header>
