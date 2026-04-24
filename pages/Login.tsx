@@ -43,17 +43,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-200 dark:border-white/10 overflow-hidden relative z-10"
       >
         {/* Left Side - Hero/Info */}
-        <div className="bg-slate-900 p-12 lg:p-16 flex flex-col justify-between text-white relative overflow-hidden">
+        <div className="bg-slate-900 p-12 lg:p-16 flex flex-col justify-between text-white relative overflow-hidden items-center lg:items-start text-center lg:text-left">
           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-[length:32px_32px]"></div>
           </div>
 
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-12 h-12 rounded-2xl bg-brand-500 flex items-center justify-center">
-                <ShieldCheck className="w-7 h-7 text-white" />
-              </div>
-              <h1 className="text-2xl font-black tracking-tight text-white">
+          <div className="relative z-10 w-full flex flex-col items-center lg:items-start">
+            <div className="flex items-center gap-3 mb-12">
+              <h1 className="text-5xl font-black tracking-tight text-white">
                 <span className="text-white">coop</span><span className="text-teal-400">HUB</span>&nbsp;<span className="text-white">BC</span>
               </h1>
             </div>
@@ -80,18 +77,18 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-400">Key Features:</h3>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 w-full max-w-sm lg:max-w-none">
               {[
                 { icon: <Home className="w-5 h-5" />, text: "Unit & Tenant Management" },
                 { icon: <Wrench className="w-5 h-5" />, text: "Maintenance Workflows" },
                 { icon: <Users className="w-5 h-5" />, text: "Committee Collaboration" },
                 { icon: <Bot className="w-5 h-5" />, text: "AI-Powered Policy Assistant" }
               ].map((item, i) => (
-                <div key={i} className="flex items-center gap-4 text-slate-300">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                <div key={i} className="flex items-center gap-4 text-slate-300 justify-center lg:justify-start">
+                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
                     {item.icon}
                   </div>
-                  <span className="font-bold text-sm uppercase tracking-widest">{item.text}</span>
+                  <span className="font-bold text-sm uppercase tracking-widest text-left">{item.text}</span>
                 </div>
               ))}
             </div>
