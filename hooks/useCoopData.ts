@@ -236,6 +236,11 @@ export const useScheduledMaintenance = (options?: Partial<UseQueryOptions<Schedu
   ...options,
 });
 
+export const useRefreshData = () => {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries();
+};
+
 export const useMoveIn = () => {
   const queryClient = useQueryClient();
   return useMutation({
