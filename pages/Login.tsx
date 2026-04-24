@@ -65,6 +65,21 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               Management.
             </h2>
 
+            <button
+              onClick={() => {
+                localStorage.setItem('demo_mode', 'true');
+                onLoginSuccess();
+              }}
+              className="px-8 py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl transition-all active:scale-95 flex items-center gap-3 group mb-12"
+            >
+              <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+              <span className="text-sm font-black uppercase tracking-widest">Try Demo Mode</span>
+            </button>
+
+            <div className="mb-6">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-400">Key Features:</h3>
+            </div>
+
             <div className="space-y-6">
               {[
                 { icon: <Home className="w-5 h-5" />, text: "Unit & Tenant Management" },
