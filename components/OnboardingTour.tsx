@@ -23,11 +23,16 @@ interface Step {
 
 const STEPS: Step[] = [
   {
-    title: "Welcome to <span class="text-slate-900 dark:text-white">coop</span><span class="text-teal-600 dark:text-teal-400">HUB</span><span class="text-slate-900 dark:text-white"> BC</span>",
+    title: (
+      <>
+        Welcome to <span className="text-slate-900 dark:text-white">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-white"> BC</span>
+      </>
+    ),
     description: "Your comprehensive platform for British Columbia housing co-operative management. Let's take a quick tour of your new Board Administrator tools.",
     icon: <ShieldCheck className="w-12 h-12" />,
     color: "bg-brand-500"
   },
+
   {
     title: "Mission Control Dashboard",
     description: "Get a high-level view of your co-op. Monitor occupancy rates, pending maintenance, and recent announcements all in one place.",
