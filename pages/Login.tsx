@@ -53,7 +53,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <div className="w-12 h-12 rounded-2xl bg-brand-500 flex items-center justify-center">
                 <ShieldCheck className="w-7 h-7 text-white" />
               </div>
-              <h1 className="text-2xl font-black tracking-tight">CoopHub BC</h1>
+              <h1 className="text-2xl font-black tracking-tight">coopHUB BC</h1>
             </div>
 
             <h2 className="text-4xl lg:text-5xl font-black leading-tight mb-8">
@@ -81,7 +81,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
           <div className="mt-12 pt-8 border-t border-white/10 relative z-10">
             <p className="text-slate-400 text-xs font-medium leading-relaxed">
-              CoopHub BC is a secure platform designed specifically for British Columbia housing co-operatives. 
+              coopHUB BC is a secure platform designed specifically for British Columbia housing co-operatives. 
               Access is restricted to registered members and board administrators.
             </p>
           </div>
@@ -130,7 +130,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       </motion.div>
 
       <div className="mt-8 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
-        &copy; 2026 CoopHub BC &bull; All Rights Reserved
+        &copy; 2026 coopHUB BC &bull; All Rights Reserved
       </div>
     </div>
   );
