@@ -65,7 +65,7 @@ const Communications: React.FC<{
 
       <FilterBar
         search={annSearch}
-        onSearchChange={setSearch}
+        onSearchChange={setAnnSearch}
         searchPlaceholder="Search broadcasts..."
         filter={annFilter}
         onFilterChange={setAnnFilter}

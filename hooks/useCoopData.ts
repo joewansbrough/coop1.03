@@ -236,7 +236,56 @@ export const useScheduledMaintenance = (options?: Partial<UseQueryOptions<Schedu
   ...options,
 });
 
-export const useRefreshData = () => {
+export const useMoveIn = () => {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries();
+  return useMutation({
+    mutationFn: async ({ unitId, tenantId, date }: { unitId: string, tenantId: string, date: string }) => {
+      if (isDemoMode()) return demoStorage.moveIn(unitId, tenantId, date);
+      return fetchJson(`/api/units/${unitId}/move-in`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId, date })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    }
+  });
+};
+
+export const useMoveOut = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ unitId, date, reason }: { unitId: string, date: string, reason: string }) => {
+      if (isDemoMode()) return demoStorage.moveOut(unitId, date, reason);
+      return fetchJson(`/api/units/${unitId}/move-out`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, reason })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    }
+  });
+};
+
+export const useTransfer = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ fromUnitId, toUnitId, date }: { fromUnitId: string, toUnitId: string, date: string }) => {
+      if (isDemoMode()) return demoStorage.transfer(fromUnitId, toUnitId, date);
+      return fetchJson(`/api/units/${fromUnitId}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromUnitId, toUnitId, date })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['units'] });
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    }
+  });
 };
