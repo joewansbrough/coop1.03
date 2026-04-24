@@ -154,16 +154,11 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 text-slate-800 dark:text-white flex flex-col transition-transform duration-300 transform border-r border-slate-200 dark:border-white/5 ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:relative lg:translate-x-0`}>
-      <div className="p-6 flex justify-between items-center lg:block">
-        <div>
-          <Link to="/" className="text-sm font-black flex items-center gap-1 tracking-tight whitespace-nowrap">
-            <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-slate-100"> BC</span>
-          </Link>
-          <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Co-op Management</p>
-        </div>
-        <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-400 hover:text-slate-900">
-           <i className="fa-solid fa-xmark"></i>
-        </button>
+      <div className="p-6">
+        <Link to="/" className="text-sm font-black flex items-center gap-1 tracking-tight whitespace-nowrap">
+          <span className="text-slate-900 dark:text-slate-100">coop</span><span className="text-teal-600 dark:text-teal-400">HUB</span><span className="text-slate-900 dark:text-slate-100"> BC</span>
+        </Link>
+        <p className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-widest font-black">Co-op Management</p>
       </div>
 
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto scrollbar-hide">
