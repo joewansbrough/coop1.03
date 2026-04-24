@@ -1,85 +1,219 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent, ScheduledMaintenance } from '../types';
 import * as demoData from '../utils/demoData';
+import { demoStorage } from '../utils/demoStorage';
 
-const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
+export const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
 
-const fetchJson = async (url: string) => {
-  const res = await fetch(url);
+const fetchJson = async (url: string, options?: RequestInit) => {
+  const res = await fetch(url, options);
   if (!res.ok) {
-    // Better error with status code
     const errorText = await res.text().catch(() => 'Unknown error');
     throw new Error(`API Error (${res.status}): ${errorText}`);
   }
   return res.json();
 };
 
-// Shared query config for all data hooks
 const dataQueryConfig = {
-  staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh
-  cacheTime: 10 * 60 * 1000, // 10 minutes - cache persists
-  retry: 2, // Retry twice on failure
-  refetchOnWindowFocus: false, // Don't refetch when user switches tabs
-  refetchOnReconnect: true, // Do refetch when network reconnects
+  staleTime: 5 * 60 * 1000,
+  cacheTime: 10 * 60 * 1000,
+  retry: 2,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: true,
 };
 
 export const useUser = (options?: Partial<UseQueryOptions<any>>) => useQuery({
   queryKey: ['user'],
   queryFn: async () => {
-    if (isDemoMode()) {
-      return demoData.MOCK_USER;
-    }
-
-    // Check our API for the full user object (role, tenantId, etc)
+    if (isDemoMode()) return demoData.MOCK_USER;
     try {
-      const res = await fetch('/api/auth/me', {
-        credentials: 'include', // Ensure cookies are sent
-        cache: 'no-cache', // Don't use cached response
-      });
+      const res = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-cache' });
       if (res.ok) {
         const { user: sessionUser } = await res.json();
         if (sessionUser) return sessionUser;
       }
-    } catch (e) {
-      console.error('Session API check failed:', e);
-    }
-    
+    } catch (e) { console.error('Session API check failed:', e); }
     return null;
   },
-  staleTime: 5 * 60 * 1000, // 5 minutes
+  staleTime: 5 * 60 * 1000,
   cacheTime: 10 * 60 * 1000,
-  retry: 1, // Only retry once for auth - fail fast
-  refetchOnMount: 'always', // Always check auth on mount
+  retry: 1,
+  refetchOnMount: 'always',
   ...options,
 });
 
-export const useUnits = (options?: Partial<UseQueryOptions<Unit[]>>) => useQuery<Unit[]>({
-  queryKey: ['units'],
-  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_UNITS) : fetchJson('/api/units'),
-  ...dataQueryConfig,
-  ...options,
-});
+// Generic CRUD factory for Hooks
+const createDataHooks = <T extends { id: string }>(
+  key: string, 
+  apiPath: string, 
+  demoGet: () => T[],
+  demoAdd: (item: T) => void,
+  demoUpdate: (item: T) => void,
+  demoDelete: (id: string) => void
+) => {
+  return {
+    useAll: (options?: Partial<UseQueryOptions<T[]>>) => useQuery<T[]>({
+      queryKey: [key],
+      queryFn: () => isDemoMode() ? Promise.resolve(demoGet()) : fetchJson(apiPath),
+      ...dataQueryConfig,
+      ...options,
+    }),
+    useCreate: () => {
+      const queryClient = useQueryClient();
+      return useMutation({
+        mutationFn: async (newItem: Omit<T, 'id'>) => {
+          if (isDemoMode()) {
+            const item = { ...newItem, id: `${key}-${Date.now()}` } as T;
+            demoAdd(item);
+            return item;
+          }
+          return fetchJson(apiPath, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newItem),
+          });
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: [key] }),
+      });
+    },
+    useUpdate: () => {
+      const queryClient = useQueryClient();
+      return useMutation({
+        mutationFn: async (updatedItem: T) => {
+          if (isDemoMode()) {
+            demoUpdate(updatedItem);
+            return updatedItem;
+          }
+          return fetchJson(`${apiPath}/${updatedItem.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedItem),
+          });
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: [key] }),
+      });
+    },
+    useDelete: () => {
+      const queryClient = useQueryClient();
+      return useMutation({
+        mutationFn: async (id: string) => {
+          if (isDemoMode()) {
+            demoDelete(id);
+            return id;
+          }
+          await fetch(`${apiPath}/${id}`, { method: 'DELETE' });
+          return id;
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: [key] }),
+      });
+    }
+  };
+};
 
-export const useTenants = (options?: Partial<UseQueryOptions<Tenant[]>>) => useQuery<Tenant[]>({
-  queryKey: ['tenants'],
-  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_TENANTS) : fetchJson('/api/tenants'),
-  ...dataQueryConfig,
-  ...options,
-});
+const unitsHooks = {
+  useAll: (options?: Partial<UseQueryOptions<Unit[]>>) => useQuery<Unit[]>({
+    queryKey: ['units'],
+    queryFn: () => isDemoMode() ? Promise.resolve(demoStorage.getUnits()) : fetchJson('/api/units'),
+    ...dataQueryConfig,
+    ...options,
+  }),
+  useCreate: () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: async (unit: Omit<Unit, 'id'>) => {
+        if (isDemoMode()) {
+          const newUnit = { ...unit, id: `u-${Date.now()}` } as Unit;
+          demoStorage.addItem('units', demoData.MOCK_UNITS, newUnit);
+          return newUnit;
+        }
+        return fetchJson('/api/units', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(unit),
+        });
+      },
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['units'] }),
+    });
+  },
+  useUpdate: () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: async (unit: Unit) => {
+        if (isDemoMode()) {
+          demoStorage.updateUnit(unit);
+          return unit;
+        }
+        return fetchJson(`/api/units/${unit.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(unit),
+        });
+      },
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['units'] }),
+    });
+  }
+};
 
-export const useMaintenance = (options?: Partial<UseQueryOptions<MaintenanceRequest[]>>) => useQuery<MaintenanceRequest[]>({
-  queryKey: ['maintenance'],
-  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_MAINTENANCE) : fetchJson('/api/maintenance'),
-  ...dataQueryConfig,
-  ...options,
-});
+const eventsHooks = createDataHooks<CoopEvent>(
+  'events', 
+  '/api/events', 
+  demoStorage.getEvents, 
+  demoStorage.addEvent, 
+  demoStorage.updateEvent, 
+  demoStorage.deleteEvent
+);
 
-export const useAnnouncements = (options?: Partial<UseQueryOptions<Announcement[]>>) => useQuery<Announcement[]>({
-  queryKey: ['announcements'],
-  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_ANNOUNCEMENTS) : fetchJson('/api/announcements'),
-  ...dataQueryConfig,
-  ...options,
-});
+const maintenanceHooks = createDataHooks<MaintenanceRequest>(
+  'maintenance', 
+  '/api/maintenance', 
+  demoStorage.getMaintenance, 
+  demoStorage.addMaintenance, 
+  demoStorage.updateMaintenance, 
+  demoStorage.deleteMaintenance
+);
+
+const announcementsHooks = createDataHooks<Announcement>(
+  'announcements', 
+  '/api/announcements', 
+  demoStorage.getAnnouncements, 
+  demoStorage.addAnnouncement, 
+  demoStorage.updateAnnouncement, 
+  demoStorage.deleteAnnouncement
+);
+
+const tenantsHooks = createDataHooks<Tenant>(
+  'tenants', 
+  '/api/tenants', 
+  demoStorage.getTenants, 
+  demoStorage.addTenant, 
+  demoStorage.updateTenant, 
+  demoStorage.deleteTenant
+);
+
+// Re-export specific hooks for clean API
+export const useUnits = unitsHooks.useAll;
+export const useCreateUnit = unitsHooks.useCreate;
+export const useUpdateUnit = unitsHooks.useUpdate;
+
+export const useEvents = eventsHooks.useAll;
+export const useCreateEvent = eventsHooks.useCreate;
+export const useUpdateEvent = eventsHooks.useUpdate;
+export const useDeleteEvent = eventsHooks.useDelete;
+
+export const useMaintenance = maintenanceHooks.useAll;
+export const useCreateMaintenance = maintenanceHooks.useCreate;
+export const useUpdateMaintenance = maintenanceHooks.useUpdate;
+export const useDeleteMaintenance = maintenanceHooks.useDelete;
+
+export const useAnnouncements = announcementsHooks.useAll;
+export const useCreateAnnouncement = announcementsHooks.useCreate;
+export const useUpdateAnnouncement = announcementsHooks.useUpdate;
+export const useDeleteAnnouncement = announcementsHooks.useDelete;
+
+export const useTenants = tenantsHooks.useAll;
+export const useCreateTenant = tenantsHooks.useCreate;
+export const useUpdateTenant = tenantsHooks.useUpdate;
+export const useDeleteTenant = tenantsHooks.useDelete;
 
 export const useDocuments = (options?: Partial<UseQueryOptions<Document[]>>) => useQuery<Document[]>({
   queryKey: ['documents'],
@@ -95,13 +229,6 @@ export const useCommittees = (options?: Partial<UseQueryOptions<Committee[]>>) =
   ...options,
 });
 
-export const useEvents = (options?: Partial<UseQueryOptions<CoopEvent[]>>) => useQuery<CoopEvent[]>({
-  queryKey: ['events'],
-  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_EVENTS) : fetchJson('/api/events'),
-  ...dataQueryConfig,
-  ...options,
-});
-
 export const useScheduledMaintenance = (options?: Partial<UseQueryOptions<ScheduledMaintenance[]>>) => useQuery<ScheduledMaintenance[]>({
   queryKey: ['scheduledMaintenance'],
   queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_SCHEDULED_MAINTENANCE) : fetchJson('/api/scheduled-maintenance'),
@@ -109,17 +236,7 @@ export const useScheduledMaintenance = (options?: Partial<UseQueryOptions<Schedu
   ...options,
 });
 
-// Mutations helper
 export const useRefreshData = () => {
   const queryClient = useQueryClient();
-  return () => {
-    queryClient.invalidateQueries({ queryKey: ['units'] });
-    queryClient.invalidateQueries({ queryKey: ['tenants'] });
-    queryClient.invalidateQueries({ queryKey: ['maintenance'] });
-    queryClient.invalidateQueries({ queryKey: ['announcements'] });
-    queryClient.invalidateQueries({ queryKey: ['documents'] });
-    queryClient.invalidateQueries({ queryKey: ['committees'] });
-    queryClient.invalidateQueries({ queryKey: ['events'] });
-    queryClient.invalidateQueries({ queryKey: ['scheduledMaintenance'] });
-  };
+  return () => queryClient.invalidateQueries();
 };

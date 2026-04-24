@@ -1,22 +1,22 @@
-
 import React, { useState } from 'react';
 import { MaintenanceRequest, RequestStatus, RepairQuote, MaintenanceCategory, Unit, MaintenancePriority } from '../types';
 import { geminiService } from '../services/geminiService';
 import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
-import { useQueryClient } from '@tanstack/react-query';
+import { useCreateMaintenance, useUpdateMaintenance } from '../hooks/useCoopData';
 
 interface MaintenanceProps {
   isAdmin?: boolean;
   requests: MaintenanceRequest[];
   setRequests: React.Dispatch<React.SetStateAction<MaintenanceRequest[]>>;
   units: Unit[];
+  isRequestsLoading?: boolean;
+  isRequestsError?: boolean;
 }
 
-const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, setRequests, units }) => {
+const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, setRequests, units, isRequestsLoading, isRequestsError }) => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const userUnitId = units.length > 0 ? units[0].id : 'u1';
   
   const [quotes, setQuotes] = useState<RepairQuote[]>([]);
@@ -30,6 +30,9 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [pendingRequest, setPendingRequest] = useState<{id: string, status: RequestStatus} | null>(null);
   const [urgency, setUrgency] = useState<string>('Medium');
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const createMaintenanceMutation = useCreateMaintenance();
+  const updateMaintenanceMutation = useUpdateMaintenance();
 
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertMessage({ message, type });
@@ -78,8 +81,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       return;
     }
 
-    const newRequest: MaintenanceRequest = {
-      id: `r${Date.now()}`,
+    const payload: Omit<MaintenanceRequest, 'id'> = {
       title: description.substring(0, 30) + (description.length > 30 ? '...' : ''),
       unitId,
       tenantId: 't1', 
@@ -95,14 +97,18 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       urgency,
     };
     
-    // Optimistic local update (though ideally this would be a mutation)
-    setRequests([newRequest, ...requests]);
-    setShowForm(false);
-    setDescription('');
-    setCategory(['Other']);
-    setUrgency('Medium');
-    if (isAdmin) setUnitId('');
-    showAlert('Maintenance request submitted successfully. The maintenance committee will review it shortly.', 'success');
+    createMaintenanceMutation.mutate(payload, {
+      onSuccess: (data) => {
+        setRequests([data, ...requests]);
+        setShowForm(false);
+        setDescription('');
+        setCategory(['Other']);
+        setUrgency('Medium');
+        if (isAdmin) setUnitId('');
+        showAlert('Maintenance request submitted successfully. The maintenance committee will review it shortly.', 'success');
+      },
+      onError: () => showAlert('Failed to submit maintenance request.', 'error')
+    });
   };
 
   const confirmRequestStatus = async () => {
@@ -111,28 +117,23 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     const target = requests.find(r => r.id === id);
     if (!target) return;
 
-    try {
-      const res = await fetch(`/api/maintenance/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...target,
-          status,
-          updatedAt: new Date().toISOString()
-        })
-      });
-      const data = await res.json();
-      await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
-      
-      if (setRequests) {
+    updateMaintenanceMutation.mutate({
+      ...target,
+      status,
+      updatedAt: new Date().toISOString()
+    }, {
+      onSuccess: (data) => {
         setRequests(prev => prev.map(r => r.id === id ? { ...data, category: Array.isArray(data.category) ? data.category : (data.category ? data.category.split(', ') : []) } : r));
+        setShowStatusConfirm(false);
+        setPendingRequest(null);
+        showAlert(`Request status updated to ${status}.`, 'success');
+      },
+      onError: () => {
+        showAlert('Failed to update request status.', 'error');
+        setShowStatusConfirm(false);
+        setPendingRequest(null);
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setShowStatusConfirm(false);
-      setPendingRequest(null);
-    }
+    });
   };
 
   const updateRequestStatus = (id: string, status: RequestStatus) => {
@@ -342,7 +343,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                             )}
                             <button 
                               onClick={(e) => { e.stopPropagation(); navigate(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance/${req.id}`); }}
-                              className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
+                              className="p-2 text-blue-600 hover:bg-blue-900/20 rounded-lg"
                             >
                               <i className="fa-solid fa-arrow-right"></i>
                             </button>

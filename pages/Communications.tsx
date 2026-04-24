@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import { Announcement } from '../types';
+import { useCreateAnnouncement } from '../hooks/useCoopData';
 
 const Communications: React.FC<{
   isAdmin: boolean,
@@ -15,12 +16,13 @@ const Communications: React.FC<{
   const [newAnnContent, setNewAnnContent] = useState('');
   const [newAnnPriority, setNewAnnPriority] = useState<'Normal' | 'Urgent'>('Normal');
 
+  const createAnnouncementMutation = useCreateAnnouncement();
+
   const handleCreateAnnouncement = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAnnTitle || !newAnnContent) return;
 
-    const newAnn: Announcement = {
-      id: `a${Date.now()}`,
+    const payload: Omit<Announcement, 'id'> = {
       title: newAnnTitle,
       content: newAnnContent,
       type: 'General',
@@ -29,11 +31,15 @@ const Communications: React.FC<{
       priority: newAnnPriority
     };
 
-    setAnnouncements((current) => [newAnn, ...current]);
-    setShowNewAnnouncement(false);
-    setNewAnnTitle('');
-    setNewAnnContent('');
-    setNewAnnPriority('Normal');
+    createAnnouncementMutation.mutate(payload, {
+      onSuccess: (data) => {
+        setAnnouncements((current) => [data, ...current]);
+        setShowNewAnnouncement(false);
+        setNewAnnTitle('');
+        setNewAnnContent('');
+        setNewAnnPriority('Normal');
+      }
+    });
   };
 
   const filteredAnnouncements = announcements.filter((announcement) => {
@@ -59,7 +65,7 @@ const Communications: React.FC<{
 
       <FilterBar
         search={annSearch}
-        onSearchChange={setAnnSearch}
+        onSearchChange={setSearch}
         searchPlaceholder="Search broadcasts..."
         filter={annFilter}
         onFilterChange={setAnnFilter}

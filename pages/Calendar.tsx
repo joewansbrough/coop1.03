@@ -1,17 +1,19 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CoopEvent } from '../types';
 import AppAlert from '../components/AppAlert';
+import { useCreateEvent, useUpdateEvent, useDeleteEvent } from '../hooks/useCoopData';
 
 interface CalendarProps {
   isAdmin?: boolean;
   isGuest?: boolean;
   events: CoopEvent[];
   setEvents: React.Dispatch<React.SetStateAction<CoopEvent[]>>;
+  isEventsLoading?: boolean;
+  isEventsError?: boolean;
 }
 
-const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, events, setEvents }) => {
+const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, events, setEvents, isEventsLoading, isEventsError }) => {
   const navigate = useNavigate();
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -21,12 +23,9 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const [tempEvents, setTempEvents] = useState<CoopEvent[]>([]);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Form State
-  const [title, setTitle] = useState('');
-  const [time, setTime] = useState('19:00');
-  const [location, setLocation] = useState('');
-  const [category, setCategory] = useState<'Meeting' | 'Social' | 'Maintenance' | 'Board'>('Meeting');
-  const [description, setDescription] = useState('');
+  const createEventMutation = useCreateEvent();
+  const updateEventMutation = useUpdateEvent();
+  const deleteEventMutation = useDeleteEvent();
 
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertMessage({ message, type });
@@ -139,62 +138,67 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
     setViewDate(new Date(currentYear, currentMonth + 1, 1));
   };
 
+  // Form State
+  const [title, setTitle] = useState('');
+  const [time, setTime] = useState('19:00');
+  const [location, setLocation] = useState('');
+  const [category, setCategory] = useState<'Meeting' | 'Social' | 'Maintenance' | 'Board'>('Meeting');
+  const [description, setDescription] = useState('');
+
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isGuest) return;
 
-    const payload = { title, date: selectedDate, time, location, category, description };
+    const payload = { 
+      title, 
+      date: selectedDate, 
+      time, 
+      location, 
+      category, 
+      description,
+      cooperativeId: 'demo-coop-id',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    } as any;
 
-    try {
-      const res = await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      setEvents([...events, data]);
-      setShowAddForm(false);
-      setTitle('');
-      setDescription('');
-      showAlert('Event added to community calendar.', 'success');
-    } catch (err) {
-      console.error(err);
-      showAlert('Failed to add event.', 'error');
-    }
+    createEventMutation.mutate(payload, {
+      onSuccess: (data) => {
+        setEvents([...events, data]);
+        setShowAddForm(false);
+        setTitle('');
+        setDescription('');
+        showAlert('Event added to community calendar.', 'success');
+      },
+      onError: () => showAlert('Failed to add event.', 'error')
+    });
   };
 
   const handleUpdateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isGuest || !editEvent) return;
 
-    try {
-      const res = await fetch(`/api/events/${editEvent.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editEvent)
-      });
-      const data = await res.json();
-      setEvents(events.map(ev => ev.id === data.id ? data : ev));
-      setEditEvent(null);
-      showAlert('Event updated successfully.', 'success');
-    } catch (err) {
-      console.error(err);
-      showAlert('Failed to update event.', 'error');
-    }
+    updateEventMutation.mutate(editEvent, {
+      onSuccess: (data) => {
+        setEvents(events.map(ev => ev.id === data.id ? data : ev));
+        setEditEvent(null);
+        showAlert('Event updated successfully.', 'success');
+      },
+      onError: () => showAlert('Failed to update event.', 'error')
+    });
   };
 
   const deleteEvent = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (isGuest) return;
     if (!window.confirm("Are you sure you want to delete this event?")) return;
-    try {
-      await fetch(`/api/events/${id}`, { method: 'DELETE' });
-      setEvents(events.filter(ev => ev.id !== id));
-      showAlert('Event removed from the calendar.', 'success');
-    } catch (err) {
-      console.error(err);
-      showAlert('Failed to delete event.', 'error');
-    }
+    
+    deleteEventMutation.mutate(id, {
+      onSuccess: () => {
+        setEvents(events.filter(ev => ev.id !== id));
+        showAlert('Event removed from the calendar.', 'success');
+      },
+      onError: () => showAlert('Failed to delete event.', 'error')
+    });
   };
 
   const monthName = viewDate.toLocaleString('default', { month: 'long' });

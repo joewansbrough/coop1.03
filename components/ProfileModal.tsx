@@ -107,6 +107,26 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onThemeCha
                 <i className="fa-solid fa-rotate-left mr-2"></i> Reset Administrator Guide
               </button>
             </div>
+
+            {typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true' && (
+              <div className="pt-2">
+                <button
+                  onClick={() => {
+                    if (window.confirm('This will clear all your created demo data and reset to factory defaults. Continue?')) {
+                      Object.keys(localStorage).forEach(key => {
+                        if (key.startsWith('demo_v1_')) {
+                          localStorage.removeItem(key);
+                        }
+                      });
+                      window.location.reload();
+                    }
+                  }}
+                  className="w-full py-3 border border-dashed border-amber-200 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-950/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-all"
+                >
+                  <i className="fa-solid fa-trash-can mr-2"></i> Factory Reset Demo Data
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="pt-4 flex gap-3 sticky bottom-0 bg-white dark:bg-slate-900 py-4 border-t border-slate-100 dark:border-white/5">

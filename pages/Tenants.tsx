@@ -3,8 +3,8 @@ import { Tenant, Unit } from '../types';
 import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
-import axios from 'axios';
 import { formatDate, formatShortDate } from '../utils/dateUtils';
+import { useCreateTenant } from '../hooks/useCoopData';
 
 interface TenantsProps {
   isAdmin?: boolean;
@@ -21,6 +21,8 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, isLoading = false, t
   const [showAddForm, setShowAddForm] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
+  const createTenantMutation = useCreateTenant();
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -35,29 +37,27 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, isLoading = false, t
 
   const handleAddTenant = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const payload = {
-        firstName,
-        lastName,
-        email,
-        phone,
-        unitId: unitId || null,
-        status,
-        role: 'MEMBER',
-        startDate: new Date().toISOString().split('T')[0]
-      };
-      
-      const response = await axios.post('/api/tenants', payload);
-      const newTenant = response.data;
-      
-      setTenants([...tenants, newTenant]);
-      setShowAddForm(false);
-      setFirstName(''); setLastName(''); setEmail(''); setPhone(''); setUnitId('');
-      showAlert('New member registered in association directory.', 'success');
-    } catch (error: any) {
-      console.error('Failed to add member:', error);
-      showAlert(`Error registering member: ${error.response?.data?.error || error.message}`, 'error');
-    }
+    
+    const payload: Omit<Tenant, 'id'> = {
+      firstName,
+      lastName,
+      email,
+      phone,
+      unitId: unitId || undefined,
+      status,
+      role: 'MEMBER',
+      startDate: new Date().toISOString().split('T')[0]
+    };
+
+    createTenantMutation.mutate(payload, {
+      onSuccess: (data) => {
+        setTenants([...tenants, data]);
+        setShowAddForm(false);
+        setFirstName(''); setLastName(''); setEmail(''); setPhone(''); setUnitId('');
+        showAlert('New member registered in association directory.', 'success');
+      },
+      onError: () => showAlert('Failed to register member.', 'error')
+    });
   };
 
   const filteredTenants = tenants.filter(t => {
@@ -202,7 +202,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, isLoading = false, t
             <div className="px-4 py-3 bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
               <div>
                 <span className="text-base font-black text-slate-900 dark:text-white">Unit {group.unit.number}</span>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter ml-2">{group.unit.type} · Floor {group.unit.floor}</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter ml-2">{group.unit.type} • Floor {group.unit.floor}</span>
               </div>
               <span className="text-[9px] font-black px-2 py-1 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded-lg uppercase">
                 {group.members.length} {group.members.length === 1 ? 'Member' : 'Members'}

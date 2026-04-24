@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Unit, Tenant } from '../types';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
+import { useCreateUnit } from '../hooks/useCoopData';
 
 const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetStateAction<Unit[]>>, tenants: Tenant[] }> = ({ units, setUnits, tenants }) => {
   const navigate = useNavigate();
@@ -12,6 +12,8 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
   const [filter, setFilter] = useState<'All' | 'Occupied' | 'Vacant' | 'Maintenance'>('All');
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   
+  const createUnitMutation = useCreateUnit();
+
   // Form State
   const [number, setNumber] = useState('');
   const [type, setType] = useState<'1BR' | '2BR' | '3BR' | '4BR'>('2BR');
@@ -24,17 +26,22 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
 
   const handleAddUnit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newUnit: Unit = {
-      id: `u${Date.now()}`,
+    const payload: Omit<Unit, 'id'> = {
       number,
       type,
       floor,
       status: 'Vacant',
     };
-    setUnits([...units, newUnit]);
-    setShowAddModal(false);
-    setNumber('');
-    showAlert('New unit added to association inventory.', 'success');
+
+    createUnitMutation.mutate(payload, {
+      onSuccess: (data) => {
+        setUnits([...units, data]);
+        setShowAddModal(false);
+        setNumber('');
+        showAlert('New unit added to association inventory.', 'success');
+      },
+      onError: () => showAlert('Failed to add unit.', 'error')
+    });
   };
 
   const sortedUnits = [...units]
@@ -63,7 +70,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
             Unit Inventory
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium font-medium">
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
             Managing building envelope and unit assignments.
           </p>
         </div>
