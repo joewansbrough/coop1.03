@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { CoopEvent, Tenant } from '../types';
 import AppAlert from '../components/AppAlert';
+import MinutesBuilder from '../components/MinutesBuilder';
+import { useMinutes } from '../hooks/useCoopData';
 
 interface EventDetailProps {
   isAdmin: boolean;
