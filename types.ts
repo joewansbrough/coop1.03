@@ -204,3 +204,23 @@ export interface ScheduledMaintenance {
   isCompleted?: boolean;
   category: 'PLUMBING' | 'ELECTRICAL' | 'HVAC' | 'SAFETY' | 'GENERAL' | 'OTHER';
 }
+
+export interface MinutesTemplate {
+  id: string;
+  meetingId: string;
+  coopName: string;
+  meetingType: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  chair: string;
+  secretary: string;
+  attendees: string[];
+  guests: string[];
+  agenda: { id: string; title: string; completed: boolean }[];
+  motions: { id: string; mover: string; seconder: string; resolution: string; carried: boolean }[];
+  actionItems: { id: string; task: string; owner: string; dueDate: string }[];
+  notes: string;
+  status: 'Draft' | 'Finalized';
+}

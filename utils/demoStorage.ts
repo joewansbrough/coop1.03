@@ -74,6 +74,11 @@ export const demoStorage = {
   getUnits: () => demoStorage.getAll('units', demoData.MOCK_UNITS),
   updateUnit: (unit: any) => demoStorage.updateItem('units', demoData.MOCK_UNITS, unit),
 
+  getMinutes: () => demoStorage.getAll('minutes', []),
+  addMinutes: (min: any) => demoStorage.addItem('minutes', [], min),
+  updateMinutes: (min: any) => demoStorage.updateItem('minutes', [], min),
+  deleteMinutes: (id: string) => demoStorage.deleteItem('minutes', [], id),
+
   // Turnover Management
   moveIn: (unitId: string, tenantId: string, date: string) => {
     const units = demoStorage.getUnits();

@@ -181,14 +181,19 @@ const announcementsHooks = createDataHooks<Announcement>(
   demoStorage.deleteAnnouncement
 );
 
-const tenantsHooks = createDataHooks<Tenant>(
-  'tenants', 
-  '/api/tenants', 
-  demoStorage.getTenants, 
-  demoStorage.addTenant, 
-  demoStorage.updateTenant, 
-  demoStorage.deleteTenant
+const minutesHooks = createDataHooks<MinutesTemplate>(
+  'minutes',
+  '/api/minutes',
+  demoStorage.getMinutes,
+  demoStorage.addMinutes,
+  demoStorage.updateMinutes,
+  demoStorage.deleteMinutes
 );
+
+export const useMinutes = minutesHooks.useAll;
+export const useCreateMinutes = minutesHooks.useCreate;
+export const useUpdateMinutes = minutesHooks.useUpdate;
+export const useDeleteMinutes = minutesHooks.useDelete;
 
 // Re-export specific hooks for clean API
 export const useUnits = unitsHooks.useAll;
