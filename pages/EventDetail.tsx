@@ -103,6 +103,10 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
     }
   };
 
+  const { data: minutesList } = useMinutes();
+  const meetingMinutes = minutesList?.find(m => m.meetingId === event.id);
+  const [activeTab, setActiveTab] = useState<'overview' | 'minutes'>('overview');
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12 transition-colors duration-200">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
@@ -114,7 +118,25 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
         <span className="font-semibold text-slate-800 dark:text-slate-200">{event.title}</span>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden">
+      <nav className="flex border-b border-slate-200 dark:border-white/5 shrink-0 overflow-x-auto scrollbar-hide">
+        {[
+          { id: 'overview', label: 'Event Details' },
+          ...(event.category === 'Meeting' && isAdmin ? [{ id: 'minutes', label: 'Meeting Minutes' }] : []),
+        ].map(tab => (
+          <button 
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`px-6 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id ? 'border-brand-600 text-brand-600 dark:text-brand-400 dark:border-brand-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      {activeTab === 'minutes' ? (
+        <MinutesBuilder meetingId={event.id} initialData={meetingMinutes} onSave={() => {}} />
+      ) : (
+        <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden">
         <div className="h-48 bg-slate-900 relative overflow-hidden">
           <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=1200')] bg-cover bg-center"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
@@ -282,8 +304,10 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
           )}
         </div>
       </div>
+      )}
     </div>
   );
+
 };
 
 export default EventDetail;
