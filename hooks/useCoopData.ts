@@ -181,6 +181,15 @@ const announcementsHooks = createDataHooks<Announcement>(
   demoStorage.deleteAnnouncement
 );
 
+const tenantsHooks = createDataHooks<Tenant>(
+  'tenants', 
+  '/api/tenants', 
+  demoStorage.getTenants, 
+  demoStorage.addTenant, 
+  demoStorage.updateTenant, 
+  demoStorage.deleteTenant
+);
+
 const minutesHooks = createDataHooks<MinutesTemplate>(
   'minutes',
   '/api/minutes',
