@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { requireAuth, getCoopId } from './index'; // Updated import
+import { requireAuth, getCoopId } from '../api/index'; 
 
 const router = Router();
 const prisma = new PrismaClient();
