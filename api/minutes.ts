@@ -243,7 +243,7 @@ router.post('/api/minutes/:meetingId/approve', authenticateUser, async (req, res
       where: { id: userId },
     });
 
-    if (!user?.isAdmin && !user?.isBoardMember) {
+    if (user?.role !== 'ADMIN' && user?.role !== 'BOARD_MEMBER') {
       return res.status(403).json({ 
         error: 'Only board members can approve minutes' 
       });
