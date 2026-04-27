@@ -215,6 +215,63 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
 
   if (!event) return <div className="p-8 text-center text-slate-500">Event not found.</div>;
 
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const payload = {
+      title: (form.elements.namedItem('title') as HTMLInputElement).value,
+      category: (form.elements.namedItem('category') as HTMLSelectElement).value as any,
+      date: (form.elements.namedItem('date') as HTMLInputElement).value,
+      time: (form.elements.namedItem('time') as HTMLInputElement).value,
+      location: (form.elements.namedItem('location') as HTMLInputElement).value,
+      description: (form.elements.namedItem('description') as HTMLTextAreaElement).value,
+    };
+
+    if (isTemp) {
+      const updatedTempEvent = { ...event, ...payload };
+      setEvents(events.map(ev => ev.id === event.id ? updatedTempEvent : ev));
+      setIsEditing(false);
+      showAlert('Temporary event updated for this session.', 'success');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/events/${event.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      setEvents(events.map(ev => ev.id === event.id ? data : ev));
+      setIsEditing(false);
+      showAlert('Event details updated successfully.', 'success');
+    } catch (err) {
+      console.error(err);
+      showAlert('Failed to update event details.', 'error');
+    }
+  };
+
+  const handleAttend = async () => {
+    if (isGuest) return;
+    try {
+      const res = await fetch(`/api/events/${event.id}/attend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEvents(events.map(ev => ev.id === event.id ? data : ev));
+        setIsAttending(true);
+        showAlert('Attendance confirmed.', 'success');
+      } else {
+        showAlert(data.error || 'Failed to confirm attendance.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showAlert('Failed to confirm attendance.', 'error');
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12 transition-colors duration-200">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
