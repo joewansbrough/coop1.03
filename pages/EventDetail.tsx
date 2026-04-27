@@ -267,6 +267,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   };
 
   const { data: minutesList } = useMinutes();
+  const createMinutesMutation = useCreateMinutes();
   const meetingMinutes = minutesList?.find(m => m.meetingId === event.id);
   const [activeTab, setActiveTab] = useState<'overview' | 'minutes'>('overview');
 
@@ -304,20 +305,14 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
               initialData={meetingMinutes}
               onSave={async (data) => {
                 try {
-                  const res = await fetch(`/api/minutes/${event.id}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                  await createMinutesMutation.mutateAsync({
+                    ...data,
+                    meetingId: event.id
                   });
-
-                  if (res.ok) {
-                    showAlert('Meeting minutes have been saved and archived.', 'success');
-                  } else {
-                    showAlert('Failed to save minutes to the database.', 'error');
-                  }
+                  showAlert('Meeting minutes have been saved and archived.', 'success');
                 } catch (err) {
                   console.error(err);
-                  showAlert('A network error occurred while saving minutes.', 'error');
+                  showAlert('Failed to save minutes to the database.', 'error');
                 }
               }}
             />
