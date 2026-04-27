@@ -35,6 +35,9 @@ Implementation of the 6-feature enhancement plan for the Meeting Minutes system.
 - [x] **Task 4.5:** Add Export UI to `MinutesBuilder`
 - [x] **Task 4.6:** Implement "Electronic Approval" footer
 
+### ⚠️ React 19 Compatibility Note
+Created `.npmrc` with `legacy-peer-deps=true` to allow Vercel to install `react-quill` and `@react-pdf/renderer` which currently list React 18 as the maximum peer dependency.
+
 ---
 
 ## 🛠 Hand-off Notes
