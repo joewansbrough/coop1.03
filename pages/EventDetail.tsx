@@ -8,7 +8,15 @@ import { useMinutes, useCreateMinutes } from '../hooks/useCoopData';
 import { useMinutesManager } from '../hooks/useMinutesManager';
 
 const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, event }) => {
-  const { formData, attendees, motions, meetingType } = data;
+  if (!data || !data.formData) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 p-12 text-center">
+        <p className="text-slate-500">Unable to load minutes data. Please contact the administrator.</p>
+      </div>
+    );
+  }
+
+  const { formData, attendees = [], motions = [], meetingType } = data;
 
   const getMeetingLabel = (type: string) => {
     switch (type) {

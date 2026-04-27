@@ -863,6 +863,13 @@ app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
     const p = getPrisma();
     const coopId = await getCoopId(req, p);
 
+    console.log(`Saving minutes for meeting ${meetingId}. User: ${user?.email}, Coop: ${coopId}`);
+
+    if (!user?.email) {
+      console.error('Minutes Save Error: No user email in session');
+      return res.status(401).json({ error: 'User session invalid' });
+    }
+
     // UPSERT pattern for minutes
     const existing = await p.meetingMinutes.findUnique({ where: { meetingId } });
 
@@ -896,7 +903,7 @@ app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
     res.status(201).json(minutes);
   } catch (error: any) {
     console.error('Error saving minutes:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, stack: process.env.NODE_ENV === 'development' ? error.stack : undefined });
   }
 });
 
