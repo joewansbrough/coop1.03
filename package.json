@@ -10,9 +10,6 @@
     "lint": "tsc --noEmit",
     "seed": "tsx prisma/seed.ts"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@google/generative-ai": "^0.22.0",
     "@prisma/client": "^6.19.2",

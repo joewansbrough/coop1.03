@@ -31,206 +31,207 @@ enum MaintenanceCategory {
 // --- MODELS ---
 
 model Cooperative {
-  id                  String                @id @default(uuid())
-  name                String
-  slug                String                @unique
-  address             String?
-  city                String?
-  province            String                @default("BC")
-  adminEmail          String?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  id         String   @id @default(uuid())
+  name       String
+  slug       String   @unique
+  address    String?
+  city       String?
+  province   String   @default("BC")
+  adminEmail String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relations
-  announcements       Announcement[]
-  committees          Committee[]
-  events              CoopEvent[]
-  documents           Document[]
-  maintenanceRequests MaintenanceRequest[]
+  announcements        Announcement[]
+  committees           Committee[]
+  events               CoopEvent[]
+  documents            Document[]
+  maintenanceRequests  MaintenanceRequest[]
   scheduledMaintenance ScheduledMaintenance[]
-  tenants             Tenant[]
-  tenantHistories     TenantHistory[]
-  units               Unit[]
+  tenants              Tenant[]
+  tenantHistories      TenantHistory[]
+  units                Unit[]
 }
 
 model Unit {
-  id                  String                @id @default(uuid())
-  number              String                @unique
-  type                String                // e.g., "1BR", "2BR", "3BR"
-  floor               Int                   @default(1)
-  status              String                // e.g., "Occupied", "Vacant", "Maintenance"
-  
-  // Multi-tenancy
-  cooperativeId       String
-  cooperative         Cooperative           @relation(fields: [cooperativeId], references: [id])
+  id     String @id @default(uuid())
+  number String @unique
+  type   String // e.g., "1BR", "2BR", "3BR"
+  floor  Int    @default(1)
+  status String // e.g., "Occupied", "Vacant", "Maintenance"
 
-  currentTenantId     String?               @unique
-  currentTenant       Tenant?               @relation("CurrentResident", fields: [currentTenantId], references: [id])
-  
+  // Multi-tenancy
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+
+  currentTenantId String? @unique
+  currentTenant   Tenant? @relation("CurrentResident", fields: [currentTenantId], references: [id])
+
   maintenanceHistory MaintenanceRequest[]
   occupancyHistory   TenantHistory[]
-  scheduledTasks      ScheduledMaintenance[] @relation("ScheduledTasks")
-  
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  scheduledTasks     ScheduledMaintenance[] @relation("ScheduledTasks")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Tenant {
-  id            String          @id @default(uuid())
-  firstName     String
-  lastName      String
-  email         String          @unique
-  phone         String?
-  startDate     DateTime        // Changed from String to DateTime
-  status        String          @default("Current") 
-  role          String          @default("MEMBER")  
-  
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  phone     String?
+  startDate DateTime // Changed from String to DateTime
+  status    String   @default("Current")
+  role      String   @default("MEMBER")
+
   // Multi-tenancy
   cooperativeId String
-  cooperative   Cooperative     @relation(fields: [cooperativeId], references: [id])
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
 
-  unitId        String?
-  unit          Unit?           @relation("CurrentResident")
-  
-  committees    Committee[]     @relation("CommitteeMembers")
-  events        CoopEvent[]     @relation("EventAttendees")
-  history       TenantHistory[]
-  
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  unitId String?
+  unit   Unit?   @relation("CurrentResident")
+
+  committees Committee[]     @relation("CommitteeMembers")
+  events     CoopEvent[]     @relation("EventAttendees")
+  history    TenantHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model TenantHistory {
-  id            String      @id @default(uuid())
-  tenantId      String
-  tenant        Tenant      @relation(fields: [tenantId], references: [id])
-  unitId        String
-  unit          Unit        @relation(fields: [unitId], references: [id])
-  
+  id       String @id @default(uuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  unitId   String
+  unit     Unit   @relation(fields: [unitId], references: [id])
+
   // Multi-tenancy
   cooperativeId String
   cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
 
-  startDate     DateTime
-  endDate       DateTime?
-  moveReason    String?
-  createdAt     DateTime    @default(now())
+  startDate  DateTime
+  endDate    DateTime?
+  moveReason String?
+  createdAt  DateTime  @default(now())
 }
 
 model MaintenanceRequest {
-  id            String      @id @default(uuid())
-  title         String
-  description   String
-  status        String      
-  priority      String      
-  category      String      @default("General")
-  
+  id          String @id @default(uuid())
+  title       String
+  description String
+  status      String
+  priority    String
+  category    String @default("General")
+
   // Multi-tenancy
   cooperativeId String
   cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
 
-  unitId        String
-  unit          Unit        @relation(fields: [unitId], references: [id])
-  
-  tenantId      String?     
-  requestedBy   String?     // Email of the tenant who requested
-  notes         Json?       
-  expenses      Json?       
-  
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  unitId String
+  unit   Unit   @relation(fields: [unitId], references: [id])
+
+  tenantId    String?
+  requestedBy String? // Email of the tenant who requested
+  notes       Json?
+  expenses    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Announcement {
-  id            String      @id @default(uuid())
-  title         String
-  content       String
-  type          String      
-  priority      String      @default("Normal")
-  author        String      
-  date          DateTime    // Changed from String to DateTime
-  
+  id       String   @id @default(uuid())
+  title    String
+  content  String
+  type     String
+  priority String   @default("Normal")
+  author   String
+  date     DateTime // Changed from String to DateTime
+
   // Multi-tenancy
   cooperativeId String
   cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Document {
-  id            String      @id @default(uuid())
-  title         String
-  category      String
-  committee     String?     @default("")
-  url           String
-  fileType      String
-  author        String      @default("Admin")
-  date          DateTime    // Changed from String to DateTime
-  tags          String[]    @default([])
-  content       String?
-  
+  id        String   @id @default(uuid())
+  title     String
+  category  String
+  committee String?  @default("")
+  url       String
+  fileType  String
+  author    String   @default("Admin")
+  date      DateTime // Changed from String to DateTime
+  tags      String[] @default([])
+  content   String?
+
   // Multi-tenancy
   cooperativeId String
   cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CoopEvent {
-  id            String      @id @default(uuid())
-  title         String
-  description   String      @default("")
-  date          DateTime    // Changed from String to DateTime
-  time          String
-  location      String
-  category      String      
-  
+  id          String   @id @default(uuid())
+  title       String
+  description String   @default("")
+  date        DateTime // Changed from String to DateTime
+  time        String
+  location    String
+  category    String
+
   // Multi-tenancy
   cooperativeId String
   cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
 
-  committeeId   String?
-  committee     Committee?  @relation(fields: [committeeId], references: [id])
+  committeeId String?
+  committee   Committee? @relation(fields: [committeeId], references: [id])
 
-  attendees     Tenant[]    @relation("EventAttendees")
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  attendees Tenant[]        @relation("EventAttendees")
+  minutes   MeetingMinutes?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 }
 
 model Committee {
-  id            String      @id @default(uuid())
-  name          String
-  description   String
-  chair         String      @default("")
-  icon          String      @default("fa-users")
-  
+  id          String @id @default(uuid())
+  name        String
+  description String
+  chair       String @default("")
+  icon        String @default("fa-users")
+
   // Multi-tenancy
   cooperativeId String
   cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
 
-  events        CoopEvent[]
-  members       Tenant[]    @relation("CommitteeMembers")
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  events    CoopEvent[]
+  members   Tenant[]    @relation("CommitteeMembers")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }
 
 model MeetingMinutes {
-  id           String   @id @default(cuid())
-  meetingId    String   @unique
-  meetingType  String   // 'quick' | 'regular' | 'agm' | 'special'
-  data         Json     // Store the entire formData object
-  attendees    Json     // Array of attendees
-  motions      Json     // Array of motions
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id           String    @id @default(cuid())
+  meetingId    String    @unique
+  meetingType  String // 'quick' | 'regular' | 'agm' | 'special'
+  data         Json // Store the entire formData object
+  attendees    Json // Array of attendees
+  motions      Json // Array of motions
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   createdBy    String
   approvedBy   String?
   approvalDate DateTime?
-  
-  meeting      CoopEvent @relation(fields: [meetingId], references: [id])
-  
+
+  meeting CoopEvent @relation(fields: [meetingId], references: [id])
+
   @@index([meetingId])
 }
 
@@ -240,18 +241,18 @@ model ScheduledMaintenance {
   unit          Unit                 @relation("ScheduledTasks", fields: [unitId], references: [id], onDelete: Cascade)
   task          String
   description   String?
-  frequency     MaintenanceFrequency 
-  dueDate       DateTime             // Changed from String to DateTime
-  lastCompleted DateTime?            // Changed from String to DateTime
+  frequency     MaintenanceFrequency
+  dueDate       DateTime // Changed from String to DateTime
+  lastCompleted DateTime? // Changed from String to DateTime
   assignedTo    String
   isCompleted   Boolean              @default(false)
   isActive      Boolean              @default(true)
-  category      MaintenanceCategory 
-  
+  category      MaintenanceCategory
+
   // Multi-tenancy
   cooperativeId String
-  cooperative   Cooperative          @relation(fields: [cooperativeId], references: [id])
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
 
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
