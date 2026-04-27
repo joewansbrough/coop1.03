@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { authenticateUser } from '../middleware/auth'; // Your auth middleware
+import { requireAuth } from './index'; // Importing from index.ts where requireAuth is defined
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
  * GET /api/minutes
  * Get all minutes (with optional filters)
  */
-router.get('/api/minutes', authenticateUser, async (req, res) => {
+router.get('/api/minutes', requireAuth, async (req, res) => {
   try {
     const { meetingType, approved, startDate, endDate } = req.query;
 
@@ -60,7 +60,7 @@ router.get('/api/minutes', authenticateUser, async (req, res) => {
  * GET /api/minutes/:meetingId
  * Get minutes for a specific meeting
  */
-router.get('/api/minutes/:meetingId', authenticateUser, async (req, res) => {
+router.get('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
 
@@ -95,7 +95,7 @@ router.get('/api/minutes/:meetingId', authenticateUser, async (req, res) => {
  * POST /api/minutes/:meetingId
  * Create new minutes for a meeting
  */
-router.post('/api/minutes/:meetingId', authenticateUser, async (req, res) => {
+router.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
     const { meetingType, formData, attendees, motions } = req.body;
@@ -154,7 +154,7 @@ router.post('/api/minutes/:meetingId', authenticateUser, async (req, res) => {
  * PUT /api/minutes/:meetingId
  * Update existing minutes
  */
-router.put('/api/minutes/:meetingId', authenticateUser, async (req, res) => {
+router.put('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
     const { meetingType, formData, attendees, motions } = req.body;
@@ -208,7 +208,7 @@ router.put('/api/minutes/:meetingId', authenticateUser, async (req, res) => {
  * DELETE /api/minutes/:meetingId
  * Delete minutes (admin only)
  */
-router.delete('/api/minutes/:meetingId', authenticateUser, async (req, res) => {
+router.delete('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
 
@@ -232,7 +232,7 @@ router.delete('/api/minutes/:meetingId', authenticateUser, async (req, res) => {
  * POST /api/minutes/:meetingId/approve
  * Approve minutes (board members only)
  */
-router.post('/api/minutes/:meetingId/approve', authenticateUser, async (req, res) => {
+router.post('/api/minutes/:meetingId/approve', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
     const { approvedBy } = req.body;
@@ -285,7 +285,7 @@ router.post('/api/minutes/:meetingId/approve', authenticateUser, async (req, res
  * GET /api/minutes/:meetingId/pdf
  * Export minutes as PDF (future enhancement)
  */
-router.get('/api/minutes/:meetingId/pdf', authenticateUser, async (req, res) => {
+router.get('/api/minutes/:meetingId/pdf', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
 
