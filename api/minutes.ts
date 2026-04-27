@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { requireAuth } from './index'; // Importing from index.ts where requireAuth is defined
+import { requireAuth, getCoopId } from './index'; // Updated import
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -100,6 +100,7 @@ router.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
     const { meetingId } = req.params;
     const { meetingType, formData, attendees, motions } = req.body;
     const userId = (req as any).user.id; // From your auth middleware
+    const coopId = await getCoopId(req, prisma);
 
     // Verify meeting exists
     const meeting = await prisma.coopEvent.findUnique({
@@ -129,6 +130,7 @@ router.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
         data: formData,
         attendees,
         motions,
+        cooperativeId: coopId,
         createdBy: userId,
       },
       include: {
