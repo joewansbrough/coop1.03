@@ -7,6 +7,166 @@ import MinutesBuilder from '../components/MinutesBuilder';
 import { useMinutes } from '../hooks/useCoopData';
 import { useMinutesManager } from '../hooks/useMinutesManager';
 
+const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, event }) => {
+  const { formData, attendees, motions, meetingType } = data;
+
+  const getMeetingLabel = (type: string) => {
+    switch (type) {
+      case 'quick': return 'Quick Meeting';
+      case 'regular': return 'Regular Board Meeting';
+      case 'agm': return 'Annual General Meeting';
+      case 'special': return 'Special General Meeting';
+      default: return 'Meeting Minutes';
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm animate-in fade-in slide-in-from-top-4">
+      <div className="bg-slate-900 p-8 flex justify-between items-center">
+        <div>
+          <span className="text-[10px] font-black px-3 py-1 rounded-full bg-brand-500 text-white uppercase tracking-widest mb-2 inline-block">
+            {getMeetingLabel(meetingType)}
+          </span>
+          <h2 className="text-2xl font-black text-white uppercase tracking-tight">Community Record</h2>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meeting Date</p>
+          <p className="text-lg font-black text-white">{formData.meetingDate || event.date.split('T')[0]}</p>
+        </div>
+      </div>
+
+      <div className="p-8 lg:p-12 space-y-12">
+        <ReadOnlySection title="Meeting Information" icon="fa-info-circle">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <ReadOnlyField label="Location" value={formData.location || event.location} />
+            <ReadOnlyField label="Time" value={`${formData.startTime || event.time} - ${formData.endTime || 'N/A'}`} />
+            <ReadOnlyField label="Chairperson" value={formData.chair} />
+            <ReadOnlyField label="Recorded By" value={formData.minuteTaker} />
+          </div>
+        </ReadOnlySection>
+
+        <ReadOnlySection title="Attendance" icon="fa-users">
+          <div className="space-y-6">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Present</p>
+              <div className="flex flex-wrap gap-2">
+                {attendees.map((a: any, i: number) => (
+                  <span key={i} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/5">
+                    {a.name}{a.position ? ` (${a.position})` : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {formData.directorsAbsent?.length > 0 && (
+                <ReadOnlyField label="Regrets/Absent" value={Array.isArray(formData.directorsAbsent) ? formData.directorsAbsent.join(', ') : formData.directorsAbsent} />
+              )}
+              {formData.guests?.length > 0 && (
+                <ReadOnlyField label="Guests/Attendees" value={Array.isArray(formData.guests) ? formData.guests.join(', ') : formData.guests} />
+              )}
+            </div>
+          </div>
+        </ReadOnlySection>
+
+        {(formData.boardReport || formData.financeReport || formData.committeeReports) && (
+          <ReadOnlySection title="Reports & Discussion" icon="fa-file-lines">
+            <div className="space-y-8">
+              {formData.boardReport && (
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Board Report</p>
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.boardReport }}></div>
+                </div>
+              )}
+              {formData.financeReport && (
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Financial Report</p>
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.financeReport }}></div>
+                </div>
+              )}
+              {formData.committeeReports && (
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Committee Reports</p>
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.committeeReports }}></div>
+                </div>
+              )}
+            </div>
+          </ReadOnlySection>
+        )}
+
+        {motions.length > 0 && (
+          <ReadOnlySection title="Motions & Resolutions" icon="fa-gavel">
+            <div className="space-y-4">
+              {motions.map((m: any, i: number) => (
+                <div key={i} className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-white/5">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Motion #{i + 1}</span>
+                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
+                      m.result === 'carried' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                      m.result === 'defeated' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                      'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                    }`}>
+                      {m.result || 'Pending'}
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">{m.description}</p>
+                  <div className="flex gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <span>Moved by: <span className="text-slate-600 dark:text-slate-300">{m.mover}</span></span>
+                    <span>Seconded by: <span className="text-slate-600 dark:text-slate-300">{m.seconder}</span></span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ReadOnlySection>
+        )}
+
+        {formData.actionItems && (
+          <ReadOnlySection title="Action Items" icon="fa-tasks">
+            <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.actionItems }}></div>
+          </ReadOnlySection>
+        )}
+      </div>
+
+      <div className="bg-slate-50 dark:bg-slate-800/50 p-8 border-t border-slate-200 dark:border-white/5 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <i className="fa-solid fa-check-double"></i>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Document Status</p>
+            <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase">Finalized & Archived Community Record</p>
+          </div>
+        </div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+          Oak Bay Housing Co-op | Digitally Verified
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const ReadOnlySection: React.FC<{ title: string; icon: string; children: React.ReactNode }> = ({ title, icon, children }) => (
+  <div className="space-y-6">
+    <div className="flex items-center gap-4">
+      <div className="w-10 h-10 bg-brand-50 dark:bg-brand-900/20 rounded-2xl flex items-center justify-center text-brand-600 dark:text-brand-400">
+        <i className={`fa-solid ${icon} text-sm`}></i>
+      </div>
+      <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{title}</h3>
+      <div className="h-px bg-slate-100 dark:bg-white/5 flex-1"></div>
+    </div>
+    <div className="pl-14">
+      {children}
+    </div>
+  </div>
+);
+
+const ReadOnlyField: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div>
+    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{value || 'N/A'}</p>
+  </div>
+);
+
 interface EventDetailProps {
   isAdmin: boolean;
   isGuest?: boolean;
@@ -124,7 +284,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       <nav className="flex border-b border-slate-200 dark:border-white/5 shrink-0 overflow-x-auto scrollbar-hide">
         {[
           { id: 'overview', label: 'Event Details' },
-          ...(event.category === 'Meeting' && isAdmin ? [{ id: 'minutes', label: 'Meeting Minutes' }] : []),
+          ...(event.category === 'Meeting' ? [{ id: 'minutes', label: 'Meeting Minutes' }] : []),
         ].map(tab => (
           <button
             key={tab.id}
@@ -138,28 +298,44 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
 
       {activeTab === 'minutes' ? (
         <div className="animate-in fade-in slide-in-from-top-2">
-          <MinutesBuilder
-            meetingId={event.id}
-            initialData={meetingMinutes}
-            onSave={async (data) => {
-              try {
-                const res = await fetch(`/api/minutes/${event.id}`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(data)
-                });
+          {isAdmin ? (
+            <MinutesBuilder
+              meetingId={event.id}
+              initialData={meetingMinutes}
+              onSave={async (data) => {
+                try {
+                  const res = await fetch(`/api/minutes/${event.id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                  });
 
-                if (res.ok) {
-                  showAlert('Meeting minutes have been saved and archived.', 'success');
-                } else {
-                  showAlert('Failed to save minutes to the database.', 'error');
+                  if (res.ok) {
+                    showAlert('Meeting minutes have been saved and archived.', 'success');
+                  } else {
+                    showAlert('Failed to save minutes to the database.', 'error');
+                  }
+                } catch (err) {
+                  console.error(err);
+                  showAlert('A network error occurred while saving minutes.', 'error');
                 }
-              } catch (err) {
-                console.error(err);
-                showAlert('A network error occurred while saving minutes.', 'error');
-              }
-            }}
-            />        </div>
+              }}
+            />
+          ) : meetingMinutes ? (
+            <MinutesReadOnly data={meetingMinutes} event={event} />
+          ) : (
+            <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 p-12 text-center">
+              <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
+                <i className="fa-solid fa-file-signature text-3xl text-slate-300"></i>
+              </div>
+              <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight mb-2">Minutes Pending</h3>
+              <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                The minutes for this meeting have not yet been finalized by the board. 
+                Please check back later once the recording process is complete.
+              </p>
+            </div>
+          )}
+        </div>
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden">
           <div className="h-48 bg-slate-900 relative overflow-hidden">

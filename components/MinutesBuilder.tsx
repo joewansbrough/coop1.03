@@ -35,6 +35,8 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
   const [step, setStep] = useState<'select' | 'build'>('select');
   const [meetingType, setMeetingType] = useState<MeetingType>('regular');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success'>('idle');
 
   const { data: tenants = [] } = useTenants();
   const { data: committees = [] } = useCommittees();
@@ -174,20 +176,28 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+    setSaveStatus('idle');
   };
 
   const addAttendee = () => {
     setAttendees([...attendees, { id: Date.now().toString(), name: '', position: '' }]);
+    setIsDirty(true);
+    setSaveStatus('idle');
   };
 
   const removeAttendee = (id: string) => {
     if (attendees.length > 1) {
       setAttendees(attendees.filter(a => a.id !== id));
+      setIsDirty(true);
+      setSaveStatus('idle');
     }
   };
 
   const updateAttendee = (id: string, field: 'name' | 'position', value: string) => {
     setAttendees(attendees.map(a => a.id === id ? { ...a, [field]: value } : a));
+    setIsDirty(true);
+    setSaveStatus('idle');
   };
 
   const addMotion = () => {
@@ -198,20 +208,35 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
       seconder: '',
       result: ''
     }]);
+    setIsDirty(true);
+    setSaveStatus('idle');
   };
 
   const removeMotion = (id: string) => {
     setMotions(motions.filter(m => m.id !== id));
+    setIsDirty(true);
+    setSaveStatus('idle');
   };
 
   const updateMotion = (id: string, field: keyof MotionItem, value: any) => {
     setMotions(motions.map(m => m.id === id ? { ...m, [field]: value } : m));
+    setIsDirty(true);
+    setSaveStatus('idle');
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setSaveStatus('saving');
     const sanitizedData = sanitizeFormData(formData);
-    onSave({ formData: sanitizedData, attendees, motions, meetingType });
-    setLastSaved(new Date());
+    try {
+      await onSave({ formData: sanitizedData, attendees, motions, meetingType });
+      setLastSaved(new Date());
+      setIsDirty(false);
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (err) {
+      console.error('Save failed:', err);
+      setSaveStatus('idle');
+    }
   };
 
   const [isExporting, setIsExporting] = useState(false);
@@ -505,10 +530,23 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
           
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95 flex items-center gap-2"
+            disabled={!isDirty || saveStatus === 'saving'}
+            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 shadow-lg ${
+              !isDirty 
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
+                : saveStatus === 'success'
+                ? 'bg-emerald-500 text-white shadow-emerald-500/20'
+                : 'bg-brand-600 text-white hover:bg-brand-700 shadow-brand-500/20 active:scale-95'
+            }`}
           >
-            <i className="fa-solid fa-save"></i>
-            Save
+            {saveStatus === 'saving' ? (
+              <i className="fa-solid fa-spinner fa-spin"></i>
+            ) : saveStatus === 'success' ? (
+              <i className="fa-solid fa-check-circle"></i>
+            ) : (
+              <i className="fa-solid fa-save"></i>
+            )}
+            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? 'Saved' : 'Save'}
           </button>
         </div>
       </div>
@@ -519,13 +557,26 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
         {meetingType === 'agm' && <AGMMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} />}
         {meetingType === 'special' && <SpecialMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} />}
         
-        <div className="mt-12 pt-8 border-t border-slate-100 dark:border-white/5 flex justify-end">
+        <div className="mt-12 pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col items-end gap-4">
+           {saveStatus === 'success' && (
+             <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
+               <i className="fa-solid fa-circle-check"></i>
+               Minutes successfully saved to the community records.
+             </span>
+           )}
            <button
             onClick={handleSave}
-            className="px-8 py-4 bg-brand-600 text-white rounded-2xl text-sm font-black uppercase hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95 flex items-center gap-2"
+            disabled={!isDirty || saveStatus === 'saving'}
+            className={`px-8 py-4 rounded-2xl text-sm font-black uppercase transition-all flex items-center gap-2 shadow-lg ${
+              !isDirty 
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
+                : saveStatus === 'success'
+                ? 'bg-emerald-500 text-white shadow-emerald-500/20'
+                : 'bg-brand-600 text-white hover:bg-brand-700 shadow-brand-500/20 active:scale-95'
+            }`}
           >
-            <i className="fa-solid fa-save"></i>
-            Finalize & Save Minutes
+            <i className={`fa-solid ${saveStatus === 'saving' ? 'fa-spinner fa-spin' : saveStatus === 'success' ? 'fa-check-double' : 'fa-save'}`}></i>
+            {saveStatus === 'saving' ? 'Saving Changes...' : saveStatus === 'success' ? 'Minutes Saved' : 'Finalize & Save Minutes'}
           </button>
         </div>
       </div>
