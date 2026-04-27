@@ -1,14 +1,46 @@
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, AlignmentType, HeadingLevel, Header, Footer, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
 
-// Helper to strip HTML for Word export
-const stripHtml = (html: string) => {
-  if (!html) return '';
-  return html
-    .replace(/<[^>]*>?/gm, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+// Helper to parse simple HTML to docx TextRuns
+const parseHtmlToDocx = (html: string) => {
+  if (!html) return [new TextRun("")];
+  
+  // Replace common block tags with spaces to avoid smashing words together
+  let sanitized = html
+    .replace(/<\/p>|<br\/?>|<div>/gi, '\n')
+    .replace(/&nbsp;/g, ' ');
+
+  const result: TextRun[] = [];
+  // Simple regex-based parser for <strong>/<b> and <em>/<i>
+  const parts = sanitized.split(/(<[^>]+>)/g);
+  
+  let isBold = false;
+  let isItalic = true; // Wait, no, false
+
+  isItalic = false;
+
+  parts.forEach(part => {
+    if (part.match(/<strong| <b/i)) {
+      isBold = true;
+    } else if (part.match(/<\/strong>|<\/b>/i)) {
+      isBold = false;
+    } else if (part.match(/<em| <i/i)) {
+      isItalic = true;
+    } else if (part.match(/<\/em>|<\/i>/i)) {
+      isItalic = false;
+    } else if (!part.startsWith('<')) {
+      // It's text
+      if (part.trim() || part.includes('\n')) {
+        result.push(new TextRun({
+          text: part,
+          bold: isBold,
+          italics: isItalic,
+        }));
+      }
+    }
+  });
+
+  return result.length > 0 ? result : [new TextRun("")];
 };
 
 export const generateMinutesWord = async (data: any, event: any) => {
@@ -177,15 +209,15 @@ export const generateMinutesWord = async (data: any, event: any) => {
             }),
             ...(formData.boardReport ? [
               new Paragraph({ text: "Board Report", bold: true }),
-              new Paragraph({ text: stripHtml(formData.boardReport), spacing: { after: 200 } }),
+              new Paragraph({ children: parseHtmlToDocx(formData.boardReport), spacing: { after: 200 } }),
             ] : []),
             ...(formData.financeReport ? [
               new Paragraph({ text: "Financial Report", bold: true }),
-              new Paragraph({ text: stripHtml(formData.financeReport), spacing: { after: 200 } }),
+              new Paragraph({ children: parseHtmlToDocx(formData.financeReport), spacing: { after: 200 } }),
             ] : []),
             ...(formData.committeeReports ? [
               new Paragraph({ text: "Committee Reports", bold: true }),
-              new Paragraph({ text: stripHtml(formData.committeeReports), spacing: { after: 200 } }),
+              new Paragraph({ children: parseHtmlToDocx(formData.committeeReports), spacing: { after: 200 } }),
             ] : []),
           ] : []),
 
@@ -198,7 +230,7 @@ export const generateMinutesWord = async (data: any, event: any) => {
             }),
             ...motions.flatMap((m: any, i: number) => [
               new Paragraph({ text: `Motion #${i + 1}`, bold: true }),
-              new Paragraph({ text: stripHtml(m.description) }),
+              new Paragraph({ children: parseHtmlToDocx(m.description) }),
               new Paragraph({
                 children: [
                   new TextRun({ text: `Moved by: ${m.mover} | Seconded by: ${m.seconder} | Result: ${m.result?.toUpperCase() || 'PENDING'}`, italics: true, size: 18, color: "64748b" }),
@@ -215,7 +247,7 @@ export const generateMinutesWord = async (data: any, event: any) => {
               heading: HeadingLevel.HEADING_2,
               shading: { fill: "f1f5f9" },
             }),
-            new Paragraph({ text: stripHtml(formData.actionItems) }),
+            new Paragraph({ children: parseHtmlToDocx(formData.actionItems) }),
           ] : []),
         ],
       },

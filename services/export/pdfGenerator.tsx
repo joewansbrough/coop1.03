@@ -1,7 +1,13 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 
-// Register fonts if needed (optional for standard fonts)
+// Register fonts to support bold/italic
+// Using standard PDF fonts is safer for broad compatibility, 
+// butfontWeight bold needs to be explicitly handled if not using Font.register
+Font.register({
+  family: 'Helvetica-Bold',
+  src: 'https://cdn.jsdelivr.net/gh/webfont-kit/helvetica-new@master/fonts/helvetica-bold.ttf'
+});
 
 const styles = StyleSheet.create({
   page: {
@@ -94,14 +100,49 @@ const styles = StyleSheet.create({
   }
 });
 
-// Helper to strip HTML tags for PDF rendering (since react-pdf doesn't support HTML)
-const stripHtml = (html: string) => {
-  if (!html) return '';
-  return html
-    .replace(/<[^>]*>?/gm, ' ') // Remove tags
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+// Helper to parse simple HTML to react-pdf components
+const parseHtmlToPdf = (html: string) => {
+  if (!html) return <Text></Text>;
+  
+  // Basic cleanup
+  let sanitized = html
+    .replace(/<\/p>|<div>/gi, '\n')
+    .replace(/<br\/?>/gi, '\n')
+    .replace(/&nbsp;/g, ' ');
+
+  const parts = sanitized.split(/(<[^>]+>)/g);
+  let isBold = false;
+  let isItalic = false;
+
+  return (
+    <Text style={styles.richText}>
+      {parts.map((part, index) => {
+        if (part.match(/<strong|<b/i)) {
+          isBold = true;
+          return null;
+        } else if (part.match(/<\/strong>|<\/b>/i)) {
+          isBold = false;
+          return null;
+        } else if (part.match(/<em|<i/i)) {
+          isItalic = true;
+          return null;
+        } else if (part.match(/<\/em>|<\/i>/i)) {
+          isItalic = false;
+          return null;
+        } else if (!part.startsWith('<')) {
+          return (
+            <Text key={index} style={{ 
+              fontWeight: isBold ? 'bold' : 'normal',
+              fontStyle: isItalic ? 'italic' : 'normal'
+            }}>
+              {part}
+            </Text>
+          );
+        }
+        return null;
+      })}
+    </Text>
+  );
 };
 
 interface PDFMinutesProps {
@@ -198,19 +239,19 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
             {formData.boardReport && (
               <View style={{ marginBottom: 10 }}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Board Report:</Text>
-                <Text style={styles.richText}>{stripHtml(formData.boardReport)}</Text>
+                {parseHtmlToPdf(formData.boardReport)}
               </View>
             )}
             {formData.financeReport && (
               <View style={{ marginBottom: 10 }}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Financial Report:</Text>
-                <Text style={styles.richText}>{stripHtml(formData.financeReport)}</Text>
+                {parseHtmlToPdf(formData.financeReport)}
               </View>
             )}
             {formData.committeeReports && (
               <View style={{ marginBottom: 10 }}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Committee Reports:</Text>
-                <Text style={styles.richText}>{stripHtml(formData.committeeReports)}</Text>
+                {parseHtmlToPdf(formData.committeeReports)}
               </View>
             )}
           </View>
@@ -223,8 +264,8 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
             {motions.map((m: any, i: number) => (
               <View key={i} style={styles.motionCard}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Motion #{i + 1}</Text>
-                <Text style={{ marginBottom: 6 }}>{stripHtml(m.description)}</Text>
-                <Text style={{ fontSize: 9, color: '#64748b' }}>
+                {parseHtmlToPdf(m.description)}
+                <Text style={{ fontSize: 9, color: '#64748b', marginTop: 4 }}>
                   Moved by: {m.mover} | Seconded by: {m.seconder} | Result: {m.result?.toUpperCase() || 'PENDING'}
                 </Text>
               </View>
@@ -236,7 +277,7 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
         {formData.actionItems && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Action Items</Text>
-            <Text style={styles.richText}>{stripHtml(formData.actionItems)}</Text>
+            {parseHtmlToPdf(formData.actionItems)}
           </View>
         )}
 
