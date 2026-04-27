@@ -7,31 +7,6 @@ import MinutesBuilder from '../components/MinutesBuilder';
 import { useMinutes } from '../hooks/useCoopData';
 import { useMinutesManager } from '../hooks/useMinutesManager';
 
-function EventDetail() {
-  const { id } = useParams();
-  const {
-    minutes,
-    loading,
-    saving,
-    saveMinutes,
-    exportToPDF
-  } = useMinutesManager(id);
-
-  // Then in your JSX:
-  {
-    activeTab === 'minutes' && (
-      <MinutesBuilder
-        meetingId={id}
-        initialData={minutes}
-        onSave={async (data) => {
-          await saveMinutes(data);
-          showAlert('Minutes saved!', 'success');
-        }}
-      />
-    )
-  }
-}
-
 interface EventDetailProps {
   isAdmin: boolean;
   isGuest?: boolean;
