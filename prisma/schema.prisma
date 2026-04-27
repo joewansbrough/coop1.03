@@ -216,6 +216,24 @@ model Committee {
   updatedAt     DateTime    @updatedAt
 }
 
+model MeetingMinutes {
+  id           String   @id @default(cuid())
+  meetingId    String   @unique
+  meetingType  String   // 'quick' | 'regular' | 'agm' | 'special'
+  data         Json     // Store the entire formData object
+  attendees    Json     // Array of attendees
+  motions      Json     // Array of motions
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String
+  approvedBy   String?
+  approvalDate DateTime?
+  
+  meeting      CoopEvent @relation(fields: [meetingId], references: [id])
+  
+  @@index([meetingId])
+}
+
 model ScheduledMaintenance {
   id            String               @id @default(uuid())
   unitId        String
