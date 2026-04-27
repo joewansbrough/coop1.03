@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { CoopEvent, Tenant } from '../types';
 import AppAlert from '../components/AppAlert';
 import MinutesBuilder from '../components/MinutesBuilder';
-import { useMinutes } from '../hooks/useCoopData';
+import { useMinutes, useCreateMinutes } from '../hooks/useCoopData';
 import { useMinutesManager } from '../hooks/useMinutesManager';
 
 const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, event }) => {
