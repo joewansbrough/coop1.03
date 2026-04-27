@@ -995,6 +995,25 @@ app.get('/api/migrate', async (req, res) => {
       await p.$executeRawUnsafe(`ALTER TABLE "${table}" ADD COLUMN IF NOT EXISTS "cooperativeId" TEXT;`);
     }
 
+    // 2b. Create MeetingMinutes table if not exists
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "MeetingMinutes" (
+        "id" TEXT NOT NULL,
+        "meetingId" TEXT NOT NULL,
+        "meetingType" TEXT NOT NULL,
+        "data" JSONB NOT NULL,
+        "attendees" JSONB NOT NULL,
+        "motions" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        "createdBy" TEXT NOT NULL,
+        "approvedBy" TEXT,
+        "approvalDate" TIMESTAMP(3),
+        CONSTRAINT "MeetingMinutes_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "MeetingMinutes_meetingId_key" ON "MeetingMinutes"("meetingId");`);
+
     // 3. Add specific missing columns
     await p.$executeRawUnsafe(`ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT 'MEMBER';`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committee" TEXT DEFAULT '';`);
