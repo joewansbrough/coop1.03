@@ -22,7 +22,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
   const formats = [
     'header',
     'bold', 'italic', 'underline', 'strike',
-    'list', 'bullet',
+    'list',
     'link'
   ];
 

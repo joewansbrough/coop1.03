@@ -813,7 +813,9 @@ app.delete('/api/events/:id', requireAuth, async (req, res) => {
 app.get('/api/minutes', requireAuth, async (req, res) => {
   try {
     const p = getPrisma();
+    const coopId = await getCoopId(req, p);
     const minutes = await p.meetingMinutes.findMany({
+      where: { cooperativeId: coopId },
       orderBy: { createdAt: 'desc' },
       include: {
         meeting: {
@@ -834,11 +836,19 @@ app.get('/api/minutes', requireAuth, async (req, res) => {
 
 app.get('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
     const meetingId = getParam(req.params.meetingId);
-    const minutes = await getPrisma().meetingMinutes.findUnique({
+    const minutes = await p.meetingMinutes.findUnique({
       where: { meetingId },
     });
     if (!minutes) return res.status(404).json({ error: 'Minutes not found' });
+    
+    // Security check: ensure minutes belong to user's coop
+    if (minutes.cooperativeId && minutes.cooperativeId !== coopId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    
     res.json(minutes);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -851,6 +861,7 @@ app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
     const { meetingType, formData, attendees, motions } = req.body;
     const user = (req as any).user;
     const p = getPrisma();
+    const coopId = await getCoopId(req, p);
 
     // UPSERT pattern for minutes
     const existing = await p.meetingMinutes.findUnique({ where: { meetingId } });
@@ -863,6 +874,7 @@ app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
           data: formData,
           attendees,
           motions,
+          cooperativeId: coopId,
           updatedAt: new Date(),
         }
       });
@@ -876,6 +888,7 @@ app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
         data: formData,
         attendees,
         motions,
+        cooperativeId: coopId,
         createdBy: user.email,
       }
     });
@@ -1004,6 +1017,7 @@ app.get('/api/migrate', async (req, res) => {
         "data" JSONB NOT NULL,
         "attendees" JSONB NOT NULL,
         "motions" JSONB NOT NULL,
+        "cooperativeId" TEXT,
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL,
         "createdBy" TEXT NOT NULL,
