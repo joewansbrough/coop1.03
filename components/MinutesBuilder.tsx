@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { useTenants, useCommittees, useEvents } from '../hooks/useCoopData';
 import { Tenant, Committee, CoopEvent } from '../types';
+import RichTextEditor from './RichTextEditor';
+import { generateMinutesWord } from '../services/export/wordGenerator';
+import { MinutesPDF } from '../services/export/pdfGenerator';
+import { pdf } from '@react-pdf/renderer';
+import { saveAs } from 'file-saver';
+import { ChevronDown, FileText, FileCode, Printer, Download } from 'lucide-react';
 
 interface MinutesBuilderProps {
   meetingId: string;
@@ -117,9 +124,25 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     }
   }, [meetingId, initialData]);
 
+  const sanitizeFormData = (data: typeof formData) => {
+    const richTextFields = [
+      'boardReport', 'financeReport', 'committeeReports', 'actionItems', 
+      'newBusiness', 'keyDecisions', 'nextSteps', 'auditorReport', 
+      'nominations', 'electionResults'
+    ];
+    
+    const sanitized = { ...data };
+    richTextFields.forEach(field => {
+      if ((sanitized as any)[field]) {
+        (sanitized as any)[field] = DOMPurify.sanitize((sanitized as any)[field]);
+      }
+    });
+    return sanitized;
+  };
+
   const autoSave = () => {
     const data = {
-      formData,
+      formData: sanitizeFormData(formData),
       attendees,
       motions,
       meetingType,
@@ -173,12 +196,42 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
   };
 
   const handleSave = () => {
-    autoSave();
-    onSave({ formData, attendees, motions, meetingType });
+    const sanitizedData = sanitizeFormData(formData);
+    onSave({ formData: sanitizedData, attendees, motions, meetingType });
+    setLastSaved(new Date());
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const blob = await pdf(<MinutesPDF data={{ formData, attendees, motions, meetingType }} event={currentEvent} />).toBlob();
+      saveAs(blob, `Minutes_${formData.meetingDate || currentEvent?.date?.split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error('PDF Export Error:', err);
+    } finally {
+      setIsExporting(false);
+      setShowExportMenu(false);
+    }
+  };
+
+  const handleExportWord = async () => {
+    setIsExporting(true);
+    try {
+      await generateMinutesWord({ formData, attendees, motions, meetingType }, currentEvent);
+    } catch (err) {
+      console.error('Word Export Error:', err);
+    } finally {
+      setIsExporting(false);
+      setShowExportMenu(false);
+    }
   };
 
   const handleExport = () => {
     window.print();
+    setShowExportMenu(false);
   };
 
   const selectMeetingType = (type: MeetingType) => {
@@ -387,18 +440,62 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleExport}
-            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-black uppercase hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
-          >
-            <i className="fa-solid fa-download mr-2"></i>Export
-          </button>
+        <div className="flex gap-2 relative">
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={isExporting}
+              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-black uppercase hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2"
+            >
+              {isExporting ? (
+                <i className="fa-solid fa-spinner fa-spin"></i>
+              ) : (
+                <Download size={14} />
+              )}
+              Export
+              <ChevronDown size={14} className={`transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showExportMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={() => setShowExportMenu(false)}
+                ></div>
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-white/5 py-2 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                  <button
+                    onClick={handleExportPDF}
+                    className="w-full px-4 py-3 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-3 transition-colors"
+                  >
+                    <FileCode size={16} className="text-red-500" />
+                    Download PDF
+                  </button>
+                  <button
+                    onClick={handleExportWord}
+                    className="w-full px-4 py-3 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-3 transition-colors"
+                  >
+                    <FileText size={16} className="text-blue-500" />
+                    Download Word
+                  </button>
+                  <div className="h-px bg-slate-100 dark:bg-white/5 my-1 mx-2"></div>
+                  <button
+                    onClick={handleExport}
+                    className="w-full px-4 py-3 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-3 transition-colors"
+                  >
+                    <Printer size={16} className="text-slate-400" />
+                    Browser Print
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95"
+            className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95 flex items-center gap-2"
           >
-            <i className="fa-solid fa-save mr-2"></i>Save
+            <i className="fa-solid fa-save"></i>
+            Save
           </button>
         </div>
       </div>
@@ -505,10 +602,10 @@ const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, memb
 
     <FormSection title="Key Points" icon="fa-list-check">
       <FormField label="Decisions Made">
-        <textarea value={formData.keyDecisions} onChange={(e) => handleInputChange('keyDecisions', e.target.value)} placeholder="What was decided or discussed?" className="form-textarea" rows={5} />
+        <RichTextEditor value={formData.keyDecisions} onChange={(val) => handleInputChange('keyDecisions', val)} placeholder="What was decided or discussed?" />
       </FormField>
       <FormField label="Next Steps / Action Items">
-        <textarea value={formData.nextSteps} onChange={(e) => handleInputChange('nextSteps', e.target.value)} placeholder="Who is doing what by when?" className="form-textarea" rows={5} />
+        <RichTextEditor value={formData.nextSteps} onChange={(val) => handleInputChange('nextSteps', val)} placeholder="Who is doing what by when?" />
       </FormField>
     </FormSection>
   </div>
@@ -601,13 +698,25 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
 
     <FormSection title="Reports" icon="fa-file-lines">
       <FormField label="Board Report">
-        <textarea value={formData.boardReport} onChange={(e) => handleInputChange('boardReport', e.target.value)} placeholder="Overview of activities, challenges, and outcomes" className="form-textarea" rows={5} />
+        <RichTextEditor 
+          value={formData.boardReport} 
+          onChange={(val) => handleInputChange('boardReport', val)} 
+          placeholder="Overview of activities, challenges, and outcomes" 
+        />
       </FormField>
       <FormField label="Financial Report">
-        <textarea value={formData.financeReport} onChange={(e) => handleInputChange('financeReport', e.target.value)} placeholder="Financial overview and budget status" className="form-textarea" rows={4} />
+        <RichTextEditor 
+          value={formData.financeReport} 
+          onChange={(val) => handleInputChange('financeReport', val)} 
+          placeholder="Financial overview and budget status" 
+        />
       </FormField>
       <FormField label="Committee Reports">
-        <textarea value={formData.committeeReports} onChange={(e) => handleInputChange('committeeReports', e.target.value)} placeholder="Reports from any committees" className="form-textarea" rows={4} />
+        <RichTextEditor 
+          value={formData.committeeReports} 
+          onChange={(val) => handleInputChange('committeeReports', val)} 
+          placeholder="Reports from any committees" 
+        />
       </FormField>
     </FormSection>
 
@@ -679,7 +788,11 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
 
     <FormSection title="Action Items" icon="fa-tasks">
       <FormField label="Follow-up Required">
-        <textarea value={formData.actionItems} onChange={(e) => handleInputChange('actionItems', e.target.value)} placeholder="List action items, responsible parties, and deadlines" className="form-textarea" rows={5} />
+        <RichTextEditor 
+          value={formData.actionItems} 
+          onChange={(val) => handleInputChange('actionItems', val)} 
+          placeholder="List action items, responsible parties, and deadlines" 
+        />
       </FormField>
     </FormSection>
   </div>
@@ -704,7 +817,11 @@ const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attend
 
     <FormSection title="Auditor's Report" icon="fa-file-invoice-dollar">
       <FormField label="Auditor's Report Summary">
-        <textarea value={formData.auditorReport} onChange={(e) => handleInputChange('auditorReport', e.target.value)} placeholder="Summary of auditor's report and year-end financial statements" className="form-textarea" rows={5} />
+        <RichTextEditor 
+          value={formData.auditorReport} 
+          onChange={(val) => handleInputChange('auditorReport', val)} 
+          placeholder="Summary of auditor's report and year-end financial statements" 
+        />
       </FormField>
     </FormSection>
 
@@ -721,10 +838,18 @@ const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attend
         </FormField>
       </div>
       <FormField label="Nominations Received">
-        <textarea value={formData.nominations} onChange={(e) => handleInputChange('nominations', e.target.value)} placeholder="List all candidates who accepted nomination" className="form-textarea" rows={4} />
+        <RichTextEditor 
+          value={formData.nominations} 
+          onChange={(val) => handleInputChange('nominations', val)} 
+          placeholder="List all candidates who accepted nomination" 
+        />
       </FormField>
       <FormField label="Election Results">
-        <textarea value={formData.electionResults} onChange={(e) => handleInputChange('electionResults', e.target.value)} placeholder="Document elected directors, vote counts, and terms of office" className="form-textarea" rows={5} />
+        <RichTextEditor 
+          value={formData.electionResults} 
+          onChange={(val) => handleInputChange('electionResults', val)} 
+          placeholder="Document elected directors, vote counts, and terms of office" 
+        />
       </FormField>
       <FormField label="Scrutineers">
         <input type="text" value={formData.scrutineers} onChange={(e) => handleInputChange('scrutineers', e.target.value)} placeholder="Names of scrutineers" className="form-input" />
@@ -828,7 +953,11 @@ const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
 
     <FormSection title="Special Business" icon="fa-exclamation-triangle">
       <FormField label="Purpose of Special Meeting">
-        <textarea value={formData.newBusiness} onChange={(e) => handleInputChange('newBusiness', e.target.value)} placeholder="Document the specific reason for calling this special meeting" className="form-textarea" rows={4} />
+        <RichTextEditor 
+          value={formData.newBusiness} 
+          onChange={(val) => handleInputChange('newBusiness', val)} 
+          placeholder="Document the specific reason for calling this special meeting" 
+        />
       </FormField>
     </FormSection>
 
@@ -900,7 +1029,11 @@ const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
 
     <FormSection title="Action Items" icon="fa-tasks">
       <FormField label="Follow-up Required">
-        <textarea value={formData.actionItems} onChange={(e) => handleInputChange('actionItems', e.target.value)} placeholder="List action items, responsible parties, and deadlines" className="form-textarea" rows={5} />
+        <RichTextEditor 
+          value={formData.actionItems} 
+          onChange={(val) => handleInputChange('actionItems', val)} 
+          placeholder="List action items, responsible parties, and deadlines" 
+        />
       </FormField>
     </FormSection>
   </div>

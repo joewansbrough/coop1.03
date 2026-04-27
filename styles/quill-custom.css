@@ -1,0 +1,63 @@
+@reference "../index.css";
+
+/* Custom styling for React Quill to match app theme and support dark mode */
+
+.rich-text-editor-container {
+  @apply rounded-xl overflow-hidden border border-slate-200 dark:border-white/5;
+}
+
+.ql-toolbar.ql-snow {
+  @apply bg-slate-50 dark:bg-slate-800/50 border-none px-4 py-2;
+}
+
+.ql-container.ql-snow {
+  @apply border-none bg-white dark:bg-slate-900 min-h-[150px] text-sm font-medium;
+}
+
+.ql-editor {
+  @apply text-slate-900 dark:text-slate-200 min-h-[150px];
+}
+
+.ql-editor.ql-blank::before {
+  @apply text-slate-400 italic;
+}
+
+/* Dark mode overrides for toolbar icons and dropdowns */
+.dark .ql-snow .ql-stroke {
+  stroke: #94a3b8; /* slate-400 */
+}
+
+.dark .ql-snow .ql-fill {
+  fill: #94a3b8;
+}
+
+.dark .ql-snow .ql-picker {
+  color: #94a3b8;
+}
+
+.dark .ql-snow.ql-toolbar button:hover .ql-stroke,
+.dark .ql-snow.ql-toolbar button.ql-active .ql-stroke {
+  stroke: #3b82f6; /* brand/blue-500 */
+}
+
+.dark .ql-snow.ql-toolbar button:hover .ql-fill,
+.dark .ql-snow.ql-toolbar button.ql-active .ql-fill {
+  fill: #3b82f6;
+}
+
+.dark .ql-snow.ql-toolbar .ql-picker-label:hover,
+.dark .ql-snow.ql-toolbar .ql-picker-label.ql-active {
+  color: #3b82f6;
+}
+
+.dark .ql-snow .ql-picker-options {
+  @apply bg-slate-800 border-slate-700 shadow-xl;
+}
+
+.dark .ql-snow .ql-picker-item {
+  color: #94a3b8;
+}
+
+.dark .ql-snow .ql-picker-item:hover {
+  color: #3b82f6;
+}
