@@ -165,16 +165,28 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
           <Text style={{ marginBottom: 10 }}>
             {attendees.map((a: any) => `${a.name}${a.position ? ` (${a.position})` : ''}`).join(', ')}
           </Text>
-          {formData.directorsAbsent && (
+          {formData.directorsAbsent && formData.directorsAbsent.length > 0 && (
             <View style={styles.row}>
               <Text style={styles.label}>Regrets/Absent:</Text>
-              <Text style={styles.value}>{formData.directorsAbsent}</Text>
+              <Text style={styles.value}>
+                {Array.isArray(formData.directorsAbsent) ? formData.directorsAbsent.join(', ') : formData.directorsAbsent}
+              </Text>
             </View>
           )}
-          {formData.guests && (
+          {formData.guests && formData.guests.length > 0 && (
             <View style={styles.row}>
-              <Text style={styles.label}>Guests:</Text>
-              <Text style={styles.value}>{formData.guests}</Text>
+              <Text style={styles.label}>Guests/Attendees:</Text>
+              <Text style={styles.value}>
+                {Array.isArray(formData.guests) ? formData.guests.join(', ') : formData.guests}
+              </Text>
+            </View>
+          )}
+          {formData.scrutineers && formData.scrutineers.length > 0 && (
+            <View style={styles.row}>
+              <Text style={styles.label}>Scrutineers:</Text>
+              <Text style={styles.value}>
+                {Array.isArray(formData.scrutineers) ? formData.scrutineers.join(', ') : formData.scrutineers}
+              </Text>
             </View>
           )}
         </View>

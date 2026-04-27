@@ -65,8 +65,6 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     noticeConfirmed: false,
     quorumConfirmed: false,
     minuteTaker: '',
-    directorsAbsent: '',
-    guests: '',
     agendaChanges: '',
     agendaApproved: false,
     previousMinutesDate: '',
@@ -92,8 +90,11 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     candidates: '',
     nominations: '',
     electionResults: '',
-    scrutineers: '',
+    scrutineers: [] as string[],
     ballotsDisposed: false,
+    // Multi-name fields
+    directorsAbsent: [] as string[],
+    guests: [] as string[],
   });
 
   const [attendees, setAttendees] = useState<AttendeeItem[]>([
@@ -103,7 +104,13 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData.formData || formData);
+      const data = initialData.formData || formData;
+      // Ensure array fields are actually arrays (migration from old string format)
+      if (typeof data.directorsAbsent === 'string') data.directorsAbsent = data.directorsAbsent ? data.directorsAbsent.split(',').map((s: string) => s.trim()) : [];
+      if (typeof data.guests === 'string') data.guests = data.guests ? data.guests.split(',').map((s: string) => s.trim()) : [];
+      if (typeof data.scrutineers === 'string') data.scrutineers = data.scrutineers ? data.scrutineers.split(',').map((s: string) => s.trim()) : [];
+      
+      setFormData(data);
       setAttendees(initialData.attendees || attendees);
       setMotions(initialData.motions || motions);
       setMeetingType(initialData.meetingType || 'regular');
@@ -113,7 +120,13 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
       const saved = localStorage.getItem(`minutes-${meetingId}`);
       if (saved) {
         const data = JSON.parse(saved);
-        setFormData(data.formData || formData);
+        const fData = data.formData || formData;
+        // Migration check
+        if (typeof fData.directorsAbsent === 'string') fData.directorsAbsent = fData.directorsAbsent ? fData.directorsAbsent.split(',').map((s: string) => s.trim()) : [];
+        if (typeof fData.guests === 'string') fData.guests = fData.guests ? fData.guests.split(',').map((s: string) => s.trim()) : [];
+        if (typeof fData.scrutineers === 'string') fData.scrutineers = fData.scrutineers ? fData.scrutineers.split(',').map((s: string) => s.trim()) : [];
+        
+        setFormData(fData);
         setAttendees(data.attendees || attendees);
         setMotions(data.motions || motions);
         setMeetingType(data.meetingType || 'regular');
@@ -541,6 +554,7 @@ const NameSelector: React.FC<{
           autoFocus
         />
         <button 
+          type="button"
           onClick={() => setIsManual(false)}
           className="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl hover:bg-slate-200"
           title="Back to list"
@@ -577,6 +591,54 @@ const NameSelector: React.FC<{
   );
 };
 
+// Reusable Name List Component
+const NameListField: React.FC<{
+  names: string[],
+  onChange: (names: string[]) => void,
+  members: Tenant[],
+  addButtonLabel: string,
+  placeholder?: string
+}> = ({ names, onChange, members, addButtonLabel, placeholder }) => {
+  const addName = () => onChange([...names, '']);
+  const removeName = (index: number) => onChange(names.filter((_, i) => i !== index));
+  const updateName = (index: number, val: string) => {
+    const newNames = [...names];
+    newNames[index] = val;
+    onChange(newNames);
+  };
+
+  return (
+    <div className="space-y-3">
+      {names.map((name, index) => (
+        <div key={index} className="flex gap-2">
+          <div className="flex-1">
+            <NameSelector 
+              value={name} 
+              onChange={(val) => updateName(index, val)} 
+              members={members} 
+              placeholder={placeholder}
+            />
+          </div>
+          <button 
+            type="button"
+            onClick={() => removeName(index)}
+            className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-200"
+          >
+            <i className="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      ))}
+      <button 
+        type="button"
+        onClick={addName}
+        className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700"
+      >
+        <i className="fa-solid fa-plus mr-1"></i> {addButtonLabel}
+      </button>
+    </div>
+  );
+};
+
 // Quick Meeting Template
 const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, members }) => (
   <div className="space-y-8">
@@ -590,12 +652,12 @@ const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, memb
         </FormField>
       </div>
       <FormField label="Attendees">
-        <textarea 
-          value={formData.guests} 
-          onChange={(e) => handleInputChange('guests', e.target.value)} 
-          placeholder="Enter names separated by commas..." 
-          className="form-textarea" 
-          rows={2}
+        <NameListField 
+          names={formData.guests || []} 
+          onChange={(val) => handleInputChange('guests', val)} 
+          members={members} 
+          addButtonLabel="Add Attendee"
+          placeholder="Select attendee..."
         />
       </FormField>
     </FormSection>
@@ -674,17 +736,29 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
           <button 
             type="button"
             onClick={addAttendee}
-            className="text-sm font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
+            className="text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300"
           >
-            <i className="fa-solid fa-plus mr-2"></i>Add Director
+            <i className="fa-solid fa-plus mr-1"></i>Add Director
           </button>
         </div>
       </FormField>
       <FormField label="Directors Absent">
-        <input type="text" value={formData.directorsAbsent} onChange={(e) => handleInputChange('directorsAbsent', e.target.value)} placeholder="Names of absent directors" className="form-input" />
+        <NameListField 
+          names={formData.directorsAbsent || []} 
+          onChange={(val) => handleInputChange('directorsAbsent', val)} 
+          members={members} 
+          addButtonLabel="Add Absent Director"
+          placeholder="Select director..."
+        />
       </FormField>
       <FormField label="Guests & Observers">
-        <input type="text" value={formData.guests} onChange={(e) => handleInputChange('guests', e.target.value)} placeholder="e.g., Auditor - Jane Smith" className="form-input" />
+        <NameListField 
+          names={formData.guests || []} 
+          onChange={(val) => handleInputChange('guests', val)} 
+          members={members} 
+          addButtonLabel="Add Guest"
+          placeholder="Select guest..."
+        />
       </FormField>
       <FormField label="Minutes Recorded By" required>
         <NameSelector 
@@ -852,7 +926,13 @@ const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attend
         />
       </FormField>
       <FormField label="Scrutineers">
-        <input type="text" value={formData.scrutineers} onChange={(e) => handleInputChange('scrutineers', e.target.value)} placeholder="Names of scrutineers" className="form-input" />
+        <NameListField 
+          names={formData.scrutineers || []} 
+          onChange={(val) => handleInputChange('scrutineers', val)} 
+          members={members} 
+          addButtonLabel="Add Scrutineer"
+          placeholder="Select scrutineer..."
+        />
       </FormField>
       <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
         <input 

@@ -142,19 +142,27 @@ export const generateMinutesWord = async (data: any, event: any) => {
             text: attendees.map((a: any) => `${a.name}${a.position ? ` (${a.position})` : ''}`).join(', '),
             spacing: { after: 200 },
           }),
-          ...(formData.directorsAbsent ? [
+          ...(formData.directorsAbsent && formData.directorsAbsent.length > 0 ? [
             new Paragraph({
               children: [
                 new TextRun({ text: "Regrets/Absent: ", bold: true }),
-                new TextRun(formData.directorsAbsent),
+                new TextRun(Array.isArray(formData.directorsAbsent) ? formData.directorsAbsent.join(', ') : formData.directorsAbsent),
               ],
             })
           ] : []),
-          ...(formData.guests ? [
+          ...(formData.guests && formData.guests.length > 0 ? [
             new Paragraph({
               children: [
-                new TextRun({ text: "Guests: ", bold: true }),
-                new TextRun(formData.guests),
+                new TextRun({ text: "Guests/Attendees: ", bold: true }),
+                new TextRun(Array.isArray(formData.guests) ? formData.guests.join(', ') : formData.guests),
+              ],
+            })
+          ] : []),
+          ...(formData.scrutineers && formData.scrutineers.length > 0 ? [
+            new Paragraph({
+              children: [
+                new TextRun({ text: "Scrutineers: ", bold: true }),
+                new TextRun(Array.isArray(formData.scrutineers) ? formData.scrutineers.join(', ') : formData.scrutineers),
               ],
             })
           ] : []),
