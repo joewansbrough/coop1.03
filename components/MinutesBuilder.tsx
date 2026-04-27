@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useTenants, useCommittees, useEvents } from '../hooks/useCoopData';
+import { Tenant, Committee, CoopEvent } from '../types';
 
 interface MinutesBuilderProps {
   meetingId: string;
@@ -26,7 +28,23 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
   const [step, setStep] = useState<'select' | 'build'>('select');
   const [meetingType, setMeetingType] = useState<MeetingType>('regular');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  
+
+  const { data: tenants = [] } = useTenants();
+  const { data: committees = [] } = useCommittees();
+  const { data: events = [] } = useEvents();
+
+  const currentEvent = events.find(e => e.id === meetingId);
+  const committeeMembers = React.useMemo(() => {
+    if (!currentEvent?.committeeId) return tenants;
+    const committee = committees.find(c => c.id === currentEvent.committeeId);
+    if (!committee) return tenants;
+    // Assuming committee.members is an array of tenant IDs or objects
+    // If it's a list of IDs, we filter tenants.
+    // Based on types.ts, it's any[]. Let's try to match by firstName/lastName if needed, 
+    // but usually it's better to just use all tenants as options if committee info is sparse.
+    return tenants; 
+  }, [currentEvent, committees, tenants]);
+
   // Form state
   const [formData, setFormData] = useState({
     meetingDate: '',
@@ -77,19 +95,27 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
   const [motions, setMotions] = useState<MotionItem[]>([]);
 
   useEffect(() => {
-    // Load from localStorage if available
-    const saved = localStorage.getItem(`minutes-${meetingId}`);
-    if (saved) {
-      const data = JSON.parse(saved);
-      setFormData(data.formData || formData);
-      setAttendees(data.attendees || attendees);
-      setMotions(data.motions || motions);
-      setMeetingType(data.meetingType || 'regular');
-      if (data.meetingType) {
-        setStep('build');
+    if (initialData) {
+      setFormData(initialData.formData || formData);
+      setAttendees(initialData.attendees || attendees);
+      setMotions(initialData.motions || motions);
+      setMeetingType(initialData.meetingType || 'regular');
+      setStep('build');
+    } else {
+      // Load from localStorage if available
+      const saved = localStorage.getItem(`minutes-${meetingId}`);
+      if (saved) {
+        const data = JSON.parse(saved);
+        setFormData(data.formData || formData);
+        setAttendees(data.attendees || attendees);
+        setMotions(data.motions || motions);
+        setMeetingType(data.meetingType || 'regular');
+        if (data.meetingType) {
+          setStep('build');
+        }
       }
     }
-  }, [meetingId]);
+  }, [meetingId, initialData]);
 
   const autoSave = () => {
     const data = {
@@ -149,7 +175,6 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
   const handleSave = () => {
     autoSave();
     onSave({ formData, attendees, motions, meetingType });
-    alert('Minutes saved successfully!');
   };
 
   const handleExport = () => {
@@ -371,7 +396,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 transition-all"
+            className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95"
           >
             <i className="fa-solid fa-save mr-2"></i>Save
           </button>
@@ -379,17 +404,84 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 p-8">
-        {meetingType === 'quick' && <QuickMeetingTemplate formData={formData} handleInputChange={handleInputChange} />}
-        {meetingType === 'regular' && <RegularMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} />}
-        {meetingType === 'agm' && <AGMMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} />}
-        {meetingType === 'special' && <SpecialMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} />}
+        {meetingType === 'quick' && <QuickMeetingTemplate formData={formData} handleInputChange={handleInputChange} members={committeeMembers} />}
+        {meetingType === 'regular' && <RegularMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} />}
+        {meetingType === 'agm' && <AGMMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} />}
+        {meetingType === 'special' && <SpecialMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} />}
+        
+        <div className="mt-12 pt-8 border-t border-slate-100 dark:border-white/5 flex justify-end">
+           <button
+            onClick={handleSave}
+            className="px-8 py-4 bg-brand-600 text-white rounded-2xl text-sm font-black uppercase hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95 flex items-center gap-2"
+          >
+            <i className="fa-solid fa-save"></i>
+            Finalize & Save Minutes
+          </button>
+        </div>
       </div>
     </div>
   );
 };
 
+// Name Dropdown Component
+const NameSelector: React.FC<{ 
+  value: string, 
+  onChange: (val: string) => void, 
+  members: Tenant[],
+  placeholder?: string 
+}> = ({ value, onChange, members, placeholder = "Select member..." }) => {
+  const [isManual, setIsManual] = useState(false);
+
+  if (isManual) {
+    return (
+      <div className="flex gap-2">
+        <input 
+          type="text" 
+          value={value} 
+          onChange={(e) => onChange(e.target.value)} 
+          placeholder="Enter name manually" 
+          className="form-input flex-1"
+          autoFocus
+        />
+        <button 
+          onClick={() => setIsManual(false)}
+          className="px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl hover:bg-slate-200"
+          title="Back to list"
+        >
+          <i className="fa-solid fa-list"></i>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-2">
+      <select 
+        value={value} 
+        onChange={(e) => {
+          if (e.target.value === '__add__') {
+            setIsManual(true);
+            onChange('');
+          } else {
+            onChange(e.target.value);
+          }
+        }}
+        className="form-input flex-1"
+      >
+        <option value="">{placeholder}</option>
+        {members.sort((a,b) => a.firstName.localeCompare(b.firstName)).map(m => (
+          <option key={m.id} value={`${m.firstName} ${m.lastName}`}>
+            {m.firstName} {m.lastName}
+          </option>
+        ))}
+        <option value="__add__">+ Add person manually...</option>
+      </select>
+    </div>
+  );
+};
+
 // Quick Meeting Template
-const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange }) => (
+const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, members }) => (
   <div className="space-y-8">
     <FormSection title="Meeting Info" icon="fa-info-circle">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -401,7 +493,13 @@ const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange }) =>
         </FormField>
       </div>
       <FormField label="Attendees">
-        <input type="text" value={formData.guests} onChange={(e) => handleInputChange('guests', e.target.value)} placeholder="e.g., John Smith, Jane Doe, etc." className="form-input" />
+        <textarea 
+          value={formData.guests} 
+          onChange={(e) => handleInputChange('guests', e.target.value)} 
+          placeholder="Enter names separated by commas..." 
+          className="form-textarea" 
+          rows={2}
+        />
       </FormField>
     </FormSection>
 
@@ -417,7 +515,7 @@ const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange }) =>
 );
 
 // Regular Meeting Template (streamlined version)
-const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion }) => (
+const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members }) => (
   <div className="space-y-8">
     <FormSection title="Meeting Information" icon="fa-calendar-check">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -436,7 +534,12 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
           <input type="text" value={formData.location} onChange={(e) => handleInputChange('location', e.target.value)} placeholder="e.g., Common Room" className="form-input" required />
         </FormField>
         <FormField label="Chair" required>
-          <input type="text" value={formData.chair} onChange={(e) => handleInputChange('chair', e.target.value)} placeholder="Meeting chairperson" className="form-input" required />
+          <NameSelector 
+            value={formData.chair} 
+            onChange={(val) => handleInputChange('chair', val)} 
+            members={members} 
+            placeholder="Select chairperson..." 
+          />
         </FormField>
       </div>
     </FormSection>
@@ -446,13 +549,13 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
         <div className="space-y-3">
           {attendees.map(attendee => (
             <div key={attendee.id} className="flex gap-3">
-              <input 
-                type="text" 
-                value={attendee.name}
-                onChange={(e) => updateAttendee(attendee.id, 'name', e.target.value)}
-                placeholder="Director name" 
-                className="form-input flex-1"
-              />
+              <div className="flex-1">
+                <NameSelector 
+                  value={attendee.name} 
+                  onChange={(val) => updateAttendee(attendee.id, 'name', val)} 
+                  members={members} 
+                />
+              </div>
               <input 
                 type="text" 
                 value={attendee.position}
@@ -487,7 +590,12 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
         <input type="text" value={formData.guests} onChange={(e) => handleInputChange('guests', e.target.value)} placeholder="e.g., Auditor - Jane Smith" className="form-input" />
       </FormField>
       <FormField label="Minutes Recorded By" required>
-        <input type="text" value={formData.minuteTaker} onChange={(e) => handleInputChange('minuteTaker', e.target.value)} placeholder="Secretary/Minute taker" className="form-input" required />
+        <NameSelector 
+          value={formData.minuteTaker} 
+          onChange={(val) => handleInputChange('minuteTaker', val)} 
+          members={members} 
+          placeholder="Select recorder..." 
+        />
       </FormField>
     </FormSection>
 
@@ -529,21 +637,17 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
               </FormField>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <FormField label="Moved By">
-                  <input 
-                    type="text"
-                    value={motion.mover}
-                    onChange={(e) => updateMotion(motion.id, 'mover', e.target.value)}
-                    placeholder="Name"
-                    className="form-input"
+                  <NameSelector 
+                    value={motion.mover} 
+                    onChange={(val) => updateMotion(motion.id, 'mover', val)} 
+                    members={members} 
                   />
                 </FormField>
                 <FormField label="Seconded By">
-                  <input 
-                    type="text"
-                    value={motion.seconder}
-                    onChange={(e) => updateMotion(motion.id, 'seconder', e.target.value)}
-                    placeholder="Name"
-                    className="form-input"
+                  <NameSelector 
+                    value={motion.seconder} 
+                    onChange={(val) => updateMotion(motion.id, 'seconder', val)} 
+                    members={members} 
                   />
                 </FormField>
                 <FormField label="Result">
@@ -582,9 +686,8 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
 );
 
 // AGM Meeting Template (comprehensive)
-const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion }) => (
+const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members }) => (
   <div className="space-y-8">
-    {/* Same as regular template but with additional sections */}
     <RegularMeetingTemplate 
       formData={formData} 
       handleInputChange={handleInputChange}
@@ -596,6 +699,7 @@ const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attend
       addMotion={addMotion}
       removeMotion={removeMotion}
       updateMotion={updateMotion}
+      members={members}
     />
 
     <FormSection title="Auditor's Report" icon="fa-file-invoice-dollar">
@@ -642,7 +746,7 @@ const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attend
 );
 
 // Special Meeting Template
-const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion }) => (
+const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members }) => (
   <div className="space-y-8">
     <FormSection title="Meeting Information" icon="fa-calendar-check">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -658,7 +762,11 @@ const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField label="Chair" required>
-          <input type="text" value={formData.chair} onChange={(e) => handleInputChange('chair', e.target.value)} className="form-input" required />
+          <NameSelector 
+            value={formData.chair} 
+            onChange={(val) => handleInputChange('chair', val)} 
+            members={members} 
+          />
         </FormField>
         <FormField label="Notice Period Confirmed">
           <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
@@ -682,13 +790,13 @@ const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
         <div className="space-y-3">
           {attendees.map(attendee => (
             <div key={attendee.id} className="flex gap-3">
-              <input 
-                type="text" 
-                value={attendee.name}
-                onChange={(e) => updateAttendee(attendee.id, 'name', e.target.value)}
-                placeholder="Member name" 
-                className="form-input flex-1"
-              />
+              <div className="flex-1">
+                <NameSelector 
+                  value={attendee.name} 
+                  onChange={(val) => updateAttendee(attendee.id, 'name', val)} 
+                  members={members} 
+                />
+              </div>
               {attendees.length > 1 && (
                 <button 
                   type="button"
@@ -710,7 +818,11 @@ const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
         </div>
       </FormField>
       <FormField label="Minutes Recorded By" required>
-        <input type="text" value={formData.minuteTaker} onChange={(e) => handleInputChange('minuteTaker', e.target.value)} className="form-input" required />
+        <NameSelector 
+          value={formData.minuteTaker} 
+          onChange={(val) => handleInputChange('minuteTaker', val)} 
+          members={members} 
+        />
       </FormField>
     </FormSection>
 
@@ -746,21 +858,17 @@ const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
               </FormField>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <FormField label="Moved By">
-                  <input 
-                    type="text"
-                    value={motion.mover}
-                    onChange={(e) => updateMotion(motion.id, 'mover', e.target.value)}
-                    placeholder="Name"
-                    className="form-input"
+                  <NameSelector 
+                    value={motion.mover} 
+                    onChange={(val) => updateMotion(motion.id, 'mover', val)} 
+                    members={members} 
                   />
                 </FormField>
                 <FormField label="Seconded By">
-                  <input 
-                    type="text"
-                    value={motion.seconder}
-                    onChange={(e) => updateMotion(motion.id, 'seconder', e.target.value)}
-                    placeholder="Name"
-                    className="form-input"
+                  <NameSelector 
+                    value={motion.seconder} 
+                    onChange={(val) => updateMotion(motion.id, 'seconder', val)} 
+                    members={members} 
                   />
                 </FormField>
                 <FormField label="Result">

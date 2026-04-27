@@ -150,17 +150,16 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                 });
 
                 if (res.ok) {
-                  showAlert('Minutes saved successfully!', 'success');
+                  showAlert('Meeting minutes have been saved and archived.', 'success');
                 } else {
-                  showAlert('Failed to save minutes.', 'error');
+                  showAlert('Failed to save minutes to the database.', 'error');
                 }
               } catch (err) {
                 console.error(err);
-                showAlert('Failed to save minutes.', 'error');
+                showAlert('A network error occurred while saving minutes.', 'error');
               }
             }}
-          />
-        </div>
+            />        </div>
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden">
           <div className="h-48 bg-slate-900 relative overflow-hidden">
