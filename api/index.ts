@@ -808,6 +808,85 @@ app.delete('/api/events/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
+// --- Meeting Minutes Routes ---
+
+app.get('/api/minutes', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const minutes = await p.meetingMinutes.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        meeting: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            category: true,
+          },
+        },
+      },
+    });
+    res.json(minutes);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/minutes/:meetingId', requireAuth, async (req, res) => {
+  try {
+    const meetingId = getParam(req.params.meetingId);
+    const minutes = await getPrisma().meetingMinutes.findUnique({
+      where: { meetingId },
+    });
+    if (!minutes) return res.status(404).json({ error: 'Minutes not found' });
+    res.json(minutes);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
+  try {
+    const meetingId = getParam(req.params.meetingId);
+    const { meetingType, formData, attendees, motions } = req.body;
+    const user = (req as any).user;
+    const p = getPrisma();
+
+    // UPSERT pattern for minutes
+    const existing = await p.meetingMinutes.findUnique({ where: { meetingId } });
+
+    if (existing) {
+      const updated = await p.meetingMinutes.update({
+        where: { meetingId },
+        data: {
+          meetingType,
+          data: formData,
+          attendees,
+          motions,
+          updatedAt: new Date(),
+        }
+      });
+      return res.json(updated);
+    }
+
+    const minutes = await p.meetingMinutes.create({
+      data: {
+        meetingId,
+        meetingType,
+        data: formData,
+        attendees,
+        motions,
+        createdBy: user.email,
+      }
+    });
+
+    res.status(201).json(minutes);
+  } catch (error: any) {
+    console.error('Error saving minutes:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // --- AI Routes ---
 const getAI = () => {
   const apiKey = process.env.API_KEY;
