@@ -184,6 +184,11 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
   const actionItems = Array.isArray(formData.actionItemsList)
     ? formData.actionItemsList.filter((item: any) => item?.description?.trim() || item?.responsible?.length || item?.dueDate)
     : [];
+  const reports = [
+    { title: 'Board Report', content: formData.boardReport },
+    { title: 'Financial Report', content: formData.financeReport },
+    { title: 'Committee Reports', content: formData.committeeReports },
+  ].filter((report) => report.content);
 
   const getMeetingLabel = (type: string) => {
     switch (type) {
@@ -300,37 +305,40 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
         </View>
 
         {/* Reports */}
-        {(formData.boardReport || formData.financeReport || formData.committeeReports) && (
+        {reports.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Reports & Discussion</Text>
-            {formData.boardReport && (
-              <View style={styles.reportCard} wrap={false}>
-                <Text style={styles.reportTitle}>Board Report</Text>
-                {parseHtmlToPdf(formData.boardReport)}
+            <View wrap={false}>
+              <Text style={styles.sectionTitle}>Reports & Discussion</Text>
+              <View style={styles.reportCard}>
+                <Text style={styles.reportTitle}>{reports[0].title}</Text>
+                {parseHtmlToPdf(reports[0].content)}
               </View>
-            )}
-            {formData.financeReport && (
-              <View style={styles.reportCard} wrap={false}>
-                <Text style={styles.reportTitle}>Financial Report</Text>
-                {parseHtmlToPdf(formData.financeReport)}
+            </View>
+            {reports.slice(1).map((report) => (
+              <View key={report.title} style={styles.reportCard} wrap={false}>
+                <Text style={styles.reportTitle}>{report.title}</Text>
+                {parseHtmlToPdf(report.content)}
               </View>
-            )}
-            {formData.committeeReports && (
-              <View style={styles.reportCard} wrap={false}>
-                <Text style={styles.reportTitle}>Committee Reports</Text>
-                {parseHtmlToPdf(formData.committeeReports)}
-              </View>
-            )}
+            ))}
           </View>
         )}
 
         {/* Motions */}
         {motions.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Motions & Resolutions</Text>
-            {motions.map((m: any, i: number) => (
-              <View key={i} style={styles.motionCard} wrap={false}>
-                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Motion #{i + 1}</Text>
+            <View wrap={false}>
+              <Text style={styles.sectionTitle}>Motions & Resolutions</Text>
+              <View style={styles.motionCard}>
+                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Motion #1</Text>
+                {parseHtmlToPdf(motions[0].description)}
+                <Text style={{ fontSize: 9, color: '#64748b', marginTop: 4 }}>
+                  Moved by: {motions[0].mover} | Seconded by: {motions[0].seconder} | Result: {motions[0].result?.toUpperCase() || 'PENDING'}
+                </Text>
+              </View>
+            </View>
+            {motions.slice(1).map((m: any, i: number) => (
+              <View key={i + 1} style={styles.motionCard} wrap={false}>
+                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Motion #{i + 2}</Text>
                 {parseHtmlToPdf(m.description)}
                 <Text style={{ fontSize: 9, color: '#64748b', marginTop: 4 }}>
                   Moved by: {m.mover} | Seconded by: {m.seconder} | Result: {m.result?.toUpperCase() || 'PENDING'}
@@ -343,10 +351,19 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
         {/* Action Items */}
         {actionItems.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Action Items</Text>
-            {actionItems.map((item: any, i: number) => (
-              <View key={item.id || i} style={styles.motionCard} wrap={false}>
-                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Action Item #{i + 1}</Text>
+            <View wrap={false}>
+              <Text style={styles.sectionTitle}>Action Items</Text>
+              <View style={styles.motionCard}>
+                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Action Item #1</Text>
+                <Text style={{ marginBottom: 6 }}>{actionItems[0].description || 'No action described.'}</Text>
+                <Text style={{ fontSize: 9, color: '#64748b' }}>
+                  Responsible: {Array.isArray(actionItems[0].responsible) && actionItems[0].responsible.length > 0 ? actionItems[0].responsible.join(', ') : 'Unassigned'} | Complete by: {formatDateOnly(actionItems[0].dueDate)}
+                </Text>
+              </View>
+            </View>
+            {actionItems.slice(1).map((item: any, i: number) => (
+              <View key={item.id || i + 1} style={styles.motionCard} wrap={false}>
+                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Action Item #{i + 2}</Text>
                 <Text style={{ marginBottom: 6 }}>{item.description || 'No action described.'}</Text>
                 <Text style={{ fontSize: 9, color: '#64748b' }}>
                   Responsible: {Array.isArray(item.responsible) && item.responsible.length > 0 ? item.responsible.join(', ') : 'Unassigned'} | Complete by: {formatDateOnly(item.dueDate)}
@@ -355,7 +372,7 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
             ))}
           </View>
         ) : formData.actionItems && (
-          <View style={styles.section}>
+          <View style={styles.section} wrap={false}>
             <Text style={styles.sectionTitle}>Action Items</Text>
             {parseHtmlToPdf(formData.actionItems)}
           </View>

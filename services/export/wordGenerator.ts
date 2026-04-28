@@ -1,6 +1,17 @@
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, AlignmentType, HeadingLevel, Header, Footer, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
 
+const BRAND = {
+  font: 'DM Sans',
+  text: '0f172a',
+  body: '475569',
+  muted: '64748b',
+  subtle: '94a3b8',
+  card: 'f8fafc',
+  section: 'f1f5f9',
+  teal: '0D9488',
+};
+
 // Helper to parse simple HTML to docx TextRuns
 const parseHtmlToDocx = (html: string) => {
   if (!html) return [new TextRun("")];
@@ -35,6 +46,9 @@ const parseHtmlToDocx = (html: string) => {
           text: part,
           bold: isBold,
           italics: isItalic,
+          font: BRAND.font,
+          color: BRAND.body,
+          size: 21,
         }));
       }
     }
@@ -45,21 +59,40 @@ const parseHtmlToDocx = (html: string) => {
 
 const boldParagraph = (text: string, options: any = {}) => new Paragraph({
   ...options,
-  children: [new TextRun({ text, bold: true })],
+  children: [new TextRun({ text, bold: true, font: BRAND.font, color: BRAND.text, size: 21 })],
 });
 
 const sectionHeading = (text: string) => new Paragraph({
-  text,
   heading: HeadingLevel.HEADING_2,
-  shading: { fill: "f1f5f9" },
+  shading: { fill: BRAND.section },
+  border: {
+    left: {
+      color: BRAND.teal,
+      space: 6,
+      style: BorderStyle.SINGLE,
+      size: 16,
+    },
+  },
+  spacing: { before: 260, after: 120 },
+  indent: { left: 120 },
   keepNext: true,
+  children: [
+    new TextRun({
+      text,
+      bold: true,
+      font: BRAND.font,
+      color: BRAND.text,
+      size: 20,
+      allCaps: true,
+    }),
+  ],
 });
 
 const cardHeading = (text: string) => boldParagraph(text, {
-  shading: { fill: "f8fafc" },
+  shading: { fill: BRAND.card },
   border: {
     left: {
-      color: "0d9488",
+      color: BRAND.teal,
       space: 4,
       style: BorderStyle.SINGLE,
       size: 12,
@@ -68,6 +101,26 @@ const cardHeading = (text: string) => boldParagraph(text, {
   indent: { left: 180 },
   spacing: { before: 120, after: 80 },
   keepNext: true,
+});
+
+const labelRun = (text: string) => new TextRun({
+  text,
+  bold: true,
+  font: BRAND.font,
+  color: BRAND.muted,
+  size: 20,
+});
+
+const valueRun = (text: string) => new TextRun({
+  text,
+  font: BRAND.font,
+  color: BRAND.text,
+  size: 21,
+});
+
+const bodyParagraph = (text: string, options: any = {}) => new Paragraph({
+  ...options,
+  children: [valueRun(text)],
 });
 
 export const generateMinutesWord = async (data: any, event: any) => {
@@ -103,6 +156,52 @@ export const generateMinutesWord = async (data: any, event: any) => {
   };
 
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: BRAND.font,
+            color: BRAND.body,
+            size: 21,
+          },
+          paragraph: {
+            spacing: { after: 120 },
+          },
+        },
+      },
+      paragraphStyles: [
+        {
+          id: 'Heading1',
+          name: 'Heading 1',
+          basedOn: 'Normal',
+          next: 'Normal',
+          quickFormat: true,
+          run: {
+            font: BRAND.font,
+            bold: true,
+            color: BRAND.text,
+            size: 45,
+          },
+          paragraph: {
+            spacing: { before: 120, after: 140 },
+          },
+        },
+        {
+          id: 'Heading2',
+          name: 'Heading 2',
+          basedOn: 'Normal',
+          next: 'Normal',
+          quickFormat: true,
+          run: {
+            font: BRAND.font,
+            bold: true,
+            color: BRAND.text,
+            size: 20,
+            allCaps: true,
+          },
+        },
+      ],
+    },
     sections: [
       {
         headers: {
@@ -111,15 +210,23 @@ export const generateMinutesWord = async (data: any, event: any) => {
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: "🍃 OAK BAY HOUSING CO-OP",
+                    text: "coopHUB BC",
                     bold: true,
-                    color: "0d9488",
+                    color: BRAND.teal,
+                    font: BRAND.font,
                     size: 28,
+                  }),
+                  new TextRun({
+                    text: " | Oak Bay Housing Co-op",
+                    bold: true,
+                    color: BRAND.text,
+                    font: BRAND.font,
+                    size: 22,
                   }),
                 ],
                 border: {
                   bottom: {
-                    color: "14b8a6",
+                    color: BRAND.teal,
                     space: 1,
                     style: BorderStyle.SINGLE,
                     size: 12,
@@ -139,22 +246,26 @@ export const generateMinutesWord = async (data: any, event: any) => {
                   new TextRun({
                     text: "✓ Electronically Approved Community Record | Page ",
                     size: 16,
-                    color: "94a3b8",
+                    color: BRAND.subtle,
+                    font: BRAND.font,
                   }),
                   new TextRun({
                     children: ["PAGE_NUMBER"],
                     size: 16,
-                    color: "94a3b8",
+                    color: BRAND.subtle,
+                    font: BRAND.font,
                   }),
                   new TextRun({
                     text: " of ",
                     size: 16,
-                    color: "94a3b8",
+                    color: BRAND.subtle,
+                    font: BRAND.font,
                   }),
                   new TextRun({
                     children: ["TOTAL_PAGES"],
                     size: 16,
-                    color: "94a3b8",
+                    color: BRAND.subtle,
+                    font: BRAND.font,
                   }),
                 ],
               }),
@@ -164,40 +275,56 @@ export const generateMinutesWord = async (data: any, event: any) => {
         children: [
           // Title
           new Paragraph({
-            text: getMeetingLabel(meetingType),
             heading: HeadingLevel.HEADING_1,
             alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                text: getMeetingLabel(meetingType),
+                bold: true,
+                font: BRAND.font,
+                color: BRAND.text,
+                size: 45,
+              }),
+            ],
           }),
           new Paragraph({
-            text: formData.meetingDate || event.date.split('T')[0],
             alignment: AlignmentType.CENTER,
             spacing: { after: 400 },
+            children: [
+              new TextRun({
+                text: formData.meetingDate || event.date.split('T')[0],
+                bold: true,
+                font: BRAND.font,
+                color: BRAND.teal,
+                size: 20,
+              }),
+            ],
           }),
 
           // Meeting Info Section
           sectionHeading("MEETING INFORMATION"),
           new Paragraph({
             children: [
-              new TextRun({ text: "Location: ", bold: true }),
-              new TextRun(formData.location || event.location),
+              labelRun("Location: "),
+              valueRun(formData.location || event.location),
             ],
           }),
           new Paragraph({
             children: [
-              new TextRun({ text: "Time: ", bold: true }),
-              new TextRun(`${formData.startTime || event.time} - ${formData.endTime || 'N/A'}`),
+              labelRun("Time: "),
+              valueRun(`${formData.startTime || event.time} - ${formData.endTime || 'N/A'}`),
             ],
           }),
           new Paragraph({
             children: [
-              new TextRun({ text: "Chairperson: ", bold: true }),
-              new TextRun(formData.chair || 'N/A'),
+              labelRun("Chairperson: "),
+              valueRun(formData.chair || 'N/A'),
             ],
           }),
           new Paragraph({
             children: [
-              new TextRun({ text: "Minute Taker: ", bold: true }),
-              new TextRun(formData.minuteTaker || 'N/A'),
+              labelRun("Minute Taker: "),
+              valueRun(formData.minuteTaker || 'N/A'),
             ],
             spacing: { after: 300 },
           }),
@@ -206,8 +333,8 @@ export const generateMinutesWord = async (data: any, event: any) => {
             sectionHeading("LINKED DOCUMENTS"),
             ...linkedDocuments.map((linkedDocument: any, index: number) => new Paragraph({
               children: [
-                new TextRun({ text: `Document ${index + 1}: `, bold: true }),
-                new TextRun(linkedDocument.title || 'N/A'),
+                labelRun(`Document ${index + 1}: `),
+                valueRun(linkedDocument.title || 'N/A'),
               ],
             })),
             new Paragraph({ text: "", spacing: { after: 200 } }),
@@ -216,31 +343,28 @@ export const generateMinutesWord = async (data: any, event: any) => {
           // Attendance
           sectionHeading("ATTENDANCE"),
           boldParagraph("Directors/Members Present:", { keepNext: true }),
-          new Paragraph({
-            text: attendees.map((a: any) => `${a.name}${a.position ? ` (${a.position})` : ''}`).join(', '),
-            spacing: { after: 200 },
-          }),
+          bodyParagraph(attendees.map((a: any) => `${a.name}${a.position ? ` (${a.position})` : ''}`).join(', '), { spacing: { after: 200 } }),
           ...(formData.directorsAbsent && formData.directorsAbsent.length > 0 ? [
             new Paragraph({
               children: [
-                new TextRun({ text: "Regrets/Absent: ", bold: true }),
-                new TextRun(Array.isArray(formData.directorsAbsent) ? formData.directorsAbsent.join(', ') : formData.directorsAbsent),
+                labelRun("Regrets/Absent: "),
+                valueRun(Array.isArray(formData.directorsAbsent) ? formData.directorsAbsent.join(', ') : formData.directorsAbsent),
               ],
             })
           ] : []),
           ...(formData.guests && formData.guests.length > 0 ? [
             new Paragraph({
               children: [
-                new TextRun({ text: "Guests/Attendees: ", bold: true }),
-                new TextRun(Array.isArray(formData.guests) ? formData.guests.join(', ') : formData.guests),
+                labelRun("Guests/Attendees: "),
+                valueRun(Array.isArray(formData.guests) ? formData.guests.join(', ') : formData.guests),
               ],
             })
           ] : []),
           ...(formData.scrutineers && formData.scrutineers.length > 0 ? [
             new Paragraph({
               children: [
-                new TextRun({ text: "Scrutineers: ", bold: true }),
-                new TextRun(Array.isArray(formData.scrutineers) ? formData.scrutineers.join(', ') : formData.scrutineers),
+                labelRun("Scrutineers: "),
+                valueRun(Array.isArray(formData.scrutineers) ? formData.scrutineers.join(', ') : formData.scrutineers),
               ],
             })
           ] : []),
@@ -251,15 +375,15 @@ export const generateMinutesWord = async (data: any, event: any) => {
             sectionHeading("REPORTS & DISCUSSION"),
             ...(formData.boardReport ? [
               cardHeading("Board Report"),
-              new Paragraph({ children: parseHtmlToDocx(formData.boardReport), shading: { fill: "f8fafc" }, spacing: { after: 200 }, keepLines: true }),
+              new Paragraph({ children: parseHtmlToDocx(formData.boardReport), shading: { fill: BRAND.card }, spacing: { after: 200 }, keepLines: true }),
             ] : []),
             ...(formData.financeReport ? [
               cardHeading("Financial Report"),
-              new Paragraph({ children: parseHtmlToDocx(formData.financeReport), shading: { fill: "f8fafc" }, spacing: { after: 200 }, keepLines: true }),
+              new Paragraph({ children: parseHtmlToDocx(formData.financeReport), shading: { fill: BRAND.card }, spacing: { after: 200 }, keepLines: true }),
             ] : []),
             ...(formData.committeeReports ? [
               cardHeading("Committee Reports"),
-              new Paragraph({ children: parseHtmlToDocx(formData.committeeReports), shading: { fill: "f8fafc" }, spacing: { after: 200 }, keepLines: true }),
+              new Paragraph({ children: parseHtmlToDocx(formData.committeeReports), shading: { fill: BRAND.card }, spacing: { after: 200 }, keepLines: true }),
             ] : []),
           ] : []),
 
@@ -271,7 +395,7 @@ export const generateMinutesWord = async (data: any, event: any) => {
               new Paragraph({ children: parseHtmlToDocx(m.description), keepLines: true }),
               new Paragraph({
                 children: [
-                  new TextRun({ text: `Moved by: ${m.mover} | Seconded by: ${m.seconder} | Result: ${m.result?.toUpperCase() || 'PENDING'}`, italics: true, size: 18, color: "64748b" }),
+                  new TextRun({ text: `Moved by: ${m.mover} | Seconded by: ${m.seconder} | Result: ${m.result?.toUpperCase() || 'PENDING'}`, italics: true, size: 18, color: BRAND.muted, font: BRAND.font }),
                 ],
                 spacing: { after: 200 },
               })
@@ -283,14 +407,15 @@ export const generateMinutesWord = async (data: any, event: any) => {
             sectionHeading("ACTION ITEMS"),
             ...actionItems.flatMap((item: any, i: number) => [
               cardHeading(`Action Item #${i + 1}`),
-              new Paragraph({ text: item.description || 'No action described.', keepLines: true }),
+              bodyParagraph(item.description || 'No action described.', { keepLines: true }),
               new Paragraph({
                 children: [
                   new TextRun({
                     text: `Responsible: ${Array.isArray(item.responsible) && item.responsible.length > 0 ? item.responsible.join(', ') : 'Unassigned'} | Complete by: ${formatDateOnly(item.dueDate)}`,
                     italics: true,
                     size: 18,
-                    color: "64748b",
+                    color: BRAND.muted,
+                    font: BRAND.font,
                   }),
                 ],
               }),
