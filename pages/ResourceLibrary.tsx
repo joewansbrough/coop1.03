@@ -49,6 +49,52 @@ const ResourceLibrary: React.FC<{
 
   const categories = ['All', 'Minutes', 'Policy', 'Financial', 'Bylaws', 'Newsletters', 'Cloud'];
 
+  const getDocumentWithInferredCommittee = (doc: Document) => {
+    if (doc.committee) return doc;
+
+    const matchingCommittee = committees.find((committee) =>
+      doc.tags?.some((tag) => tag.toLowerCase() === committee.name.toLowerCase()) ||
+      doc.title.toLowerCase().includes(committee.name.toLowerCase())
+    );
+
+    return matchingCommittee ? { ...doc, committee: matchingCommittee.name } : doc;
+  };
+
+  const getDocumentFileName = (doc: Document) => {
+    const extension = doc.fileType?.replace(/^\./, '') || 'pdf';
+    const safeTitle = doc.title.replace(/[\\/:*?"<>|]+/g, '').trim() || 'document';
+    return safeTitle.toLowerCase().endsWith(`.${extension.toLowerCase()}`) ? safeTitle : `${safeTitle}.${extension}`;
+  };
+
+  const dataUrlToBlobUrl = (dataUrl: string) => {
+    const [metadata, data] = dataUrl.split(',');
+    const mimeType = metadata.match(/data:(.*?);base64/)?.[1] || 'application/octet-stream';
+    const binary = window.atob(data);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+  };
+
+  const getLaunchUrl = (doc: Document) => doc.url?.startsWith('data:')
+    ? dataUrlToBlobUrl(doc.url)
+    : doc.url;
+
+  const openDocument = (doc: Document) => {
+    if (!doc.url || doc.url === '#') {
+      showAlert('This document is stored in the secure association vault. Open it from the viewer instead.', 'info');
+      return;
+    }
+
+    const launchUrl = getLaunchUrl(doc);
+    if (!launchUrl) return;
+    window.open(launchUrl, '_blank', 'noopener,noreferrer');
+    if (launchUrl.startsWith('blob:')) {
+      window.setTimeout(() => URL.revokeObjectURL(launchUrl), 30000);
+    }
+  };
+
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertMessage({ message, type });
     window.setTimeout(() => setAlertMessage(null), 5000);
@@ -251,20 +297,33 @@ const ResourceLibrary: React.FC<{
     setFilter(cat);
   };
 
-  const handleDownload = (doc: Document, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (doc.url && doc.url !== '#') {
-      window.open(doc.url, '_blank');
-    } else {
+  const handleDownload = (doc: Document, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!doc.url || doc.url === '#') {
       showAlert('This document is stored in the secure association vault. Open it from the viewer instead.', 'info');
+      return;
+    }
+
+    const launchUrl = getLaunchUrl(doc);
+    if (!launchUrl) return;
+    const link = window.document.createElement('a');
+    link.href = launchUrl;
+    link.download = getDocumentFileName(doc);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    window.document.body.appendChild(link);
+    link.click();
+    link.remove();
+    if (launchUrl.startsWith('blob:')) {
+      window.setTimeout(() => URL.revokeObjectURL(launchUrl), 30000);
     }
   };
 
   const handleViewDoc = (doc: Document) => {
     if (doc.url && doc.url !== '#') {
-      window.open(doc.url, '_blank');
+      openDocument(doc);
     } else {
-      setReviewingDoc(doc);
+      setReviewingDoc(getDocumentWithInferredCommittee(doc));
     }
   };
 
@@ -526,7 +585,7 @@ const ResourceLibrary: React.FC<{
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setReviewingDoc(doc);
+                            setReviewingDoc(getDocumentWithInferredCommittee(doc));
                           }}
                           className="w-10 h-10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-white rounded-xl flex items-center justify-center hover:bg-amber-500 transition-all active:scale-95"
                           title="Edit"
@@ -591,7 +650,7 @@ const ResourceLibrary: React.FC<{
                     <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-xs">Association documents are now stored externally. Managing metadata below will update the searchable archive.</p>
                     <button
                       onClick={() => handleViewDoc(reviewingDoc)}
-                      className={`mt-8 ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-black'} px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all`}
+                      className={`mt-8 ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-600 hover:bg-brand-600' : 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-brand-600 dark:hover:bg-brand-600'} px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all`}
                     >
                       <i className="fa-solid fa-arrow-up-right-from-square"></i>
                       {reviewingDoc.url?.includes('drive.google.com') ? 'Open in Drive' : 'Launch Original File'}
@@ -632,9 +691,9 @@ const ResourceLibrary: React.FC<{
                             value={reviewingDoc.category}
                             disabled={!isAdmin || isGuest}
                             onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, category: e.target.value as any })}
-                            className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none appearance-none cursor-pointer"
+                            className="w-full bg-white dark:bg-slate-700 text-xs font-black text-slate-800 dark:text-white outline-none appearance-none cursor-pointer"
                           >
-                            {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                            {categories.filter(c => c !== 'All').map(c => <option key={c} value={c} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">{c}</option>)}
                           </select>
                         </div>
                       </div>
@@ -646,10 +705,10 @@ const ResourceLibrary: React.FC<{
                           value={reviewingDoc.committee || ''}
                           disabled={!isAdmin || isGuest}
                           onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, committee: e.target.value })}
-                          className="w-full bg-transparent text-xs font-black text-slate-800 dark:text-white outline-none appearance-none cursor-pointer"
+                          className="w-full bg-white dark:bg-slate-700 text-xs font-black text-slate-800 dark:text-white outline-none appearance-none cursor-pointer"
                         >
-                          <option value="">None</option>
-                          {committees.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                          <option value="" className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">None</option>
+                          {committees.map(c => <option key={c.id} value={c.name} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">{c.name}</option>)}
                         </select>
                       </div>
                     </div>
@@ -721,8 +780,8 @@ const ResourceLibrary: React.FC<{
                   </button>
                 )}
                 <button
-                  onClick={(e) => handleDownload(reviewingDoc, e as any)}
-                  className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-600' : 'bg-slate-900'} text-white hover:opacity-90 transition-all active:scale-95 flex items-center gap-2`}
+                  onClick={(e) => handleDownload(reviewingDoc, e)}
+                  className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-600' : 'bg-slate-900'} text-white hover:bg-brand-600 transition-all active:scale-95 flex items-center gap-2`}
                 >
                   <i className={`fa-solid ${reviewingDoc.url?.includes('drive.google.com') ? 'fa-arrow-up-right-from-square' : 'fa-download'}`}></i>
                   {reviewingDoc.url?.includes('drive.google.com') ? 'Open' : 'Download'}

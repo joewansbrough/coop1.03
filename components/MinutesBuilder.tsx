@@ -202,6 +202,11 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
 
   const getMinutesDocumentTitle = () => `${currentEvent?.title || 'Meeting'} Minutes`;
 
+  const getCurrentCommitteeName = () => {
+    const committee = committees.find((item) => item.id === currentEvent?.committeeId);
+    return committee?.name || '';
+  };
+
   const createMinutesPdfBlob = () => {
     const pdfFormData = sanitizeFormData(formData);
     return pdf(
@@ -220,6 +225,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     const stableTag = `minutes-meeting:${meetingId}`;
     const currentDocuments = demoStorage.getAll<CoopDocument>('documents', []);
     const existingDocument = currentDocuments.find((doc) => doc.tags?.includes(stableTag));
+    const committeeName = getCurrentCommitteeName();
     const archivedDocument: CoopDocument = {
       ...(existingDocument || {}),
       id: existingDocument?.id || `minutes-pdf-${meetingId}`,
@@ -229,7 +235,8 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
       fileType: 'pdf',
       author: user?.name || user?.email || 'Secretary',
       date: formData.meetingDate || currentEvent?.date?.split('T')[0] || new Date().toISOString(),
-      tags: Array.from(new Set([...(existingDocument?.tags || []), new Date().getFullYear().toString(), 'Minutes', 'Meeting Minutes', stableTag])),
+      committee: committeeName || undefined,
+      tags: Array.from(new Set([...(existingDocument?.tags || []), new Date().getFullYear().toString(), 'Minutes', 'Meeting Minutes', ...(committeeName ? [committeeName] : []), stableTag])),
       content: `PDF archive for meeting ${meetingId}. Replaced automatically when minutes are re-saved.`,
     };
 

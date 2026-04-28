@@ -933,6 +933,9 @@ app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) =>
         id: meetingId,
         cooperativeId: coopId,
       },
+      include: {
+        committee: true,
+      },
     });
 
     if (!event) {
@@ -942,10 +945,12 @@ app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) =>
     const stableTag = `minutes-meeting:${meetingId}`;
     const documentTitle = title || `${event.title} Minutes`;
     const documentDate = date ? new Date(date) : new Date();
+    const committeeName = event.committee?.name || null;
     const tags = Array.from(new Set([
       new Date().getFullYear().toString(),
       'Minutes',
       'Meeting Minutes',
+      ...(committeeName ? [committeeName] : []),
       stableTag,
     ]));
 
@@ -969,7 +974,7 @@ app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) =>
             author: user?.name || user?.email || 'Secretary',
             date: documentDate,
             tags: { set: tags },
-            committee: null,
+            committee: committeeName,
             content: `PDF archive for meeting ${meetingId}. Replaced automatically when minutes are re-saved.`,
           } as any,
         })
@@ -983,7 +988,7 @@ app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) =>
             author: user?.name || user?.email || 'Secretary',
             date: documentDate,
             tags,
-            committee: null,
+            committee: committeeName,
             content: `PDF archive for meeting ${meetingId}. Replaced automatically when minutes are re-saved.`,
           } as any,
         });
