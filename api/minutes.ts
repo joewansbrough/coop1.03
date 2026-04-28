@@ -1,12 +1,20 @@
-// Example Express.js API routes for Meeting Minutes
-// Add these to your backend routes file (e.g., routes/minutes.ts or routes/api.ts)
+// Meeting Minutes API routes
+// Integrates with your existing Express app in index.ts
 
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { requireAuth, getCoopId } from './index'; 
+import { requireAuth, getCoopId } from './index';
 
 const router = Router();
-const prisma = new PrismaClient();
+
+// Use singleton pattern to avoid connection pool exhaustion
+let prismaInstance: PrismaClient;
+const getPrisma = () => {
+  if (!prismaInstance) {
+    prismaInstance = new PrismaClient();
+  }
+  return prismaInstance;
+};
 
 /**
  * GET /api/minutes
@@ -34,7 +42,7 @@ router.get('/api/minutes', requireAuth, async (req, res) => {
       if (endDate) where.createdAt.lte = new Date(endDate as string);
     }
 
-    const minutes = await prisma.meetingMinutes.findMany({
+    const minutes = await getPrisma().meetingMinutes.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -64,7 +72,7 @@ router.get('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
 
-    const minutes = await prisma.meetingMinutes.findUnique({
+    const minutes = await getPrisma().meetingMinutes.findUnique({
       where: { meetingId },
       include: {
         meeting: {
@@ -99,11 +107,13 @@ router.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
     const { meetingType, formData, attendees, motions } = req.body;
-    const userId = (req as any).user.id; // From your auth middleware
-    const coopId = await getCoopId(req, prisma);
+    const userId = (req as any).user?.id;
+    const coopId = await getCoopId(req, getPrisma());
+
+    console.log('Creating minutes:', { meetingId, meetingType, userId, coopId });
 
     // Verify meeting exists
-    const meeting = await prisma.coopEvent.findUnique({
+    const meeting = await getPrisma().coopEvent.findUnique({
       where: { id: meetingId },
     });
 
@@ -112,7 +122,7 @@ router.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
     }
 
     // Check if minutes already exist
-    const existing = await prisma.meetingMinutes.findUnique({
+    const existing = await getPrisma().meetingMinutes.findUnique({
       where: { meetingId },
     });
 
@@ -123,7 +133,7 @@ router.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
     }
 
     // Create minutes
-    const minutes = await prisma.meetingMinutes.create({
+    const minutes = await getPrisma().meetingMinutes.create({
       data: {
         meetingId,
         meetingType,
@@ -148,7 +158,96 @@ router.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
     res.status(201).json(minutes);
   } catch (error) {
     console.error('Error creating minutes:', error);
-    res.status(500).json({ error: 'Failed to create minutes' });
+    res.status(500).json({ 
+      error: 'Failed to create minutes',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/minutes
+ * Create new minutes without a pre-existing meeting
+ * Used by MinutesBuilder for creating standalone minutes
+ */
+router.post('/api/minutes', requireAuth, async (req, res) => {
+  try {
+    const { meetingId, meetingType, formData, attendees, motions, meetingTitle, meetingDate } = req.body;
+    const userId = (req as any).user?.id;
+    const coopId = await getCoopId(req, getPrisma());
+
+    console.log('Creating standalone minutes:', { meetingType, userId, coopId });
+
+    // If meetingId is provided, verify it exists
+    if (meetingId) {
+      const meeting = await getPrisma().coopEvent.findUnique({
+        where: { id: meetingId },
+      });
+
+      if (!meeting) {
+        return res.status(404).json({ error: 'Meeting not found' });
+      }
+
+      // Check if minutes already exist
+      const existing = await getPrisma().meetingMinutes.findUnique({
+        where: { meetingId },
+      });
+
+      if (existing) {
+        return res.status(400).json({ 
+          error: 'Minutes already exist for this meeting. Use PUT to update.' 
+        });
+      }
+    } else if (meetingTitle && meetingDate) {
+      // Create a new meeting event first
+      const newMeeting = await getPrisma().coopEvent.create({
+        data: {
+          title: meetingTitle,
+          date: new Date(meetingDate),
+          time: new Date(meetingDate).toISOString().split('T')[1]?.substring(0, 5) || '00:00',
+          category: meetingType || 'General',
+          cooperativeId: coopId,
+        },
+      });
+      
+      // Use the newly created meeting ID
+      req.body.meetingId = newMeeting.id;
+    } else {
+      return res.status(400).json({ 
+        error: 'Either meetingId or both meetingTitle and meetingDate are required' 
+      });
+    }
+
+    // Create minutes
+    const minutes = await getPrisma().meetingMinutes.create({
+      data: {
+        meetingId: req.body.meetingId,
+        meetingType,
+        data: formData,
+        attendees,
+        motions,
+        cooperativeId: coopId,
+        createdBy: userId,
+      },
+      include: {
+        meeting: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            category: true,
+          },
+        },
+      },
+    });
+
+    res.status(201).json(minutes);
+  } catch (error) {
+    console.error('Error creating standalone minutes:', error);
+    res.status(500).json({ 
+      error: 'Failed to create minutes',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
@@ -162,7 +261,7 @@ router.put('/api/minutes/:meetingId', requireAuth, async (req, res) => {
     const { meetingType, formData, attendees, motions } = req.body;
 
     // Check if minutes exist
-    const existing = await prisma.meetingMinutes.findUnique({
+    const existing = await getPrisma().meetingMinutes.findUnique({
       where: { meetingId },
     });
 
@@ -178,7 +277,7 @@ router.put('/api/minutes/:meetingId', requireAuth, async (req, res) => {
     }
 
     // Update minutes
-    const minutes = await prisma.meetingMinutes.update({
+    const minutes = await getPrisma().meetingMinutes.update({
       where: { meetingId },
       data: {
         meetingType,
@@ -219,7 +318,7 @@ router.delete('/api/minutes/:meetingId', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Admin permission required' });
     }
 
-    await prisma.meetingMinutes.delete({
+    await getPrisma().meetingMinutes.delete({
       where: { meetingId },
     });
 
@@ -241,7 +340,7 @@ router.post('/api/minutes/:meetingId/approve', requireAuth, async (req, res) => 
     const userId = (req as any).user.id;
 
     // Verify user is a board member or admin
-    const user = await prisma.tenant.findUnique({
+    const user = await getPrisma().tenant.findUnique({
       where: { id: userId },
     });
 
@@ -252,7 +351,7 @@ router.post('/api/minutes/:meetingId/approve', requireAuth, async (req, res) => 
     }
 
     // Check if minutes exist
-    const existing = await prisma.meetingMinutes.findUnique({
+    const existing = await getPrisma().meetingMinutes.findUnique({
       where: { meetingId },
     });
 
@@ -265,7 +364,7 @@ router.post('/api/minutes/:meetingId/approve', requireAuth, async (req, res) => 
     }
 
     // Approve minutes
-    const minutes = await prisma.meetingMinutes.update({
+    const minutes = await getPrisma().meetingMinutes.update({
       where: { meetingId },
       data: {
         approvedBy,
@@ -291,7 +390,7 @@ router.get('/api/minutes/:meetingId/pdf', requireAuth, async (req, res) => {
   try {
     const { meetingId } = req.params;
 
-    const minutes = await prisma.meetingMinutes.findUnique({
+    const minutes = await getPrisma().meetingMinutes.findUnique({
       where: { meetingId },
       include: {
         meeting: true,

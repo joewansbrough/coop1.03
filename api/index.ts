@@ -6,6 +6,9 @@ import axios from 'axios';
 import cookieSession from 'cookie-session';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import driveRoutes from './drive.js';
+import minutesRouter from './api/minutes.js';  // Note the .js extension for ES modules
+
+
 
 const app = express();
 
@@ -267,7 +270,7 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
   res.json({ success: true });
 });
 
-// With your other routes, under your auth middleware
+
 app.use('/api/drive', requireAuth, driveRoutes);
 
 // --- Database API Routes ---
@@ -1412,6 +1415,8 @@ app.get('/api/seed', async (req, res) => {
   }
 });
 
+app.use(minutesRouter);
+
 app.get(['/api/debug/config', '/debug/config'], (req, res) => {
   res.json({
     hasClientId: !!process.env.GOOGLE_CLIENT_ID,
@@ -1432,5 +1437,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   console.error('Unhandled Error:', err);
   res.status(500).json({ error: err.message || 'Internal Server Error' });
 });
+
+// Export middleware and helpers for use in other route files
+export { requireAuth, getCoopId };
 
 export default app;
