@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CoopEvent } from '../types';
+import { Committee, CoopEvent } from '../types';
 import AppAlert from '../components/AppAlert';
 import { useCreateEvent, useUpdateEvent, useDeleteEvent } from '../hooks/useCoopData';
 
@@ -9,11 +9,12 @@ interface CalendarProps {
   isGuest?: boolean;
   events: CoopEvent[];
   setEvents: React.Dispatch<React.SetStateAction<CoopEvent[]>>;
+  committees?: Committee[];
   isEventsLoading?: boolean;
   isEventsError?: boolean;
 }
 
-const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, events, setEvents, isEventsLoading, isEventsError }) => {
+const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, events, setEvents, committees = [], isEventsLoading, isEventsError }) => {
   const navigate = useNavigate();
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -143,6 +144,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const [time, setTime] = useState('19:00');
   const [location, setLocation] = useState('');
   const [category, setCategory] = useState<'Meeting' | 'Social' | 'Maintenance' | 'Board'>('Meeting');
+  const [committeeId, setCommitteeId] = useState('');
   const [description, setDescription] = useState('');
 
   const handleAddEvent = async (e: React.FormEvent) => {
@@ -155,6 +157,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
       time, 
       location, 
       category, 
+      committeeId: committeeId || null,
       description,
       cooperativeId: 'demo-coop-id',
       createdAt: new Date().toISOString(),
@@ -166,6 +169,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
         setEvents([...events, data]);
         setShowAddForm(false);
         setTitle('');
+        setCommitteeId('');
         setDescription('');
         showAlert('Event added to community calendar.', 'success');
       },
@@ -330,6 +334,19 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                   <option>Social</option>
                   <option>Maintenance</option>
                   <option>Board</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Committee <span className="text-slate-300">(Optional)</span></label>
+                <select
+                  value={editEvent ? editEvent.committeeId || '' : committeeId}
+                  onChange={e => editEvent ? setEditEvent({ ...editEvent, committeeId: e.target.value || undefined }) : setCommitteeId(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+                >
+                  <option value="">No committee link</option>
+                  {committees.map(committee => (
+                    <option key={committee.id} value={committee.id}>{committee.name}</option>
+                  ))}
                 </select>
               </div>
               <div>

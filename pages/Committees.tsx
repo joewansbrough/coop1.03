@@ -56,7 +56,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
   const canSchedule = isAdmin || isChair;
   const selectedCommitteeMeetings = selectedCommittee
     ? events
-        .filter(event => event.committeeId === selectedCommittee.id && event.category === 'Meeting')
+        .filter(event => event.committeeId === selectedCommittee.id)
         .filter(event => new Date(event.date) >= new Date(new Date().toDateString()))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     : [];

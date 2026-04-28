@@ -178,7 +178,7 @@ const AppContent: React.FC = () => {
               />
             }
           />
-          <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} isGuest={isGuest} events={events} setEvents={setEvents} isEventsLoading={isEventsLoading} isEventsError={isEventsError} />} />
+          <Route path="/calendar" element={<Calendar isAdmin={effectiveIsAdmin} isGuest={isGuest} events={events} setEvents={setEvents} committees={committees} isEventsLoading={isEventsLoading} isEventsError={isEventsError} />} />
           <Route path="/calendar/:eventId" element={<EventDetail isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} events={events} setEvents={setEvents} isEventsLoading={isEventsLoading} isEventsError={isEventsError} />} />          <Route path="/announcements/:annId" element={<AnnouncementDetail announcements={announcements} isAnnouncementsLoading={isAnnouncementsLoading} isAnnouncementsError={isAnnouncementsError} />} />
           <Route path="/committees" element={<Committees isAdmin={effectiveIsAdmin} isGuest={isGuest} user={user} committees={committees} setCommittees={setCommittees} tenants={tenants} documents={documents} events={events} setEvents={setEvents} isCommitteesLoading={isCommitteesLoading} isCommitteesError={isCommitteesError} />} />
           <Route path="/maintenance" element={<Maintenance isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} isRequestsLoading={isRequestsLoading} isRequestsError={isRequestsError} />} />
