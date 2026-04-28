@@ -938,6 +938,7 @@ app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) =>
       title,
       date,
       blobToken: process.env.BLOB_READ_WRITE_TOKEN || process.env.coophub_READ_WRITE_TOKEN,
+      blobAccess: process.env.BLOB_ACCESS === 'public' ? 'public' : 'private',
     });
     res.json(document);
   } catch (error: any) {

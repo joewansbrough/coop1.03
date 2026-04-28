@@ -5,8 +5,9 @@ type BlobResult = {
 
 type ArchiveMinutesPdfInput = {
   prisma: any;
-  putBlob: (path: string, bytes: Buffer, options: { access: 'public'; contentType: string; token?: string }) => Promise<BlobResult>;
+  putBlob: (path: string, bytes: Buffer, options: { access: 'public' | 'private'; contentType: string; token?: string }) => Promise<BlobResult>;
   blobToken?: string;
+  blobAccess?: 'public' | 'private';
   meetingId: string;
   cooperativeId: string;
   user?: { name?: string; email?: string };
@@ -34,6 +35,7 @@ export const archiveMinutesPdf = async ({
   prisma,
   putBlob,
   blobToken,
+  blobAccess = 'private',
   meetingId,
   cooperativeId,
   user,
@@ -92,7 +94,7 @@ export const archiveMinutesPdf = async ({
   }
 
   const blob = await putBlob(storagePath, pdfBytes, {
-    access: 'public',
+    access: blobAccess,
     contentType: 'application/pdf',
     token: resolvedBlobToken,
   });

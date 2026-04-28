@@ -130,6 +130,27 @@ test('passes a configured Blob token to the storage client', async () => {
   assert.equal(prisma.calls.blob.options.token, 'blob-token');
 });
 
+test('uploads minutes PDFs with private access by default', async () => {
+  const prisma = createPrisma();
+
+  await archiveMinutesPdf({
+    prisma,
+    putBlob: async (_path, _bytes, options) => {
+      prisma.calls.blob = { options };
+      return {
+        url: 'https://blob.example/minutes.pdf',
+      };
+    },
+    blobToken: 'blob-token',
+    meetingId: 'meeting-1',
+    cooperativeId: 'coop-1',
+    user: { email: 'sam@example.com' },
+    pdfDataUrl,
+  });
+
+  assert.equal(prisma.calls.blob.options.access, 'private');
+});
+
 test('fails before calling Blob when no token is configured', async () => {
   const previousToken = process.env.BLOB_READ_WRITE_TOKEN;
   const previousStoreToken = process.env.coophub_READ_WRITE_TOKEN;
