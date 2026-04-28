@@ -161,6 +161,9 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
       : [];
   const motions = data.motions || [];
   const meetingType = data.meetingType;
+  const actionItems = Array.isArray(formData.actionItemsList)
+    ? formData.actionItemsList.filter((item: any) => item?.description?.trim() || item?.responsible?.length || item?.dueDate)
+    : [];
 
   const getMeetingLabel = (type: string) => {
     switch (type) {
@@ -180,6 +183,17 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
     const suffix = hours >= 12 ? 'PM' : 'AM';
     const hour12 = hours % 12 || 12;
     return `${hour12}:${minutesValue.padStart(2, '0')} ${suffix}`;
+  };
+
+  const formatDateOnly = (date?: string) => {
+    if (!date) return 'No due date';
+    const [year, month, day] = date.split('-').map(Number);
+    if (!year || !month || !day) return date;
+    return new Date(year, month - 1, day).toLocaleDateString('en-CA', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
   return (
@@ -303,7 +317,20 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
         )}
 
         {/* Action Items */}
-        {formData.actionItems && (
+        {actionItems.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Action Items</Text>
+            {actionItems.map((item: any, i: number) => (
+              <View key={item.id || i} style={styles.motionCard}>
+                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Action Item #{i + 1}</Text>
+                <Text style={{ marginBottom: 6 }}>{item.description || 'No action described.'}</Text>
+                <Text style={{ fontSize: 9, color: '#64748b' }}>
+                  Responsible: {Array.isArray(item.responsible) && item.responsible.length > 0 ? item.responsible.join(', ') : 'Unassigned'} | Complete by: {formatDateOnly(item.dueDate)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : formData.actionItems && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Action Items</Text>
             {parseHtmlToPdf(formData.actionItems)}

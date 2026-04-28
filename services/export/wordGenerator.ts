@@ -45,6 +45,9 @@ const parseHtmlToDocx = (html: string) => {
 
 export const generateMinutesWord = async (data: any, event: any) => {
   const { formData, attendees, motions, meetingType } = data;
+  const actionItems = Array.isArray(formData.actionItemsList)
+    ? formData.actionItemsList.filter((item: any) => item?.description?.trim() || item?.responsible?.length || item?.dueDate)
+    : [];
 
   const getMeetingLabel = (type: string) => {
     switch (type) {
@@ -54,6 +57,17 @@ export const generateMinutesWord = async (data: any, event: any) => {
       case 'special': return 'Special General Meeting';
       default: return 'Meeting Minutes';
     }
+  };
+
+  const formatDateOnly = (date?: string) => {
+    if (!date) return 'No due date';
+    const [year, month, day] = date.split('-').map(Number);
+    if (!year || !month || !day) return date;
+    return new Date(year, month - 1, day).toLocaleDateString('en-CA', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
   const doc = new Document({
@@ -241,7 +255,28 @@ export const generateMinutesWord = async (data: any, event: any) => {
           ] : []),
 
           // Action Items
-          ...(formData.actionItems ? [
+          ...(actionItems.length > 0 ? [
+            new Paragraph({
+              text: "ACTION ITEMS",
+              heading: HeadingLevel.HEADING_2,
+              shading: { fill: "f1f5f9" },
+            }),
+            ...actionItems.flatMap((item: any, i: number) => [
+              new Paragraph({ text: `Action Item #${i + 1}`, bold: true }),
+              new Paragraph({ text: item.description || 'No action described.' }),
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `Responsible: ${Array.isArray(item.responsible) && item.responsible.length > 0 ? item.responsible.join(', ') : 'Unassigned'} | Complete by: ${formatDateOnly(item.dueDate)}`,
+                    italics: true,
+                    size: 18,
+                    color: "64748b",
+                  }),
+                ],
+              }),
+              new Paragraph({ text: "" }),
+            ]),
+          ] : formData.actionItems ? [
             new Paragraph({
               text: "ACTION ITEMS",
               heading: HeadingLevel.HEADING_2,

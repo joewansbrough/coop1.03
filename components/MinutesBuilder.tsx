@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
-import { isDemoMode, useTenants, useCommittees, useEvents } from '../hooks/useCoopData';
+import { isDemoMode, useTenants, useCommittees, useEvents, useUser, useRefreshData } from '../hooks/useCoopData';
 import { Tenant, Committee, CoopEvent, Document as CoopDocument } from '../types';
 import RichTextEditor from './RichTextEditor';
 import { generateMinutesWord } from '../services/export/wordGenerator';
@@ -14,6 +14,7 @@ interface MinutesBuilderProps {
   meetingId: string;
   initialData?: any;
   documents?: CoopDocument[];
+  setDocuments?: React.Dispatch<React.SetStateAction<CoopDocument[]>>;
   onSave?: (data: any) => void;
 }
 
@@ -33,13 +34,25 @@ interface AttendeeItem {
   position: string;
 }
 
-const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData, documents = [], onSave }) => {
+interface ActionItem {
+  id: string;
+  description: string;
+  responsible: string[];
+  dueDate: string;
+}
+
+const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData, documents = [], setDocuments, onSave }) => {
   const [step, setStep] = useState<'select' | 'build'>('select');
   const [meetingType, setMeetingType] = useState<MeetingType>('regular');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success'>('idle');
+  const [isScriptsReady, setIsScriptsReady] = useState(false);
+  const [isLinkingDriveDocument, setIsLinkingDriveDocument] = useState(false);
+  const [config, setConfig] = useState<{ googleClientId: string; googleApiKey: string } | null>(null);
 
+  const { data: user } = useUser();
+  const refreshData = useRefreshData();
   const { data: tenants = [] } = useTenants();
   const { data: committees = [] } = useCommittees();
   const { data: events = [] } = useEvents();
@@ -85,6 +98,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     approvedBy: '',
     approvalDate: '',
     additionalNotes: '',
+    actionItemsList: [] as ActionItem[],
     // Quick meeting specific
     keyDecisions: '',
     nextSteps: '',
@@ -108,14 +122,31 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
   const [motions, setMotions] = useState<MotionItem[]>([]);
 
   useEffect(() => {
+    fetch('/api/config')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setConfig(data))
+      .catch(err => console.error('Failed to load Google config:', err));
+
+    const checkScripts = setInterval(() => {
+      if ((window as any).google?.accounts?.oauth2 && (window as any).gapi) {
+        setIsScriptsReady(true);
+        clearInterval(checkScripts);
+      }
+    }, 500);
+
+    return () => clearInterval(checkScripts);
+  }, []);
+
+  useEffect(() => {
     if (initialData) {
       const data = initialData.formData || initialData.data || formData;
       // Ensure array fields are actually arrays (migration from old string format)
       if (typeof data.directorsAbsent === 'string') data.directorsAbsent = data.directorsAbsent ? data.directorsAbsent.split(',').map((s: string) => s.trim()) : [];
       if (typeof data.guests === 'string') data.guests = data.guests ? data.guests.split(',').map((s: string) => s.trim()) : [];
       if (typeof data.scrutineers === 'string') data.scrutineers = data.scrutineers ? data.scrutineers.split(',').map((s: string) => s.trim()) : [];
+      if (!Array.isArray(data.actionItemsList)) data.actionItemsList = [];
       
-      setFormData(data);
+      setFormData(prev => ({ ...prev, ...data }));
       setAttendees(initialData.attendees || attendees);
       setMotions(initialData.motions || motions);
       setMeetingType(initialData.meetingType || 'regular');
@@ -130,8 +161,9 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
         if (typeof fData.directorsAbsent === 'string') fData.directorsAbsent = fData.directorsAbsent ? fData.directorsAbsent.split(',').map((s: string) => s.trim()) : [];
         if (typeof fData.guests === 'string') fData.guests = fData.guests ? fData.guests.split(',').map((s: string) => s.trim()) : [];
         if (typeof fData.scrutineers === 'string') fData.scrutineers = fData.scrutineers ? fData.scrutineers.split(',').map((s: string) => s.trim()) : [];
+        if (!Array.isArray(fData.actionItemsList)) fData.actionItemsList = [];
         
-        setFormData(fData);
+        setFormData(prev => ({ ...prev, ...fData }));
         setAttendees(data.attendees || attendees);
         setMotions(data.motions || motions);
         setMeetingType(data.meetingType || 'regular');
@@ -191,6 +223,123 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
       url: doc.url,
       fileType: doc.fileType,
     } : null);
+  };
+
+  const linkDocumentToMinutes = (doc: CoopDocument) => {
+    handleInputChange('linkedDocument', {
+      id: doc.id,
+      title: doc.title,
+      url: doc.url,
+      fileType: doc.fileType,
+    });
+  };
+
+  const handleOpenPicker = () => {
+    if (!isScriptsReady) {
+      window.alert('Google Picker is still loading. Please try again in a moment.');
+      return;
+    }
+
+    if (!config?.googleClientId || !config?.googleApiKey) {
+      window.alert('Missing Google configuration. Please check your environment variables.');
+      return;
+    }
+
+    if ((user as any)?.accessToken) {
+      createPicker((user as any).accessToken);
+      return;
+    }
+
+    try {
+      const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+        client_id: config.googleClientId,
+        scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file',
+        callback: (response: any) => {
+          if (response.error !== undefined) return;
+          createPicker(response.access_token);
+        },
+      });
+      tokenClient.requestAccessToken({ prompt: 'consent' });
+    } catch (err) {
+      console.error('Picker error:', err);
+      window.alert('Unable to open Google Picker. Please try again.');
+    }
+  };
+
+  const createPicker = (accessToken: string) => {
+    (window as any).gapi.load('picker', async () => {
+      const view = new (window as any).google.picker.DocsView((window as any).google.picker.ViewId.DOCS);
+      view.setIncludeFolders(true);
+
+      const picker = new (window as any).google.picker.PickerBuilder()
+        .addView(view)
+        .setOAuthToken(accessToken)
+        .setDeveloperKey(config?.googleApiKey)
+        .setCallback(async (data: any) => {
+          if (data.action !== (window as any).google.picker.Action.PICKED) return;
+
+          const driveDoc = data.docs[0];
+          const newDoc: CoopDocument = {
+            id: `drive-${driveDoc.id}`,
+            title: driveDoc.name,
+            category: 'Minutes',
+            url: driveDoc.url,
+            fileType: driveDoc.type || driveDoc.mimeType || 'gdoc',
+            author: 'Google Drive',
+            date: new Date().toISOString(),
+            tags: ['Google Drive', 'Linked', 'Minutes'],
+            content: '',
+          };
+
+          setIsLinkingDriveDocument(true);
+          try {
+            if (isDemoMode()) {
+              setDocuments?.(prev => prev.some(doc => doc.id === newDoc.id) ? prev : [newDoc, ...prev]);
+              linkDocumentToMinutes(newDoc);
+              return;
+            }
+
+            const res = await fetch('/api/documents', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newDoc),
+            });
+            const saved = await res.json();
+            if (!res.ok) {
+              throw new Error(saved.error || saved.details || `Failed to save document: ${res.status}`);
+            }
+
+            setDocuments?.(prev => [saved, ...prev]);
+            refreshData();
+            linkDocumentToMinutes(saved);
+          } catch (err: any) {
+            console.error('Failed to save drive doc:', err);
+            window.alert(err.message || 'Failed to link document. Please try again.');
+          } finally {
+            setIsLinkingDriveDocument(false);
+          }
+        })
+        .build();
+      picker.setVisible(true);
+    });
+  };
+
+  const addActionItem = () => {
+    handleInputChange('actionItemsList', [
+      ...(formData.actionItemsList || []),
+      { id: Date.now().toString(), description: '', responsible: [], dueDate: '' },
+    ]);
+  };
+
+  const removeActionItem = (id: string) => {
+    handleInputChange('actionItemsList', (formData.actionItemsList || []).filter(item => item.id !== id));
+  };
+
+  const updateActionItem = (id: string, field: keyof ActionItem, value: any) => {
+    handleInputChange(
+      'actionItemsList',
+      (formData.actionItemsList || []).map(item => item.id === id ? { ...item, [field]: value } : item)
+    );
   };
 
   const addAttendee = () => {
@@ -628,52 +777,20 @@ const handleSave = async () => {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 p-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 md:justify-between">
-          <div>
-            <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2">
-              <i className="fa-solid fa-link text-brand-500"></i>
-              Linked Document
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
-              Attach an existing library document to this minutes record.
-            </p>
-          </div>
-          <select
-            value={formData.linkedDocument?.id || ''}
-            onChange={(e) => handleLinkedDocumentChange(e.target.value)}
-            className="w-full md:max-w-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-500"
-          >
-            <option value="">No linked document</option>
-            {documents.map(doc => (
-              <option key={doc.id} value={doc.id}>{doc.title}</option>
-            ))}
-          </select>
-        </div>
-        {formData.linkedDocument && (
-          <div className="mt-4 flex items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
-            <div className="min-w-0">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Link</p>
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{formData.linkedDocument.title}</p>
-            </div>
-            {formData.linkedDocument.url && formData.linkedDocument.url !== '#' && (
-              <button
-                type="button"
-                onClick={() => window.open(formData.linkedDocument?.url, '_blank', 'noopener,noreferrer')}
-                className="px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
-              >
-                Open
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 p-8">
-        {meetingType === 'quick' && <QuickMeetingTemplate formData={formData} handleInputChange={handleInputChange} members={committeeMembers} />}
-        {meetingType === 'regular' && <RegularMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} />}
-        {meetingType === 'agm' && <AGMMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} />}
-        {meetingType === 'special' && <SpecialMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} />}
+        {meetingType === 'quick' && <QuickMeetingTemplate formData={formData} handleInputChange={handleInputChange} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
+        {meetingType === 'regular' && <RegularMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
+        {meetingType === 'agm' && <AGMMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
+        {meetingType === 'special' && <SpecialMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
+
+        <LinkDocumentSection
+          documents={documents}
+          linkedDocument={formData.linkedDocument}
+          isScriptsReady={isScriptsReady}
+          isLinkingDriveDocument={isLinkingDriveDocument}
+          onOpenPicker={handleOpenPicker}
+          onExistingDocumentChange={handleLinkedDocumentChange}
+        />
         
         <div className="mt-12 pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col items-end gap-4">
            {saveStatus === 'success' && (
@@ -808,8 +925,135 @@ const NameListField: React.FC<{
   );
 };
 
+const ActionItemsEditor: React.FC<{
+  actionItems: ActionItem[];
+  members: Tenant[];
+  addActionItem: () => void;
+  removeActionItem: (id: string) => void;
+  updateActionItem: (id: string, field: keyof ActionItem, value: any) => void;
+}> = ({ actionItems, members, addActionItem, removeActionItem, updateActionItem }) => (
+  <FormSection title="Action Items" icon="fa-tasks">
+    <div className="space-y-4">
+      {actionItems.map((item, index) => (
+        <div key={item.id} className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-white/5">
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">
+              Action Item {index + 1}
+            </h4>
+            <button
+              type="button"
+              onClick={() => removeActionItem(item.id)}
+              className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+            >
+              <i className="fa-solid fa-trash"></i>
+            </button>
+          </div>
+          <div className="space-y-4">
+            <FormField label="Action To Be Taken">
+              <textarea
+                value={item.description}
+                onChange={(e) => updateActionItem(item.id, 'description', e.target.value)}
+                placeholder="Describe the follow-up action..."
+                className="form-textarea"
+                rows={3}
+              />
+            </FormField>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField label="Responsible Member(s)">
+                <NameListField
+                  names={item.responsible || []}
+                  onChange={(names) => updateActionItem(item.id, 'responsible', names)}
+                  members={members}
+                  addButtonLabel="Add Responsible Member"
+                  placeholder="Select member..."
+                />
+              </FormField>
+              <FormField label="Complete By">
+                <input
+                  type="date"
+                  value={item.dueDate}
+                  onChange={(e) => updateActionItem(item.id, 'dueDate', e.target.value)}
+                  className="form-input"
+                />
+              </FormField>
+            </div>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addActionItem}
+        className="w-full py-3 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl text-sm font-bold text-slate-500 dark:text-slate-400 hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
+      >
+        <i className="fa-solid fa-plus mr-2"></i>Add Action Item
+      </button>
+    </div>
+  </FormSection>
+);
+
+const LinkDocumentSection: React.FC<{
+  documents: CoopDocument[];
+  linkedDocument: { id: string; title: string; url: string; fileType: string } | null;
+  isScriptsReady: boolean;
+  isLinkingDriveDocument: boolean;
+  onOpenPicker: () => void;
+  onExistingDocumentChange: (documentId: string) => void;
+}> = ({ documents, linkedDocument, isScriptsReady, isLinkingDriveDocument, onOpenPicker, onExistingDocumentChange }) => (
+  <FormSection title="Link a Document" icon="fa-link">
+    <div className="space-y-4">
+      <div className="flex flex-col lg:flex-row gap-4 lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            Link a new Google Drive document to this minutes record, or choose an existing document from the library.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenPicker}
+          disabled={!isScriptsReady || isLinkingDriveDocument}
+          className="w-full lg:w-auto px-5 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <i className={`fa-brands ${isLinkingDriveDocument ? 'fa-google fa-spin' : 'fa-google-drive'}`}></i>
+          {isLinkingDriveDocument ? 'Linking...' : 'Link New from Drive'}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-center">
+        <select
+          value={linkedDocument?.id || ''}
+          onChange={(e) => onExistingDocumentChange(e.target.value)}
+          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-500"
+        >
+          <option value="">No linked document</option>
+          {documents.map(doc => (
+            <option key={doc.id} value={doc.id}>{doc.title}</option>
+          ))}
+        </select>
+      </div>
+
+      {linkedDocument && (
+        <div className="flex items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Link</p>
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{linkedDocument.title}</p>
+          </div>
+          {linkedDocument.url && linkedDocument.url !== '#' && (
+            <button
+              type="button"
+              onClick={() => window.open(linkedDocument.url, '_blank', 'noopener,noreferrer')}
+              className="px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+            >
+              Open
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  </FormSection>
+);
+
 // Quick Meeting Template
-const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, members }) => (
+const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
   <div className="space-y-8">
     <FormSection title="Meeting Info" icon="fa-info-circle">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -853,15 +1097,13 @@ const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, memb
       <FormField label="Decisions Made">
         <RichTextEditor value={formData.keyDecisions} onChange={(val) => handleInputChange('keyDecisions', val)} placeholder="What was decided or discussed?" />
       </FormField>
-      <FormField label="Next Steps / Action Items">
-        <RichTextEditor value={formData.nextSteps} onChange={(val) => handleInputChange('nextSteps', val)} placeholder="Who is doing what by when?" />
-      </FormField>
     </FormSection>
+    <ActionItemsEditor actionItems={actionItems} members={members} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />
   </div>
 );
 
 // Regular Meeting Template (streamlined version)
-const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members }) => (
+const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
   <div className="space-y-8">
     <FormSection title="Meeting Information" icon="fa-calendar-check">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1047,20 +1289,12 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
       </div>
     </FormSection>
 
-    <FormSection title="Action Items" icon="fa-tasks">
-      <FormField label="Follow-up Required">
-        <RichTextEditor 
-          value={formData.actionItems} 
-          onChange={(val) => handleInputChange('actionItems', val)} 
-          placeholder="List action items, responsible parties, and deadlines" 
-        />
-      </FormField>
-    </FormSection>
+    <ActionItemsEditor actionItems={actionItems} members={members} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />
   </div>
 );
 
 // AGM Meeting Template (comprehensive)
-const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members }) => (
+const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
   <div className="space-y-8">
     <RegularMeetingTemplate 
       formData={formData} 
@@ -1074,6 +1308,10 @@ const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attend
       removeMotion={removeMotion}
       updateMotion={updateMotion}
       members={members}
+      actionItems={actionItems}
+      addActionItem={addActionItem}
+      removeActionItem={removeActionItem}
+      updateActionItem={updateActionItem}
     />
 
     <FormSection title="Auditor's Report" icon="fa-file-invoice-dollar">
@@ -1138,7 +1376,7 @@ const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attend
 );
 
 // Special Meeting Template
-const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members }) => (
+const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
   <div className="space-y-8">
     <FormSection title="Meeting Information" icon="fa-calendar-check">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1294,15 +1532,7 @@ const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
       </div>
     </FormSection>
 
-    <FormSection title="Action Items" icon="fa-tasks">
-      <FormField label="Follow-up Required">
-        <RichTextEditor 
-          value={formData.actionItems} 
-          onChange={(val) => handleInputChange('actionItems', val)} 
-          placeholder="List action items, responsible parties, and deadlines" 
-        />
-      </FormField>
-    </FormSection>
+    <ActionItemsEditor actionItems={actionItems} members={members} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />
   </div>
 );
 

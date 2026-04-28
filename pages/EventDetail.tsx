@@ -24,6 +24,9 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
 
   const { attendees = [], motions = [], meetingType } = data;
   const linkedDocument = formData.linkedDocument;
+  const actionItems = Array.isArray(formData.actionItemsList)
+    ? formData.actionItemsList.filter((item: any) => item?.description?.trim() || item?.responsible?.length || item?.dueDate)
+    : [];
   const attendeeRecords = attendees.filter((attendee: any) => attendee?.name?.trim());
   const guestNames = Array.isArray(formData.guests) ? formData.guests.filter((name: string) => name?.trim()) : [];
   const presentPeople = attendeeRecords.length > 0
@@ -64,6 +67,17 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
     const suffix = hours >= 12 ? 'PM' : 'AM';
     const hour12 = hours % 12 || 12;
     return `${hour12}:${minutesValue.padStart(2, '0')} ${suffix}`;
+  };
+
+  const formatDateOnly = (date?: string) => {
+    if (!date) return 'No due date';
+    const [year, month, day] = date.split('-').map(Number);
+    if (!year || !month || !day) return date;
+    return new Date(year, month - 1, day).toLocaleDateString('en-CA', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
   const handleExportPDF = async () => {
@@ -219,7 +233,22 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
           </ReadOnlySection>
         )}
 
-        {formData.actionItems && (
+        {actionItems.length > 0 ? (
+          <ReadOnlySection title="Action Items" icon="fa-tasks">
+            <div className="space-y-4">
+              {actionItems.map((item: any, index: number) => (
+                <div key={item.id || index} className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Action Item #{index + 1}</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">{item.description || 'No action described.'}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ReadOnlyField label="Responsible" value={Array.isArray(item.responsible) && item.responsible.length > 0 ? item.responsible.join(', ') : 'Unassigned'} />
+                    <ReadOnlyField label="Complete By" value={formatDateOnly(item.dueDate)} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ReadOnlySection>
+        ) : formData.actionItems && (
           <ReadOnlySection title="Action Items" icon="fa-tasks">
             <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.actionItems }}></div>
           </ReadOnlySection>
@@ -274,9 +303,10 @@ interface EventDetailProps {
   setEvents: React.Dispatch<React.SetStateAction<CoopEvent[]>>;
   committees?: Committee[];
   documents?: CoopDocument[];
+  setDocuments?: React.Dispatch<React.SetStateAction<CoopDocument[]>>;
 }
 
-const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, user, events, setEvents, committees = [], documents = [] }) => {
+const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, user, events, setEvents, committees = [], documents = [], setDocuments }) => {
   const { eventId } = useParams<{ eventId: string }>();
   const queryClient = useQueryClient();
   const [event, setEvent] = useState(events.find(e => e.id === eventId));
@@ -412,6 +442,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
               meetingId={event.id}
               initialData={meetingMinutes}
               documents={documents}
+              setDocuments={setDocuments}
               onSave={(savedMinutes) => {
                 queryClient.setQueryData<any[]>(['minutes'], (current = []) => {
                   const nextMinutes = {
