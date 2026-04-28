@@ -106,3 +106,24 @@ test('archives a replacement minutes PDF as the next document version', async ()
   assert.equal(prisma.calls.documentVersionCreate.documentId, 'doc-7');
   assert.equal(prisma.calls.ingestionJobCreate.documentVersionId, 'version-1');
 });
+
+test('passes a configured Blob token to the storage client', async () => {
+  const prisma = createPrisma();
+
+  await archiveMinutesPdf({
+    prisma,
+    putBlob: async (_path, _bytes, options) => {
+      prisma.calls.blob = { options };
+      return {
+        url: 'https://blob.example/minutes.pdf',
+      };
+    },
+    blobToken: 'blob-token',
+    meetingId: 'meeting-1',
+    cooperativeId: 'coop-1',
+    user: { email: 'sam@example.com' },
+    pdfDataUrl,
+  });
+
+  assert.equal(prisma.calls.blob.options.token, 'blob-token');
+});

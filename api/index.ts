@@ -936,6 +936,7 @@ app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) =>
       pdfDataUrl,
       title,
       date,
+      blobToken: process.env.BLOB_READ_WRITE_TOKEN,
     });
     res.json(document);
   } catch (error: any) {
