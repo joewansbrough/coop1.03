@@ -23,7 +23,11 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
   }
 
   const { attendees = [], motions = [], meetingType } = data;
-  const linkedDocument = formData.linkedDocument;
+  const linkedDocuments = Array.isArray(formData.linkedDocuments)
+    ? formData.linkedDocuments
+    : formData.linkedDocument
+      ? [formData.linkedDocument]
+      : [];
   const actionItems = Array.isArray(formData.actionItemsList)
     ? formData.actionItemsList.filter((item: any) => item?.description?.trim() || item?.responsible?.length || item?.dueDate)
     : [];
@@ -133,23 +137,27 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
           </div>
         </ReadOnlySection>
 
-        {linkedDocument && (
-          <ReadOnlySection title="Linked Document" icon="fa-link">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
-              <div className="min-w-0">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attached Record</p>
-                <p className="text-sm font-black text-slate-800 dark:text-slate-200 truncate">{linkedDocument.title}</p>
-              </div>
-              {linkedDocument.url && linkedDocument.url !== '#' && (
-                <button
-                  type="button"
-                  onClick={() => window.open(linkedDocument.url, '_blank', 'noopener,noreferrer')}
-                  className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-700 text-white text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
-                >
-                  <i className="fa-solid fa-arrow-up-right-from-square mr-2"></i>
-                  Open Document
-                </button>
-              )}
+        {linkedDocuments.length > 0 && (
+          <ReadOnlySection title="Linked Documents" icon="fa-link">
+            <div className="space-y-3">
+              {linkedDocuments.map((linkedDocument: any) => (
+                <div key={linkedDocument.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attached Record</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-slate-200 truncate">{linkedDocument.title}</p>
+                  </div>
+                  {linkedDocument.url && linkedDocument.url !== '#' && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(linkedDocument.url, '_blank', 'noopener,noreferrer')}
+                      className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-700 text-white text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                    >
+                      <i className="fa-solid fa-arrow-up-right-from-square mr-2"></i>
+                      Open Document
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </ReadOnlySection>
         )}

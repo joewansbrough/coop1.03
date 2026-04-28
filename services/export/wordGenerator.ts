@@ -45,6 +45,11 @@ const parseHtmlToDocx = (html: string) => {
 
 export const generateMinutesWord = async (data: any, event: any) => {
   const { formData, attendees, motions, meetingType } = data;
+  const linkedDocuments = Array.isArray(formData.linkedDocuments)
+    ? formData.linkedDocuments
+    : formData.linkedDocument
+      ? [formData.linkedDocument]
+      : [];
   const actionItems = Array.isArray(formData.actionItemsList)
     ? formData.actionItemsList.filter((item: any) => item?.description?.trim() || item?.responsible?.length || item?.dueDate)
     : [];
@@ -173,6 +178,21 @@ export const generateMinutesWord = async (data: any, event: any) => {
             ],
             spacing: { after: 300 },
           }),
+
+          ...(linkedDocuments.length > 0 ? [
+            new Paragraph({
+              text: "LINKED DOCUMENTS",
+              heading: HeadingLevel.HEADING_2,
+              shading: { fill: "f1f5f9" },
+            }),
+            ...linkedDocuments.map((linkedDocument: any, index: number) => new Paragraph({
+              children: [
+                new TextRun({ text: `Document ${index + 1}: `, bold: true }),
+                new TextRun(linkedDocument.title || 'N/A'),
+              ],
+            })),
+            new Paragraph({ text: "", spacing: { after: 200 } }),
+          ] : []),
 
           // Attendance
           new Paragraph({

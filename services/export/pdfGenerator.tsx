@@ -161,6 +161,11 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
       : [];
   const motions = data.motions || [];
   const meetingType = data.meetingType;
+  const linkedDocuments = Array.isArray(formData.linkedDocuments)
+    ? formData.linkedDocuments
+    : formData.linkedDocument
+      ? [formData.linkedDocument]
+      : [];
   const actionItems = Array.isArray(formData.actionItemsList)
     ? formData.actionItemsList.filter((item: any) => item?.description?.trim() || item?.responsible?.length || item?.dueDate)
     : [];
@@ -232,13 +237,15 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
           </View>
         </View>
 
-        {formData.linkedDocument && (
+        {linkedDocuments.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Linked Document</Text>
-            <View style={styles.row}>
-              <Text style={styles.label}>Document:</Text>
-              <Text style={styles.value}>{formData.linkedDocument.title || 'N/A'}</Text>
-            </View>
+            <Text style={styles.sectionTitle}>Linked Documents</Text>
+            {linkedDocuments.map((linkedDocument: any, index: number) => (
+              <View key={linkedDocument.id || index} style={styles.row}>
+                <Text style={styles.label}>Document {index + 1}:</Text>
+                <Text style={styles.value}>{linkedDocument.title || 'N/A'}</Text>
+              </View>
+            ))}
           </View>
         )}
 

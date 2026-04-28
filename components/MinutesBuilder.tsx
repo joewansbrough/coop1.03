@@ -41,6 +41,13 @@ interface ActionItem {
   dueDate: string;
 }
 
+interface LinkedDocument {
+  id: string;
+  title: string;
+  url: string;
+  fileType: string;
+}
+
 const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData, documents = [], setDocuments, onSave }) => {
   const [step, setStep] = useState<'select' | 'build'>('select');
   const [meetingType, setMeetingType] = useState<MeetingType>('regular');
@@ -113,7 +120,8 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     // Multi-name fields
     directorsAbsent: [] as string[],
     guests: [] as string[],
-    linkedDocument: null as { id: string; title: string; url: string; fileType: string } | null,
+    linkedDocument: null as LinkedDocument | null,
+    linkedDocuments: [] as LinkedDocument[],
   });
 
   const [attendees, setAttendees] = useState<AttendeeItem[]>([
@@ -145,6 +153,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
       if (typeof data.guests === 'string') data.guests = data.guests ? data.guests.split(',').map((s: string) => s.trim()) : [];
       if (typeof data.scrutineers === 'string') data.scrutineers = data.scrutineers ? data.scrutineers.split(',').map((s: string) => s.trim()) : [];
       if (!Array.isArray(data.actionItemsList)) data.actionItemsList = [];
+      if (!Array.isArray(data.linkedDocuments)) data.linkedDocuments = data.linkedDocument ? [data.linkedDocument] : [];
       
       setFormData(prev => ({ ...prev, ...data }));
       setAttendees(initialData.attendees || attendees);
@@ -162,6 +171,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
         if (typeof fData.guests === 'string') fData.guests = fData.guests ? fData.guests.split(',').map((s: string) => s.trim()) : [];
         if (typeof fData.scrutineers === 'string') fData.scrutineers = fData.scrutineers ? fData.scrutineers.split(',').map((s: string) => s.trim()) : [];
         if (!Array.isArray(fData.actionItemsList)) fData.actionItemsList = [];
+        if (!Array.isArray(fData.linkedDocuments)) fData.linkedDocuments = fData.linkedDocument ? [fData.linkedDocument] : [];
         
         setFormData(prev => ({ ...prev, ...fData }));
         setAttendees(data.attendees || attendees);
@@ -215,23 +225,55 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     setSaveStatus('idle');
   };
 
+  const setLinkedDocumentsState = (linkedDocuments: LinkedDocument[]) => {
+    setFormData(prev => ({
+      ...prev,
+      linkedDocuments,
+      linkedDocument: linkedDocuments[0] || null,
+    }));
+    setIsDirty(true);
+    setSaveStatus('idle');
+  };
+
   const handleLinkedDocumentChange = (documentId: string) => {
+    if (!documentId) return;
     const doc = documents.find(d => d.id === documentId);
-    handleInputChange('linkedDocument', doc ? {
+    if (!doc) return;
+
+    const linkedDoc = {
       id: doc.id,
       title: doc.title,
       url: doc.url,
       fileType: doc.fileType,
-    } : null);
+    };
+    const currentDocuments = formData.linkedDocuments || [];
+    if (currentDocuments.some(existingDoc => existingDoc.id === linkedDoc.id)) return;
+    setLinkedDocumentsState([...currentDocuments, linkedDoc]);
   };
 
   const linkDocumentToMinutes = (doc: CoopDocument) => {
-    handleInputChange('linkedDocument', {
+    const linkedDoc = {
       id: doc.id,
       title: doc.title,
       url: doc.url,
       fileType: doc.fileType,
+    };
+    setFormData(prev => {
+      const currentDocuments = prev.linkedDocuments || [];
+      if (currentDocuments.some(existingDoc => existingDoc.id === linkedDoc.id)) return prev;
+      const linkedDocuments = [...currentDocuments, linkedDoc];
+      return {
+        ...prev,
+        linkedDocuments,
+        linkedDocument: linkedDocuments[0] || null,
+      };
     });
+    setIsDirty(true);
+    setSaveStatus('idle');
+  };
+
+  const removeLinkedDocument = (documentId: string) => {
+    setLinkedDocumentsState((formData.linkedDocuments || []).filter(doc => doc.id !== documentId));
   };
 
   const handleOpenPicker = () => {
@@ -783,14 +825,17 @@ const handleSave = async () => {
         {meetingType === 'agm' && <AGMMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
         {meetingType === 'special' && <SpecialMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
 
-        <LinkDocumentSection
-          documents={documents}
-          linkedDocument={formData.linkedDocument}
-          isScriptsReady={isScriptsReady}
-          isLinkingDriveDocument={isLinkingDriveDocument}
-          onOpenPicker={handleOpenPicker}
-          onExistingDocumentChange={handleLinkedDocumentChange}
-        />
+        <div className="mt-16 pt-10 border-t border-slate-100 dark:border-white/5">
+          <LinkDocumentSection
+            documents={documents}
+            linkedDocuments={formData.linkedDocuments || []}
+            isScriptsReady={isScriptsReady}
+            isLinkingDriveDocument={isLinkingDriveDocument}
+            onOpenPicker={handleOpenPicker}
+            onExistingDocumentChange={handleLinkedDocumentChange}
+            onRemoveLinkedDocument={removeLinkedDocument}
+          />
+        </div>
         
         <div className="mt-12 pt-8 border-t border-slate-100 dark:border-white/5 flex flex-col items-end gap-4">
            {saveStatus === 'success' && (
@@ -993,18 +1038,19 @@ const ActionItemsEditor: React.FC<{
 
 const LinkDocumentSection: React.FC<{
   documents: CoopDocument[];
-  linkedDocument: { id: string; title: string; url: string; fileType: string } | null;
+  linkedDocuments: LinkedDocument[];
   isScriptsReady: boolean;
   isLinkingDriveDocument: boolean;
   onOpenPicker: () => void;
   onExistingDocumentChange: (documentId: string) => void;
-}> = ({ documents, linkedDocument, isScriptsReady, isLinkingDriveDocument, onOpenPicker, onExistingDocumentChange }) => (
+  onRemoveLinkedDocument: (documentId: string) => void;
+}> = ({ documents, linkedDocuments, isScriptsReady, isLinkingDriveDocument, onOpenPicker, onExistingDocumentChange, onRemoveLinkedDocument }) => (
   <FormSection title="Link a Document" icon="fa-link">
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex flex-col lg:flex-row gap-4 lg:items-end lg:justify-between">
         <div>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Link a new Google Drive document to this minutes record, or choose an existing document from the library.
+            Link new Google Drive documents to this minutes record, or choose existing documents from the library.
           </p>
         </div>
         <button
@@ -1020,32 +1066,46 @@ const LinkDocumentSection: React.FC<{
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-center">
         <select
-          value={linkedDocument?.id || ''}
+          value=""
           onChange={(e) => onExistingDocumentChange(e.target.value)}
           className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-500"
         >
-          <option value="">No linked document</option>
+          <option value="">Add existing document from library...</option>
           {documents.map(doc => (
             <option key={doc.id} value={doc.id}>{doc.title}</option>
           ))}
         </select>
       </div>
 
-      {linkedDocument && (
-        <div className="flex items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
-          <div className="min-w-0">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Link</p>
-            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{linkedDocument.title}</p>
-          </div>
-          {linkedDocument.url && linkedDocument.url !== '#' && (
-            <button
-              type="button"
-              onClick={() => window.open(linkedDocument.url, '_blank', 'noopener,noreferrer')}
-              className="px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
-            >
-              Open
-            </button>
-          )}
+      {linkedDocuments.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Linked Documents</p>
+          {linkedDocuments.map(linkedDocument => (
+            <div key={linkedDocument.id} className="flex items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{linkedDocument.title}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{linkedDocument.fileType || 'Document'}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {linkedDocument.url && linkedDocument.url !== '#' && (
+                  <button
+                    type="button"
+                    onClick={() => window.open(linkedDocument.url, '_blank', 'noopener,noreferrer')}
+                    className="px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                  >
+                    Open
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onRemoveLinkedDocument(linkedDocument.id)}
+                  className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                >
+                  <i className="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
