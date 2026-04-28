@@ -199,10 +199,13 @@ export const getNextIncompleteStep = (state: DemoTutorialState) => {
 
 const unique = (values: string[]) => Array.from(new Set(values));
 
-export const markTutorialStepDone = (state: DemoTutorialState, stepId: string): DemoTutorialState => ({
-  ...state,
-  completedStepIds: unique([...state.completedStepIds, stepId]),
-});
+export const markTutorialStepDone = (state: DemoTutorialState, stepId: string): DemoTutorialState => {
+  if (state.completedStepIds.includes(stepId)) return state;
+  return {
+    ...state,
+    completedStepIds: [...state.completedStepIds, stepId],
+  };
+};
 
 const routeMatches = (pathname: string, routePattern: string) =>
   routePattern === '/' ? pathname === '/' : pathname === routePattern || pathname.startsWith(routePattern);
@@ -222,10 +225,12 @@ export const updateTutorialProgress = (
     })
     .map(step => step.id);
 
-  if (completed.length === 0) return state;
+  const newlyCompleted = completed.filter(stepId => !state.completedStepIds.includes(stepId));
+  if (newlyCompleted.length === 0) return state;
+
   return {
     ...state,
-    completedStepIds: unique([...state.completedStepIds, ...completed]),
+    completedStepIds: unique([...state.completedStepIds, ...newlyCompleted]),
   };
 };
 

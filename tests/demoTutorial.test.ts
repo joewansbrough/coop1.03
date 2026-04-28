@@ -42,6 +42,18 @@ test('manual completion marks a tutorial step done once', () => {
   assert.deepEqual(twice.completedStepIds, ['resident-documents']);
 });
 
+test('progress updates are idempotent after a matching step is already complete', () => {
+  const routeState = updateTutorialProgress(createInitialTutorialState('admin'), { pathname: '/' });
+  const routeAgain = updateTutorialProgress(routeState, { pathname: '/' });
+
+  assert.equal(routeAgain, routeState);
+
+  const eventState = updateTutorialProgress(createInitialTutorialState('pitch'), { eventName: 'minutes_saved' });
+  const eventAgain = updateTutorialProgress(eventState, { eventName: 'minutes_saved' });
+
+  assert.equal(eventAgain, eventState);
+});
+
 test('reset keeps selected track but clears progress and panel dismissal', () => {
   const state = {
     ...createInitialTutorialState('admin'),
