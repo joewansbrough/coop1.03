@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
-import { CoopEvent, Tenant } from '../types';
+import { Committee, CoopEvent, Tenant } from '../types';
 import AppAlert from '../components/AppAlert';
 import MinutesBuilder from '../components/MinutesBuilder';
 import { useMinutes } from '../hooks/useCoopData';
@@ -250,9 +250,10 @@ interface EventDetailProps {
   user: { email: string; name: string };
   events: CoopEvent[];
   setEvents: React.Dispatch<React.SetStateAction<CoopEvent[]>>;
+  committees?: Committee[];
 }
 
-const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, user, events, setEvents }) => {
+const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, user, events, setEvents, committees = [] }) => {
   const { eventId } = useParams<{ eventId: string }>();
   const queryClient = useQueryClient();
   const [event, setEvent] = useState(events.find(e => e.id === eventId));
@@ -307,11 +308,12 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       time: (form.elements.namedItem('time') as HTMLInputElement).value,
       location: (form.elements.namedItem('location') as HTMLInputElement).value,
       description: (form.elements.namedItem('description') as HTMLTextAreaElement).value,
+      committeeId: (form.elements.namedItem('committeeId') as HTMLSelectElement).value || null,
     };
 
     if (isTemp) {
       const updatedTempEvent = { ...event, ...payload };
-      setEvents(events.map(ev => ev.id === event.id ? updatedTempEvent : ev));
+      setEvents(current => current.map(ev => ev.id === event.id ? updatedTempEvent : ev));
       setIsEditing(false);
       showAlert('Temporary event updated for this session.', 'success');
       return;
@@ -324,7 +326,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      setEvents(events.map(ev => ev.id === event.id ? data : ev));
+      setEvents(current => current.map(ev => ev.id === event.id ? data : ev));
       setIsEditing(false);
       showAlert('Event details updated successfully.', 'success');
     } catch (err) {
@@ -458,6 +460,15 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                       <option value="Social">Social</option>
                       <option value="Maintenance">Maintenance</option>
                       <option value="Board">Board</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Committee <span className="text-slate-300">(Optional)</span></label>
+                    <select name="committeeId" className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white" defaultValue={event.committeeId || ''}>
+                      <option value="">No committee link</option>
+                      {committees.map(committee => (
+                        <option key={committee.id} value={committee.id}>{committee.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
