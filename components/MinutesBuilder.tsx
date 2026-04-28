@@ -240,7 +240,7 @@ const handleSave = async () => {
   };
 
   try {
-    const response = await fetch('/api/minutes', {
+    const response = await fetch(`/api/minutes/${meetingId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -259,7 +259,7 @@ const handleSave = async () => {
     console.log('✅ Minutes saved:', savedMinutes);
     
     // Navigate to the view page
-    navigate(`/minutes/${savedMinutes.id}`);
+    navigate(`/minutes/${savedMinutes.meetingId}`);
     
   } catch (error) {
     console.error('❌ Error saving minutes:', error);
