@@ -3,12 +3,10 @@ import DOMPurify from 'dompurify';
 import { isDemoMode, useTenants, useCommittees, useEvents, useUser, useRefreshData } from '../hooks/useCoopData';
 import { Tenant, Committee, CoopEvent, Document as CoopDocument } from '../types';
 import RichTextEditor from './RichTextEditor';
-import { generateMinutesWord } from '../services/export/wordGenerator';
 import { MinutesPDF } from '../services/export/pdfGenerator';
 import { demoStorage } from '../utils/demoStorage';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
-import { ChevronDown, FileText, FileCode, Printer, Download } from 'lucide-react';
 
 interface MinutesBuilderProps {
   meetingId: string;
@@ -198,6 +196,93 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
       }
     });
     return sanitized;
+  };
+
+  const getMinutesFileName = () => `Minutes_${formData.meetingDate || currentEvent?.date?.split('T')[0]}.pdf`;
+
+  const getMinutesDocumentTitle = () => `${currentEvent?.title || 'Meeting'} Minutes`;
+
+  const createMinutesPdfBlob = () => {
+    const pdfFormData = sanitizeFormData(formData);
+    return pdf(
+      <MinutesPDF data={{ formData: pdfFormData, attendees, motions, meetingType }} event={currentEvent} />
+    ).toBlob();
+  };
+
+  const blobToDataUrl = (blob: Blob) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read PDF blob.'));
+    reader.readAsDataURL(blob);
+  });
+
+  const upsertDemoMinutesPdfDocument = (pdfDataUrl: string) => {
+    const stableTag = `minutes-meeting:${meetingId}`;
+    const currentDocuments = demoStorage.getAll<CoopDocument>('documents', []);
+    const existingDocument = currentDocuments.find((doc) => doc.tags?.includes(stableTag));
+    const archivedDocument: CoopDocument = {
+      ...(existingDocument || {}),
+      id: existingDocument?.id || `minutes-pdf-${meetingId}`,
+      title: getMinutesDocumentTitle(),
+      category: 'Minutes',
+      url: pdfDataUrl,
+      fileType: 'pdf',
+      author: user?.name || user?.email || 'Secretary',
+      date: formData.meetingDate || currentEvent?.date?.split('T')[0] || new Date().toISOString(),
+      tags: Array.from(new Set([...(existingDocument?.tags || []), new Date().getFullYear().toString(), 'Minutes', 'Meeting Minutes', stableTag])),
+      content: `PDF archive for meeting ${meetingId}. Replaced automatically when minutes are re-saved.`,
+    };
+
+    const nextDocuments = existingDocument
+      ? currentDocuments.map((doc) => doc.id === existingDocument.id ? archivedDocument : doc)
+      : [archivedDocument, ...currentDocuments];
+
+    demoStorage.saveAll('documents', nextDocuments);
+    setDocuments?.((current) => {
+      const existingIndex = current.findIndex((doc) => doc.id === archivedDocument.id || doc.tags?.includes(stableTag));
+      if (existingIndex === -1) return [archivedDocument, ...current];
+      return current.map((doc, index) => index === existingIndex ? archivedDocument : doc);
+    });
+    return archivedDocument;
+  };
+
+  const archiveMinutesPdfToLibrary = async () => {
+    if (!currentEvent) {
+      throw new Error('Meeting details are not available, so the PDF could not be archived.');
+    }
+
+    const pdfBlob = await createMinutesPdfBlob();
+    const pdfDataUrl = await blobToDataUrl(pdfBlob);
+
+    if (isDemoMode()) {
+      return upsertDemoMinutesPdfDocument(pdfDataUrl);
+    }
+
+    const response = await fetch(`/api/minutes/${meetingId}/library-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        title: getMinutesDocumentTitle(),
+        date: formData.meetingDate || currentEvent.date,
+        pdfDataUrl,
+      }),
+    });
+
+    const archivedDocument = await response.json();
+
+    if (!response.ok) {
+      throw new Error(archivedDocument.details || archivedDocument.error || 'Failed to archive minutes PDF.');
+    }
+
+    setDocuments?.((current) => {
+      const stableTag = `minutes-meeting:${meetingId}`;
+      const existingIndex = current.findIndex((doc) => doc.id === archivedDocument.id || doc.tags?.includes(stableTag));
+      if (existingIndex === -1) return [archivedDocument, ...current];
+      return current.map((doc, index) => index === existingIndex ? archivedDocument : doc);
+    });
+    refreshData();
+    return archivedDocument;
   };
 
   const autoSave = () => {
@@ -471,6 +556,12 @@ const handleSave = async () => {
       setIsDirty(false);
       localStorage.removeItem(`minutes-${meetingId}`);
       onSave?.(savedMinutes);
+      try {
+        await archiveMinutesPdfToLibrary();
+      } catch (archiveError: any) {
+        console.error('PDF archive error:', archiveError);
+        alert(`Minutes saved, but the PDF copy could not be updated in the Document Library: ${archiveError.message}`);
+      }
       return;
     }
 
@@ -497,6 +588,12 @@ const handleSave = async () => {
     setIsDirty(false); // Mark as not dirty
     localStorage.removeItem(`minutes-${meetingId}`);
     onSave?.(savedMinutes);
+    try {
+      await archiveMinutesPdfToLibrary();
+    } catch (archiveError: any) {
+      console.error('PDF archive error:', archiveError);
+      alert(`Minutes saved, but the PDF copy could not be updated in the Document Library: ${archiveError.message}`);
+    }
 
   } catch (error: any) { // Explicitly type error for message property
     console.error('❌ Error saving minutes:', error);
@@ -508,36 +605,17 @@ const handleSave = async () => {
 
 
   const [isExporting, setIsExporting] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
-      const blob = await pdf(<MinutesPDF data={{ formData, attendees, motions, meetingType }} event={currentEvent} />).toBlob();
-      saveAs(blob, `Minutes_${formData.meetingDate || currentEvent?.date?.split('T')[0]}.pdf`);
+      const blob = await createMinutesPdfBlob();
+      saveAs(blob, getMinutesFileName());
     } catch (err) {
       console.error('PDF Export Error:', err);
     } finally {
       setIsExporting(false);
-      setShowExportMenu(false);
     }
-  };
-
-  const handleExportWord = async () => {
-    setIsExporting(true);
-    try {
-      await generateMinutesWord({ formData, attendees, motions, meetingType }, currentEvent);
-    } catch (err) {
-      console.error('Word Export Error:', err);
-    } finally {
-      setIsExporting(false);
-      setShowExportMenu(false);
-    }
-  };
-
-  const handleExport = () => {
-    window.print();
-    setShowExportMenu(false);
   };
 
   const selectMeetingType = (type: MeetingType) => {
@@ -747,54 +825,15 @@ const handleSave = async () => {
           </div>
         </div>
         <div className="flex gap-2 relative">
-          <div className="relative">
-            <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              disabled={isExporting}
-              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-black uppercase hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center gap-2"
-            >
-              {isExporting ? (
-                <i className="fa-solid fa-spinner fa-spin"></i>
-              ) : (
-                <Download size={14} />
-              )}
-              Export
-              <ChevronDown size={14} className={`transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
-            </button>
-
-            {showExportMenu && (
-              <>
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={() => setShowExportMenu(false)}
-                ></div>
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-white/5 py-2 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                  <button
-                    onClick={handleExportPDF}
-                    className="w-full px-4 py-3 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-3 transition-colors"
-                  >
-                    <FileCode size={16} className="text-red-500" />
-                    Download PDF
-                  </button>
-                  <button
-                    onClick={handleExportWord}
-                    className="w-full px-4 py-3 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-3 transition-colors"
-                  >
-                    <FileText size={16} className="text-blue-500" />
-                    Download Word
-                  </button>
-                  <div className="h-px bg-slate-100 dark:bg-white/5 my-1 mx-2"></div>
-                  <button
-                    onClick={handleExport}
-                    className="w-full px-4 py-3 text-left text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-3 transition-colors"
-                  >
-                    <Printer size={16} className="text-slate-400" />
-                    Browser Print
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed border border-slate-200 dark:border-white/5"
+          >
+            <i className={`fa-solid ${isExporting ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i>
+            {isExporting ? 'Exporting...' : 'Export to PDF'}
+          </button>
           
           <button
             onClick={handleSave}

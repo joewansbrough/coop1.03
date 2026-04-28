@@ -233,7 +233,7 @@ export const useDeleteTenant = tenantsHooks.useDelete;
 
 export const useDocuments = (options?: DataQueryOptions<Document[]>) => useQuery<Document[]>({
   queryKey: ['documents'],
-  queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_DOCUMENTS) : fetchJson('/api/documents'),
+  queryFn: () => isDemoMode() ? Promise.resolve(demoStorage.getAll('documents', demoData.MOCK_DOCUMENTS)) : fetchJson('/api/documents'),
   ...dataQueryConfig,
   ...options,
 });

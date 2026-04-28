@@ -916,6 +916,85 @@ app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) => {
+  try {
+    const meetingId = getParam(req.params.meetingId);
+    const { pdfDataUrl, title, date } = req.body;
+
+    if (typeof pdfDataUrl !== 'string' || !pdfDataUrl.startsWith('data:application/pdf;base64,')) {
+      return res.status(400).json({ error: 'A PDF data URL is required.' });
+    }
+
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const user = (req as any).user || (req as any).session?.user;
+    const event = await p.coopEvent.findFirst({
+      where: {
+        id: meetingId,
+        cooperativeId: coopId,
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Meeting not found for this cooperative.' });
+    }
+
+    const stableTag = `minutes-meeting:${meetingId}`;
+    const documentTitle = title || `${event.title} Minutes`;
+    const documentDate = date ? new Date(date) : new Date();
+    const tags = Array.from(new Set([
+      new Date().getFullYear().toString(),
+      'Minutes',
+      'Meeting Minutes',
+      stableTag,
+    ]));
+
+    const existingDocument = await p.document.findFirst({
+      where: {
+        cooperativeId: coopId,
+        tags: {
+          has: stableTag,
+        },
+      },
+    });
+
+    const document = existingDocument
+      ? await p.document.update({
+          where: { id: existingDocument.id },
+          data: {
+            title: documentTitle,
+            category: 'Minutes',
+            url: pdfDataUrl,
+            fileType: 'pdf',
+            author: user?.name || user?.email || 'Secretary',
+            date: documentDate,
+            tags: { set: tags },
+            committee: null,
+            content: `PDF archive for meeting ${meetingId}. Replaced automatically when minutes are re-saved.`,
+          } as any,
+        })
+      : await p.document.create({
+          data: {
+            cooperativeId: coopId,
+            title: documentTitle,
+            category: 'Minutes',
+            url: pdfDataUrl,
+            fileType: 'pdf',
+            author: user?.name || user?.email || 'Secretary',
+            date: documentDate,
+            tags,
+            committee: null,
+            content: `PDF archive for meeting ${meetingId}. Replaced automatically when minutes are re-saved.`,
+          } as any,
+        });
+
+    res.json(document);
+  } catch (error: any) {
+    console.error('Error archiving minutes PDF:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // --- AI Routes ---
 const getAI = () => {
   const apiKey = process.env.API_KEY;
