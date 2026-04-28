@@ -1,14 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { CoopEvent, Tenant } from '../types';
 import AppAlert from '../components/AppAlert';
 import MinutesBuilder from '../components/MinutesBuilder';
-import { useMinutes, useCreateMinutes } from '../hooks/useCoopData';
-import { useMinutesManager } from '../hooks/useMinutesManager';
+import { useMinutes } from '../hooks/useCoopData';
 
 const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, event }) => {
-  if (!data || !data.formData) {
+  const formData = data?.formData || data?.data;
+
+  if (!data || !formData) {
     return (
       <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 p-12 text-center">
         <p className="text-slate-500">Unable to load minutes data. Please contact the administrator.</p>
@@ -16,7 +18,7 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
     );
   }
 
-  const { formData, attendees = [], motions = [], meetingType } = data;
+  const { attendees = [], motions = [], meetingType } = data;
 
   const getMeetingLabel = (type: string) => {
     switch (type) {
@@ -185,7 +187,7 @@ interface EventDetailProps {
 
 const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, user, events, setEvents }) => {
   const { eventId } = useParams<{ eventId: string }>();
-  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [event, setEvent] = useState(events.find(e => e.id === eventId));
   const [isEditing, setIsEditing] = useState(false);
   const [isAttending, setIsAttending] = useState(false);
@@ -193,7 +195,6 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   const [activeTab, setActiveTab] = useState<'overview' | 'minutes'>('overview');
 
   const { data: minutesList } = useMinutes();
-  const createMinutesMutation = useCreateMinutes();
   
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertMessage({ message, type });
@@ -318,17 +319,18 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
             <MinutesBuilder
               meetingId={event.id}
               initialData={meetingMinutes}
-              onSave={async (data) => {
-                try {
-                  await createMinutesMutation.mutateAsync({
-                    ...data,
-                    meetingId: event.id
-                  });
-                  showAlert('Meeting minutes have been saved and archived.', 'success');
-                } catch (err) {
-                  console.error(err);
-                  showAlert('Failed to save minutes to the database.', 'error');
-                }
+              onSave={(savedMinutes) => {
+                queryClient.setQueryData<any[]>(['minutes'], (current = []) => {
+                  const nextMinutes = {
+                    ...savedMinutes,
+                    formData: savedMinutes.formData || savedMinutes.data,
+                  };
+                  const existingIndex = current.findIndex(m => m.meetingId === event.id);
+                  if (existingIndex === -1) return [nextMinutes, ...current];
+                  return current.map((m, index) => index === existingIndex ? nextMinutes : m);
+                });
+                queryClient.invalidateQueries({ queryKey: ['minutes'] });
+                showAlert('Meeting minutes have been saved and archived.', 'success');
               }}
             />
           ) : meetingMinutes ? (

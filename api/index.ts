@@ -813,6 +813,11 @@ app.delete('/api/events/:id', requireAuth, async (req, res) => {
 
 // --- Meeting Minutes Routes ---
 
+const serializeMinutes = (minutes: any) => minutes ? ({
+  ...minutes,
+  formData: minutes.data,
+}) : minutes;
+
 app.get('/api/minutes', requireAuth, async (req, res) => {
   try {
     const p = getPrisma();
@@ -831,7 +836,7 @@ app.get('/api/minutes', requireAuth, async (req, res) => {
         },
       },
     });
-    res.json(minutes);
+    res.json(minutes.map(serializeMinutes));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -852,7 +857,7 @@ app.get('/api/minutes/:meetingId', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Forbidden' });
     }
     
-    res.json(minutes);
+    res.json(serializeMinutes(minutes));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -862,6 +867,7 @@ app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   try {
     const meetingId = getParam(req.params.meetingId);
     const { meetingType, formData, attendees, motions } = req.body;
+    const minutesData = formData ?? req.body.data;
     const user = (req as any).user;
     const p = getPrisma();
     const coopId = await getCoopId(req, p);
@@ -881,21 +887,21 @@ app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
         where: { meetingId },
         data: {
           meetingType,
-          data: formData,
+          data: minutesData,
           attendees,
           motions,
           cooperativeId: coopId,
           updatedAt: new Date(),
         }
       });
-      return res.json(updated);
+      return res.json(serializeMinutes(updated));
     }
 
     const minutes = await p.meetingMinutes.create({
       data: {
         meetingId,
         meetingType,
-        data: formData,
+        data: minutesData,
         attendees,
         motions,
         cooperativeId: coopId,
@@ -903,7 +909,7 @@ app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
       }
     });
 
-    res.status(201).json(minutes);
+    res.status(201).json(serializeMinutes(minutes));
   } catch (error: any) {
     console.error('Error saving minutes:', error);
     res.status(500).json({ error: error.message, stack: process.env.NODE_ENV === 'development' ? error.stack : undefined });

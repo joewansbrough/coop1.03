@@ -12,7 +12,7 @@ import { ChevronDown, FileText, FileCode, Printer, Download } from 'lucide-react
 interface MinutesBuilderProps {
   meetingId: string;
   initialData?: any;
-  onSave: (data: any) => void;
+  onSave?: (data: any) => void;
 }
 
 type MeetingType = 'quick' | 'regular' | 'agm' | 'special';
@@ -106,7 +106,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
 
   useEffect(() => {
     if (initialData) {
-      const data = initialData.formData || formData;
+      const data = initialData.formData || initialData.data || formData;
       // Ensure array fields are actually arrays (migration from old string format)
       if (typeof data.directorsAbsent === 'string') data.directorsAbsent = data.directorsAbsent ? data.directorsAbsent.split(',').map((s: string) => s.trim()) : [];
       if (typeof data.guests === 'string') data.guests = data.guests ? data.guests.split(',').map((s: string) => s.trim()) : [];
@@ -228,54 +228,12 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
 
 const handleSave = async () => {
   setSaveStatus('saving'); // Indicate saving process has started
-  setDisplaySuccessMessage(false); // Hide previous message if any
-  setSuccessMessage('');
 
   const payload = {
-    // If you don't have a pre-existing meeting:
-    meetingTitle: formData.meetingDate ? `${formData.meetingDate} - ${meetingType || 'Meeting'}` : '', // Placeholder title if needed
-    meetingDate: formData.meetingDate,
-    startTime: formData.startTime,
-    endTime: formData.endTime,
-    location: formData.location,
-    chair: formData.chair,
-    territorialAck: formData.territorialAck,
-    quorumRequired: formData.quorumRequired,
-    quorumPresent: formData.quorumPresent,
-    noticeConfirmed: formData.noticeConfirmed,
-    quorumConfirmed: formData.quorumConfirmed,
-    minuteTaker: formData.minuteTaker,
-    agendaChanges: formData.agendaChanges,
-    agendaApproved: formData.agendaApproved,
-    previousMinutesDate: formData.previousMinutesDate,
-    minutesCorrections: formData.minutesCorrections,
-    minutesApproved: formData.minutesApproved,
-    businessArising: formData.businessArising,
-    boardReport: formData.boardReport,
-    financeReport: formData.financeReport,
-    committeeReports: formData.committeeReports,
-    auditorReport: formData.auditorReport,
-    managementReport: formData.managementReport,
-    newBusiness: formData.newBusiness,
-    actionItems: formData.actionItems,
-    approvedBy: formData.approvedBy,
-    approvalDate: formData.approvalDate,
-    additionalNotes: formData.additionalNotes,
-    // Quick meeting specific
-    keyDecisions: formData.keyDecisions,
-    nextSteps: formData.nextSteps,
-    // AGM specific
-    totalSeats: formData.totalSeats,
-    vacancies: formData.vacancies,
-    candidates: formData.candidates,
-    nominations: formData.nominations,
-    electionResults: formData.electionResults,
-    scrutineers: formData.scrutineers, // Ensure these are strings
-    ballotsDisposed: formData.ballotsDisposed,
-    // Multi-name fields
-    directorsAbsent: formData.directorsAbsent, // Ensure these are strings
-    guests: formData.guests, // Ensure these are strings
-    meetingType: meetingType, // Add meetingType to payload
+    meetingType,
+    formData: sanitizeFormData(formData),
+    attendees,
+    motions,
   };
 
   try {
@@ -284,7 +242,7 @@ const handleSave = async () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include', // Important: sends session cookie
+      credentials: 'include',
       body: JSON.stringify(payload),
     });
 
@@ -300,15 +258,8 @@ const handleSave = async () => {
     
     setSaveStatus('success'); // Set success state
     setIsDirty(false); // Mark as not dirty
-    setSuccessMessage('Minutes successfully saved!'); // Set the success message
-    setDisplaySuccessMessage(true); // Show the success message
-
-    // Keep success state and message visible for 2 seconds before navigating
-    const timer = setTimeout(() => {
-      navigate(`/minutes/${savedMinutes.meetingId}`);
-    }, 2000);
-    // Cleanup timer on component unmount or if handleSave is called again
-    return () => clearTimeout(timer); 
+    localStorage.removeItem(`minutes-${meetingId}`);
+    onSave?.(savedMinutes);
 
   } catch (error: any) { // Explicitly type error for message property
     console.error('❌ Error saving minutes:', error);
