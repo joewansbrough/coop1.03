@@ -6,7 +6,8 @@ import axios from 'axios';
 import cookieSession from 'cookie-session';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import driveRoutes from './drive.js';
-import minutesRouter from './api/minutes.js';  // Note the .js extension for ES modules
+import minutesRouter from './minutes.js';
+
 
 
 
@@ -1415,7 +1416,9 @@ app.get('/api/seed', async (req, res) => {
   }
 });
 
-app.use(minutesRouter);
+
+   app.use(minutesRouter);  
+   app.use('/api/drive', driveRoutes);
 
 app.get(['/api/debug/config', '/debug/config'], (req, res) => {
   res.json({

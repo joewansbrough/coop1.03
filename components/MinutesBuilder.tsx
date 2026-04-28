@@ -224,20 +224,48 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     setSaveStatus('idle');
   };
 
-  const handleSave = async () => {
-    setSaveStatus('saving');
-    const sanitizedData = sanitizeFormData(formData);
-    try {
-      await onSave({ formData: sanitizedData, attendees, motions, meetingType });
-      setLastSaved(new Date());
-      setIsDirty(false);
-      setSaveStatus('success');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch (err) {
-      console.error('Save failed:', err);
-      setSaveStatus('idle');
-    }
+// In your MinutesBuilder component
+
+const handleSave = async () => {
+  const payload = {
+    // If you don't have a pre-existing meeting:
+    meetingTitle: formData.meetingInfo.title,
+    meetingDate: formData.meetingInfo.date, // "2026-04-27T19:00:00Z"
+    
+    // Required fields:
+    meetingType: formData.meetingInfo.type, // "AGM", "Board", etc.
+    formData: formData, // Your entire form state
+    attendees: formData.attendees.map(a => a.email),
+    motions: formData.motions,
   };
+
+  try {
+    const response = await fetch('/api/minutes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Important: sends session cookie
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.details || error.error || 'Failed to save');
+    }
+
+    const savedMinutes = await response.json();
+    
+    console.log('✅ Minutes saved:', savedMinutes);
+    
+    // Navigate to the view page
+    navigate(`/minutes/${savedMinutes.id}`);
+    
+  } catch (error) {
+    console.error('❌ Error saving minutes:', error);
+    alert(`Failed to save: ${error.message}`);
+  }
+};
 
   const [isExporting, setIsExporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
