@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Committee, Tenant, Document } from '../types';
+import { Committee, Tenant, Document, CoopEvent } from '../types';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
 import { formatDate } from '../utils/dateUtils';
@@ -13,13 +13,14 @@ interface CommitteesProps {
   setCommittees: React.Dispatch<React.SetStateAction<Committee[]>>;
   tenants: Tenant[];
   documents?: Document[];
+  events?: CoopEvent[];
+  setEvents?: React.Dispatch<React.SetStateAction<CoopEvent[]>>;
 }
 
-const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user, committees, setCommittees, tenants, documents = [] }) => {
+const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user, committees, setCommittees, tenants, documents = [], events = [], setEvents }) => {
   const location = useLocation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showContact, setShowContact] = useState(false);
-  const [showUpload, setShowUpload] = useState(false);
   const [showAddCommittee, setShowAddCommittee] = useState(false);
   const [showAssignMember, setShowAssignMember] = useState<string | null>(null);
   
@@ -53,6 +54,12 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
   const selectedCommittee = Array.isArray(committees) ? committees.find(c => c.id === selectedId) : null;
   const isChair = selectedCommittee && user?.name === selectedCommittee.chair;
   const canSchedule = isAdmin || isChair;
+  const selectedCommitteeMeetings = selectedCommittee
+    ? events
+        .filter(event => event.committeeId === selectedCommittee.id && event.category === 'Meeting')
+        .filter(event => new Date(event.date) >= new Date(new Date().toDateString()))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    : [];
 
   const handleScheduleMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +81,8 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
       });
       
       if (res.ok) {
+        const scheduledEvent = await res.json();
+        setEvents?.(current => [...current, scheduledEvent]);
         showAlert('Committee meeting scheduled successfully.', 'success');
         setShowMeetingModal(false);
         // Reset form
@@ -127,13 +136,6 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
       setMsgBody('');
       showAlert('Message broadcasted to committee members.', 'success');
     }, 2000);
-  };
-
-  const handleUploadMinute = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isGuest) return;
-    showAlert('Minutes uploaded to the general library. Members will be notified.', 'success');
-    setShowUpload(false);
   };
 
   const handleAddCommittee = (e: React.FormEvent) => {
@@ -357,7 +359,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
       ) : (
         <div className="space-y-6">
           <button 
-            onClick={() => { setSelectedId(null); setShowContact(false); setShowUpload(false); }}
+            onClick={() => { setSelectedId(null); setShowContact(false); }}
             className="text-xs font-black text-slate-400 hover:text-brand-600 flex items-center gap-2 uppercase tracking-widest transition-all group mb-6"
           >
             <i className="fa-solid fa-chevron-left text-[10px] group-hover:-translate-x-1 transition-transform"></i> All Committees
@@ -374,24 +376,6 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                   <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 rounded-full text-[10px] font-black uppercase tracking-widest">
                       <i className="fa-solid fa-shield-halved"></i> Community Entity
-                    </div>
-                    <div className="flex gap-2">
-                       {isAdmin && !isGuest && (
-                         <>
-                           <button 
-                             onClick={() => setShowMeetingModal(true)}
-                             className="px-4 py-2 bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center gap-2"
-                           >
-                             <i className="fa-solid fa-calendar-plus"></i> Schedule Meeting
-                           </button>
-                           <button 
-                             onClick={() => setShowUpload(true)}
-                             className="px-4 py-2 bg-slate-900 dark:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
-                           >
-                             Upload Minutes
-                           </button>
-                         </>
-                       )}
                     </div>
                   </div>
                   <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tight">
@@ -424,37 +408,23 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                 </div>
               </div>
 
-              {showUpload && isAdmin && !isGuest && (
-                <div className="bg-brand-50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-500/20 p-8 rounded-3xl animate-in slide-in-from-top-4 duration-300">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-black text-brand-900 dark:text-brand-400 uppercase text-xs tracking-widest">Secretary Submission Portal</h3>
-                    <button onClick={() => setShowUpload(false)} className="text-brand-600"><i className="fa-solid fa-xmark"></i></button>
-                  </div>
-                  <form onSubmit={handleUploadMinute} className="space-y-4">
-                    <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-brand-200 dark:border-brand-500/20 rounded-2xl p-8 flex flex-col items-center justify-center text-center group hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors">
-                      <i className="fa-solid fa-file-arrow-up text-3xl text-brand-300 group-hover:text-brand-500 mb-3"></i>
-                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Drop PDF meeting minutes here or <span className="text-brand-600 underline cursor-pointer">browse</span></p>
-                    </div>
-                    <div className="flex gap-3">
-                      <input type="date" className="flex-1 bg-white dark:bg-slate-800 border border-brand-100 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 outline-none" required />
-                      <button type="submit" className="px-8 bg-brand-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-700 transition-all active:scale-95">Publish Minutes</button>
-                    </div>
-                  </form>
-                </div>
-              )}
-
               <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5">
-                 <div className="flex justify-between items-center mb-8">
+                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
                    <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase tracking-tight">
                      <i className="fa-solid fa-calendar-check text-brand-500"></i> Upcoming Meetings
                    </h3>
+                   {canSchedule && !isGuest && (
+                     <button
+                       onClick={() => setShowMeetingModal(true)}
+                       className="px-4 py-2 bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center justify-center gap-2"
+                     >
+                       <i className="fa-solid fa-calendar-plus"></i> Schedule Meeting
+                     </button>
+                   )}
                  </div>
                  <div className="space-y-4">
-                    {selectedCommittee?.events && selectedCommittee.events.length > 0 ? (
-                      selectedCommittee.events
-                        .filter(e => new Date(e.date) >= new Date())
-                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                        .map(event => (
+                    {selectedCommitteeMeetings.length > 0 ? (
+                      selectedCommitteeMeetings.map(event => (
                           <div key={event.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
                             <div className="flex items-center gap-4">
                               <div className="bg-white dark:bg-slate-900 p-2 rounded-xl text-center min-w-[50px] border dark:border-white/5">
@@ -467,7 +437,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                               </div>
                             </div>
                             <button 
-                              onClick={() => window.location.href = `/calendar/${event.id}`}
+                              onClick={() => window.location.href = `#/calendar/${event.id}`}
                               className="p-2 text-slate-300 hover:text-brand-500 transition-colors"
                             >
                               <i className="fa-solid fa-circle-info"></i>
