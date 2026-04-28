@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import { isDemoMode, useTenants, useCommittees, useEvents } from '../hooks/useCoopData';
-import { Tenant, Committee, CoopEvent } from '../types';
+import { Tenant, Committee, CoopEvent, Document as CoopDocument } from '../types';
 import RichTextEditor from './RichTextEditor';
 import { generateMinutesWord } from '../services/export/wordGenerator';
 import { MinutesPDF } from '../services/export/pdfGenerator';
@@ -13,6 +13,7 @@ import { ChevronDown, FileText, FileCode, Printer, Download } from 'lucide-react
 interface MinutesBuilderProps {
   meetingId: string;
   initialData?: any;
+  documents?: CoopDocument[];
   onSave?: (data: any) => void;
 }
 
@@ -32,7 +33,7 @@ interface AttendeeItem {
   position: string;
 }
 
-const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData, onSave }) => {
+const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData, documents = [], onSave }) => {
   const [step, setStep] = useState<'select' | 'build'>('select');
   const [meetingType, setMeetingType] = useState<MeetingType>('regular');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -98,6 +99,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     // Multi-name fields
     directorsAbsent: [] as string[],
     guests: [] as string[],
+    linkedDocument: null as { id: string; title: string; url: string; fileType: string } | null,
   });
 
   const [attendees, setAttendees] = useState<AttendeeItem[]>([
@@ -179,6 +181,16 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     setFormData(prev => ({ ...prev, [field]: value }));
     setIsDirty(true);
     setSaveStatus('idle');
+  };
+
+  const handleLinkedDocumentChange = (documentId: string) => {
+    const doc = documents.find(d => d.id === documentId);
+    handleInputChange('linkedDocument', doc ? {
+      id: doc.id,
+      title: doc.title,
+      url: doc.url,
+      fileType: doc.fileType,
+    } : null);
   };
 
   const addAttendee = () => {
@@ -614,6 +626,47 @@ const handleSave = async () => {
             {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? 'Saved' : 'Save'}
           </button>
         </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 p-6">
+        <div className="flex flex-col md:flex-row md:items-center gap-4 md:justify-between">
+          <div>
+            <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2">
+              <i className="fa-solid fa-link text-brand-500"></i>
+              Linked Document
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
+              Attach an existing library document to this minutes record.
+            </p>
+          </div>
+          <select
+            value={formData.linkedDocument?.id || ''}
+            onChange={(e) => handleLinkedDocumentChange(e.target.value)}
+            className="w-full md:max-w-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-500"
+          >
+            <option value="">No linked document</option>
+            {documents.map(doc => (
+              <option key={doc.id} value={doc.id}>{doc.title}</option>
+            ))}
+          </select>
+        </div>
+        {formData.linkedDocument && (
+          <div className="mt-4 flex items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Current Link</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{formData.linkedDocument.title}</p>
+            </div>
+            {formData.linkedDocument.url && formData.linkedDocument.url !== '#' && (
+              <button
+                type="button"
+                onClick={() => window.open(formData.linkedDocument?.url, '_blank', 'noopener,noreferrer')}
+                className="px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+              >
+                Open
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 p-8">

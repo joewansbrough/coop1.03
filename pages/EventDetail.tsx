@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
-import { Committee, CoopEvent, Tenant } from '../types';
+import { Committee, CoopEvent, Document as CoopDocument, Tenant } from '../types';
 import AppAlert from '../components/AppAlert';
 import MinutesBuilder from '../components/MinutesBuilder';
 import { useMinutes } from '../hooks/useCoopData';
@@ -23,6 +23,7 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
   }
 
   const { attendees = [], motions = [], meetingType } = data;
+  const linkedDocument = formData.linkedDocument;
   const attendeeRecords = attendees.filter((attendee: any) => attendee?.name?.trim());
   const guestNames = Array.isArray(formData.guests) ? formData.guests.filter((name: string) => name?.trim()) : [];
   const presentPeople = attendeeRecords.length > 0
@@ -117,6 +118,27 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
             <ReadOnlyField label="Recorded By" value={formData.minuteTaker} />
           </div>
         </ReadOnlySection>
+
+        {linkedDocument && (
+          <ReadOnlySection title="Linked Document" icon="fa-link">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+              <div className="min-w-0">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attached Record</p>
+                <p className="text-sm font-black text-slate-800 dark:text-slate-200 truncate">{linkedDocument.title}</p>
+              </div>
+              {linkedDocument.url && linkedDocument.url !== '#' && (
+                <button
+                  type="button"
+                  onClick={() => window.open(linkedDocument.url, '_blank', 'noopener,noreferrer')}
+                  className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-700 text-white text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                >
+                  <i className="fa-solid fa-arrow-up-right-from-square mr-2"></i>
+                  Open Document
+                </button>
+              )}
+            </div>
+          </ReadOnlySection>
+        )}
 
         <ReadOnlySection title="Attendance" icon="fa-users">
           <div className="space-y-6">
@@ -251,9 +273,10 @@ interface EventDetailProps {
   events: CoopEvent[];
   setEvents: React.Dispatch<React.SetStateAction<CoopEvent[]>>;
   committees?: Committee[];
+  documents?: CoopDocument[];
 }
 
-const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, user, events, setEvents, committees = [] }) => {
+const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, user, events, setEvents, committees = [], documents = [] }) => {
   const { eventId } = useParams<{ eventId: string }>();
   const queryClient = useQueryClient();
   const [event, setEvent] = useState(events.find(e => e.id === eventId));
@@ -370,7 +393,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       <nav className="flex border-b border-slate-200 dark:border-white/5 shrink-0 overflow-x-auto scrollbar-hide">
         {[
           { id: 'overview', label: 'Event Details' },
-          ...(event.category === 'Meeting' && (isAdmin || meetingMinutes) ? [{ id: 'minutes', label: 'Meeting Minutes' }] : []),
+          ...(isAdmin || meetingMinutes ? [{ id: 'minutes', label: 'Meeting Minutes' }] : []),
         ].map(tab => (
           <button
             key={tab.id}
@@ -388,6 +411,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
             <MinutesBuilder
               meetingId={event.id}
               initialData={meetingMinutes}
+              documents={documents}
               onSave={(savedMinutes) => {
                 queryClient.setQueryData<any[]>(['minutes'], (current = []) => {
                   const nextMinutes = {

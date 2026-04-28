@@ -218,6 +218,16 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
           </View>
         </View>
 
+        {formData.linkedDocument && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Linked Document</Text>
+            <View style={styles.row}>
+              <Text style={styles.label}>Document:</Text>
+              <Text style={styles.value}>{formData.linkedDocument.title || 'N/A'}</Text>
+            </View>
+          </View>
+        )}
+
         {/* Attendance */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Attendance</Text>
