@@ -109,7 +109,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV,
-    blobConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN)
+    blobConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.coophub_READ_WRITE_TOKEN)
   });
 });
 
@@ -937,7 +937,7 @@ app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) =>
       pdfDataUrl,
       title,
       date,
-      blobToken: process.env.BLOB_READ_WRITE_TOKEN,
+      blobToken: process.env.BLOB_READ_WRITE_TOKEN || process.env.coophub_READ_WRITE_TOKEN,
     });
     res.json(document);
   } catch (error: any) {

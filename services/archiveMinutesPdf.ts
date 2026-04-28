@@ -27,7 +27,8 @@ const decodePdfDataUrl = (pdfDataUrl: string) => {
   return Buffer.from(pdfDataUrl.slice(PDF_DATA_URL_PREFIX.length), 'base64');
 };
 
-const getBlobToken = (blobToken?: string) => blobToken || process.env.BLOB_READ_WRITE_TOKEN;
+const getBlobToken = (blobToken?: string) =>
+  blobToken || process.env.BLOB_READ_WRITE_TOKEN || process.env.coophub_READ_WRITE_TOKEN;
 
 export const archiveMinutesPdf = async ({
   prisma,
@@ -87,7 +88,7 @@ export const archiveMinutesPdf = async ({
   const resolvedBlobToken = getBlobToken(blobToken);
 
   if (!resolvedBlobToken) {
-    throw new Error('BLOB_READ_WRITE_TOKEN is not configured for the running server process.');
+    throw new Error('No Vercel Blob read-write token is configured for the running server process.');
   }
 
   const blob = await putBlob(storagePath, pdfBytes, {

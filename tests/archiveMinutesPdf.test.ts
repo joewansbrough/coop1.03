@@ -132,7 +132,9 @@ test('passes a configured Blob token to the storage client', async () => {
 
 test('fails before calling Blob when no token is configured', async () => {
   const previousToken = process.env.BLOB_READ_WRITE_TOKEN;
+  const previousStoreToken = process.env.coophub_READ_WRITE_TOKEN;
   delete process.env.BLOB_READ_WRITE_TOKEN;
+  delete process.env.coophub_READ_WRITE_TOKEN;
   const prisma = createPrisma();
   let calledBlob = false;
 
@@ -149,13 +151,49 @@ test('fails before calling Blob when no token is configured', async () => {
         user: { email: 'sam@example.com' },
         pdfDataUrl,
       }),
-      /BLOB_READ_WRITE_TOKEN is not configured/,
+      /No Vercel Blob read-write token is configured/,
     );
   } finally {
     if (previousToken) {
       process.env.BLOB_READ_WRITE_TOKEN = previousToken;
     }
+    if (previousStoreToken) {
+      process.env.coophub_READ_WRITE_TOKEN = previousStoreToken;
+    }
   }
 
   assert.equal(calledBlob, false);
+});
+
+test('uses the Vercel store-specific Blob token when the standard token is absent', async () => {
+  const previousToken = process.env.BLOB_READ_WRITE_TOKEN;
+  const previousStoreToken = process.env.coophub_READ_WRITE_TOKEN;
+  delete process.env.BLOB_READ_WRITE_TOKEN;
+  process.env.coophub_READ_WRITE_TOKEN = 'store-token';
+  const prisma = createPrisma();
+
+  try {
+    await archiveMinutesPdf({
+      prisma,
+      putBlob: async (_path, _bytes, options) => {
+        prisma.calls.blob = { options };
+        return { url: 'https://blob.example/minutes.pdf' };
+      },
+      meetingId: 'meeting-1',
+      cooperativeId: 'coop-1',
+      user: { email: 'sam@example.com' },
+      pdfDataUrl,
+    });
+  } finally {
+    if (previousToken) {
+      process.env.BLOB_READ_WRITE_TOKEN = previousToken;
+    }
+    if (previousStoreToken) {
+      process.env.coophub_READ_WRITE_TOKEN = previousStoreToken;
+    } else {
+      delete process.env.coophub_READ_WRITE_TOKEN;
+    }
+  }
+
+  assert.equal(prisma.calls.blob.options.token, 'store-token');
 });
