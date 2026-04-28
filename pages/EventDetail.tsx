@@ -221,6 +221,12 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
 
   const meetingMinutes = event ? minutesList?.find(m => m.meetingId === event.id) : null;
 
+  // Debugging log: Check isAdmin and meetingMinutes status
+  useEffect(() => {
+    // ... existing effect code ...
+    console.log('EventDetail Mount Check:', { isAdmin, meetingMinutes: !!meetingMinutes, eventId: event?.id, meetingMinutesId: meetingMinutes?.id });
+  }, [isAdmin, meetingMinutes, event]);
+    
   if (!event) return <div className="p-8 text-center text-slate-500">Event not found.</div>;
 
   const handleSave = async (e: React.FormEvent) => {
