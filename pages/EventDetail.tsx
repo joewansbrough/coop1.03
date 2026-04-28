@@ -181,10 +181,10 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {formData.directorsAbsent?.length > 0 && (
-                <ReadOnlyField label="Regrets/Absent" value={Array.isArray(formData.directorsAbsent) ? formData.directorsAbsent.join(', ') : formData.directorsAbsent} />
+                <ReadOnlyPeopleField label="Regrets/Absent" people={formData.directorsAbsent} />
               )}
               {meetingType !== 'quick' && formData.guests?.length > 0 && (
-                <ReadOnlyField label="Guests/Attendees" value={Array.isArray(formData.guests) ? formData.guests.join(', ') : formData.guests} />
+                <ReadOnlyPeopleField label="Guests/Attendees" people={formData.guests} />
               )}
             </div>
           </div>
@@ -192,21 +192,21 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
 
         {(formData.boardReport || formData.financeReport || formData.committeeReports) && (
           <ReadOnlySection title="Reports & Discussion" icon="fa-file-lines">
-            <div className="space-y-8">
+            <div className="space-y-4">
               {formData.boardReport && (
-                <div>
+                <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Board Report</p>
                   <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.boardReport }}></div>
                 </div>
               )}
               {formData.financeReport && (
-                <div>
+                <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Financial Report</p>
                   <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.financeReport }}></div>
                 </div>
               )}
               {formData.committeeReports && (
-                <div>
+                <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Committee Reports</p>
                   <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.committeeReports }}></div>
                 </div>
@@ -300,6 +300,35 @@ const ReadOnlyField: React.FC<{ label: string; value: string }> = ({ label, valu
   <div>
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
     <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{value || 'N/A'}</p>
+  </div>
+);
+
+const toNameArray = (people: string[] | string) => Array.isArray(people)
+  ? people.filter((name) => name?.trim())
+  : people.split(',').map((name) => name.trim()).filter(Boolean);
+
+const PersonChips: React.FC<{ people: string[] | string }> = ({ people }) => {
+  const names = toNameArray(people);
+
+  if (names.length === 0) {
+    return <p className="text-sm font-medium text-slate-500 dark:text-slate-400">N/A</p>;
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {names.map((name, index) => (
+        <span key={`${name}-${index}`} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/5">
+          {name}
+        </span>
+      ))}
+    </div>
+  );
+};
+
+const ReadOnlyPeopleField: React.FC<{ label: string; people: string[] | string }> = ({ label, people }) => (
+  <div>
+    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>
+    <PersonChips people={people} />
   </div>
 );
 

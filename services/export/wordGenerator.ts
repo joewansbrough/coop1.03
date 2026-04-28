@@ -43,6 +43,33 @@ const parseHtmlToDocx = (html: string) => {
   return result.length > 0 ? result : [new TextRun("")];
 };
 
+const boldParagraph = (text: string, options: any = {}) => new Paragraph({
+  ...options,
+  children: [new TextRun({ text, bold: true })],
+});
+
+const sectionHeading = (text: string) => new Paragraph({
+  text,
+  heading: HeadingLevel.HEADING_2,
+  shading: { fill: "f1f5f9" },
+  keepNext: true,
+});
+
+const cardHeading = (text: string) => boldParagraph(text, {
+  shading: { fill: "f8fafc" },
+  border: {
+    left: {
+      color: "0d9488",
+      space: 4,
+      style: BorderStyle.SINGLE,
+      size: 12,
+    },
+  },
+  indent: { left: 180 },
+  spacing: { before: 120, after: 80 },
+  keepNext: true,
+});
+
 export const generateMinutesWord = async (data: any, event: any) => {
   const { formData, attendees, motions, meetingType } = data;
   const linkedDocuments = Array.isArray(formData.linkedDocuments)
@@ -148,11 +175,7 @@ export const generateMinutesWord = async (data: any, event: any) => {
           }),
 
           // Meeting Info Section
-          new Paragraph({
-            text: "MEETING INFORMATION",
-            heading: HeadingLevel.HEADING_2,
-            shading: { fill: "f1f5f9" },
-          }),
+          sectionHeading("MEETING INFORMATION"),
           new Paragraph({
             children: [
               new TextRun({ text: "Location: ", bold: true }),
@@ -180,11 +203,7 @@ export const generateMinutesWord = async (data: any, event: any) => {
           }),
 
           ...(linkedDocuments.length > 0 ? [
-            new Paragraph({
-              text: "LINKED DOCUMENTS",
-              heading: HeadingLevel.HEADING_2,
-              shading: { fill: "f1f5f9" },
-            }),
+            sectionHeading("LINKED DOCUMENTS"),
             ...linkedDocuments.map((linkedDocument: any, index: number) => new Paragraph({
               children: [
                 new TextRun({ text: `Document ${index + 1}: `, bold: true }),
@@ -195,15 +214,8 @@ export const generateMinutesWord = async (data: any, event: any) => {
           ] : []),
 
           // Attendance
-          new Paragraph({
-            text: "ATTENDANCE",
-            heading: HeadingLevel.HEADING_2,
-            shading: { fill: "f1f5f9" },
-          }),
-          new Paragraph({
-            text: "Directors/Members Present:",
-            bold: true,
-          }),
+          sectionHeading("ATTENDANCE"),
+          boldParagraph("Directors/Members Present:", { keepNext: true }),
           new Paragraph({
             text: attendees.map((a: any) => `${a.name}${a.position ? ` (${a.position})` : ''}`).join(', '),
             spacing: { after: 200 },
@@ -236,35 +248,27 @@ export const generateMinutesWord = async (data: any, event: any) => {
 
           // Reports
           ...((formData.boardReport || formData.financeReport || formData.committeeReports) ? [
-            new Paragraph({
-              text: "REPORTS & DISCUSSION",
-              heading: HeadingLevel.HEADING_2,
-              shading: { fill: "f1f5f9" },
-            }),
+            sectionHeading("REPORTS & DISCUSSION"),
             ...(formData.boardReport ? [
-              new Paragraph({ text: "Board Report", bold: true }),
-              new Paragraph({ children: parseHtmlToDocx(formData.boardReport), spacing: { after: 200 } }),
+              cardHeading("Board Report"),
+              new Paragraph({ children: parseHtmlToDocx(formData.boardReport), shading: { fill: "f8fafc" }, spacing: { after: 200 }, keepLines: true }),
             ] : []),
             ...(formData.financeReport ? [
-              new Paragraph({ text: "Financial Report", bold: true }),
-              new Paragraph({ children: parseHtmlToDocx(formData.financeReport), spacing: { after: 200 } }),
+              cardHeading("Financial Report"),
+              new Paragraph({ children: parseHtmlToDocx(formData.financeReport), shading: { fill: "f8fafc" }, spacing: { after: 200 }, keepLines: true }),
             ] : []),
             ...(formData.committeeReports ? [
-              new Paragraph({ text: "Committee Reports", bold: true }),
-              new Paragraph({ children: parseHtmlToDocx(formData.committeeReports), spacing: { after: 200 } }),
+              cardHeading("Committee Reports"),
+              new Paragraph({ children: parseHtmlToDocx(formData.committeeReports), shading: { fill: "f8fafc" }, spacing: { after: 200 }, keepLines: true }),
             ] : []),
           ] : []),
 
           // Motions
           ...(motions.length > 0 ? [
-            new Paragraph({
-              text: "MOTIONS & RESOLUTIONS",
-              heading: HeadingLevel.HEADING_2,
-              shading: { fill: "f1f5f9" },
-            }),
+            sectionHeading("MOTIONS & RESOLUTIONS"),
             ...motions.flatMap((m: any, i: number) => [
-              new Paragraph({ text: `Motion #${i + 1}`, bold: true }),
-              new Paragraph({ children: parseHtmlToDocx(m.description) }),
+              cardHeading(`Motion #${i + 1}`),
+              new Paragraph({ children: parseHtmlToDocx(m.description), keepLines: true }),
               new Paragraph({
                 children: [
                   new TextRun({ text: `Moved by: ${m.mover} | Seconded by: ${m.seconder} | Result: ${m.result?.toUpperCase() || 'PENDING'}`, italics: true, size: 18, color: "64748b" }),
@@ -276,14 +280,10 @@ export const generateMinutesWord = async (data: any, event: any) => {
 
           // Action Items
           ...(actionItems.length > 0 ? [
-            new Paragraph({
-              text: "ACTION ITEMS",
-              heading: HeadingLevel.HEADING_2,
-              shading: { fill: "f1f5f9" },
-            }),
+            sectionHeading("ACTION ITEMS"),
             ...actionItems.flatMap((item: any, i: number) => [
-              new Paragraph({ text: `Action Item #${i + 1}`, bold: true }),
-              new Paragraph({ text: item.description || 'No action described.' }),
+              cardHeading(`Action Item #${i + 1}`),
+              new Paragraph({ text: item.description || 'No action described.', keepLines: true }),
               new Paragraph({
                 children: [
                   new TextRun({
@@ -297,11 +297,7 @@ export const generateMinutesWord = async (data: any, event: any) => {
               new Paragraph({ text: "" }),
             ]),
           ] : formData.actionItems ? [
-            new Paragraph({
-              text: "ACTION ITEMS",
-              heading: HeadingLevel.HEADING_2,
-              shading: { fill: "f1f5f9" },
-            }),
+            sectionHeading("ACTION ITEMS"),
             new Paragraph({ children: parseHtmlToDocx(formData.actionItems) }),
           ] : []),
         ],

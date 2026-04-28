@@ -49,6 +49,9 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 15,
   },
+  keepTogetherSection: {
+    marginBottom: 15,
+  },
   sectionTitle: {
     fontSize: 11,
     fontWeight: 'bold',
@@ -73,6 +76,18 @@ const styles = StyleSheet.create({
   richText: {
     lineHeight: 1.5,
     marginBottom: 10,
+  },
+  reportCard: {
+    padding: 10,
+    backgroundColor: '#f8fafc',
+    borderLeft: 3,
+    borderLeftColor: '#94a3b8',
+    marginBottom: 10,
+  },
+  reportTitle: {
+    fontWeight: 'bold',
+    marginBottom: 4,
+    color: '#0f172a',
   },
   motionCard: {
     padding: 10,
@@ -217,7 +232,7 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
         </View>
 
         {/* Meeting Details */}
-        <View style={styles.section}>
+        <View style={styles.keepTogetherSection} wrap={false}>
           <Text style={styles.sectionTitle}>Meeting Information</Text>
           <View style={styles.row}>
             <Text style={styles.label}>Location:</Text>
@@ -238,7 +253,7 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
         </View>
 
         {linkedDocuments.length > 0 && (
-          <View style={styles.section}>
+          <View style={styles.keepTogetherSection} wrap={false}>
             <Text style={styles.sectionTitle}>Linked Documents</Text>
             {linkedDocuments.map((linkedDocument: any, index: number) => (
               <View key={linkedDocument.id || index} style={styles.row}>
@@ -250,12 +265,14 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
         )}
 
         {/* Attendance */}
-        <View style={styles.section}>
+        <View style={styles.keepTogetherSection} wrap={false}>
           <Text style={styles.sectionTitle}>Attendance</Text>
-          <Text style={{ marginBottom: 5, fontWeight: 'bold' }}>Directors/Members Present:</Text>
-          <Text style={{ marginBottom: 10 }}>
-            {attendees.map((a: any) => `${a.name}${a.position ? ` (${a.position})` : ''}`).join(', ')}
-          </Text>
+          <View style={styles.row}>
+            <Text style={styles.label}>Directors/Members Present:</Text>
+            <Text style={styles.value}>
+              {attendees.map((a: any) => `${a.name}${a.position ? ` (${a.position})` : ''}`).join(', ') || 'N/A'}
+            </Text>
+          </View>
           {formData.directorsAbsent && formData.directorsAbsent.length > 0 && (
             <View style={styles.row}>
               <Text style={styles.label}>Regrets/Absent:</Text>
@@ -287,20 +304,20 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Reports & Discussion</Text>
             {formData.boardReport && (
-              <View style={{ marginBottom: 10 }}>
-                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Board Report:</Text>
+              <View style={styles.reportCard} wrap={false}>
+                <Text style={styles.reportTitle}>Board Report</Text>
                 {parseHtmlToPdf(formData.boardReport)}
               </View>
             )}
             {formData.financeReport && (
-              <View style={{ marginBottom: 10 }}>
-                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Financial Report:</Text>
+              <View style={styles.reportCard} wrap={false}>
+                <Text style={styles.reportTitle}>Financial Report</Text>
                 {parseHtmlToPdf(formData.financeReport)}
               </View>
             )}
             {formData.committeeReports && (
-              <View style={{ marginBottom: 10 }}>
-                <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Committee Reports:</Text>
+              <View style={styles.reportCard} wrap={false}>
+                <Text style={styles.reportTitle}>Committee Reports</Text>
                 {parseHtmlToPdf(formData.committeeReports)}
               </View>
             )}
@@ -312,7 +329,7 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Motions & Resolutions</Text>
             {motions.map((m: any, i: number) => (
-              <View key={i} style={styles.motionCard}>
+              <View key={i} style={styles.motionCard} wrap={false}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Motion #{i + 1}</Text>
                 {parseHtmlToPdf(m.description)}
                 <Text style={{ fontSize: 9, color: '#64748b', marginTop: 4 }}>
@@ -328,7 +345,7 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Action Items</Text>
             {actionItems.map((item: any, i: number) => (
-              <View key={item.id || i} style={styles.motionCard}>
+              <View key={item.id || i} style={styles.motionCard} wrap={false}>
                 <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Action Item #{i + 1}</Text>
                 <Text style={{ marginBottom: 6 }}>{item.description || 'No action described.'}</Text>
                 <Text style={{ fontSize: 9, color: '#64748b' }}>
