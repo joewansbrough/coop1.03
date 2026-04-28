@@ -1,5 +1,6 @@
 import React from 'react';
 import { clearTutorialState } from '../utils/demoTutorial';
+import { clearDemoStorageCollections } from '../utils/demoStorage';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -114,11 +115,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onThemeCha
                 <button
                   onClick={() => {
                     if (window.confirm('This will clear all your created demo data and reset to factory defaults. Continue?')) {
-                      Object.keys(localStorage).forEach(key => {
-                        if (key.startsWith('demo_v1_')) {
-                          localStorage.removeItem(key);
-                        }
-                      });
+                      clearDemoStorageCollections();
                       clearTutorialState();
                       window.location.reload();
                     }

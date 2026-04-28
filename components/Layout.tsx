@@ -250,7 +250,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       </aside>
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden w-full relative">
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 transition-colors duration-200 relative">
+        <header className={`h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 lg:px-8 shrink-0 transition-colors duration-200 relative ${isProfileOpen ? 'z-[130]' : 'z-30'}`}>
           <div className="flex items-center gap-3 z-10">
             <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-brand-600 active:scale-95">
               <i className="fa-solid fa-bars-staggered text-xl"></i>
@@ -311,7 +311,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 py-2 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
+                <div className="absolute right-0 z-[140] mt-3 w-64 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 py-2 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
                   <div className="px-4 py-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-white/5 mb-1">
                     <p className="text-xs font-black text-slate-900 dark:text-slate-100">{user.name}</p>
                     <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>

@@ -7,6 +7,7 @@ import {
   saveTutorialState,
   type DemoTutorialTrackId,
 } from '../utils/demoTutorial';
+import { initializeDemoStorage } from '../utils/demoStorage';
 
 interface DemoTrackPickerProps {
   onStart: () => void;
@@ -23,6 +24,7 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
   const startTrack = (trackId: DemoTutorialTrackId) => {
     const track = DEMO_TUTORIAL_TRACKS.find(item => item.id === trackId);
     localStorage.setItem('demo_mode', 'true');
+    initializeDemoStorage();
     saveTutorialState(createInitialTutorialState(trackId));
     localStorage.setItem(DEMO_TUTORIAL_ROLE_VIEW_KEY, track?.startAsResident ? 'true' : 'false');
     window.location.hash = track?.startPath || '/';

@@ -7,6 +7,37 @@
 import * as demoData from './demoData';
 
 const PREFIX = 'demo_v1_';
+export const DEMO_DATA_SEED_VERSION = '2026-04-28-rich-site-seed';
+
+const seededCollections: Record<string, any[]> = {
+  events: demoData.MOCK_EVENTS,
+  maintenance: demoData.MOCK_MAINTENANCE,
+  announcements: demoData.MOCK_ANNOUNCEMENTS,
+  tenants: demoData.MOCK_TENANTS,
+  units: demoData.MOCK_UNITS,
+  documents: demoData.MOCK_DOCUMENTS,
+  minutes: demoData.MOCK_MINUTES,
+};
+
+export const clearDemoStorageCollections = () => {
+  if (typeof window === 'undefined') return;
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith(PREFIX)) {
+      localStorage.removeItem(key);
+    }
+  });
+};
+
+export const initializeDemoStorage = () => {
+  if (typeof window === 'undefined') return;
+  if (localStorage.getItem(PREFIX + 'seed_version') === DEMO_DATA_SEED_VERSION) return;
+
+  clearDemoStorageCollections();
+  Object.entries(seededCollections).forEach(([key, data]) => {
+    localStorage.setItem(PREFIX + key, JSON.stringify(data));
+  });
+  localStorage.setItem(PREFIX + 'seed_version', DEMO_DATA_SEED_VERSION);
+};
 
 export const demoStorage = {
   // Generic get all
@@ -74,10 +105,10 @@ export const demoStorage = {
   getUnits: () => demoStorage.getAll('units', demoData.MOCK_UNITS),
   updateUnit: (unit: any) => demoStorage.updateItem('units', demoData.MOCK_UNITS, unit),
 
-  getMinutes: () => demoStorage.getAll('minutes', []),
-  addMinutes: (min: any) => demoStorage.addItem('minutes', [], min),
-  updateMinutes: (min: any) => demoStorage.updateItem('minutes', [], min),
-  deleteMinutes: (id: string) => demoStorage.deleteItem('minutes', [], id),
+  getMinutes: () => demoStorage.getAll('minutes', demoData.MOCK_MINUTES),
+  addMinutes: (min: any) => demoStorage.addItem('minutes', demoData.MOCK_MINUTES, min),
+  updateMinutes: (min: any) => demoStorage.updateItem('minutes', demoData.MOCK_MINUTES, min),
+  deleteMinutes: (id: string) => demoStorage.deleteItem('minutes', demoData.MOCK_MINUTES, id),
 
   // Turnover Management
   moveIn: (unitId: string, tenantId: string, date: string) => {
