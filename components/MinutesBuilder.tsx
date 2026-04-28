@@ -825,7 +825,7 @@ const handleSave = async () => {
         {meetingType === 'agm' && <AGMMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
         {meetingType === 'special' && <SpecialMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
 
-        <div className="mt-16 pt-10 border-t border-slate-100 dark:border-white/5">
+        <div className="mt-8">
           <LinkDocumentSection
             documents={documents}
             linkedDocuments={formData.linkedDocuments || []}
@@ -1044,73 +1044,120 @@ const LinkDocumentSection: React.FC<{
   onOpenPicker: () => void;
   onExistingDocumentChange: (documentId: string) => void;
   onRemoveLinkedDocument: (documentId: string) => void;
-}> = ({ documents, linkedDocuments, isScriptsReady, isLinkingDriveDocument, onOpenPicker, onExistingDocumentChange, onRemoveLinkedDocument }) => (
-  <FormSection title="Link a Document" icon="fa-link">
-    <div className="space-y-5">
-      <div className="flex flex-col lg:flex-row gap-4 lg:items-end lg:justify-between">
-        <div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            Link new Google Drive documents to this minutes record, or choose existing documents from the library.
-          </p>
+}> = ({ documents, linkedDocuments, isScriptsReady, isLinkingDriveDocument, onOpenPicker, onExistingDocumentChange, onRemoveLinkedDocument }) => {
+  const [documentSearch, setDocumentSearch] = useState('');
+  const linkedDocumentIds = new Set(linkedDocuments.map(doc => doc.id));
+  const normalizedSearch = documentSearch.trim().toLowerCase();
+  const searchableDocuments = documents
+    .filter(doc => !linkedDocumentIds.has(doc.id))
+    .filter(doc => {
+      if (!normalizedSearch) return true;
+      const haystack = [
+        doc.title,
+        doc.category,
+        doc.fileType,
+        ...(doc.tags || []),
+      ].join(' ').toLowerCase();
+      return haystack.includes(normalizedSearch);
+    })
+    .slice(0, 8);
+
+  const addExistingDocument = (documentId: string) => {
+    onExistingDocumentChange(documentId);
+    setDocumentSearch('');
+  };
+
+  return (
+    <FormSection title="Link a Document" icon="fa-link">
+      <div className="space-y-5">
+        <div className="flex flex-col lg:flex-row gap-4 lg:items-end lg:justify-between">
+          <div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Link new Google Drive documents to this minutes record, or search for existing library documents.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenPicker}
+            disabled={!isScriptsReady || isLinkingDriveDocument}
+            className="w-full lg:w-auto px-5 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <i className={`fa-brands ${isLinkingDriveDocument ? 'fa-google fa-spin' : 'fa-google-drive'}`}></i>
+            {isLinkingDriveDocument ? 'Linking...' : 'Link New from Drive'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onOpenPicker}
-          disabled={!isScriptsReady || isLinkingDriveDocument}
-          className="w-full lg:w-auto px-5 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          <i className={`fa-brands ${isLinkingDriveDocument ? 'fa-google fa-spin' : 'fa-google-drive'}`}></i>
-          {isLinkingDriveDocument ? 'Linking...' : 'Link New from Drive'}
-        </button>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-center">
-        <select
-          value=""
-          onChange={(e) => onExistingDocumentChange(e.target.value)}
-          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-500"
-        >
-          <option value="">Add existing document from library...</option>
-          {documents.map(doc => (
-            <option key={doc.id} value={doc.id}>{doc.title}</option>
-          ))}
-        </select>
-      </div>
-
-      {linkedDocuments.length > 0 && (
         <div className="space-y-3">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Linked Documents</p>
-          {linkedDocuments.map(linkedDocument => (
-            <div key={linkedDocument.id} className="flex items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{linkedDocument.title}</p>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{linkedDocument.fileType || 'Document'}</p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {linkedDocument.url && linkedDocument.url !== '#' && (
+          <div className="relative">
+            <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input
+              type="search"
+              value={documentSearch}
+              onChange={(e) => setDocumentSearch(e.target.value)}
+              placeholder="Search existing documents..."
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+          {(documentSearch.trim() || searchableDocuments.length > 0) && (
+            <div className="max-h-72 overflow-y-auto rounded-2xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50">
+              {searchableDocuments.length > 0 ? (
+                searchableDocuments.map(doc => (
+                  <div key={doc.id} className="flex items-center justify-between gap-4 p-4 border-b border-slate-100 dark:border-white/5 last:border-b-0">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{doc.title}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{doc.category} {doc.fileType ? `- ${doc.fileType}` : ''}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addExistingDocument(doc.id)}
+                      className="px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-[10px] font-black uppercase tracking-widest hover:border-brand-500 hover:text-brand-600 dark:hover:text-brand-400 transition-all shrink-0"
+                    >
+                      Add
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="p-4 text-xs font-bold text-slate-400">No matching documents found.</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {linkedDocuments.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Linked Documents</p>
+            {linkedDocuments.map(linkedDocument => (
+              <div key={linkedDocument.id} className="flex items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{linkedDocument.title}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{linkedDocument.fileType || 'Document'}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {linkedDocument.url && linkedDocument.url !== '#' && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(linkedDocument.url, '_blank', 'noopener,noreferrer')}
+                      className="px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                    >
+                      Open
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => window.open(linkedDocument.url, '_blank', 'noopener,noreferrer')}
-                    className="px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
+                    onClick={() => onRemoveLinkedDocument(linkedDocument.id)}
+                    className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                   >
-                    Open
+                    <i className="fa-solid fa-trash"></i>
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onRemoveLinkedDocument(linkedDocument.id)}
-                  className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
-                >
-                  <i className="fa-solid fa-trash"></i>
-                </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  </FormSection>
-);
+            ))}
+          </div>
+        )}
+      </div>
+    </FormSection>
+  );
+};
 
 // Quick Meeting Template
 const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
