@@ -190,26 +190,61 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
           </div>
         </ReadOnlySection>
 
+        {formData.keyDecisions && (
+          <ReadOnlySection title="Key Points" icon="fa-list-check">
+            <ReadOnlyRichTextCard label="Decisions Made" html={formData.keyDecisions} />
+          </ReadOnlySection>
+        )}
+
+        {formData.newBusiness && (
+          <ReadOnlySection title="Special Business" icon="fa-exclamation-triangle">
+            <ReadOnlyRichTextCard label="Purpose of Special Meeting" html={formData.newBusiness} />
+          </ReadOnlySection>
+        )}
+
+        {formData.auditorReport && (
+          <ReadOnlySection title="Auditor's Report" icon="fa-file-invoice-dollar">
+            <ReadOnlyRichTextCard label="Auditor's Report Summary" html={formData.auditorReport} />
+          </ReadOnlySection>
+        )}
+
+        {(formData.totalSeats || formData.vacancies || formData.candidates || formData.nominations || formData.electionResults || formData.scrutineers?.length > 0 || formData.ballotsDisposed) && (
+          <ReadOnlySection title="Election of Directors" icon="fa-person-booth">
+            <div className="space-y-5">
+              {(formData.totalSeats || formData.vacancies || formData.candidates) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {formData.totalSeats && <ReadOnlyField label="Total Seats" value={String(formData.totalSeats)} />}
+                  {formData.vacancies && <ReadOnlyField label="Vacancies" value={String(formData.vacancies)} />}
+                  {formData.candidates && <ReadOnlyField label="Candidates" value={String(formData.candidates)} />}
+                </div>
+              )}
+              {formData.nominations && (
+                <ReadOnlyRichTextCard label="Nominations Received" html={formData.nominations} />
+              )}
+              {formData.electionResults && (
+                <ReadOnlyRichTextCard label="Election Results" html={formData.electionResults} />
+              )}
+              {formData.scrutineers?.length > 0 && (
+                <ReadOnlyPeopleField label="Scrutineers" people={formData.scrutineers} />
+              )}
+              {formData.ballotsDisposed && (
+                <ReadOnlyField label="Ballots Disposed" value="Approved" />
+              )}
+            </div>
+          </ReadOnlySection>
+        )}
+
         {(formData.boardReport || formData.financeReport || formData.committeeReports) && (
           <ReadOnlySection title="Reports & Discussion" icon="fa-file-lines">
             <div className="space-y-4">
               {formData.boardReport && (
-                <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Board Report</p>
-                  <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.boardReport }}></div>
-                </div>
+                <ReadOnlyRichTextCard label="Board Report" html={formData.boardReport} />
               )}
               {formData.financeReport && (
-                <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Financial Report</p>
-                  <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.financeReport }}></div>
-                </div>
+                <ReadOnlyRichTextCard label="Financial Report" html={formData.financeReport} />
               )}
               {formData.committeeReports && (
-                <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Committee Reports</p>
-                  <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.committeeReports }}></div>
-                </div>
+                <ReadOnlyRichTextCard label="Committee Reports" html={formData.committeeReports} />
               )}
             </div>
           </ReadOnlySection>
@@ -300,6 +335,13 @@ const ReadOnlyField: React.FC<{ label: string; value: string }> = ({ label, valu
   <div>
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
     <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{value || 'N/A'}</p>
+  </div>
+);
+
+const ReadOnlyRichTextCard: React.FC<{ label: string; html: string }> = ({ label, html }) => (
+  <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{label}</p>
+    <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: html }}></div>
   </div>
 );
 

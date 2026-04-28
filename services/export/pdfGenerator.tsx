@@ -189,6 +189,15 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
     { title: 'Financial Report', content: formData.financeReport },
     { title: 'Committee Reports', content: formData.committeeReports },
   ].filter((report) => report.content);
+  const hasElectionDetails = Boolean(
+    formData.totalSeats ||
+    formData.vacancies ||
+    formData.candidates ||
+    formData.nominations ||
+    formData.electionResults ||
+    formData.scrutineers?.length > 0 ||
+    formData.ballotsDisposed
+  );
 
   const getMeetingLabel = (type: string) => {
     switch (type) {
@@ -294,15 +303,121 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
               </Text>
             </View>
           )}
-          {formData.scrutineers && formData.scrutineers.length > 0 && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Scrutineers:</Text>
-              <Text style={styles.value}>
-                {Array.isArray(formData.scrutineers) ? formData.scrutineers.join(', ') : formData.scrutineers}
-              </Text>
-            </View>
-          )}
         </View>
+
+        {formData.keyDecisions && (
+          <View style={styles.section}>
+            <View wrap={false}>
+              <Text style={styles.sectionTitle}>Key Points</Text>
+              <View style={styles.reportCard}>
+                <Text style={styles.reportTitle}>Decisions Made</Text>
+                {parseHtmlToPdf(formData.keyDecisions)}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {formData.newBusiness && (
+          <View style={styles.section}>
+            <View wrap={false}>
+              <Text style={styles.sectionTitle}>Special Business</Text>
+              <View style={styles.reportCard}>
+                <Text style={styles.reportTitle}>Purpose of Special Meeting</Text>
+                {parseHtmlToPdf(formData.newBusiness)}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {formData.auditorReport && (
+          <View style={styles.section}>
+            <View wrap={false}>
+              <Text style={styles.sectionTitle}>Auditor's Report</Text>
+              <View style={styles.reportCard}>
+                <Text style={styles.reportTitle}>Auditor's Report Summary</Text>
+                {parseHtmlToPdf(formData.auditorReport)}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {hasElectionDetails && (
+          <View style={styles.section}>
+            <View wrap={false}>
+              <Text style={styles.sectionTitle}>Election of Directors</Text>
+              {(formData.totalSeats || formData.vacancies || formData.candidates) && (
+                <View style={styles.reportCard}>
+                  {formData.totalSeats && (
+                    <View style={styles.row}>
+                      <Text style={styles.label}>Total Seats:</Text>
+                      <Text style={styles.value}>{formData.totalSeats}</Text>
+                    </View>
+                  )}
+                  {formData.vacancies && (
+                    <View style={styles.row}>
+                      <Text style={styles.label}>Vacancies:</Text>
+                      <Text style={styles.value}>{formData.vacancies}</Text>
+                    </View>
+                  )}
+                  {formData.candidates && (
+                    <View style={styles.row}>
+                      <Text style={styles.label}>Candidates:</Text>
+                      <Text style={styles.value}>{formData.candidates}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+              {!formData.totalSeats && !formData.vacancies && !formData.candidates && formData.nominations && (
+                <View style={styles.reportCard}>
+                  <Text style={styles.reportTitle}>Nominations Received</Text>
+                  {parseHtmlToPdf(formData.nominations)}
+                </View>
+              )}
+              {!formData.totalSeats && !formData.vacancies && !formData.candidates && !formData.nominations && formData.electionResults && (
+                <View style={styles.reportCard}>
+                  <Text style={styles.reportTitle}>Election Results</Text>
+                  {parseHtmlToPdf(formData.electionResults)}
+                </View>
+              )}
+              {!formData.totalSeats && !formData.vacancies && !formData.candidates && !formData.nominations && !formData.electionResults && formData.scrutineers?.length > 0 && (
+                <View style={styles.reportCard}>
+                  <Text style={styles.reportTitle}>Scrutineers</Text>
+                  <Text>{Array.isArray(formData.scrutineers) ? formData.scrutineers.join(', ') : formData.scrutineers}</Text>
+                </View>
+              )}
+              {!formData.totalSeats && !formData.vacancies && !formData.candidates && !formData.nominations && !formData.electionResults && !formData.scrutineers?.length && formData.ballotsDisposed && (
+                <View style={styles.row}>
+                  <Text style={styles.label}>Ballots Disposed:</Text>
+                  <Text style={styles.value}>Approved</Text>
+                </View>
+              )}
+            </View>
+            {(formData.totalSeats || formData.vacancies || formData.candidates) && formData.nominations && (
+              <View style={styles.reportCard} wrap={false}>
+                <Text style={styles.reportTitle}>Nominations Received</Text>
+                {parseHtmlToPdf(formData.nominations)}
+              </View>
+            )}
+            {(formData.totalSeats || formData.vacancies || formData.candidates || formData.nominations) && formData.electionResults && (
+              <View style={styles.reportCard} wrap={false}>
+                <Text style={styles.reportTitle}>Election Results</Text>
+                {parseHtmlToPdf(formData.electionResults)}
+              </View>
+            )}
+            {(formData.totalSeats || formData.vacancies || formData.candidates || formData.nominations || formData.electionResults) && formData.scrutineers?.length > 0 && (
+              <View style={styles.reportCard} wrap={false}>
+                <Text style={styles.reportTitle}>Scrutineers</Text>
+                <Text>{Array.isArray(formData.scrutineers) ? formData.scrutineers.join(', ') : formData.scrutineers}</Text>
+              </View>
+            )}
+            {(formData.totalSeats || formData.vacancies || formData.candidates || formData.nominations || formData.electionResults || formData.scrutineers?.length > 0) && formData.ballotsDisposed && (
+              <View style={styles.row}>
+                <Text style={styles.label}>Ballots Disposed:</Text>
+                <Text style={styles.value}>Approved</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Reports */}
         {reports.length > 0 && (
