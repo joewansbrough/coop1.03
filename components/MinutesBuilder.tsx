@@ -227,16 +227,55 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
 // In your MinutesBuilder component
 
 const handleSave = async () => {
+  setSaveStatus('saving'); // Indicate saving process has started
+  setDisplaySuccessMessage(false); // Hide previous message if any
+  setSuccessMessage('');
+
   const payload = {
     // If you don't have a pre-existing meeting:
-    meetingTitle: formData.meetingInfo.title,
-    meetingDate: formData.meetingInfo.date, // "2026-04-27T19:00:00Z"
-    
-    // Required fields:
-    meetingType: formData.meetingInfo.type, // "AGM", "Board", etc.
-    formData: formData, // Your entire form state
-    attendees: formData.attendees.map(a => a.email),
-    motions: formData.motions,
+    meetingTitle: formData.meetingDate ? `${formData.meetingDate} - ${meetingType || 'Meeting'}` : '', // Placeholder title if needed
+    meetingDate: formData.meetingDate,
+    startTime: formData.startTime,
+    endTime: formData.endTime,
+    location: formData.location,
+    chair: formData.chair,
+    territorialAck: formData.territorialAck,
+    quorumRequired: formData.quorumRequired,
+    quorumPresent: formData.quorumPresent,
+    noticeConfirmed: formData.noticeConfirmed,
+    quorumConfirmed: formData.quorumConfirmed,
+    minuteTaker: formData.minuteTaker,
+    agendaChanges: formData.agendaChanges,
+    agendaApproved: formData.agendaApproved,
+    previousMinutesDate: formData.previousMinutesDate,
+    minutesCorrections: formData.minutesCorrections,
+    minutesApproved: formData.minutesApproved,
+    businessArising: formData.businessArising,
+    boardReport: formData.boardReport,
+    financeReport: formData.financeReport,
+    committeeReports: formData.committeeReports,
+    auditorReport: formData.auditorReport,
+    managementReport: formData.managementReport,
+    newBusiness: formData.newBusiness,
+    actionItems: formData.actionItems,
+    approvedBy: formData.approvedBy,
+    approvalDate: formData.approvalDate,
+    additionalNotes: formData.additionalNotes,
+    // Quick meeting specific
+    keyDecisions: formData.keyDecisions,
+    nextSteps: formData.nextSteps,
+    // AGM specific
+    totalSeats: formData.totalSeats,
+    vacancies: formData.vacancies,
+    candidates: formData.candidates,
+    nominations: formData.nominations,
+    electionResults: formData.electionResults,
+    scrutineers: formData.scrutineers, // Ensure these are strings
+    ballotsDisposed: formData.ballotsDisposed,
+    // Multi-name fields
+    directorsAbsent: formData.directorsAbsent, // Ensure these are strings
+    guests: formData.guests, // Ensure these are strings
+    meetingType: meetingType, // Add meetingType to payload
   };
 
   try {
@@ -251,21 +290,34 @@ const handleSave = async () => {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.details || error.error || 'Failed to save');
+      console.error('❌ Save Error Response:', error); // Log response body for debugging
+      throw new Error(error.details || error.error || 'Failed to save minutes. Please check console for details.');
     }
 
     const savedMinutes = await response.json();
     
     console.log('✅ Minutes saved:', savedMinutes);
     
-    // Navigate to the view page
-    navigate(`/minutes/${savedMinutes.meetingId}`);
-    
-  } catch (error) {
+    setSaveStatus('success'); // Set success state
+    setIsDirty(false); // Mark as not dirty
+    setSuccessMessage('Minutes successfully saved!'); // Set the success message
+    setDisplaySuccessMessage(true); // Show the success message
+
+    // Keep success state and message visible for 2 seconds before navigating
+    const timer = setTimeout(() => {
+      navigate(`/minutes/${savedMinutes.meetingId}`);
+    }, 2000);
+    // Cleanup timer on component unmount or if handleSave is called again
+    return () => clearTimeout(timer); 
+
+  } catch (error: any) { // Explicitly type error for message property
     console.error('❌ Error saving minutes:', error);
     alert(`Failed to save: ${error.message}`);
+    setSaveStatus('idle'); // Reset to idle on error
+    // isDirty remains true as the save failed
   }
 };
+
 
   const [isExporting, setIsExporting] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
