@@ -3,6 +3,8 @@ import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, Co
 import * as demoData from '../utils/demoData';
 import { demoStorage } from '../utils/demoStorage';
 
+type DataQueryOptions<T> = Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, 'queryKey' | 'queryFn'>;
+
 export const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
 
 const fetchJson = async (url: string, options?: RequestInit) => {
@@ -16,13 +18,13 @@ const fetchJson = async (url: string, options?: RequestInit) => {
 
 const dataQueryConfig = {
   staleTime: 5 * 60 * 1000,
-  cacheTime: 10 * 60 * 1000,
+  gcTime: 10 * 60 * 1000,
   retry: 2,
   refetchOnWindowFocus: false,
   refetchOnReconnect: true,
 };
 
-export const useUser = (options?: Partial<UseQueryOptions<any>>) => useQuery({
+export const useUser = (options?: DataQueryOptions<any>) => useQuery({
   queryKey: ['user'],
   queryFn: async () => {
     if (isDemoMode()) return demoData.MOCK_USER;
@@ -36,7 +38,7 @@ export const useUser = (options?: Partial<UseQueryOptions<any>>) => useQuery({
     return null;
   },
   staleTime: 5 * 60 * 1000,
-  cacheTime: 10 * 60 * 1000,
+  gcTime: 10 * 60 * 1000,
   retry: 1,
   refetchOnMount: 'always',
   ...options,
@@ -52,7 +54,7 @@ const createDataHooks = <T extends { id: string }>(
   demoDelete: (id: string) => void
 ) => {
   return {
-    useAll: (options?: Partial<UseQueryOptions<T[]>>) => useQuery<T[]>({
+    useAll: (options?: DataQueryOptions<T[]>) => useQuery<T[]>({
       queryKey: [key],
       queryFn: () => isDemoMode() ? Promise.resolve(demoGet()) : fetchJson(apiPath),
       ...dataQueryConfig,
@@ -111,7 +113,7 @@ const createDataHooks = <T extends { id: string }>(
 };
 
 const unitsHooks = {
-  useAll: (options?: Partial<UseQueryOptions<Unit[]>>) => useQuery<Unit[]>({
+  useAll: (options?: DataQueryOptions<Unit[]>) => useQuery<Unit[]>({
     queryKey: ['units'],
     queryFn: () => isDemoMode() ? Promise.resolve(demoStorage.getUnits()) : fetchJson('/api/units'),
     ...dataQueryConfig,
@@ -229,21 +231,21 @@ export const useCreateTenant = tenantsHooks.useCreate;
 export const useUpdateTenant = tenantsHooks.useUpdate;
 export const useDeleteTenant = tenantsHooks.useDelete;
 
-export const useDocuments = (options?: Partial<UseQueryOptions<Document[]>>) => useQuery<Document[]>({
+export const useDocuments = (options?: DataQueryOptions<Document[]>) => useQuery<Document[]>({
   queryKey: ['documents'],
   queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_DOCUMENTS) : fetchJson('/api/documents'),
   ...dataQueryConfig,
   ...options,
 });
 
-export const useCommittees = (options?: Partial<UseQueryOptions<Committee[]>>) => useQuery<Committee[]>({
+export const useCommittees = (options?: DataQueryOptions<Committee[]>) => useQuery<Committee[]>({
   queryKey: ['committees'],
   queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_COMMITTEES) : fetchJson('/api/committees'),
   ...dataQueryConfig,
   ...options,
 });
 
-export const useScheduledMaintenance = (options?: Partial<UseQueryOptions<ScheduledMaintenance[]>>) => useQuery<ScheduledMaintenance[]>({
+export const useScheduledMaintenance = (options?: DataQueryOptions<ScheduledMaintenance[]>) => useQuery<ScheduledMaintenance[]>({
   queryKey: ['scheduledMaintenance'],
   queryFn: () => isDemoMode() ? Promise.resolve(demoData.MOCK_SCHEDULED_MAINTENANCE) : fetchJson('/api/scheduled-maintenance'),
   ...dataQueryConfig,

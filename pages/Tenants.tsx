@@ -12,6 +12,8 @@ interface TenantsProps {
   tenants: Tenant[];
   setTenants: React.Dispatch<React.SetStateAction<Tenant[]>>;
   units: Unit[];
+  isTenantsLoading?: boolean;
+  isTenantsError?: boolean;
 }
 
 const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, isLoading = false, tenants, setTenants, units }) => {

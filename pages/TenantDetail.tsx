@@ -38,7 +38,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
         try {
           if (localStorage.getItem('demo_mode') === 'true') {
              // Mock history data for demo
-             setHistory([{ id: 'h1', unitId: 'u1', startDate: tenant?.startDate || '2019-03-15', endDate: null, moveReason: 'Initial move-in', unit: units.find(u => u.id === 'u1') }]);
+             setHistory([{ id: 'h1', tenantId, unitId: 'u1', startDate: tenant?.startDate || '2019-03-15', moveReason: 'Initial move-in', unit: units.find(u => u.id === 'u1') }]);
           } else {
             const res = await fetch(`/api/tenants/${tenantId}/history`);
             const data = await res.json();

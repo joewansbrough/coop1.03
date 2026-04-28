@@ -15,7 +15,9 @@ const ResourceLibrary: React.FC<{
   isGuest?: boolean,
   documents: Document[],
   setDocuments: React.Dispatch<React.SetStateAction<Document[]>>,
-  committees?: Committee[]
+  committees?: Committee[],
+  isDocumentsLoading?: boolean,
+  isDocumentsError?: boolean
 }> = ({ isAdmin, isGuest = false, documents, setDocuments, committees = [] }) => {
   const { data: user } = useUser();
   const refreshData = useRefreshData();

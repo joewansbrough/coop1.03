@@ -341,6 +341,8 @@ interface EventDetailProps {
   committees?: Committee[];
   documents?: CoopDocument[];
   setDocuments?: React.Dispatch<React.SetStateAction<CoopDocument[]>>;
+  isEventsLoading?: boolean;
+  isEventsError?: boolean;
 }
 
 const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, user, events, setEvents, committees = [], documents = [], setDocuments }) => {

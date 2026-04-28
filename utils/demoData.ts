@@ -1,4 +1,4 @@
-import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent, ScheduledMaintenance } from '../types';
+import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent, ScheduledMaintenance, RequestStatus, MaintenancePriority } from '../types';
 
 export const MOCK_USER = {
   id: 'demo-user-id',
@@ -64,15 +64,15 @@ export const MOCK_TENANTS: Tenant[] = [
 ];
 
 export const MOCK_MAINTENANCE: MaintenanceRequest[] = [
-  { id: 'm1', title: 'Leaking kitchen faucet', description: 'Leaking constantly.', status: 'Pending', priority: 'Medium', category: ['Plumbing'], unitId: 'u1', requestedBy: 'margaret.chen@email.com', createdAt: '2026-02-28', notes: [], expenses: [] },
-  { id: 'm2', title: 'Bathroom fan broken', description: 'No exhaust.', status: 'In Progress', priority: 'Medium', category: ['Electrical'], unitId: 'u2', requestedBy: 'david.okafor@email.com', createdAt: '2026-02-20', notes: [], expenses: [] },
-  { id: 'm3', title: 'Dishwasher not draining', description: 'Standing water.', status: 'Completed', priority: 'Medium', category: ['Appliance'], unitId: 'u4', requestedBy: 'james.nakamura@email.com', createdAt: '2026-01-15', notes: [], expenses: [] },
-  { id: 'm4', title: 'Broken window latch', description: 'Security concern.', status: 'Pending', priority: 'High', category: ['Structural'], unitId: 'u3', requestedBy: 'robert.tremblay@email.com', createdAt: '2026-03-01', notes: [], expenses: [] },
-  { id: 'm5', title: 'Heating unit noise', description: 'Loud banging.', status: 'In Progress', priority: 'Low', category: ['HVAC'], unitId: 'u6', requestedBy: 'carlos.rivera@email.com', createdAt: '2026-02-10', notes: [], expenses: [] },
-  { id: 'm6', title: 'Water damage on ceiling', description: 'Stain spreading.', status: 'Pending', priority: 'High', category: ['Structural'], unitId: 'u10', requestedBy: 'aisha.mohammed@email.com', createdAt: '2026-03-05', notes: [], expenses: [] },
-  { id: 'm7', title: 'Unit 204 renovation', description: 'Full unit reno.', status: 'In Progress', priority: 'Medium', category: ['Structural'], unitId: 'u13', requestedBy: '', createdAt: '2026-02-01', notes: [], expenses: [] },
-  { id: 'm8', title: 'Stove burner fail', description: 'Does not ignite.', status: 'Pending', priority: 'Medium', category: ['Appliance'], unitId: 'u12', requestedBy: 'wei.liu@email.com', createdAt: '2026-03-07', notes: [], expenses: [] },
-  { id: 'm9', title: 'Parking light out', description: 'Very dark.', status: 'Pending', priority: 'High', category: ['Electrical'], unitId: 'u19', requestedBy: 'george.papadopoulos@email.com', createdAt: '2026-03-03', notes: [], expenses: [] },
+  { id: 'm1', title: 'Leaking kitchen faucet', description: 'Leaking constantly.', status: RequestStatus.PENDING, priority: MaintenancePriority.MEDIUM, category: ['Plumbing'], unitId: 'u1', requestedBy: 'margaret.chen@email.com', createdAt: '2026-02-28', notes: [], expenses: [] },
+  { id: 'm2', title: 'Bathroom fan broken', description: 'No exhaust.', status: RequestStatus.IN_PROGRESS, priority: MaintenancePriority.MEDIUM, category: ['Electrical'], unitId: 'u2', requestedBy: 'david.okafor@email.com', createdAt: '2026-02-20', notes: [], expenses: [] },
+  { id: 'm3', title: 'Dishwasher not draining', description: 'Standing water.', status: RequestStatus.COMPLETED, priority: MaintenancePriority.MEDIUM, category: ['Appliance'], unitId: 'u4', requestedBy: 'james.nakamura@email.com', createdAt: '2026-01-15', notes: [], expenses: [] },
+  { id: 'm4', title: 'Broken window latch', description: 'Security concern.', status: RequestStatus.PENDING, priority: MaintenancePriority.HIGH, category: ['Structural'], unitId: 'u3', requestedBy: 'robert.tremblay@email.com', createdAt: '2026-03-01', notes: [], expenses: [] },
+  { id: 'm5', title: 'Heating unit noise', description: 'Loud banging.', status: RequestStatus.IN_PROGRESS, priority: MaintenancePriority.LOW, category: ['HVAC'], unitId: 'u6', requestedBy: 'carlos.rivera@email.com', createdAt: '2026-02-10', notes: [], expenses: [] },
+  { id: 'm6', title: 'Water damage on ceiling', description: 'Stain spreading.', status: RequestStatus.PENDING, priority: MaintenancePriority.HIGH, category: ['Structural'], unitId: 'u10', requestedBy: 'aisha.mohammed@email.com', createdAt: '2026-03-05', notes: [], expenses: [] },
+  { id: 'm7', title: 'Unit 204 renovation', description: 'Full unit reno.', status: RequestStatus.IN_PROGRESS, priority: MaintenancePriority.MEDIUM, category: ['Structural'], unitId: 'u13', requestedBy: '', createdAt: '2026-02-01', notes: [], expenses: [] },
+  { id: 'm8', title: 'Stove burner fail', description: 'Does not ignite.', status: RequestStatus.PENDING, priority: MaintenancePriority.MEDIUM, category: ['Appliance'], unitId: 'u12', requestedBy: 'wei.liu@email.com', createdAt: '2026-03-07', notes: [], expenses: [] },
+  { id: 'm9', title: 'Parking light out', description: 'Very dark.', status: RequestStatus.PENDING, priority: MaintenancePriority.HIGH, category: ['Electrical'], unitId: 'u19', requestedBy: 'george.papadopoulos@email.com', createdAt: '2026-03-03', notes: [], expenses: [] },
 ];
 
 export const MOCK_ANNOUNCEMENTS: Announcement[] = [

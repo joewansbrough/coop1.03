@@ -3,7 +3,11 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Announcement } from '../types';
 
-const AnnouncementDetail: React.FC<{ announcements: Announcement[] }> = ({ announcements }) => {
+const AnnouncementDetail: React.FC<{
+  announcements: Announcement[];
+  isAnnouncementsLoading?: boolean;
+  isAnnouncementsError?: boolean;
+}> = ({ announcements }) => {
   const { annId } = useParams<{ annId: string }>();
   const announcement = announcements.find(a => a.id === annId);
 

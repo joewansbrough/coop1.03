@@ -12,10 +12,20 @@ interface DashboardProps {
     [key: string]: any;
   };
   units: Unit[];
+  isUnitsLoading?: boolean;
+  isUnitsError?: boolean;
   tenants: Tenant[];
+  isTenantsLoading?: boolean;
+  isTenantsError?: boolean;
   requests: MaintenanceRequest[];
+  isRequestsLoading?: boolean;
+  isRequestsError?: boolean;
   announcements: Announcement[];
+  isAnnouncementsLoading?: boolean;
+  isAnnouncementsError?: boolean;
   events: CoopEvent[];
+  isEventsLoading?: boolean;
+  isEventsError?: boolean;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ isAdmin, user, units, tenants, requests, announcements, events }) => {

@@ -15,6 +15,8 @@ interface CommitteesProps {
   documents?: Document[];
   events?: CoopEvent[];
   setEvents?: React.Dispatch<React.SetStateAction<CoopEvent[]>>;
+  isCommitteesLoading?: boolean;
+  isCommitteesError?: boolean;
 }
 
 const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user, committees, setCommittees, tenants, documents = [], events = [], setEvents }) => {
