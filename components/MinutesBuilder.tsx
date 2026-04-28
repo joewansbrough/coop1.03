@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
-import { useTenants, useCommittees, useEvents } from '../hooks/useCoopData';
+import { isDemoMode, useTenants, useCommittees, useEvents } from '../hooks/useCoopData';
 import { Tenant, Committee, CoopEvent } from '../types';
 import RichTextEditor from './RichTextEditor';
 import { generateMinutesWord } from '../services/export/wordGenerator';
 import { MinutesPDF } from '../services/export/pdfGenerator';
+import { demoStorage } from '../utils/demoStorage';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
 import { ChevronDown, FileText, FileCode, Printer, Download } from 'lucide-react';
@@ -243,6 +244,33 @@ const handleSave = async () => {
   };
 
   try {
+    if (isDemoMode()) {
+      const existingMinutes = demoStorage.getMinutes().find((minutes: any) => minutes.meetingId === meetingId);
+      const now = new Date().toISOString();
+      const savedMinutes = {
+        ...existingMinutes,
+        id: existingMinutes?.id || `minutes-${meetingId}`,
+        meetingId,
+        ...payload,
+        data: payload.formData,
+        createdAt: existingMinutes?.createdAt || now,
+        updatedAt: now,
+        createdBy: existingMinutes?.createdBy || 'demo@coophub.bc.ca',
+      };
+
+      if (existingMinutes) {
+        demoStorage.updateMinutes(savedMinutes);
+      } else {
+        demoStorage.addMinutes(savedMinutes);
+      }
+
+      setSaveStatus('success');
+      setIsDirty(false);
+      localStorage.removeItem(`minutes-${meetingId}`);
+      onSave?.(savedMinutes);
+      return;
+    }
+
     const response = await fetch(`/api/minutes/${meetingId}`, {
       method: 'POST',
       headers: {
