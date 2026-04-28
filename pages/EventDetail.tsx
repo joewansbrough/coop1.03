@@ -294,7 +294,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       <nav className="flex border-b border-slate-200 dark:border-white/5 shrink-0 overflow-x-auto scrollbar-hide">
         {[
           { id: 'overview', label: 'Event Details' },
-          ...(event.category === 'Meeting' ? [{ id: 'minutes', label: 'Meeting Minutes' }] : []),
+          ...(event.category === 'Meeting' && (isAdmin || meetingMinutes) ? [{ id: 'minutes', label: 'Meeting Minutes' }] : []),
         ].map(tab => (
           <button
             key={tab.id}
