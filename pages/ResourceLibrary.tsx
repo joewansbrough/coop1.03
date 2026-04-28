@@ -66,6 +66,29 @@ const ResourceLibrary: React.FC<{
     return safeTitle.toLowerCase().endsWith(`.${extension.toLowerCase()}`) ? safeTitle : `${safeTitle}.${extension}`;
   };
 
+  const getStorageLabel = (doc: Document) => {
+    if (doc.currentVersion?.storageUrl) return 'Blob';
+    if (doc.url?.includes('drive.google.com')) return 'Drive';
+    if (doc.url?.startsWith('data:')) return 'Legacy';
+    return 'Link';
+  };
+
+  const getIngestionDisplay = (doc: Document) => {
+    const status = doc.currentVersion?.ingestionStatus || (doc.currentVersion ? 'pending' : null);
+    switch (status) {
+      case 'processing':
+        return { label: 'Processing', className: 'bg-amber-500/10 text-amber-600 border-amber-500/20' };
+      case 'ready':
+        return { label: 'Ready for AI', className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' };
+      case 'failed':
+        return { label: 'Failed', className: 'bg-rose-500/10 text-rose-600 border-rose-500/20' };
+      case 'pending':
+        return { label: 'Pending', className: 'bg-sky-500/10 text-sky-600 border-sky-500/20' };
+      default:
+        return { label: 'Not indexed', className: 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-white/5' };
+    }
+  };
+
   const dataUrlToBlobUrl = (dataUrl: string) => {
     const [metadata, data] = dataUrl.split(',');
     const mimeType = metadata.match(/data:(.*?);base64/)?.[1] || 'application/octet-stream';
@@ -529,6 +552,7 @@ const ResourceLibrary: React.FC<{
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredDocs.map(doc => {
             const isCloud = doc.url?.includes('drive.google.com');
+            const ingestion = getIngestionDisplay(doc);
             return (
               <div
                 key={doc.id}
@@ -549,6 +573,15 @@ const ResourceLibrary: React.FC<{
                       )}
                     </div>
                     <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">{formatDate(doc.date)} • {doc.author}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      <span className="text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter bg-slate-100 text-slate-500 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-white/5">
+                        {getStorageLabel(doc)}
+                        {doc.currentVersion?.version ? ` v${doc.currentVersion.version}` : ''}
+                      </span>
+                      <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter border ${ingestion.className}`}>
+                        {ingestion.label}
+                      </span>
+                    </div>
                   </div>
                 </div>
 

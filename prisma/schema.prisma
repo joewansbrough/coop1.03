@@ -28,6 +28,20 @@ enum MaintenanceCategory {
   OTHER
 }
 
+enum DocumentVisibility {
+  PUBLIC
+  MEMBERS
+  COMMITTEE
+  BOARD
+  ADMIN
+}
+
+enum DocumentStatus {
+  ACTIVE
+  ARCHIVED
+  SUPERSEDED
+}
+
 // --- MODELS ---
 
 model Cooperative {
@@ -169,13 +183,160 @@ model Document {
   date      DateTime // Changed from String to DateTime
   tags      String[] @default([])
   content   String?
+  status    DocumentStatus @default(ACTIVE)
+  visibility DocumentVisibility @default(MEMBERS)
+  committeeAccess String?
+  effectiveDate DateTime?
+  expiryDate    DateTime?
+  reviewDate    DateTime?
+  supersedes    String?
+  supersededBy  String?
+  relatedDocs   String[] @default([])
+  keywords      String[] @default([])
+  fullTextSearch String?
+  currentVersionId String? @unique
+  currentVersion   DocumentVersion? @relation("CurrentDocumentVersion", fields: [currentVersionId], references: [id])
 
   // Multi-tenancy
   cooperativeId String
   cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+  versions      DocumentVersion[] @relation("DocumentVersions")
+  chunks        DocumentChunk[]
+  ingestionJobs DocumentIngestionJob[]
+  accessLogs    DocumentAccessLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model DocumentVersion {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation("DocumentVersions", fields: [documentId], references: [id], onDelete: Cascade)
+
+  cooperativeId String
+  version       Int
+  source        String
+  storageUrl    String
+  storageKey    String?
+  fileType      String
+  mimeType      String?
+  sizeBytes     Int?
+  checksum      String?
+
+  ingestionStatus String @default("pending")
+  ingestionError  String?
+  ingestionStartedAt   DateTime?
+  ingestionCompletedAt DateTime?
+  ingestionDurationMs  Int?
+
+  extractionMethod     String?
+  extractionConfidence Float?
+  chunkCount           Int?
+  tokenCount           Int?
+
+  extractedText String?
+  summary       String?
+
+  currentForDocument Document? @relation("CurrentDocumentVersion")
+  chunks             DocumentChunk[]
+  ingestionJobs      DocumentIngestionJob[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([documentId, version])
+  @@index([cooperativeId])
+  @@index([documentId])
+  @@index([ingestionStatus])
+}
+
+model DocumentChunk {
+  id                String @id @default(uuid())
+  documentId        String
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentVersionId String
+  documentVersion   DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  cooperativeId     String
+
+  chunkIndex    Int
+  text          String
+  tokenEstimate Int?
+
+  category   String?
+  committee  String?
+  tags       String[] @default([])
+  pageNumber Int?
+
+  embedding         Json
+  embeddingModel    String
+  embeddingVersion  String
+  isActive          Boolean @default(true)
+  replacedAt        DateTime?
+  replacedByBatchId String?
+  chunkBatchId      String
+
+  createdAt DateTime @default(now())
+
+  @@index([cooperativeId])
+  @@index([cooperativeId, isActive])
+  @@index([documentId])
+  @@index([documentVersionId])
+  @@index([isActive])
+  @@index([embeddingModel, embeddingVersion])
+}
+
+model DocumentIngestionJob {
+  id                String @id @default(uuid())
+  documentId        String
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentVersionId String
+  documentVersion   DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  cooperativeId     String
+
+  status      String @default("queued")
+  attempts    Int @default(0)
+  maxAttempts Int @default(3)
+  nextRetryAt DateTime?
+  error       String?
+  errorStack  Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cooperativeId])
+  @@index([status, nextRetryAt])
+  @@index([documentVersionId])
+}
+
+model PolicyAssistantQuery {
+  id              String @id @default(uuid())
+  cooperativeId   String
+  userId          String
+  question        String
+  retrievedChunks Json
+  answer          String
+  citations       Json
+  userFeedback    String?
+  feedbackReason  String?
+  latencyMs       Int
+  createdAt       DateTime @default(now())
+
+  @@index([cooperativeId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model DocumentAccessLog {
+  id         String @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String
+  action     String
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([documentId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model CoopEvent {

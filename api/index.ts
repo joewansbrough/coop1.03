@@ -4,8 +4,10 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import axios from 'axios';
 import cookieSession from 'cookie-session';
+import { put } from '@vercel/blob';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import driveRoutes from './drive.js';
+import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
 
 
 
@@ -650,7 +652,8 @@ app.get('/api/documents', requireAuth, async (req, res) => {
     const coopId = await getCoopId(req, p);
     const documents = await p.document.findMany({
       where: { cooperativeId: coopId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: { currentVersion: true }
     });
     res.json(documents);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -920,83 +923,27 @@ app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) =>
   try {
     const meetingId = getParam(req.params.meetingId);
     const { pdfDataUrl, title, date } = req.body;
-
-    if (typeof pdfDataUrl !== 'string' || !pdfDataUrl.startsWith('data:application/pdf;base64,')) {
-      return res.status(400).json({ error: 'A PDF data URL is required.' });
-    }
-
     const p = getPrisma();
     const coopId = await getCoopId(req, p);
     const user = (req as any).user || (req as any).session?.user;
-    const event = await p.coopEvent.findFirst({
-      where: {
-        id: meetingId,
-        cooperativeId: coopId,
-      },
-      include: {
-        committee: true,
-      },
+
+    const document = await archiveMinutesPdf({
+      prisma: p,
+      putBlob: put,
+      meetingId,
+      cooperativeId: coopId,
+      user,
+      pdfDataUrl,
+      title,
+      date,
     });
-
-    if (!event) {
-      return res.status(404).json({ error: 'Meeting not found for this cooperative.' });
-    }
-
-    const stableTag = `minutes-meeting:${meetingId}`;
-    const documentTitle = title || `${event.title} Minutes`;
-    const documentDate = date ? new Date(date) : new Date();
-    const committeeName = event.committee?.name || null;
-    const tags = Array.from(new Set([
-      new Date().getFullYear().toString(),
-      'Minutes',
-      'Meeting Minutes',
-      ...(committeeName ? [committeeName] : []),
-      stableTag,
-    ]));
-
-    const existingDocument = await p.document.findFirst({
-      where: {
-        cooperativeId: coopId,
-        tags: {
-          has: stableTag,
-        },
-      },
-    });
-
-    const document = existingDocument
-      ? await p.document.update({
-          where: { id: existingDocument.id },
-          data: {
-            title: documentTitle,
-            category: 'Minutes',
-            url: pdfDataUrl,
-            fileType: 'pdf',
-            author: user?.name || user?.email || 'Secretary',
-            date: documentDate,
-            tags: { set: tags },
-            committee: committeeName,
-            content: `PDF archive for meeting ${meetingId}. Replaced automatically when minutes are re-saved.`,
-          } as any,
-        })
-      : await p.document.create({
-          data: {
-            cooperativeId: coopId,
-            title: documentTitle,
-            category: 'Minutes',
-            url: pdfDataUrl,
-            fileType: 'pdf',
-            author: user?.name || user?.email || 'Secretary',
-            date: documentDate,
-            tags,
-            committee: committeeName,
-            content: `PDF archive for meeting ${meetingId}. Replaced automatically when minutes are re-saved.`,
-          } as any,
-        });
-
     res.json(document);
   } catch (error: any) {
     console.error('Error archiving minutes PDF:', error);
-    res.status(500).json({ error: error.message });
+    const status = error.message === 'A PDF data URL is required.' ? 400
+      : error.message === 'Meeting not found for this cooperative.' ? 404
+        : 500;
+    res.status(status).json({ error: error.message });
   }
 });
 
@@ -1130,9 +1077,27 @@ app.get('/api/migrate', async (req, res) => {
 
     // 3. Add specific missing columns
     await p.$executeRawUnsafe(`ALTER TABLE "Tenant" ADD COLUMN IF NOT EXISTS "role" TEXT DEFAULT 'MEMBER';`);
+    try {
+      await p.$executeRawUnsafe(`CREATE TYPE "DocumentVisibility" AS ENUM ('PUBLIC', 'MEMBERS', 'COMMITTEE', 'BOARD', 'ADMIN');`);
+    } catch (e) { /* ignore if exists */ }
+    try {
+      await p.$executeRawUnsafe(`CREATE TYPE "DocumentStatus" AS ENUM ('ACTIVE', 'ARCHIVED', 'SUPERSEDED');`);
+    } catch (e) { /* ignore if exists */ }
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committee" TEXT DEFAULT '';`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "tags" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "content" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "status" "DocumentStatus" NOT NULL DEFAULT 'ACTIVE';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "visibility" "DocumentVisibility" NOT NULL DEFAULT 'MEMBERS';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "committeeAccess" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "effectiveDate" TIMESTAMP(3);`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "expiryDate" TIMESTAMP(3);`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "reviewDate" TIMESTAMP(3);`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "supersedes" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "supersededBy" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "relatedDocs" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "keywords" TEXT[] DEFAULT ARRAY[]::TEXT[];`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "fullTextSearch" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "currentVersionId" TEXT;`);
     await p.$executeRawUnsafe(`ALTER TABLE "Document" DROP COLUMN IF EXISTS "isPrivate";`);
 
     // 4. Handle Enums and ScheduledMaintenance
@@ -1164,6 +1129,58 @@ app.get('/api/migrate', async (req, res) => {
         CONSTRAINT "ScheduledMaintenance_pkey" PRIMARY KEY ("id")
       );
     `);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "DocumentVersion" (
+        "id" TEXT NOT NULL,
+        "documentId" TEXT NOT NULL,
+        "cooperativeId" TEXT NOT NULL,
+        "version" INTEGER NOT NULL,
+        "source" TEXT NOT NULL,
+        "storageUrl" TEXT NOT NULL,
+        "storageKey" TEXT,
+        "fileType" TEXT NOT NULL,
+        "mimeType" TEXT,
+        "sizeBytes" INTEGER,
+        "checksum" TEXT,
+        "ingestionStatus" TEXT NOT NULL DEFAULT 'pending',
+        "ingestionError" TEXT,
+        "ingestionStartedAt" TIMESTAMP(3),
+        "ingestionCompletedAt" TIMESTAMP(3),
+        "ingestionDurationMs" INTEGER,
+        "extractionMethod" TEXT,
+        "extractionConfidence" DOUBLE PRECISION,
+        "chunkCount" INTEGER,
+        "tokenCount" INTEGER,
+        "extractedText" TEXT,
+        "summary" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "DocumentVersion_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "DocumentVersion_documentId_version_key" ON "DocumentVersion"("documentId", "version");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DocumentVersion_cooperativeId_idx" ON "DocumentVersion"("cooperativeId");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DocumentVersion_ingestionStatus_idx" ON "DocumentVersion"("ingestionStatus");`);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "DocumentIngestionJob" (
+        "id" TEXT NOT NULL,
+        "documentId" TEXT NOT NULL,
+        "documentVersionId" TEXT NOT NULL,
+        "cooperativeId" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'queued',
+        "attempts" INTEGER NOT NULL DEFAULT 0,
+        "maxAttempts" INTEGER NOT NULL DEFAULT 3,
+        "nextRetryAt" TIMESTAMP(3),
+        "error" TEXT,
+        "errorStack" JSONB,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "DocumentIngestionJob_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DocumentIngestionJob_cooperativeId_idx" ON "DocumentIngestionJob"("cooperativeId");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DocumentIngestionJob_status_nextRetryAt_idx" ON "DocumentIngestionJob"("status", "nextRetryAt");`);
 
     // 5. Foreign Key Constraints (Ensure they exist or add them)
     // Note: We skip complex FK management here to avoid errors if they already exist, 

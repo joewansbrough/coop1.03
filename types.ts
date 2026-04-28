@@ -116,6 +116,19 @@ export interface Document {
   author: string;
   date: string;
   tags?: string[];
+  status?: 'ACTIVE' | 'ARCHIVED' | 'SUPERSEDED';
+  visibility?: 'PUBLIC' | 'MEMBERS' | 'COMMITTEE' | 'BOARD' | 'ADMIN';
+  currentVersionId?: string;
+  currentVersion?: {
+    id: string;
+    version: number;
+    source: string;
+    storageUrl: string;
+    storageKey?: string | null;
+    ingestionStatus: 'pending' | 'processing' | 'ready' | 'failed' | string;
+    ingestionError?: string | null;
+    createdAt?: string;
+  } | null;
   createdAt?: string;
   updatedAt?: string;
   content?: string;
