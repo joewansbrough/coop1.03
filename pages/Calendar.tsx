@@ -166,7 +166,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
 
     createEventMutation.mutate(payload, {
       onSuccess: (data) => {
-        setEvents([...events, data]);
+        setEvents(current => [...current, data]);
         setShowAddForm(false);
         setTitle('');
         setCommitteeId('');
@@ -183,7 +183,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
 
     updateEventMutation.mutate(editEvent, {
       onSuccess: (data) => {
-        setEvents(events.map(ev => ev.id === data.id ? data : ev));
+        setEvents(current => current.map(ev => ev.id === data.id ? data : ev));
         setEditEvent(null);
         showAlert('Event updated successfully.', 'success');
       },
@@ -198,7 +198,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
     
     deleteEventMutation.mutate(id, {
       onSuccess: () => {
-        setEvents(events.filter(ev => ev.id !== id));
+        setEvents(current => current.filter(ev => ev.id !== id));
         showAlert('Event removed from the calendar.', 'success');
       },
       onError: () => showAlert('Failed to delete event.', 'error')

@@ -54,11 +54,23 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
   const selectedCommittee = Array.isArray(committees) ? committees.find(c => c.id === selectedId) : null;
   const isChair = selectedCommittee && user?.name === selectedCommittee.chair;
   const canSchedule = isAdmin || isChair;
+  const getDateOnly = (date: string) => date?.includes('T') ? date.split('T')[0] : date;
+  const parseDateOnly = (date: string) => {
+    const [year, month, day] = getDateOnly(date).split('-').map(Number);
+    return new Date(year, month - 1, day);
+  };
+  const getLocalDateOnly = (date: Date) => {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const todayDateOnly = getLocalDateOnly(new Date());
   const selectedCommitteeMeetings = selectedCommittee
     ? events
         .filter(event => event.committeeId === selectedCommittee.id)
-        .filter(event => new Date(event.date) >= new Date(new Date().toDateString()))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .filter(event => getDateOnly(event.date) >= todayDateOnly)
+        .sort((a, b) => parseDateOnly(a.date).getTime() - parseDateOnly(b.date).getTime())
     : [];
 
   const handleScheduleMeeting = async (e: React.FormEvent) => {
@@ -428,8 +440,8 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                           <div key={event.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
                             <div className="flex items-center gap-4">
                               <div className="bg-white dark:bg-slate-900 p-2 rounded-xl text-center min-w-[50px] border dark:border-white/5">
-                                <p className="text-[8px] font-black text-slate-400 uppercase">{new Date(event.date).toLocaleDateString([], { month: 'short' })}</p>
-                                <p className="text-sm font-black text-slate-800 dark:text-white">{new Date(event.date).toLocaleDateString([], { day: 'numeric' })}</p>
+                                <p className="text-[8px] font-black text-slate-400 uppercase">{parseDateOnly(event.date).toLocaleDateString([], { month: 'short' })}</p>
+                                <p className="text-sm font-black text-slate-800 dark:text-white">{parseDateOnly(event.date).toLocaleDateString([], { day: 'numeric' })}</p>
                               </div>
                               <div>
                                 <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{event.title}</p>
