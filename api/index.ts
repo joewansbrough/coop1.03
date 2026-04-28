@@ -108,7 +108,8 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV
+    env: process.env.NODE_ENV,
+    blobConfigured: Boolean(process.env.BLOB_READ_WRITE_TOKEN)
   });
 });
 

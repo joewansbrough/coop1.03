@@ -27,6 +27,8 @@ const decodePdfDataUrl = (pdfDataUrl: string) => {
   return Buffer.from(pdfDataUrl.slice(PDF_DATA_URL_PREFIX.length), 'base64');
 };
 
+const getBlobToken = (blobToken?: string) => blobToken || process.env.BLOB_READ_WRITE_TOKEN;
+
 export const archiveMinutesPdf = async ({
   prisma,
   putBlob,
@@ -82,10 +84,16 @@ export const archiveMinutesPdf = async ({
   const version = (latestVersion?.version || 0) + 1;
   const storagePath = `coops/${toSafePathPart(cooperativeId)}/minutes/${toSafePathPart(meetingId)}/minutes-v${version}.pdf`;
   const pdfBytes = decodePdfDataUrl(pdfDataUrl);
+  const resolvedBlobToken = getBlobToken(blobToken);
+
+  if (!resolvedBlobToken) {
+    throw new Error('BLOB_READ_WRITE_TOKEN is not configured for the running server process.');
+  }
+
   const blob = await putBlob(storagePath, pdfBytes, {
     access: 'public',
     contentType: 'application/pdf',
-    ...(blobToken ? { token: blobToken } : {}),
+    token: resolvedBlobToken,
   });
   const storageUrl = blob.url;
   const storageKey = blob.pathname || storagePath;

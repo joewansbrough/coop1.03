@@ -63,6 +63,7 @@ test('archives a minutes PDF to Blob and queues an ingestion job', async () => {
         pathname: path,
       };
     },
+    blobToken: 'blob-token',
     meetingId: 'meeting-1',
     cooperativeId: 'coop-1',
     user: { name: 'Sam Secretary', email: 'sam@example.com' },
@@ -95,6 +96,7 @@ test('archives a replacement minutes PDF as the next document version', async ()
       url: 'https://blob.example/minutes-v4.pdf',
       pathname: path,
     }),
+    blobToken: 'blob-token',
     meetingId: 'meeting-1',
     cooperativeId: 'coop-1',
     user: { email: 'sam@example.com' },
@@ -126,4 +128,34 @@ test('passes a configured Blob token to the storage client', async () => {
   });
 
   assert.equal(prisma.calls.blob.options.token, 'blob-token');
+});
+
+test('fails before calling Blob when no token is configured', async () => {
+  const previousToken = process.env.BLOB_READ_WRITE_TOKEN;
+  delete process.env.BLOB_READ_WRITE_TOKEN;
+  const prisma = createPrisma();
+  let calledBlob = false;
+
+  try {
+    await assert.rejects(
+      archiveMinutesPdf({
+        prisma,
+        putBlob: async () => {
+          calledBlob = true;
+          return { url: 'https://blob.example/minutes.pdf' };
+        },
+        meetingId: 'meeting-1',
+        cooperativeId: 'coop-1',
+        user: { email: 'sam@example.com' },
+        pdfDataUrl,
+      }),
+      /BLOB_READ_WRITE_TOKEN is not configured/,
+    );
+  } finally {
+    if (previousToken) {
+      process.env.BLOB_READ_WRITE_TOKEN = previousToken;
+    }
+  }
+
+  assert.equal(calledBlob, false);
 });
