@@ -151,7 +151,16 @@ interface PDFMinutesProps {
 }
 
 export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
-  const { formData, attendees, motions, meetingType } = data;
+  const formData = data.formData || data.data || {};
+  const guestNames = Array.isArray(formData.guests) ? formData.guests.filter((name: string) => name?.trim()) : [];
+  const attendeeRecords = (data.attendees || []).filter((attendee: any) => attendee?.name?.trim());
+  const attendees = attendeeRecords.length > 0
+    ? attendeeRecords
+    : data.meetingType === 'quick'
+      ? guestNames.map((name: string) => ({ name, position: '' }))
+      : [];
+  const motions = data.motions || [];
+  const meetingType = data.meetingType;
 
   const getMeetingLabel = (type: string) => {
     switch (type) {
@@ -161,6 +170,16 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
       case 'special': return 'Special General Meeting';
       default: return 'Meeting Minutes';
     }
+  };
+
+  const formatTime12h = (time?: string) => {
+    if (!time) return 'N/A';
+    const [hoursValue, minutesValue = '00'] = time.split(':');
+    const hours = Number(hoursValue);
+    if (Number.isNaN(hours)) return time;
+    const suffix = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = hours % 12 || 12;
+    return `${hour12}:${minutesValue.padStart(2, '0')} ${suffix}`;
   };
 
   return (
@@ -186,8 +205,8 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
             <Text style={styles.value}>{formData.location || event.location}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Time:</Text>
-            <Text style={styles.value}>{formData.startTime || event.time} - {formData.endTime || 'N/A'}</Text>
+            <Text style={styles.label}>Start Time:</Text>
+            <Text style={styles.value}>{formatTime12h(formData.startTime || event.time)}</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Chairperson:</Text>
@@ -214,7 +233,7 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
               </Text>
             </View>
           )}
-          {formData.guests && formData.guests.length > 0 && (
+          {data.meetingType !== 'quick' && formData.guests && formData.guests.length > 0 && (
             <View style={styles.row}>
               <Text style={styles.label}>Guests/Attendees:</Text>
               <Text style={styles.value}>

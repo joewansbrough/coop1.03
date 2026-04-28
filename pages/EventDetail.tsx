@@ -2,13 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { pdf } from '@react-pdf/renderer';
+import { saveAs } from 'file-saver';
 import { CoopEvent, Tenant } from '../types';
 import AppAlert from '../components/AppAlert';
 import MinutesBuilder from '../components/MinutesBuilder';
 import { useMinutes } from '../hooks/useCoopData';
+import { MinutesPDF } from '../services/export/pdfGenerator';
 
 const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, event }) => {
   const formData = data?.formData || data?.data;
+  const [isExporting, setIsExporting] = useState(false);
 
   if (!data || !formData) {
     return (
@@ -19,6 +23,13 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
   }
 
   const { attendees = [], motions = [], meetingType } = data;
+  const attendeeRecords = attendees.filter((attendee: any) => attendee?.name?.trim());
+  const guestNames = Array.isArray(formData.guests) ? formData.guests.filter((name: string) => name?.trim()) : [];
+  const presentPeople = attendeeRecords.length > 0
+    ? attendeeRecords
+    : meetingType === 'quick'
+      ? guestNames.map((name: string) => ({ name, position: '' }))
+      : [];
 
   const getMeetingLabel = (type: string) => {
     switch (type) {
@@ -30,9 +41,52 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
     }
   };
 
+  const getPresentLabel = (type: string) => {
+    switch (type) {
+      case 'regular':
+      case 'agm':
+        return 'Directors Present';
+      case 'special':
+        return 'Members Present';
+      case 'quick':
+        return 'Attendees Present';
+      default:
+        return 'Present';
+    }
+  };
+
+  const formatTime12h = (time?: string) => {
+    if (!time) return 'N/A';
+    const [hoursValue, minutesValue = '00'] = time.split(':');
+    const hours = Number(hoursValue);
+    if (Number.isNaN(hours)) return time;
+    const suffix = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = hours % 12 || 12;
+    return `${hour12}:${minutesValue.padStart(2, '0')} ${suffix}`;
+  };
+
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const minutesData = {
+        ...data,
+        formData,
+        attendees: presentPeople,
+        motions,
+        meetingType,
+      };
+      const blob = await pdf(<MinutesPDF data={minutesData} event={event} />).toBlob();
+      saveAs(blob, `Minutes_${formData.meetingDate || event.date.split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm animate-in fade-in slide-in-from-top-4">
-      <div className="bg-slate-900 p-8 flex justify-between items-center">
+      <div className="bg-slate-900 p-8 flex flex-col md:flex-row gap-6 md:items-center md:justify-between">
         <div>
           <span className="text-[10px] font-black px-3 py-1 rounded-full bg-brand-500 text-white uppercase tracking-widest mb-2 inline-block">
             {getMeetingLabel(meetingType)}
@@ -42,6 +96,15 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
         <div className="text-right">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meeting Date</p>
           <p className="text-lg font-black text-white">{formData.meetingDate || event.date.split('T')[0]}</p>
+          <button
+            type="button"
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-slate-900 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <i className={`fa-solid ${isExporting ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i>
+            {isExporting ? 'Exporting...' : 'Export to PDF'}
+          </button>
         </div>
       </div>
 
@@ -49,7 +112,7 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
         <ReadOnlySection title="Meeting Information" icon="fa-info-circle">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <ReadOnlyField label="Location" value={formData.location || event.location} />
-            <ReadOnlyField label="Time" value={`${formData.startTime || event.time} - ${formData.endTime || 'N/A'}`} />
+            <ReadOnlyField label="Start Time" value={formatTime12h(formData.startTime || event.time)} />
             <ReadOnlyField label="Chairperson" value={formData.chair} />
             <ReadOnlyField label="Recorded By" value={formData.minuteTaker} />
           </div>
@@ -58,21 +121,25 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
         <ReadOnlySection title="Attendance" icon="fa-users">
           <div className="space-y-6">
             <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Present</p>
-              <div className="flex flex-wrap gap-2">
-                {attendees.map((a: any, i: number) => (
-                  <span key={i} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/5">
-                    {a.name}{a.position ? ` (${a.position})` : ''}
-                  </span>
-                ))}
-              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{getPresentLabel(meetingType)}</p>
+              {presentPeople.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {presentPeople.map((a: any, i: number) => (
+                    <span key={`${a.name}-${i}`} className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/5">
+                      {a.name}{a.position ? ` (${a.position})` : ''}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No attendees recorded.</p>
+              )}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {formData.directorsAbsent?.length > 0 && (
                 <ReadOnlyField label="Regrets/Absent" value={Array.isArray(formData.directorsAbsent) ? formData.directorsAbsent.join(', ') : formData.directorsAbsent} />
               )}
-              {formData.guests?.length > 0 && (
+              {meetingType !== 'quick' && formData.guests?.length > 0 && (
                 <ReadOnlyField label="Guests/Attendees" value={Array.isArray(formData.guests) ? formData.guests.join(', ') : formData.guests} />
               )}
             </div>

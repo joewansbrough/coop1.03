@@ -229,6 +229,12 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
 const handleSave = async () => {
   setSaveStatus('saving'); // Indicate saving process has started
 
+  if (!formData.chair?.trim() || !formData.minuteTaker?.trim()) {
+    alert('Chairperson and Minutes Recorded By are required before saving minutes.');
+    setSaveStatus('idle');
+    return;
+  }
+
   const payload = {
     meetingType,
     formData: sanitizeFormData(formData),
@@ -729,8 +735,26 @@ const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, memb
         <FormField label="Date" required>
           <input type="date" value={formData.meetingDate} onChange={(e) => handleInputChange('meetingDate', e.target.value)} className="form-input" required />
         </FormField>
-        <FormField label="Time">
+        <FormField label="Start Time">
           <input type="time" value={formData.startTime} onChange={(e) => handleInputChange('startTime', e.target.value)} className="form-input" />
+        </FormField>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField label="Chairperson" required>
+          <NameSelector
+            value={formData.chair}
+            onChange={(val) => handleInputChange('chair', val)}
+            members={members}
+            placeholder="Select chairperson..."
+          />
+        </FormField>
+        <FormField label="Minutes Recorded By" required>
+          <NameSelector
+            value={formData.minuteTaker}
+            onChange={(val) => handleInputChange('minuteTaker', val)}
+            members={members}
+            placeholder="Select recorder..."
+          />
         </FormField>
       </div>
       <FormField label="Attendees">
@@ -774,7 +798,7 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
         <FormField label="Location" required>
           <input type="text" value={formData.location} onChange={(e) => handleInputChange('location', e.target.value)} placeholder="e.g., Common Room" className="form-input" required />
         </FormField>
-        <FormField label="Chair" required>
+        <FormField label="Chairperson" required>
           <NameSelector 
             value={formData.chair} 
             onChange={(val) => handleInputChange('chair', val)} 
@@ -1048,7 +1072,7 @@ const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
         </FormField>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Chair" required>
+        <FormField label="Chairperson" required>
           <NameSelector 
             value={formData.chair} 
             onChange={(val) => handleInputChange('chair', val)} 
