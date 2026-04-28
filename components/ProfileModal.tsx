@@ -1,4 +1,5 @@
 import React from 'react';
+import { clearTutorialState } from '../utils/demoTutorial';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -118,6 +119,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, onThemeCha
                           localStorage.removeItem(key);
                         }
                       });
+                      clearTutorialState();
                       window.location.reload();
                     }
                   }}

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Bot, Send, User, Sparkles, Shield, MessageSquare, ChevronRight, Info } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
 import { Document, Announcement } from '../types';
+import { recordTutorialEvent } from '../utils/demoTutorial';
 
 const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announcement[] }> = ({ documents, announcements }) => {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([
@@ -24,6 +25,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
   const handleResourceSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resourceQuestion) return;
+    recordTutorialEvent('policy_question_asked');
     setIsResourceSearching(true);
     setResourceAiResponse('');
 
@@ -63,6 +65,7 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
+    recordTutorialEvent('policy_question_asked');
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);

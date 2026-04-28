@@ -9,6 +9,7 @@ import AppAlert from '../components/AppAlert';
 
 import { useUser, useRefreshData } from '../hooks/useCoopData';
 import { formatDate } from '../utils/dateUtils';
+import { recordTutorialEvent } from '../utils/demoTutorial';
 
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
@@ -343,6 +344,7 @@ const ResourceLibrary: React.FC<{
   };
 
   const handleViewDoc = (doc: Document) => {
+    recordTutorialEvent('document_opened');
     if (doc.url && doc.url !== '#') {
       openDocument(doc);
     } else {

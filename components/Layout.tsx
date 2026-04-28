@@ -5,7 +5,15 @@ import { Home } from 'lucide-react';
 import ProfileModal from './ProfileModal';
 import HelpModal from './HelpModal';
 import OnboardingTour from './OnboardingTour';
+import DemoTutorialPanel from './DemoTutorialPanel';
 import { AnimatePresence } from 'motion/react';
+import {
+  readTutorialState,
+  saveTutorialState,
+  updateTutorialProgress,
+  type DemoTutorialState,
+  type DemoTutorialEvent,
+} from '../utils/demoTutorial';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -37,6 +45,8 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [tutorialState, setTutorialState] = useState<DemoTutorialState | null>(() => readTutorialState());
+  const isDemo = typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme');
@@ -78,7 +88,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   }, []);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin && !isDemo) {
       const hasCompleted = localStorage.getItem('onboarding_completed');
       const isHidden = localStorage.getItem('onboarding_hidden');
       if (!hasCompleted && !isHidden) {
@@ -87,7 +97,36 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
         return () => clearTimeout(timer);
       }
     }
-  }, [isAdmin]);
+  }, [isAdmin, isDemo]);
+
+  useEffect(() => {
+    if (!isDemo || !tutorialState) return;
+    const nextState = updateTutorialProgress(tutorialState, { pathname: location.pathname });
+    if (nextState !== tutorialState) {
+      saveTutorialState(nextState);
+      setTutorialState(nextState);
+    }
+  }, [isDemo, location.pathname, tutorialState]);
+
+  useEffect(() => {
+    const handleStorage = () => setTutorialState(readTutorialState());
+    const handleTutorialEvent = (event: Event) => {
+      if (!isDemo) return;
+      const customEvent = event as CustomEvent<DemoTutorialEvent>;
+      const current = readTutorialState();
+      if (!current) return;
+      const nextState = updateTutorialProgress(current, { eventName: customEvent.detail });
+      saveTutorialState(nextState);
+      setTutorialState(nextState);
+    };
+
+    window.addEventListener('demo-tutorial-event', handleTutorialEvent);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('demo-tutorial-event', handleTutorialEvent);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [isDemo]);
 
   const toggleDarkMode = () => {
     const newMode = !isDarkMode;
@@ -355,10 +394,16 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
         />
         <HelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} onRestartTour={() => setIsOnboardingOpen(true)} />
         <AnimatePresence>
-          {isOnboardingOpen && (
+          {isOnboardingOpen && !isDemo && (
             <OnboardingTour isOpen={isOnboardingOpen} onClose={() => setIsOnboardingOpen(false)} />
           )}
         </AnimatePresence>
+        {isDemo && tutorialState && (
+          <DemoTutorialPanel
+            state={tutorialState}
+            onStateChange={setTutorialState}
+          />
+        )}
 
         <section key={theme} className="flex-1 overflow-y-auto p-4 lg:p-12 bg-slate-50/50 dark:bg-slate-950/20 relative transition-colors duration-200 animate-in fade-in duration-1000">
           <div className="max-w-7xl mx-auto">

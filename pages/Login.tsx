@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { LogIn, ShieldCheck, Home, Users, Wrench, Bot, Sparkles } from 'lucide-react';
 import AppAlert from '../components/AppAlert';
+import DemoTrackPicker from '../components/DemoTrackPicker';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -11,6 +12,7 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isDemoPickerOpen, setIsDemoPickerOpen] = useState(false);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -31,6 +33,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {isDemoPickerOpen && (
+        <DemoTrackPicker
+          onStart={onLoginSuccess}
+          onCancel={() => setIsDemoPickerOpen(false)}
+        />
+      )}
       {/* Background Decorative Elements */}
       <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand-500/20 blur-[120px] rounded-full"></div>
@@ -67,8 +75,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
             <button
               onClick={() => {
-                localStorage.setItem('demo_mode', 'true');
-                onLoginSuccess();
+                setIsDemoPickerOpen(true);
               }}
               className="w-full py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 group mb-10"
             >
@@ -134,8 +141,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
             <button
               onClick={() => {
-                localStorage.setItem('demo_mode', 'true');
-                onLoginSuccess();
+                setIsDemoPickerOpen(true);
               }}
               className="w-full flex items-center justify-center gap-4 bg-teal-600 hover:bg-teal-700 py-4 rounded-2xl transition-all active:scale-95"
             >

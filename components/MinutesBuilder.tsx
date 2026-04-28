@@ -5,6 +5,7 @@ import { Tenant, Committee, CoopEvent, Document as CoopDocument } from '../types
 import RichTextEditor from './RichTextEditor';
 import { MinutesPDF } from '../services/export/pdfGenerator';
 import { demoStorage } from '../utils/demoStorage';
+import { recordTutorialEvent } from '../utils/demoTutorial';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
 
@@ -563,6 +564,7 @@ const handleSave = async () => {
       setIsDirty(false);
       localStorage.removeItem(`minutes-${meetingId}`);
       onSave?.(savedMinutes);
+      recordTutorialEvent('minutes_saved');
       try {
         await archiveMinutesPdfToLibrary();
       } catch (archiveError: any) {
@@ -595,6 +597,7 @@ const handleSave = async () => {
     setIsDirty(false); // Mark as not dirty
     localStorage.removeItem(`minutes-${meetingId}`);
     onSave?.(savedMinutes);
+    recordTutorialEvent('minutes_saved');
     try {
       await archiveMinutesPdfToLibrary();
     } catch (archiveError: any) {

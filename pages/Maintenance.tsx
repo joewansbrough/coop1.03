@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
 import { useCreateMaintenance, useUpdateMaintenance } from '../hooks/useCoopData';
+import { recordTutorialEvent } from '../utils/demoTutorial';
 
 interface MaintenanceProps {
   isAdmin?: boolean;
@@ -105,6 +106,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
         setCategory(['Other']);
         setUrgency('Medium');
         if (isAdmin) setUnitId('');
+        recordTutorialEvent('maintenance_submitted');
         showAlert('Maintenance request submitted successfully. The maintenance committee will review it shortly.', 'success');
       },
       onError: () => showAlert('Failed to submit maintenance request.', 'error')
@@ -137,6 +139,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   };
 
   const updateRequestStatus = (id: string, status: RequestStatus) => {
+    recordTutorialEvent('maintenance_opened');
     setPendingRequest({ id, status });
     setShowStatusConfirm(true);
   };
