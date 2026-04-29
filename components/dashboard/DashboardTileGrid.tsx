@@ -77,7 +77,7 @@ const SortableTile: React.FC<{
       style={style}
       className={`${sizeClasses[tile.size]} min-h-[14rem] ${sortable.isDragging ? 'z-20 opacity-80' : ''}`}
     >
-      <div className="h-full rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm transition-all dark:border-white/5 dark:bg-slate-900">
+      <div className="h-full overflow-hidden rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm transition-all dark:border-white/5 dark:bg-slate-900">
         {isEditing && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-white/5">
             <button

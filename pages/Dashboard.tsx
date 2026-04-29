@@ -207,12 +207,12 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'next-meeting':
       case 'next-community-event':
         return nextEvent ? (
-          <button onClick={() => navigate(`/calendar/${nextEvent.id}`)} className="flex h-full w-full flex-col text-left">
+          <button onClick={() => navigate(`/calendar/${nextEvent.id}`)} className="flex h-full min-h-0 w-full flex-col text-left">
             <TileHeading tileId={tileId} icon="fa-calendar-day" />
-            <div className="mt-auto rounded-3xl bg-amber-50 p-5 dark:bg-amber-950/20">
-              <p className="text-3xl font-black text-amber-700 dark:text-amber-300">{formatShortDate(nextEvent.date)}</p>
-              <p className="mt-2 text-sm font-black text-slate-900 dark:text-white">{nextEvent.title}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">{nextEvent.time} - {nextEvent.location}</p>
+            <div className="mt-auto min-h-0 overflow-hidden rounded-2xl bg-amber-50 p-4 dark:bg-amber-950/20">
+              <p className="text-2xl font-black text-amber-700 dark:text-amber-300">{formatShortDate(nextEvent.date)}</p>
+              <p className="mt-2 line-clamp-2 text-xs font-black leading-snug text-slate-900 dark:text-white">{nextEvent.title}</p>
+              <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">{nextEvent.time} - {nextEvent.location}</p>
             </div>
           </button>
         ) : <><TileHeading tileId={tileId} icon="fa-calendar-xmark" /><EmptyTile label="No upcoming events" /></>;
@@ -250,11 +250,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         );
       case 'waitlist-snapshot':
         return (
-          <button onClick={() => navigate('/admin/waitlist')} className="flex h-full w-full flex-col text-left">
+          <button onClick={() => navigate('/admin/waitlist')} className="flex h-full min-h-0 w-full flex-col text-left">
             <TileHeading tileId={tileId} icon="fa-clock-rotate-left" />
-            <div className="mt-auto rounded-3xl bg-teal-50 p-5 dark:bg-teal-950/30">
-              <p className="text-4xl font-black text-teal-700 dark:text-teal-300">{waitlistCount}</p>
-              <p className="mt-2 text-xs font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">Applicants waiting</p>
+            <div className="mt-auto min-h-0 overflow-hidden rounded-2xl bg-teal-50 p-4 dark:bg-teal-950/30">
+              <p className="text-3xl font-black text-teal-700 dark:text-teal-300">{waitlistCount}</p>
+              <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">Applicants waiting</p>
             </div>
           </button>
         );
@@ -275,12 +275,12 @@ const Dashboard: React.FC<DashboardProps> = ({
         );
       case 'my-home':
         return (
-          <button onClick={() => userUnitId && navigate(`/admin/units/${userUnitId}`)} className="flex h-full w-full flex-col text-left">
+          <button onClick={() => userUnitId && navigate(`/admin/units/${userUnitId}`)} className="flex h-full min-h-0 w-full flex-col text-left">
             <TileHeading tileId={tileId} icon="fa-house-user" />
-            <div className="mt-auto rounded-3xl bg-teal-50 p-5 dark:bg-teal-950/30">
-              <p className="text-3xl font-black text-teal-700 dark:text-teal-300">{userUnit ? `Unit ${userUnit.number}` : 'No unit'}</p>
-              <p className="mt-2 text-xs font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">{userUnit ? `${userUnit.type} - Floor ${userUnit.floor}` : 'Contact administration'}</p>
-              <p className="mt-4 text-[10px] font-black uppercase tracking-widest text-slate-500">{userOpenRequests.length} active requests</p>
+            <div className="mt-auto min-h-0 overflow-hidden rounded-2xl bg-teal-50 p-4 dark:bg-teal-950/30">
+              <p className="truncate text-2xl font-black text-teal-700 dark:text-teal-300">{userUnit ? `Unit ${userUnit.number}` : 'No unit'}</p>
+              <p className="mt-2 truncate text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">{userUnit ? `${userUnit.type} - Floor ${userUnit.floor}` : 'Contact administration'}</p>
+              <p className="mt-3 text-[9px] font-black uppercase tracking-widest text-slate-500">{userOpenRequests.length} active requests</p>
             </div>
           </button>
         );
