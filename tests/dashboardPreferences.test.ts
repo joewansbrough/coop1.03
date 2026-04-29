@@ -26,9 +26,28 @@ test('creates role-aware default dashboard layouts', () => {
   const residentLayout = createDefaultDashboardLayout('resident');
 
   assert.equal(adminLayout.version, DASHBOARD_PREFERENCE_VERSION);
-  assert.ok(adminLayout.tiles.length >= 8);
-  assert.equal(adminLayout.tiles[0].id, 'maintenance-pulse');
-  assert.equal(residentLayout.tiles[0].id, 'my-home');
+  assert.deepEqual(
+    adminLayout.tiles.map(tile => [tile.id, tile.size]),
+    [
+      ['maintenance-pulse', 'wide'],
+      ['scheduled-maintenance', 'wide'],
+      ['next-meeting', 'wide'],
+      ['building-map', 'wide'],
+      ['announcement-digest', 'wide'],
+      ['document-watch', 'wide'],
+    ],
+  );
+  assert.deepEqual(
+    residentLayout.tiles.map(tile => [tile.id, tile.size]),
+    [
+      ['my-home', 'small'],
+      ['my-requests', 'wide'],
+      ['quick-actions', 'small'],
+      ['next-meeting', 'wide'],
+      ['community-updates', 'large'],
+      ['useful-documents', 'wide'],
+    ],
+  );
   assert.ok(residentLayout.tiles.every(tile => DASHBOARD_TILE_REGISTRY[tile.id].roles.includes('resident')));
 });
 

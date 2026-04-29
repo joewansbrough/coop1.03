@@ -54,36 +54,36 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     title: 'Building Map',
     description: 'Compact floor and unit health map.',
     roles: ['admin'],
-    defaultSize: 'large',
+    defaultSize: 'wide',
     allowedSizes: ['wide', 'large'],
-    defaultOrder: { admin: 20, resident: null },
+    defaultOrder: { admin: 40, resident: null },
   },
   'next-meeting': {
     id: 'next-meeting',
     title: 'Next Meeting',
     description: 'Upcoming calendar meeting or community event.',
     roles: ['admin', 'resident'],
-    defaultSize: 'small',
+    defaultSize: 'wide',
     allowedSizes: ['small', 'wide', 'large'],
-    defaultOrder: { admin: 30, resident: 30 },
+    defaultOrder: { admin: 30, resident: 40 },
   },
   'announcement-digest': {
     id: 'announcement-digest',
-    title: 'Announcement Digest',
+    title: 'Community Announcements',
     description: 'Urgent and recent community notices.',
     roles: ['admin'],
     defaultSize: 'wide',
     allowedSizes: ['small', 'wide', 'large'],
-    defaultOrder: { admin: 40, resident: null },
+    defaultOrder: { admin: 50, resident: null },
   },
   'document-watch': {
     id: 'document-watch',
-    title: 'Document Watch',
+    title: 'Document Library',
     description: 'Recently updated documents and archive readiness.',
     roles: ['admin'],
     defaultSize: 'wide',
     allowedSizes: ['small', 'wide', 'large'],
-    defaultOrder: { admin: 50, resident: null },
+    defaultOrder: { admin: 60, resident: null },
   },
   'waitlist-snapshot': {
     id: 'waitlist-snapshot',
@@ -92,7 +92,7 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     roles: ['admin'],
     defaultSize: 'small',
     allowedSizes: ['small', 'wide'],
-    defaultOrder: { admin: 60, resident: null },
+    defaultOrder: { admin: null, resident: null },
   },
   'scheduled-maintenance': {
     id: 'scheduled-maintenance',
@@ -101,23 +101,23 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     roles: ['admin'],
     defaultSize: 'wide',
     allowedSizes: ['small', 'wide', 'large'],
-    defaultOrder: { admin: 70, resident: null },
+    defaultOrder: { admin: 20, resident: null },
   },
   'quick-actions': {
     id: 'quick-actions',
     title: 'Quick Actions',
     description: 'Frequently used dashboard actions.',
     roles: ['admin', 'resident'],
-    defaultSize: 'wide',
+    defaultSize: 'small',
     allowedSizes: ['small', 'wide'],
-    defaultOrder: { admin: 80, resident: 70 },
+    defaultOrder: { admin: null, resident: 30 },
   },
   'my-home': {
     id: 'my-home',
     title: 'My Home',
     description: 'Unit and residency context.',
     roles: ['resident'],
-    defaultSize: 'wide',
+    defaultSize: 'small',
     allowedSizes: ['small', 'wide', 'large'],
     defaultOrder: { admin: null, resident: 10 },
   },
@@ -137,7 +137,7 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     roles: ['resident'],
     defaultSize: 'large',
     allowedSizes: ['wide', 'large'],
-    defaultOrder: { admin: null, resident: 40 },
+    defaultOrder: { admin: null, resident: 50 },
   },
   'useful-documents': {
     id: 'useful-documents',
@@ -146,7 +146,7 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     roles: ['resident'],
     defaultSize: 'wide',
     allowedSizes: ['small', 'wide', 'large'],
-    defaultOrder: { admin: null, resident: 50 },
+    defaultOrder: { admin: null, resident: 60 },
   },
   'participation-prompts': {
     id: 'participation-prompts',
@@ -155,7 +155,7 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     roles: ['resident'],
     defaultSize: 'wide',
     allowedSizes: ['small', 'wide'],
-    defaultOrder: { admin: null, resident: 60 },
+    defaultOrder: { admin: null, resident: null },
   },
 };
 
@@ -184,11 +184,13 @@ export const getAvailableDashboardTiles = (role: DashboardRole): DashboardTileDe
 
 export const createDefaultDashboardLayout = (role: DashboardRole): DashboardPreference => ({
   version: DASHBOARD_PREFERENCE_VERSION,
-  tiles: getAvailableDashboardTiles(role).map(tile => ({
-    id: tile.id,
-    size: tile.defaultSize,
-    hidden: false,
-  })),
+  tiles: getAvailableDashboardTiles(role)
+    .filter(tile => tile.defaultOrder[role] !== null)
+    .map(tile => ({
+      id: tile.id,
+      size: tile.defaultSize,
+      hidden: false,
+    })),
 });
 
 export const normalizeDashboardPreference = (

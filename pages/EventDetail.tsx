@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
@@ -395,6 +395,7 @@ interface EventDetailProps {
 
 const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, user, events, setEvents, committees = [], documents = [], setDocuments }) => {
   const { eventId } = useParams<{ eventId: string }>();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [event, setEvent] = useState(events.find(e => e.id === eventId));
   const [isEditing, setIsEditing] = useState(false);
@@ -429,6 +430,13 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   };
 
   const meetingMinutes = event ? minutesList?.find(m => m.meetingId === event.id) : null;
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'minutes' && (isAdmin || meetingMinutes)) {
+      setActiveTab('minutes');
+    }
+  }, [isAdmin, location.search, meetingMinutes]);
 
   // Debugging log: Check isAdmin and meetingMinutes status
   useEffect(() => {

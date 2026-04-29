@@ -108,8 +108,8 @@ const getDateKey = (value?: string | Date) => {
 };
 
 const TileHeading: React.FC<{ tileId: DashboardTileId; icon: string; action?: React.ReactNode }> = ({ tileId, icon, action }) => (
-  <div className="mb-4 flex items-start justify-between gap-3 sm:mb-5">
-    <div className="flex min-w-0 items-start gap-3">
+  <div className="mb-4 flex items-center justify-between gap-3 sm:mb-5">
+    <div className="flex min-w-0 items-center gap-3">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-300 sm:h-11 sm:w-11">
         <i className={`fa-solid ${icon}`}></i>
       </div>
@@ -128,6 +128,27 @@ const EmptyTile: React.FC<{ label: string }> = ({ label }) => (
 );
 
 const tileActionClass = 'transition-colors hover:bg-teal-50 dark:hover:bg-teal-950/30';
+
+const isMinutesDocument = (document: Document) => {
+  const searchable = [
+    document.category,
+    document.title,
+    ...(document.tags ?? []),
+  ].join(' ').toLowerCase();
+
+  return searchable.includes('minute');
+};
+
+const getMinutesEventId = (document: Document) => {
+  const taggedEvent = document.tags?.find(tag => tag.startsWith('minutes-meeting:'));
+  return taggedEvent?.split(':')[1] || null;
+};
+
+const getDocumentFileUrl = (document: Document) => {
+  if (document.currentVersion?.storageUrl) return document.currentVersion.storageUrl;
+  if (document.url && document.url !== '#') return document.url;
+  return null;
+};
 
 const Dashboard: React.FC<DashboardProps> = ({
   isAdmin,
@@ -271,6 +292,18 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 </div>
               ))}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+                {[
+                  { label: 'Occupied', className: 'bg-teal-100 dark:bg-teal-950' },
+                  { label: 'Maintenance', className: 'bg-amber-100 dark:bg-amber-950' },
+                  { label: 'Vacant', className: 'bg-slate-100 dark:bg-slate-800' },
+                ].map(item => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <span className={`h-3 w-3 rounded ${item.className}`}></span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{item.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );
@@ -470,28 +503,54 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <TileHeading tileId={tileId} icon="fa-file-lines" action={<Link to="/documents" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Library</Link>} />
             <div className="space-y-3">
-              {recentDocuments.slice(0, documentLimit).map(document => (
-                <Link key={document.id} to="/documents" className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-lg bg-white px-2 py-1 text-[8px] font-black uppercase tracking-widest text-slate-500 dark:bg-slate-900 dark:text-slate-400">{document.fileType}</span>
-                    <span className="text-[9px] font-bold uppercase text-slate-400">{formatDate(document.date)}</span>
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-sm font-black text-slate-900 dark:text-white">{document.title}</p>
-                  {tileSize === 'large' && (
-                    <p className="mt-2 line-clamp-2 text-xs font-semibold leading-relaxed text-slate-500">
-                      {document.category}{document.author ? ` - ${document.author}` : ''}
-                    </p>
-                  )}
-                </Link>
-              ))}
+              {recentDocuments.slice(0, documentLimit).map(document => {
+                const minutesEventId = !isAdmin && isMinutesDocument(document) ? getMinutesEventId(document) : null;
+                const fileUrl = getDocumentFileUrl(document);
+                const card = (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="rounded-lg bg-white px-2 py-1 text-[8px] font-black uppercase tracking-widest text-slate-500 dark:bg-slate-900 dark:text-slate-400">{document.fileType}</span>
+                      <span className="text-[9px] font-bold uppercase text-slate-400">{formatDate(document.date)}</span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-sm font-black text-slate-900 dark:text-white">{document.title}</p>
+                    {tileSize === 'large' && (
+                      <p className="mt-2 line-clamp-2 text-xs font-semibold leading-relaxed text-slate-500">
+                        {document.category}{document.author ? ` - ${document.author}` : ''}
+                      </p>
+                    )}
+                  </>
+                );
+
+                if (minutesEventId) {
+                  return (
+                    <Link key={document.id} to={`/calendar/${minutesEventId}?tab=minutes`} className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
+                      {card}
+                    </Link>
+                  );
+                }
+
+                if (fileUrl) {
+                  return (
+                    <a key={document.id} href={fileUrl} target="_blank" rel="noopener noreferrer" className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
+                      {card}
+                    </a>
+                  );
+                }
+
+                return (
+                  <Link key={document.id} to="/documents" className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
+                    {card}
+                  </Link>
+                );
+              })}
               {recentDocuments.length === 0 && <EmptyTile label="No documents yet" />}
             </div>
           </div>
         );
       case 'waitlist-snapshot':
         return (
-          <button onClick={() => navigate('/admin/waitlist')} className="group flex h-full min-h-0 w-full flex-col text-left">
-            <TileHeading tileId={tileId} icon="fa-clock-rotate-left" action={<span className="rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest text-teal-600 transition-colors hover:bg-teal-50 hover:text-teal-700 dark:hover:bg-teal-950/30 dark:hover:text-teal-300">Waitlist</span>} />
+          <button onClick={() => navigate('/admin/waitlist')} className="group flex h-full min-h-0 w-full cursor-pointer flex-col text-left">
+            <TileHeading tileId={tileId} icon="fa-clock-rotate-left" action={<span className="cursor-pointer rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest text-teal-600 transition-colors hover:bg-teal-50 hover:text-teal-700 dark:hover:bg-teal-950/30 dark:hover:text-teal-300">Waitlist</span>} />
             <div className={`flex min-h-0 flex-1 flex-col justify-center overflow-hidden rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30 sm:p-4 ${tileSize === 'small' ? 'items-center text-center' : ''} ${tileActionClass}`}>
               <p className="text-3xl font-black text-teal-700 dark:text-teal-300">{waitlistCount}</p>
               <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">Applicants waiting</p>
@@ -531,23 +590,14 @@ const Dashboard: React.FC<DashboardProps> = ({
         );
       case 'my-home':
         return (
-          <button type="button" onClick={() => userUnitId && navigate(`/admin/units/${userUnitId}`)} className="group flex h-full min-h-0 w-full flex-col text-left">
-            <TileHeading tileId={tileId} icon="fa-house-user" action={userUnitId ? <span className="text-[10px] font-black uppercase tracking-widest text-teal-600">Unit</span> : undefined} />
+          <button type="button" onClick={() => userUnitId && navigate(`/admin/units/${userUnitId}`)} className="group flex h-full min-h-0 w-full cursor-pointer flex-col text-left">
+            <TileHeading tileId={tileId} icon="fa-house-user" action={userUnitId ? <span className="cursor-pointer text-[10px] font-black uppercase tracking-widest text-teal-600">Unit</span> : undefined} />
             <div className={`flex min-h-0 flex-1 flex-col justify-center overflow-hidden rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30 sm:p-4 ${tileActionClass}`}>
               <p className="truncate text-2xl font-black text-teal-700 dark:text-teal-300 sm:text-3xl">{userUnit ? `Unit ${userUnit.number}` : 'No unit'}</p>
               <p className="mt-1 truncate text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">{userUnit ? `${userUnit.type} - Floor ${userUnit.floor}` : 'Contact administration'}</p>
-              <div className={`mt-3 grid gap-2 ${tileSize === 'large' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                <div className="min-w-0 rounded-xl bg-white/70 p-2 dark:bg-slate-900/50">
-                  <p className="truncate text-[9px] font-black uppercase tracking-widest text-slate-400">Active requests</p>
-                  <p className="text-sm font-black text-slate-900 dark:text-white">{userOpenRequests.length}</p>
-                </div>
-                {tileSize === 'large' && (
-                  <div className="min-w-0 rounded-xl bg-white/70 p-2 dark:bg-slate-900/50">
-                    <p className="truncate text-[9px] font-black uppercase tracking-widest text-slate-400">Status</p>
-                    <p className="truncate text-sm font-black text-slate-900 dark:text-white">{userUnit?.status ?? 'Unknown'}</p>
-                  </div>
-                )}
-              </div>
+              <p className="mt-3 truncate text-sm font-black text-teal-700 dark:text-teal-300">
+                {userOpenRequests.length} Active {userOpenRequests.length === 1 ? 'Request' : 'Requests'}
+              </p>
             </div>
           </button>
         );
