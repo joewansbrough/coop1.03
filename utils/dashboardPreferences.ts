@@ -14,7 +14,6 @@ export type DashboardTileId =
   | 'quick-actions'
   | 'my-home'
   | 'my-requests'
-  | 'next-community-event'
   | 'community-updates'
   | 'useful-documents'
   | 'participation-prompts';
@@ -62,11 +61,11 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
   'next-meeting': {
     id: 'next-meeting',
     title: 'Next Meeting',
-    description: 'Upcoming meeting and readiness summary.',
-    roles: ['admin'],
+    description: 'Upcoming calendar meeting or community event.',
+    roles: ['admin', 'resident'],
     defaultSize: 'small',
     allowedSizes: ['small', 'wide'],
-    defaultOrder: { admin: 30, resident: null },
+    defaultOrder: { admin: 30, resident: 30 },
   },
   'announcement-digest': {
     id: 'announcement-digest',
@@ -131,15 +130,6 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     allowedSizes: ['small', 'wide', 'large'],
     defaultOrder: { admin: null, resident: 20 },
   },
-  'next-community-event': {
-    id: 'next-community-event',
-    title: 'Next Community Event',
-    description: 'Upcoming meeting or community event.',
-    roles: ['resident'],
-    defaultSize: 'small',
-    allowedSizes: ['small', 'wide'],
-    defaultOrder: { admin: null, resident: 30 },
-  },
   'community-updates': {
     id: 'community-updates',
     title: 'Community Updates',
@@ -171,8 +161,18 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
 
 const DEMO_STORAGE_PREFIX = 'demo_dashboard_preferences_';
 
+const LEGACY_TILE_ID_MAP: Record<string, DashboardTileId> = {
+  'next-community-event': 'next-meeting',
+};
+
 const isDashboardTileId = (id: unknown): id is DashboardTileId =>
   typeof id === 'string' && id in DASHBOARD_TILE_REGISTRY;
+
+const resolveDashboardTileId = (id: unknown): DashboardTileId | null => {
+  if (isDashboardTileId(id)) return id;
+  if (typeof id === 'string') return LEGACY_TILE_ID_MAP[id] ?? null;
+  return null;
+};
 
 const isDashboardTileSize = (size: unknown): size is DashboardTileSize =>
   size === 'small' || size === 'wide' || size === 'tall' || size === 'large';
@@ -211,18 +211,19 @@ export const normalizeDashboardPreference = (
   for (const rawTile of inputTiles) {
     if (typeof rawTile !== 'object' || rawTile === null) continue;
     const tile = rawTile as { id?: unknown; size?: unknown; hidden?: unknown };
-    if (!isDashboardTileId(tile.id)) continue;
-    if (!availableIds.has(tile.id)) continue;
-    if (seen.has(tile.id)) continue;
-    seen.add(tile.id);
+    const tileId = resolveDashboardTileId(tile.id);
+    if (!tileId) continue;
+    if (!availableIds.has(tileId)) continue;
+    if (seen.has(tileId)) continue;
+    seen.add(tileId);
 
-    const definition = DASHBOARD_TILE_REGISTRY[tile.id];
+    const definition = DASHBOARD_TILE_REGISTRY[tileId];
     const size = isDashboardTileSize(tile.size) && definition.allowedSizes.includes(tile.size)
       ? tile.size
       : definition.defaultSize;
 
     normalizedTiles.push({
-      id: tile.id,
+      id: tileId,
       size,
       hidden: tile.hidden === true,
     });

@@ -53,6 +53,22 @@ test('normalizes dashboard layouts by removing invalid and unauthorized tiles', 
   assert.equal(normalized.tiles.find(tile => tile.id === 'my-requests')?.size, 'large');
 });
 
+test('normalizes legacy resident calendar tiles to the shared next meeting tile', () => {
+  const normalized = normalizeDashboardPreference({
+    version: DASHBOARD_PREFERENCE_VERSION,
+    tiles: [
+      { id: 'next-community-event', size: 'wide', hidden: false },
+      { id: 'next-meeting', size: 'small', hidden: true },
+    ],
+  }, 'resident');
+
+  assert.equal(normalized.tiles.filter(tile => tile.id === 'next-meeting').length, 1);
+  assert.equal(normalized.tiles[0].id, 'next-meeting');
+  assert.equal(normalized.tiles[0].size, 'wide');
+  assert.equal(normalized.tiles[0].hidden, false);
+  assert.ok(!(normalized.tiles.map(tile => tile.id) as string[]).includes('next-community-event'));
+});
+
 test('persists demo dashboard preferences in localStorage', () => {
   const store = new Map<string, string>();
   const localStorageMock = {

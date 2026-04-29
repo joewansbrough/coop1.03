@@ -95,6 +95,8 @@ const EmptyTile: React.FC<{ label: string }> = ({ label }) => (
   </div>
 );
 
+const tileActionClass = 'transition-colors hover:bg-teal-50 dark:hover:bg-teal-950/30';
+
 const Dashboard: React.FC<DashboardProps> = ({
   isAdmin,
   user,
@@ -169,7 +171,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <div className="mt-4 space-y-2">
               {openRequests.slice(0, 3).map(request => (
-                <button key={request.id} onClick={() => navigate(`/maintenance/${request.id}`)} className="w-full rounded-2xl border border-slate-100 p-3 text-left transition-colors hover:border-teal-300 dark:border-white/5">
+                <button key={request.id} onClick={() => navigate(`/maintenance/${request.id}`)} className={`w-full rounded-2xl bg-slate-50 p-3 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
                   <div className="flex items-center justify-between gap-3">{renderRequestBadge(request)}<span className="text-[9px] font-black uppercase text-slate-400">{request.status}</span></div>
                   <p className="mt-2 line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{request.title || request.description}</p>
                 </button>
@@ -189,7 +191,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <span className="w-12 text-[10px] font-black uppercase text-slate-400">Floor {floor}</span>
                   <div className="grid flex-1 grid-cols-8 gap-1">
                     {unitsByFloor[floor].slice(0, 16).map(unit => (
-                      <button key={unit.id} onClick={() => navigate(`/admin/units/${unit.id}`)} className={`aspect-square rounded-lg text-[8px] font-black ${
+                      <button key={unit.id} onClick={() => navigate(`/admin/units/${unit.id}`)} className={`aspect-square rounded-lg text-[8px] font-black transition-transform hover:scale-105 ${
                         unit.status === 'Occupied' ? 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300' :
                         unit.status === 'Maintenance' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300' :
                         'bg-slate-100 text-slate-400 dark:bg-slate-800'
@@ -205,11 +207,10 @@ const Dashboard: React.FC<DashboardProps> = ({
         );
       }
       case 'next-meeting':
-      case 'next-community-event':
         return nextEvent ? (
-          <button onClick={() => navigate(`/calendar/${nextEvent.id}`)} className="flex h-full min-h-0 w-full flex-col text-left">
+          <button onClick={() => navigate(`/calendar/${nextEvent.id}`)} className="group flex h-full min-h-0 w-full flex-col text-left">
             <TileHeading tileId={tileId} icon="fa-calendar-day" />
-            <div className="mt-auto min-h-0 overflow-hidden rounded-2xl bg-amber-50 p-4 dark:bg-amber-950/20">
+            <div className={`mt-auto min-h-0 overflow-hidden rounded-2xl bg-amber-50 p-4 dark:bg-amber-950/20 ${tileActionClass}`}>
               <p className="text-2xl font-black text-amber-700 dark:text-amber-300">{formatShortDate(nextEvent.date)}</p>
               <p className="mt-2 line-clamp-2 text-xs font-black leading-snug text-slate-900 dark:text-white">{nextEvent.title}</p>
               <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">{nextEvent.time} - {nextEvent.location}</p>
@@ -223,7 +224,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <TileHeading tileId={tileId} icon="fa-bullhorn" action={<Link to="/communications" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Updates</Link>} />
             <div className="space-y-3">
               {recentAnnouncements.map(announcement => (
-                <Link key={announcement.id} to={`/announcements/${announcement.id}`} className="block rounded-2xl border border-slate-100 p-4 hover:border-teal-300 dark:border-white/5">
+                <Link key={announcement.id} to={`/announcements/${announcement.id}`} className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
                   <div className="flex items-center justify-between gap-2"><span className={`rounded-lg px-2 py-1 text-[8px] font-black uppercase tracking-widest ${announcement.priority === 'Urgent' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}>{announcement.priority}</span><span className="text-[9px] font-bold uppercase text-slate-400">{formatDate(announcement.date)}</span></div>
                   <p className="mt-2 line-clamp-2 text-sm font-black text-slate-900 dark:text-white">{announcement.title}</p>
                 </Link>
@@ -239,7 +240,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <TileHeading tileId={tileId} icon="fa-file-lines" action={<Link to="/documents" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Library</Link>} />
             <div className="space-y-2">
               {recentDocuments.map(document => (
-                <Link key={document.id} to="/documents" className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
+                <Link key={document.id} to="/documents" className={`flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40 ${tileActionClass}`}>
                   <div><p className="line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{document.title}</p><p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">{document.category}</p></div>
                   <span className="rounded-lg bg-white px-2 py-1 text-[9px] font-black uppercase text-slate-400 dark:bg-slate-900">{document.fileType}</span>
                 </Link>
@@ -250,9 +251,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         );
       case 'waitlist-snapshot':
         return (
-          <button onClick={() => navigate('/admin/waitlist')} className="flex h-full min-h-0 w-full flex-col text-left">
+          <button onClick={() => navigate('/admin/waitlist')} className="group flex h-full min-h-0 w-full flex-col text-left">
             <TileHeading tileId={tileId} icon="fa-clock-rotate-left" />
-            <div className="mt-auto min-h-0 overflow-hidden rounded-2xl bg-teal-50 p-4 dark:bg-teal-950/30">
+            <div className={`mt-auto min-h-0 overflow-hidden rounded-2xl bg-teal-50 p-4 dark:bg-teal-950/30 ${tileActionClass}`}>
               <p className="text-3xl font-black text-teal-700 dark:text-teal-300">{waitlistCount}</p>
               <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">Applicants waiting</p>
             </div>
@@ -264,10 +265,10 @@ const Dashboard: React.FC<DashboardProps> = ({
             <TileHeading tileId={tileId} icon="fa-screwdriver-wrench" />
             <div className="space-y-2">
               {upcomingScheduled.map(task => (
-                <div key={task.id} className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
+                <button key={task.id} type="button" onClick={() => navigate('/maintenance')} className={`w-full rounded-2xl bg-slate-50 p-3 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
                   <p className="text-xs font-black text-slate-900 dark:text-white">{task.task}</p>
                   <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">Due {formatDate(task.dueDate)} - {task.assignedTo}</p>
-                </div>
+                </button>
               ))}
               {upcomingScheduled.length === 0 && <EmptyTile label="No scheduled tasks due" />}
             </div>
@@ -275,9 +276,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         );
       case 'my-home':
         return (
-          <button onClick={() => userUnitId && navigate(`/admin/units/${userUnitId}`)} className="flex h-full min-h-0 w-full flex-col text-left">
+          <button onClick={() => userUnitId && navigate(`/admin/units/${userUnitId}`)} className="group flex h-full min-h-0 w-full flex-col text-left">
             <TileHeading tileId={tileId} icon="fa-house-user" />
-            <div className="mt-auto min-h-0 overflow-hidden rounded-2xl bg-teal-50 p-4 dark:bg-teal-950/30">
+            <div className={`mt-auto min-h-0 overflow-hidden rounded-2xl bg-teal-50 p-4 dark:bg-teal-950/30 ${tileActionClass}`}>
               <p className="truncate text-2xl font-black text-teal-700 dark:text-teal-300">{userUnit ? `Unit ${userUnit.number}` : 'No unit'}</p>
               <p className="mt-2 truncate text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">{userUnit ? `${userUnit.type} - Floor ${userUnit.floor}` : 'Contact administration'}</p>
               <p className="mt-3 text-[9px] font-black uppercase tracking-widest text-slate-500">{userOpenRequests.length} active requests</p>
@@ -290,7 +291,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <TileHeading tileId={tileId} icon="fa-list-check" action={<Link to="/maintenance" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Report issue</Link>} />
             <div className="space-y-2">
               {userOpenRequests.slice(0, 4).map(request => (
-                <button key={request.id} onClick={() => navigate(`/maintenance/${request.id}`)} className="w-full rounded-2xl border border-slate-100 p-3 text-left dark:border-white/5">
+                <button key={request.id} onClick={() => navigate(`/maintenance/${request.id}`)} className={`w-full rounded-2xl bg-slate-50 p-3 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
                   <div className="flex items-center justify-between gap-2">{renderRequestBadge(request)}<span className="text-[9px] font-black uppercase text-slate-400">{request.status}</span></div>
                   <p className="mt-2 line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{request.title || request.description}</p>
                 </button>
@@ -305,7 +306,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <TileHeading tileId={tileId} icon="fa-people-group" action={<Link to="/committees" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Committees</Link>} />
             <div className="space-y-3">
               {committees.slice(0, 3).map(committee => (
-                <Link key={committee.id} to="/committees" className="block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40">
+                <Link key={committee.id} to="/committees" className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
                   <p className="text-xs font-black text-slate-900 dark:text-white">{committee.name}</p>
                   <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-slate-500">{committee.description}</p>
                 </Link>
@@ -333,7 +334,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <TileHeading tileId={tileId} icon="fa-bolt" />
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {actions.map(action => (
-                <button key={action.path} onClick={() => navigate(action.path)} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-left transition-colors hover:bg-teal-50 dark:bg-slate-950/40 dark:hover:bg-teal-950/30">
+                <button key={action.path} onClick={() => navigate(action.path)} className={`flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
                   <i className={`fa-solid ${action.icon} text-teal-600 dark:text-teal-300`}></i>
                   <span className="text-xs font-black text-slate-900 dark:text-white">{action.label}</span>
                 </button>
