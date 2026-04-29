@@ -7,10 +7,11 @@ import DriveExplorer from '../components/DriveExplorer';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
 
-import { useUser, useRefreshData } from '../hooks/useCoopData';
+import { isDemoMode, useUser, useRefreshData } from '../hooks/useCoopData';
 import { formatDate } from '../utils/dateUtils';
 import { recordTutorialEvent } from '../utils/demoTutorial';
 import { getDocumentFileUrl, getDocumentLibraryOriginalUrl } from '../utils/dashboardDocumentLinks';
+import { demoStorage } from '../utils/demoStorage';
 
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
@@ -467,6 +468,20 @@ const ResourceLibrary: React.FC<{
 
   const handleSaveReview = async () => {
     if (isGuest || !reviewingDoc) return;
+    if (isDemoMode()) {
+      const savedDocument = {
+        ...reviewingDoc,
+        committee: reviewingDoc.committee || undefined,
+        updatedAt: new Date().toISOString(),
+      };
+      demoStorage.updateDocument(savedDocument);
+      setDocuments(prev => prev.map(d => d.id === savedDocument.id ? savedDocument : d));
+      refreshData();
+      setReviewingDoc(null);
+      showAlert('Document saved.', 'success');
+      return;
+    }
+
     try {
       const res = await fetch(`/api/documents/${reviewingDoc.id}`, {
         method: 'PUT',

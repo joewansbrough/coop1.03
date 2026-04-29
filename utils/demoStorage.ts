@@ -97,6 +97,11 @@ export const demoStorage = {
   updateAnnouncement: (ann: any) => demoStorage.updateItem('announcements', demoData.MOCK_ANNOUNCEMENTS, ann),
   deleteAnnouncement: (id: string) => demoStorage.deleteItem('announcements', demoData.MOCK_ANNOUNCEMENTS, id),
 
+  getDocuments: () => demoStorage.getAll('documents', demoData.MOCK_DOCUMENTS),
+  addDocument: (doc: any) => demoStorage.addItem('documents', demoData.MOCK_DOCUMENTS, doc),
+  updateDocument: (doc: any) => demoStorage.updateItem('documents', demoData.MOCK_DOCUMENTS, doc),
+  deleteDocument: (id: string) => demoStorage.deleteItem('documents', demoData.MOCK_DOCUMENTS, id),
+
   getTenants: () => demoStorage.getAll('tenants', demoData.MOCK_TENANTS),
   addTenant: (tenant: any) => demoStorage.addItem('tenants', demoData.MOCK_TENANTS, tenant),
   updateTenant: (tenant: any) => demoStorage.updateItem('tenants', demoData.MOCK_TENANTS, tenant),

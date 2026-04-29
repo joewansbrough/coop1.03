@@ -799,7 +799,7 @@ app.put('/api/documents/:id', requireAuth, async (req, res) => {
         title, 
         category, 
         tags: tags ? { set: tags } : undefined, 
-        committee: committee !== undefined ? (committee || null) : undefined,
+        committee: committee !== undefined ? (committee || '') : undefined,
         content 
       } as any,
       include: { currentVersion: true }

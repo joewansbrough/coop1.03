@@ -56,3 +56,26 @@ test('demo storage initializer refreshes older local demo snapshots to the curre
   delete (globalThis as any).window;
   delete (globalThis as any).localStorage;
 });
+
+test('demo storage persists document committee updates', () => {
+  const store = new Map<string, string>();
+  const localStorageMock = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+    removeItem: (key: string) => { store.delete(key); },
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    get length() { return store.size; },
+  };
+
+  (globalThis as any).window = { localStorage: localStorageMock };
+  (globalThis as any).localStorage = localStorageMock;
+
+  const document = demoStorage.getAll('documents', MOCK_DOCUMENTS)[0];
+  demoStorage.updateDocument({ ...document, committee: 'Finance Committee' });
+
+  const updated = demoStorage.getAll('documents', MOCK_DOCUMENTS).find(doc => doc.id === document.id);
+  assert.equal(updated?.committee, 'Finance Committee');
+
+  delete (globalThis as any).window;
+  delete (globalThis as any).localStorage;
+});
