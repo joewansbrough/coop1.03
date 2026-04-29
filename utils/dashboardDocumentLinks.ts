@@ -44,7 +44,7 @@ export const getDashboardDocumentLink = (document: Document): DashboardDocumentL
     }
   }
 
-  const fileUrl = getDocumentFileUrl(document);
+  const fileUrl = getDocumentLibraryOriginalUrl(document);
   if (fileUrl) {
     return { type: 'external', href: fileUrl };
   }

@@ -4,6 +4,7 @@ import { Committee, Tenant, Document, CoopEvent } from '../types';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
 import { formatDate } from '../utils/dateUtils';
+import { getDocumentFileUrl, getDocumentLibraryOriginalUrl } from '../utils/dashboardDocumentLinks';
 
 interface CommitteesProps {
   isAdmin: boolean;
@@ -191,6 +192,15 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
     setShowAssignMember(null);
     setSelectedMemberId('');
     showAlert(`${memberName} has been assigned to the committee.`, 'success');
+  };
+
+  const openCommitteeDocument = (doc: Document) => {
+    const openUrl = getDocumentLibraryOriginalUrl(doc);
+    if (!openUrl) {
+      showAlert('The original file is not available for this document.', 'info');
+      return;
+    }
+    window.open(openUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -484,15 +494,18 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                  />
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {committeeDocs.length > 0 ? committeeDocs.map(doc => (
+                    {committeeDocs.length > 0 ? committeeDocs.map(doc => {
+                      const fileUrl = getDocumentFileUrl(doc);
+                      const isDriveDocument = fileUrl?.includes('drive.google.com');
+                      return (
                       <div 
                         key={doc.id} 
-                        onClick={() => doc.url && doc.url !== '#' && window.open(doc.url, '_blank')}
+                        onClick={() => openCommitteeDocument(doc)}
                         className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-brand-300 dark:hover:border-brand-500/50 hover:bg-white dark:hover:bg-slate-800 transition-all group cursor-pointer"
                       >
                         <div className="flex items-center gap-4 min-w-0 flex-1">
                            <div className="w-10 h-10 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center text-rose-500 group-hover:bg-rose-50 transition-colors">
-                             <i className={`fa-solid ${doc.fileType === 'pdf' ? 'fa-file-pdf' : doc.url.includes('drive.google.com') ? 'fa-file-word text-blue-500' : 'fa-file-lines text-slate-400'} text-xl`}></i>
+                             <i className={`fa-solid ${doc.fileType === 'pdf' ? 'fa-file-pdf' : isDriveDocument ? 'fa-file-word text-blue-500' : 'fa-file-lines text-slate-400'} text-xl`}></i>
                            </div>
                            <div className="min-w-0 flex-1 overflow-hidden">
                               <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{doc.title}</p>
@@ -501,7 +514,8 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                         </div>
                         <i className="fa-solid fa-arrow-up-right-from-square shrink-0 text-slate-300 group-hover:text-brand-500 group-hover:scale-110 transition-all p-2"></i>
                       </div>
-                    )) : (
+                    );
+                    }) : (
                       <p className="col-span-2 text-center py-12 text-slate-300 italic text-sm border-2 border-dashed border-slate-100 dark:border-white/5 rounded-2xl">No documents found matching your criteria.</p>
                     )}
                  </div>

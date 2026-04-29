@@ -61,3 +61,24 @@ test('routes blob-backed documents through the authenticated original file endpo
     },
   }), '/api/documents/doc-blob/original');
 });
+
+test('links ordinary blob-backed documents through the authenticated original endpoint', () => {
+  assert.deepEqual(getDashboardDocumentLink({
+    ...minutesDocument,
+    id: 'doc-policy-blob',
+    title: 'Pet Policy',
+    category: 'Policy',
+    tags: ['policy'],
+    url: '#',
+    currentVersion: {
+      id: 'version-2',
+      version: 2,
+      source: 'upload',
+      storageUrl: 'https://blob.example/pet-policy.pdf',
+      ingestionStatus: 'ready',
+    },
+  }), {
+    type: 'external',
+    href: '/api/documents/doc-policy-blob/original',
+  });
+});
