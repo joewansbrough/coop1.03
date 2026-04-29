@@ -196,7 +196,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     const tileSize: DashboardTileSize = tile.size;
 
     const listLimit = tileSize === 'small' ? 1 : tileSize === 'large' ? 5 : 3;
-    const documentLimit = tileSize === 'small' ? 2 : tileSize === 'large' ? 6 : 3;
+    const documentLimit = listLimit;
     const actionLimit = tileSize === 'small' ? 2 : 4;
 
     switch (tileId) {
@@ -445,11 +445,19 @@ const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div>
             <TileHeading tileId={tileId} icon="fa-file-lines" action={<Link to="/documents" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Library</Link>} />
-            <div className="space-y-2">
+            <div className="space-y-3">
               {recentDocuments.slice(0, documentLimit).map(document => (
-                <Link key={document.id} to="/documents" className={`flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40 ${tileActionClass}`}>
-                  <div><p className="line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{document.title}</p><p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">{document.category}{tileSize === 'large' && document.author ? ` - ${document.author}` : ''}</p></div>
-                  <span className="rounded-lg bg-white px-2 py-1 text-[9px] font-black uppercase text-slate-400 dark:bg-slate-900">{document.fileType}</span>
+                <Link key={document.id} to="/documents" className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-lg bg-white px-2 py-1 text-[8px] font-black uppercase tracking-widest text-slate-500 dark:bg-slate-900 dark:text-slate-400">{document.fileType}</span>
+                    <span className="text-[9px] font-bold uppercase text-slate-400">{formatDate(document.date)}</span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-sm font-black text-slate-900 dark:text-white">{document.title}</p>
+                  {tileSize === 'large' && (
+                    <p className="mt-2 line-clamp-2 text-xs font-semibold leading-relaxed text-slate-500">
+                      {document.category}{document.author ? ` - ${document.author}` : ''}
+                    </p>
+                  )}
                 </Link>
               ))}
               {recentDocuments.length === 0 && <EmptyTile label="No documents yet" />}
