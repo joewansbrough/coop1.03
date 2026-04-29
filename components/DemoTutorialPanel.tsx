@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronDown, ExternalLink, RotateCcw, X } from 'lucide-react';
+import { Check, ChevronDown, ExternalLink, Maximize2, RotateCcw, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   getNextIncompleteStep,
@@ -48,6 +48,11 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
     persist(resetTutorialState(state));
   };
 
+  const toggleCollapsed = () => {
+    setShouldNudge(false);
+    setIsCollapsed(!isCollapsed);
+  };
+
   useEffect(() => {
     if (!shouldNudge) return;
     const timer = window.setTimeout(() => setShouldNudge(false), 2600);
@@ -55,27 +60,30 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
   }, [shouldNudge]);
 
   return (
-    <aside className={`fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)] ${shouldNudge ? 'demo-guide-nudge' : ''}`}>
+    <aside className={`fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)] ${isCollapsed ? '' : 'max-h-[88dvh]'} ${shouldNudge ? 'demo-guide-nudge' : ''}`}>
       <div className="px-4 py-3 sm:p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-950/50">
         <button
           type="button"
-          onClick={() => {
-            setShouldNudge(false);
-            setIsCollapsed(!isCollapsed);
-          }}
+          onClick={toggleCollapsed}
           className="mx-auto mb-3 block h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700 sm:hidden"
           aria-label={isCollapsed ? 'Expand demo guide' : 'Collapse demo guide'}
+          aria-expanded={!isCollapsed}
         />
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="min-w-0 flex-1 text-left sm:pointer-events-none"
+            aria-expanded={!isCollapsed}
+          >
             <p className="text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-[0.22em]">Demo Guide</p>
             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight mt-1 truncate">{track.title}</h3>
             {isCollapsed && nextStep && (
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mt-1 truncate sm:hidden">{nextStep.title}</p>
             )}
-          </div>
+          </button>
           <div className="flex gap-1">
-            <button onClick={() => { setShouldNudge(false); setIsCollapsed(!isCollapsed); }} className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-white dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center justify-center" aria-label={isCollapsed ? 'Expand tutorial panel' : 'Collapse tutorial panel'}>
+            <button onClick={toggleCollapsed} className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-white dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center justify-center" aria-label={isCollapsed ? 'Expand tutorial panel' : 'Collapse tutorial panel'} aria-expanded={!isCollapsed}>
               <ChevronDown className={`w-4 h-4 mx-auto transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
             </button>
             <button onClick={dismiss} className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-white dark:bg-white/10 text-slate-500 hover:text-rose-500 transition-colors flex items-center justify-center" aria-label="Dismiss tutorial panel">
@@ -92,10 +100,20 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
             <div className="h-full bg-teal-600 transition-all" style={{ width: `${progress}%` }} />
           </div>
         </div>
+        {isCollapsed && (
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors active:scale-[0.99] dark:bg-white dark:text-slate-950 sm:hidden"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            View full guide
+          </button>
+        )}
       </div>
 
       {!isCollapsed && (
-        <div className="p-3 max-h-[62dvh] sm:max-h-[58vh] overflow-y-auto">
+        <div className="p-3 max-h-[calc(88dvh-9rem)] sm:max-h-[58vh] overflow-y-auto">
           {nextStep && (
             <div className="m-1 mb-3 p-3 rounded-2xl bg-teal-50 dark:bg-teal-950/30 border border-teal-100 dark:border-teal-900/40">
               <p className="text-[9px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300 mb-1">Next up</p>
