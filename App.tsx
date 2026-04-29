@@ -20,7 +20,7 @@ import Waitlist from './pages/Waitlist';
 import PolicyAssistant from './pages/PolicyAssistant';
 import Login from './pages/Login';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { useUser, useUnits, useTenants, useMaintenance, useAnnouncements, useDocuments, useCommittees, useEvents } from './hooks/useCoopData';
+import { useUser, useUnits, useTenants, useMaintenance, useAnnouncements, useDocuments, useCommittees, useEvents, useScheduledMaintenance } from './hooks/useCoopData';
 import { DEMO_TUTORIAL_ROLE_VIEW_KEY, recordTutorialEvent } from './utils/demoTutorial';
 
 const queryClient = new QueryClient({
@@ -94,6 +94,13 @@ const AppContent: React.FC = () => {
     error: eventsError
   } = useEvents({ enabled: isEnabled });
 
+  const {
+    data: scheduledMaintenance = [],
+    isLoading: isScheduledMaintenanceLoading,
+    isError: isScheduledMaintenanceError,
+    error: scheduledMaintenanceError
+  } = useScheduledMaintenance({ enabled: isEnabled });
+
   const createQueryArraySetter = <T,>(queryKey: string[]) =>
     (value: React.SetStateAction<T[]>) => {
       queryClient.setQueryData<T[]>(queryKey, (previous = []) =>
@@ -121,12 +128,13 @@ const AppContent: React.FC = () => {
       { name: 'Documents', error: documentsError },
       { name: 'Committees', error: committeesError },
       { name: 'Events', error: eventsError },
+      { name: 'Scheduled Maintenance', error: scheduledMaintenanceError },
     ].filter(e => e.error);
 
     if (errors.length > 0) {
       console.error('Data loading errors:', errors);
     }
-  }, [unitsError, tenantsError, requestsError, announcementsError, documentsError, committeesError, eventsError]);
+  }, [unitsError, tenantsError, requestsError, announcementsError, documentsError, committeesError, eventsError, scheduledMaintenanceError]);
 
   useEffect(() => {
     if (!user || typeof window === 'undefined') return;
@@ -192,6 +200,9 @@ const AppContent: React.FC = () => {
                 events={events}
                 isEventsLoading={isEventsLoading}
                 isEventsError={isEventsError}
+                documents={documents}
+                committees={committees}
+                scheduledMaintenance={scheduledMaintenance}
               />
             }
           />

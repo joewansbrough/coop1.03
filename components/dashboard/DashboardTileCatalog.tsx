@@ -1,0 +1,59 @@
+import React from 'react';
+import {
+  DASHBOARD_TILE_REGISTRY,
+  addDashboardTile,
+  getAvailableDashboardTiles,
+  type DashboardPreference,
+  type DashboardRole,
+} from '../../utils/dashboardPreferences';
+
+interface DashboardTileCatalogProps {
+  role: DashboardRole;
+  preference: DashboardPreference;
+  onPreferenceChange: (preference: DashboardPreference) => void;
+}
+
+const DashboardTileCatalog: React.FC<DashboardTileCatalogProps> = ({
+  role,
+  preference,
+  onPreferenceChange,
+}) => {
+  const availableTiles = getAvailableDashboardTiles(role);
+
+  return (
+    <div className="rounded-[20px] border border-dashed border-slate-300 bg-white/70 p-4 dark:border-white/10 dark:bg-slate-900/70">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400">Tile catalog</p>
+          <h3 className="mt-1 text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white">Add or restore tiles</h3>
+        </div>
+        <i className="fa-solid fa-layer-group text-slate-300 dark:text-slate-700"></i>
+      </div>
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {availableTiles.map(tile => {
+          const current = preference.tiles.find(item => item.id === tile.id);
+          const isVisible = current && !current.hidden;
+          return (
+            <button
+              key={tile.id}
+              type="button"
+              disabled={isVisible}
+              onClick={() => onPreferenceChange(addDashboardTile(preference, role, tile.id))}
+              className={`rounded-2xl border p-4 text-left transition-all ${
+                isVisible
+                  ? 'cursor-default border-slate-100 bg-slate-50 text-slate-300 dark:border-white/5 dark:bg-slate-950/50 dark:text-slate-600'
+                  : 'border-slate-200 bg-white hover:border-teal-400 hover:shadow-sm dark:border-white/10 dark:bg-slate-950/40 dark:hover:border-teal-500'
+              }`}
+            >
+              <p className="text-xs font-black text-slate-900 dark:text-white">{DASHBOARD_TILE_REGISTRY[tile.id].title}</p>
+              <p className="mt-1 line-clamp-2 text-[10px] font-semibold leading-relaxed text-slate-500 dark:text-slate-400">{tile.description}</p>
+              <p className="mt-3 text-[9px] font-black uppercase tracking-widest text-teal-600 dark:text-teal-400">{isVisible ? 'Visible' : current?.hidden ? 'Restore' : 'Add tile'}</p>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+export default DashboardTileCatalog;

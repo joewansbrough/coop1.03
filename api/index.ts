@@ -8,6 +8,11 @@ import { put } from '@vercel/blob';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import driveRoutes from './drive.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
+import {
+  getStoredDashboardPreference,
+  saveStoredDashboardPreference,
+} from '../services/dashboardPreferenceStore.js';
+import { type DashboardRole } from '../utils/dashboardPreferences.js';
 
 
 
@@ -123,6 +128,9 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
   return res.status(401).json({ error: 'Unauthorized' });
 };
 
+const getDashboardRole = (req: express.Request): DashboardRole =>
+  ((req as any).user?.isAdmin || (req as any).session?.user?.isAdmin) ? 'admin' : 'resident';
+
 // Robust Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
   const host = req.get('x-forwarded-host') || req.get('host');
@@ -152,6 +160,43 @@ app.get('/api/config', requireAuth, (req, res) => {
     googleClientId: process.env.GOOGLE_CLIENT_ID,
     googleApiKey: process.env.PICKER_API_KEY,
   });
+});
+
+app.get('/api/dashboard/preferences', requireAuth, async (req, res, next) => {
+  try {
+    const user = (req as any).user || (req as any).session?.user;
+    if (!user?.email) return res.status(401).json({ error: 'User session invalid' });
+
+    const p = getPrisma();
+    const preference = await getStoredDashboardPreference(p, {
+      cooperativeId: await getCoopId(req, p),
+      userEmail: user.email,
+      role: getDashboardRole(req),
+    });
+
+    res.json(preference);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/dashboard/preferences', requireAuth, async (req, res, next) => {
+  try {
+    const user = (req as any).user || (req as any).session?.user;
+    if (!user?.email) return res.status(401).json({ error: 'User session invalid' });
+
+    const p = getPrisma();
+    const preference = await saveStoredDashboardPreference(p, {
+      cooperativeId: await getCoopId(req, p),
+      userEmail: user.email,
+      role: getDashboardRole(req),
+      preference: req.body,
+    });
+
+    res.json(preference);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Auth Routes
@@ -1215,6 +1260,20 @@ app.get('/api/migrate', async (req, res) => {
     `);
     await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DocumentIngestionJob_cooperativeId_idx" ON "DocumentIngestionJob"("cooperativeId");`);
     await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DocumentIngestionJob_status_nextRetryAt_idx" ON "DocumentIngestionJob"("status", "nextRetryAt");`);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "DashboardPreference" (
+        "id" TEXT NOT NULL,
+        "cooperativeId" TEXT NOT NULL,
+        "userEmail" TEXT NOT NULL,
+        "layout" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "DashboardPreference_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "DashboardPreference_cooperativeId_userEmail_key" ON "DashboardPreference"("cooperativeId", "userEmail");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DashboardPreference_cooperativeId_idx" ON "DashboardPreference"("cooperativeId");`);
 
     // 5. Foreign Key Constraints (Ensure they exist or add them)
     // Note: We skip complex FK management here to avoid errors if they already exist, 

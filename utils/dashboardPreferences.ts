@@ -1,0 +1,323 @@
+export const DASHBOARD_PREFERENCE_VERSION = 1;
+
+export type DashboardRole = 'admin' | 'resident';
+export type DashboardTileSize = 'small' | 'wide' | 'tall' | 'large';
+
+export type DashboardTileId =
+  | 'maintenance-pulse'
+  | 'building-map'
+  | 'next-meeting'
+  | 'announcement-digest'
+  | 'document-watch'
+  | 'waitlist-snapshot'
+  | 'scheduled-maintenance'
+  | 'quick-actions'
+  | 'my-home'
+  | 'my-requests'
+  | 'next-community-event'
+  | 'community-updates'
+  | 'useful-documents'
+  | 'participation-prompts';
+
+export interface DashboardTilePreference {
+  id: DashboardTileId;
+  size: DashboardTileSize;
+  hidden: boolean;
+}
+
+export interface DashboardPreference {
+  version: number;
+  tiles: DashboardTilePreference[];
+}
+
+export interface DashboardTileDefinition {
+  id: DashboardTileId;
+  title: string;
+  description: string;
+  roles: DashboardRole[];
+  defaultSize: DashboardTileSize;
+  allowedSizes: DashboardTileSize[];
+  defaultOrder: Record<DashboardRole, number | null>;
+}
+
+export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefinition> = {
+  'maintenance-pulse': {
+    id: 'maintenance-pulse',
+    title: 'Maintenance Pulse',
+    description: 'Open requests grouped by priority and status.',
+    roles: ['admin'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: 10, resident: null },
+  },
+  'building-map': {
+    id: 'building-map',
+    title: 'Building Map',
+    description: 'Compact floor and unit health map.',
+    roles: ['admin'],
+    defaultSize: 'large',
+    allowedSizes: ['wide', 'large'],
+    defaultOrder: { admin: 20, resident: null },
+  },
+  'next-meeting': {
+    id: 'next-meeting',
+    title: 'Next Meeting',
+    description: 'Upcoming meeting and readiness summary.',
+    roles: ['admin'],
+    defaultSize: 'small',
+    allowedSizes: ['small', 'wide'],
+    defaultOrder: { admin: 30, resident: null },
+  },
+  'announcement-digest': {
+    id: 'announcement-digest',
+    title: 'Announcement Digest',
+    description: 'Urgent and recent community notices.',
+    roles: ['admin'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: 40, resident: null },
+  },
+  'document-watch': {
+    id: 'document-watch',
+    title: 'Document Watch',
+    description: 'Recently updated documents and archive readiness.',
+    roles: ['admin'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: 50, resident: null },
+  },
+  'waitlist-snapshot': {
+    id: 'waitlist-snapshot',
+    title: 'Waitlist Snapshot',
+    description: 'Waitlist size and follow-up prompt.',
+    roles: ['admin'],
+    defaultSize: 'small',
+    allowedSizes: ['small', 'wide'],
+    defaultOrder: { admin: 60, resident: null },
+  },
+  'scheduled-maintenance': {
+    id: 'scheduled-maintenance',
+    title: 'Scheduled Maintenance',
+    description: 'Upcoming planned work by urgency.',
+    roles: ['admin'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: 70, resident: null },
+  },
+  'quick-actions': {
+    id: 'quick-actions',
+    title: 'Quick Actions',
+    description: 'Frequently used dashboard actions.',
+    roles: ['admin', 'resident'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide'],
+    defaultOrder: { admin: 80, resident: 70 },
+  },
+  'my-home': {
+    id: 'my-home',
+    title: 'My Home',
+    description: 'Unit and residency context.',
+    roles: ['resident'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: null, resident: 10 },
+  },
+  'my-requests': {
+    id: 'my-requests',
+    title: 'My Requests',
+    description: 'Active maintenance request timeline.',
+    roles: ['resident'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: null, resident: 20 },
+  },
+  'next-community-event': {
+    id: 'next-community-event',
+    title: 'Next Community Event',
+    description: 'Upcoming meeting or community event.',
+    roles: ['resident'],
+    defaultSize: 'small',
+    allowedSizes: ['small', 'wide'],
+    defaultOrder: { admin: null, resident: 30 },
+  },
+  'community-updates': {
+    id: 'community-updates',
+    title: 'Community Updates',
+    description: 'Recent announcements and urgent notices.',
+    roles: ['resident'],
+    defaultSize: 'large',
+    allowedSizes: ['wide', 'large'],
+    defaultOrder: { admin: null, resident: 40 },
+  },
+  'useful-documents': {
+    id: 'useful-documents',
+    title: 'Useful Documents',
+    description: 'Policies, forms, and recently updated records.',
+    roles: ['resident'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: null, resident: 50 },
+  },
+  'participation-prompts': {
+    id: 'participation-prompts',
+    title: 'Participation Prompts',
+    description: 'Committee and event opportunities.',
+    roles: ['resident'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide'],
+    defaultOrder: { admin: null, resident: 60 },
+  },
+};
+
+const DEMO_STORAGE_PREFIX = 'demo_dashboard_preferences_';
+
+const isDashboardTileId = (id: unknown): id is DashboardTileId =>
+  typeof id === 'string' && id in DASHBOARD_TILE_REGISTRY;
+
+const isDashboardTileSize = (size: unknown): size is DashboardTileSize =>
+  size === 'small' || size === 'wide' || size === 'tall' || size === 'large';
+
+export const getAvailableDashboardTiles = (role: DashboardRole): DashboardTileDefinition[] =>
+  Object.values(DASHBOARD_TILE_REGISTRY)
+    .filter(tile => tile.roles.includes(role))
+    .sort((a, b) => (a.defaultOrder[role] ?? 999) - (b.defaultOrder[role] ?? 999));
+
+export const createDefaultDashboardLayout = (role: DashboardRole): DashboardPreference => ({
+  version: DASHBOARD_PREFERENCE_VERSION,
+  tiles: getAvailableDashboardTiles(role).map(tile => ({
+    id: tile.id,
+    size: tile.defaultSize,
+    hidden: false,
+  })),
+});
+
+export const normalizeDashboardPreference = (
+  preference: unknown,
+  role: DashboardRole,
+): DashboardPreference => {
+  const defaults = createDefaultDashboardLayout(role);
+  const availableIds = new Set(getAvailableDashboardTiles(role).map(tile => tile.id));
+  const seen = new Set<DashboardTileId>();
+  const inputTiles = (
+    typeof preference === 'object' &&
+    preference !== null &&
+    Array.isArray((preference as { tiles?: unknown }).tiles)
+  )
+    ? (preference as { tiles: unknown[] }).tiles
+    : [];
+
+  const normalizedTiles: DashboardTilePreference[] = [];
+
+  for (const rawTile of inputTiles) {
+    if (typeof rawTile !== 'object' || rawTile === null) continue;
+    const tile = rawTile as { id?: unknown; size?: unknown; hidden?: unknown };
+    if (!isDashboardTileId(tile.id)) continue;
+    if (!availableIds.has(tile.id)) continue;
+    if (seen.has(tile.id)) continue;
+    seen.add(tile.id);
+
+    const definition = DASHBOARD_TILE_REGISTRY[tile.id];
+    const size = isDashboardTileSize(tile.size) && definition.allowedSizes.includes(tile.size)
+      ? tile.size
+      : definition.defaultSize;
+
+    normalizedTiles.push({
+      id: tile.id,
+      size,
+      hidden: tile.hidden === true,
+    });
+  }
+
+  for (const defaultTile of defaults.tiles) {
+    if (!seen.has(defaultTile.id)) normalizedTiles.push(defaultTile);
+  }
+
+  return {
+    version: DASHBOARD_PREFERENCE_VERSION,
+    tiles: normalizedTiles,
+  };
+};
+
+export const loadDemoDashboardPreference = (role: DashboardRole): DashboardPreference | null => {
+  if (typeof localStorage === 'undefined') return null;
+  const raw = localStorage.getItem(`${DEMO_STORAGE_PREFIX}${role}`);
+  if (!raw) return null;
+  try {
+    return normalizeDashboardPreference(JSON.parse(raw), role);
+  } catch {
+    return null;
+  }
+};
+
+export const saveDemoDashboardPreference = (role: DashboardRole, preference: DashboardPreference) => {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(
+    `${DEMO_STORAGE_PREFIX}${role}`,
+    JSON.stringify(normalizeDashboardPreference(preference, role)),
+  );
+};
+
+export const moveDashboardTile = (
+  preference: DashboardPreference,
+  activeId: DashboardTileId,
+  overId: DashboardTileId,
+): DashboardPreference => {
+  const fromIndex = preference.tiles.findIndex(tile => tile.id === activeId);
+  const toIndex = preference.tiles.findIndex(tile => tile.id === overId);
+  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return preference;
+
+  const tiles = [...preference.tiles];
+  const [moved] = tiles.splice(fromIndex, 1);
+  tiles.splice(toIndex, 0, moved);
+  return { ...preference, tiles };
+};
+
+export const resizeDashboardTile = (
+  preference: DashboardPreference,
+  role: DashboardRole,
+  tileId: DashboardTileId,
+  size: DashboardTileSize,
+): DashboardPreference => normalizeDashboardPreference({
+  ...preference,
+  tiles: preference.tiles.map(tile => (
+    tile.id === tileId ? { ...tile, size } : tile
+  )),
+}, role);
+
+export const hideDashboardTile = (
+  preference: DashboardPreference,
+  role: DashboardRole,
+  tileId: DashboardTileId,
+): DashboardPreference => normalizeDashboardPreference({
+  ...preference,
+  tiles: preference.tiles.map(tile => (
+    tile.id === tileId ? { ...tile, hidden: true } : tile
+  )),
+}, role);
+
+export const addDashboardTile = (
+  preference: DashboardPreference,
+  role: DashboardRole,
+  tileId: DashboardTileId,
+): DashboardPreference => {
+  const definition = DASHBOARD_TILE_REGISTRY[tileId];
+  if (!definition.roles.includes(role)) return normalizeDashboardPreference(preference, role);
+
+  const existing = preference.tiles.find(tile => tile.id === tileId);
+  if (existing) {
+    return normalizeDashboardPreference({
+      ...preference,
+      tiles: preference.tiles.map(tile => (
+        tile.id === tileId ? { ...tile, hidden: false } : tile
+      )),
+    }, role);
+  }
+
+  return normalizeDashboardPreference({
+    ...preference,
+    tiles: [
+      ...preference.tiles,
+      { id: tileId, size: definition.defaultSize, hidden: false },
+    ],
+  }, role);
+};
