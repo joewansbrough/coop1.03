@@ -86,46 +86,47 @@ const SortableTile: React.FC<{
     >
       <div className="h-full overflow-hidden rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition-all dark:border-white/5 dark:bg-slate-900 sm:p-5">
         {isEditing && (
-          <div className="mb-3 grid gap-2 border-b border-slate-100 pb-3 dark:border-white/5 sm:mb-4 sm:flex sm:items-center sm:justify-between">
+          <div className="mb-3 flex min-w-0 items-center gap-1 border-b border-slate-100 pb-3 dark:border-white/5 sm:mb-4">
             <button
               type="button"
               {...sortable.attributes}
               {...sortable.listeners}
-              className="inline-flex h-11 touch-none items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:justify-start sm:py-2"
+              className="inline-flex h-10 w-10 shrink-0 touch-none items-center justify-center rounded-xl bg-slate-100 text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-9"
               aria-label={`Drag ${definition.title}`}
+              title={`Drag ${definition.title}`}
             >
               <i className="fa-solid fa-grip-lines"></i>
-              Move
             </button>
-            <div className="grid grid-cols-4 items-center gap-1 sm:flex sm:flex-wrap">
-              <button type="button" onClick={() => moveBy(-1)} className="h-11 rounded-xl bg-slate-100 text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-9" aria-label={`Move ${definition.title} earlier`}>
-                <i className="fa-solid fa-arrow-left"></i>
-              </button>
-              <button type="button" onClick={() => moveBy(1)} className="h-11 rounded-xl bg-slate-100 text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-9" aria-label={`Move ${definition.title} later`}>
-                <i className="fa-solid fa-arrow-right"></i>
-              </button>
-              <button
-                type="button"
-                onClick={() => onPreferenceChange({
-                  ...preference,
-                  tiles: preference.tiles.map(item => item.id === tile.id ? { ...item, size: nextSize(item) } : item),
-                })}
-                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-100 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:px-3 sm:py-2"
-              >
-                {tile.size}
-              </button>
-              <button
-                type="button"
-                onClick={() => onPreferenceChange({
-                  ...preference,
-                  tiles: preference.tiles.map(item => item.id === tile.id ? { ...item, hidden: true } : item),
-                })}
-                className="h-11 rounded-xl bg-rose-50 text-rose-600 active:scale-95 dark:bg-rose-950/30 dark:text-rose-300 sm:h-9 sm:w-9"
-                aria-label={`Hide ${definition.title}`}
-              >
-                <i className="fa-solid fa-eye-slash"></i>
-              </button>
-            </div>
+            <button type="button" onClick={() => moveBy(-1)} className="h-10 w-10 shrink-0 rounded-xl bg-slate-100 text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-9" aria-label={`Move ${definition.title} earlier`} title={`Move ${definition.title} earlier`}>
+              <i className="fa-solid fa-arrow-left"></i>
+            </button>
+            <button type="button" onClick={() => moveBy(1)} className="h-10 w-10 shrink-0 rounded-xl bg-slate-100 text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-9" aria-label={`Move ${definition.title} later`} title={`Move ${definition.title} later`}>
+              <i className="fa-solid fa-arrow-right"></i>
+            </button>
+            <button
+              type="button"
+              onClick={() => onPreferenceChange({
+                ...preference,
+                tiles: preference.tiles.map(item => item.id === tile.id ? { ...item, size: nextSize(item) } : item),
+              })}
+              className="inline-flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl bg-slate-100 px-1 text-[9px] font-black uppercase tracking-tight text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:px-2 sm:text-[10px]"
+              aria-label={`Resize ${definition.title}, current size ${tile.size}`}
+              title={`Resize ${definition.title}`}
+            >
+              <span className="truncate">{tile.size}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onPreferenceChange({
+                ...preference,
+                tiles: preference.tiles.map(item => item.id === tile.id ? { ...item, hidden: true } : item),
+              })}
+              className="h-10 w-10 shrink-0 rounded-xl bg-rose-50 text-rose-600 active:scale-95 dark:bg-rose-950/30 dark:text-rose-300 sm:h-9 sm:w-9"
+              aria-label={`Hide ${definition.title}`}
+              title={`Hide ${definition.title}`}
+            >
+              <i className="fa-solid fa-eye-slash"></i>
+            </button>
           </div>
         )}
         {children}

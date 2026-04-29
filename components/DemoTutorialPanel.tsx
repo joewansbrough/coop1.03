@@ -28,11 +28,6 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
   const track = getTutorialTrack(state.trackId);
   const nextStep = useMemo(() => getNextIncompleteStep(state), [state]);
 
-  if (!track || state.isPanelDismissed) return null;
-
-  const completedCount = state.completedStepIds.length;
-  const progress = Math.round((completedCount / track.steps.length) * 100);
-
   const persist = (nextState: DemoTutorialState | null) => {
     if (nextState) saveTutorialState(nextState);
     onStateChange(nextState);
@@ -88,6 +83,11 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
     const timer = window.setTimeout(() => setShouldNudge(false), 2600);
     return () => window.clearTimeout(timer);
   }, [shouldNudge]);
+
+  if (!track || state.isPanelDismissed) return null;
+
+  const completedCount = state.completedStepIds.length;
+  const progress = Math.round((completedCount / track.steps.length) * 100);
 
   return (
     <aside className={`fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)] ${isCollapsed ? '' : 'max-h-[88dvh]'} ${shouldNudge ? 'demo-guide-nudge' : ''}`}>
