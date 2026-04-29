@@ -10,6 +10,8 @@ import {
   type DashboardPreference,
   type DashboardRole,
   type DashboardTileId,
+  type DashboardTilePreference,
+  type DashboardTileSize,
 } from '../utils/dashboardPreferences';
 import { formatDate, formatShortDate } from '../utils/dateUtils';
 import {
@@ -74,6 +76,31 @@ const getNextEvent = (events: CoopEvent[]) => {
     .sort((a, b) => asDate(a.date).getTime() - asDate(b.date).getTime())[0];
 };
 
+const getUpcomingEvents = (events: CoopEvent[], limit = 6) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return [...events]
+    .filter(event => {
+      const eventDate = asDate(event.date);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate >= today;
+    })
+    .sort((a, b) => asDate(a.date).getTime() - asDate(b.date).getTime())
+    .slice(0, limit);
+};
+
+const getCalendarDays = (anchor?: string) => {
+  const base = anchor ? asDate(anchor) : new Date();
+  const year = base.getFullYear();
+  const month = base.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  return Array.from({ length: firstDay.getDay() + daysInMonth }, (_, index) => {
+    const day = index - firstDay.getDay() + 1;
+    return day > 0 ? day : null;
+  });
+};
+
 const TileHeading: React.FC<{ tileId: DashboardTileId; icon: string; action?: React.ReactNode }> = ({ tileId, icon, action }) => (
   <div className="mb-4 flex items-start justify-between gap-3 sm:mb-5">
     <div className="flex min-w-0 items-start gap-3">
@@ -127,8 +154,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   const openRequests = requests.filter(request => openStatuses.has(request.status));
   const userOpenRequests = userUnitId ? openRequests.filter(request => request.unitId === userUnitId) : [];
   const nextEvent = getNextEvent(events);
-  const recentAnnouncements = [...announcements].sort((a, b) => asDate(b.date).getTime() - asDate(a.date).getTime()).slice(0, 3);
-  const recentDocuments = [...documents].sort((a, b) => asDate(b.date).getTime() - asDate(a.date).getTime()).slice(0, 4);
+  const upcomingEvents = getUpcomingEvents(events, 6);
+  const recentAnnouncements = [...announcements].sort((a, b) => asDate(b.date).getTime() - asDate(a.date).getTime()).slice(0, 5);
+  const recentDocuments = [...documents].sort((a, b) => asDate(b.date).getTime() - asDate(a.date).getTime()).slice(0, 6);
   const upcomingScheduled = [...scheduledMaintenance]
     .filter(task => !task.isCompleted)
     .sort((a, b) => asDate(a.dueDate).getTime() - asDate(b.dueDate).getTime())
@@ -156,7 +184,14 @@ const Dashboard: React.FC<DashboardProps> = ({
     </span>
   );
 
-  const renderTile = (tileId: DashboardTileId) => {
+  const renderTile = (tile: DashboardTilePreference) => {
+    const tileId = tile.id;
+    const tileSize: DashboardTileSize = tile.size;
+
+    const listLimit = tileSize === 'small' ? 1 : tileSize === 'large' ? 5 : 3;
+    const documentLimit = tileSize === 'small' ? 2 : tileSize === 'large' ? 6 : 4;
+    const actionLimit = tileSize === 'small' ? 2 : 4;
+
     switch (tileId) {
       case 'maintenance-pulse': {
         const emergency = openRequests.filter(request => request.priority === MaintenancePriority.EMERGENCY).length;
@@ -169,14 +204,28 @@ const Dashboard: React.FC<DashboardProps> = ({
               <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20 sm:p-4"><p className="text-xl font-black text-amber-600 sm:text-2xl">{high}</p><p className="text-[9px] font-black uppercase tracking-widest text-amber-700/70">High</p></div>
               <div className="rounded-2xl bg-rose-50 p-3 dark:bg-rose-950/20 sm:p-4"><p className="text-xl font-black text-rose-600 sm:text-2xl">{emergency}</p><p className="text-[9px] font-black uppercase tracking-widest text-rose-700/70">Emergency</p></div>
             </div>
-            <div className="mt-4 space-y-2">
-              {openRequests.slice(0, 3).map(request => (
-                <button key={request.id} onClick={() => navigate(`/maintenance/${request.id}`)} className={`w-full rounded-2xl bg-slate-50 p-3 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
-                  <div className="flex items-center justify-between gap-3">{renderRequestBadge(request)}<span className="text-[9px] font-black uppercase text-slate-400">{request.status}</span></div>
-                  <p className="mt-2 line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{request.title || request.description}</p>
-                </button>
-              ))}
-            </div>
+            {tileSize !== 'small' && (
+              <div className="mt-4 space-y-2">
+                {openRequests.slice(0, tileSize === 'large' ? 5 : 3).map(request => (
+                  <button key={request.id} onClick={() => navigate(`/maintenance/${request.id}`)} className={`w-full rounded-2xl bg-slate-50 p-3 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
+                    <div className="flex items-center justify-between gap-3">{renderRequestBadge(request)}<span className="text-[9px] font-black uppercase text-slate-400">{request.status}</span></div>
+                    <p className="mt-2 line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{request.title || request.description}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+            {tileSize === 'large' && (
+              <div className="mt-auto grid grid-cols-2 gap-2 pt-4">
+                <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
+                  <p className="text-xl font-black text-teal-700 dark:text-teal-300">{currentResidents.length}</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-teal-700/70">Residents</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40">
+                  <p className="text-xl font-black text-slate-900 dark:text-white">{units.length}</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Units tracked</p>
+                </div>
+              </div>
+            )}
           </div>
         );
       }
@@ -207,26 +256,96 @@ const Dashboard: React.FC<DashboardProps> = ({
         );
       }
       case 'next-meeting':
-        return nextEvent ? (
-          <button onClick={() => navigate(`/calendar/${nextEvent.id}`)} className="group flex h-full min-h-0 w-full flex-col text-left">
-            <TileHeading tileId={tileId} icon="fa-calendar-day" />
-            <div className={`min-h-0 overflow-hidden rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20 sm:p-4 ${tileActionClass}`}>
-              <p className="text-2xl font-black text-amber-700 dark:text-amber-300">{formatShortDate(nextEvent.date)}</p>
-              <p className="mt-2 line-clamp-2 text-xs font-black leading-snug text-slate-900 dark:text-white">{nextEvent.title}</p>
-              <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">{nextEvent.time} - {nextEvent.location}</p>
+        if (!nextEvent) {
+          return (
+            <>
+              <TileHeading tileId={tileId} icon="fa-calendar-xmark" action={<Link to="/calendar" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Calendar</Link>} />
+              <EmptyTile label="No upcoming events" />
+            </>
+          );
+        }
+
+        if (tileSize === 'large') {
+          const activeDay = asDate(nextEvent.date).getDate();
+          const eventDays = new Set(upcomingEvents.map(event => asDate(event.date).getDate()));
+          return (
+            <div className="flex h-full min-h-0 flex-col">
+              <TileHeading tileId={tileId} icon="fa-calendar-day" action={<Link to="/calendar" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Calendar</Link>} />
+              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">
+                      {asDate(nextEvent.date).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                    </p>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{upcomingEvents.length} upcoming</span>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-black uppercase text-slate-400">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
+                    {getCalendarDays(nextEvent.date).map((day, index) => (
+                      <button
+                        key={`${day ?? 'blank'}-${index}`}
+                        type="button"
+                        disabled={!day}
+                        onClick={() => navigate('/calendar')}
+                        className={`aspect-square rounded-lg text-[10px] font-black ${
+                          day === activeDay ? 'bg-amber-600 text-white' :
+                          day && eventDays.has(day) ? 'bg-white text-amber-700 dark:bg-slate-900 dark:text-amber-300' :
+                          day ? 'bg-amber-100/60 text-slate-500 dark:bg-amber-950/30' : 'bg-transparent'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={() => navigate(`/calendar/${nextEvent.id}`)} className={`flex min-h-0 flex-col justify-center rounded-2xl bg-amber-50 p-4 text-left dark:bg-amber-950/20 ${tileActionClass}`}>
+                  <p className="text-3xl font-black text-amber-700 dark:text-amber-300">{formatShortDate(nextEvent.date)}</p>
+                  <p className="mt-2 line-clamp-2 text-sm font-black leading-snug text-slate-900 dark:text-white">{nextEvent.title}</p>
+                  <p className="mt-2 truncate text-[10px] font-bold uppercase tracking-wider text-slate-500">{nextEvent.time} - {nextEvent.location}</p>
+                  <p className="mt-3 line-clamp-3 text-xs font-semibold leading-relaxed text-slate-500">{nextEvent.description}</p>
+                </button>
+              </div>
             </div>
-          </button>
-        ) : <><TileHeading tileId={tileId} icon="fa-calendar-xmark" /><EmptyTile label="No upcoming events" /></>;
+          );
+        }
+
+        return (
+          <div className="flex h-full min-h-0 flex-col">
+            <TileHeading tileId={tileId} icon="fa-calendar-day" action={<Link to="/calendar" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Calendar</Link>} />
+            <button onClick={() => navigate(`/calendar/${nextEvent.id}`)} className={`flex min-h-0 flex-1 flex-col items-center justify-center rounded-2xl bg-amber-50 p-3 text-center dark:bg-amber-950/20 sm:p-4 ${tileActionClass}`}>
+              <p className="text-3xl font-black text-amber-700 dark:text-amber-300">{formatShortDate(nextEvent.date)}</p>
+              <p className="mt-2 line-clamp-2 text-sm font-black leading-snug text-slate-900 dark:text-white">{nextEvent.title}</p>
+              <p className="mt-1 max-w-full truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">{nextEvent.time} - {nextEvent.location}</p>
+              {tileSize === 'wide' && (
+                <div className="mt-4 grid w-full gap-2 border-t border-amber-100 pt-3 text-left dark:border-amber-900/40 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Attendees</p>
+                    <p className="mt-1 line-clamp-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+                      {nextEvent.attendees?.length
+                        ? nextEvent.attendees.slice(0, 3).map(attendee => `${attendee.firstName} ${attendee.lastName}`).join(', ')
+                        : 'No attendees yet'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Category</p>
+                    <p className="mt-1 line-clamp-2 text-xs font-bold text-slate-700 dark:text-slate-200">{nextEvent.category}</p>
+                  </div>
+                </div>
+              )}
+            </button>
+          </div>
+        );
       case 'announcement-digest':
       case 'community-updates':
         return (
           <div>
             <TileHeading tileId={tileId} icon="fa-bullhorn" action={<Link to="/communications" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Updates</Link>} />
             <div className="space-y-3">
-              {recentAnnouncements.map(announcement => (
+              {recentAnnouncements.slice(0, listLimit).map(announcement => (
                 <Link key={announcement.id} to={`/announcements/${announcement.id}`} className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
                   <div className="flex items-center justify-between gap-2"><span className={`rounded-lg px-2 py-1 text-[8px] font-black uppercase tracking-widest ${announcement.priority === 'Urgent' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}>{announcement.priority}</span><span className="text-[9px] font-bold uppercase text-slate-400">{formatDate(announcement.date)}</span></div>
                   <p className="mt-2 line-clamp-2 text-sm font-black text-slate-900 dark:text-white">{announcement.title}</p>
+                  {tileSize === 'large' && <p className="mt-2 line-clamp-2 text-xs font-semibold leading-relaxed text-slate-500">{announcement.content}</p>}
                 </Link>
               ))}
               {recentAnnouncements.length === 0 && <EmptyTile label="No recent announcements" />}
@@ -239,9 +358,9 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <TileHeading tileId={tileId} icon="fa-file-lines" action={<Link to="/documents" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Library</Link>} />
             <div className="space-y-2">
-              {recentDocuments.map(document => (
+              {recentDocuments.slice(0, documentLimit).map(document => (
                 <Link key={document.id} to="/documents" className={`flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40 ${tileActionClass}`}>
-                  <div><p className="line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{document.title}</p><p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">{document.category}</p></div>
+                  <div><p className="line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{document.title}</p><p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">{document.category}{tileSize === 'large' && document.author ? ` - ${document.author}` : ''}</p></div>
                   <span className="rounded-lg bg-white px-2 py-1 text-[9px] font-black uppercase text-slate-400 dark:bg-slate-900">{document.fileType}</span>
                 </Link>
               ))}
@@ -252,10 +371,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'waitlist-snapshot':
         return (
           <button onClick={() => navigate('/admin/waitlist')} className="group flex h-full min-h-0 w-full flex-col text-left">
-            <TileHeading tileId={tileId} icon="fa-clock-rotate-left" />
-            <div className={`mt-auto min-h-0 overflow-hidden rounded-2xl bg-teal-50 p-4 dark:bg-teal-950/30 ${tileActionClass}`}>
+            <TileHeading tileId={tileId} icon="fa-clock-rotate-left" action={<span className="text-[10px] font-black uppercase tracking-widest text-teal-600">Waitlist</span>} />
+            <div className={`flex min-h-0 flex-1 flex-col justify-center overflow-hidden rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30 sm:p-4 ${tileActionClass}`}>
               <p className="text-3xl font-black text-teal-700 dark:text-teal-300">{waitlistCount}</p>
               <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">Applicants waiting</p>
+              {tileSize === 'wide' && <p className="mt-3 line-clamp-2 text-xs font-semibold text-slate-500">Open the waitlist to review next applicant follow-ups and status changes.</p>}
             </div>
           </button>
         );
@@ -264,10 +384,11 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <TileHeading tileId={tileId} icon="fa-screwdriver-wrench" />
             <div className="space-y-2">
-              {upcomingScheduled.map(task => (
+              {upcomingScheduled.slice(0, listLimit).map(task => (
                 <button key={task.id} type="button" onClick={() => navigate('/maintenance')} className={`w-full rounded-2xl bg-slate-50 p-3 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
                   <p className="text-xs font-black text-slate-900 dark:text-white">{task.task}</p>
                   <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">Due {formatDate(task.dueDate)} - {task.assignedTo}</p>
+                  {tileSize === 'large' && <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">{task.category} - {task.frequency}</p>}
                 </button>
               ))}
               {upcomingScheduled.length === 0 && <EmptyTile label="No scheduled tasks due" />}
@@ -276,12 +397,23 @@ const Dashboard: React.FC<DashboardProps> = ({
         );
       case 'my-home':
         return (
-          <button onClick={() => userUnitId && navigate(`/admin/units/${userUnitId}`)} className="group flex h-full min-h-0 w-full flex-col text-left">
-            <TileHeading tileId={tileId} icon="fa-house-user" />
-            <div className={`mt-auto min-h-0 overflow-hidden rounded-2xl bg-teal-50 p-4 dark:bg-teal-950/30 ${tileActionClass}`}>
-              <p className="truncate text-2xl font-black text-teal-700 dark:text-teal-300">{userUnit ? `Unit ${userUnit.number}` : 'No unit'}</p>
-              <p className="mt-2 truncate text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">{userUnit ? `${userUnit.type} - Floor ${userUnit.floor}` : 'Contact administration'}</p>
-              <p className="mt-3 text-[9px] font-black uppercase tracking-widest text-slate-500">{userOpenRequests.length} active requests</p>
+          <button type="button" onClick={() => userUnitId && navigate(`/admin/units/${userUnitId}`)} className="group flex h-full min-h-0 w-full flex-col text-left">
+            <TileHeading tileId={tileId} icon="fa-house-user" action={userUnitId ? <span className="text-[10px] font-black uppercase tracking-widest text-teal-600">Unit</span> : undefined} />
+            <div className={`flex min-h-0 flex-1 flex-col justify-center overflow-hidden rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30 sm:p-4 ${tileActionClass}`}>
+              <p className="truncate text-2xl font-black text-teal-700 dark:text-teal-300 sm:text-3xl">{userUnit ? `Unit ${userUnit.number}` : 'No unit'}</p>
+              <p className="mt-1 truncate text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">{userUnit ? `${userUnit.type} - Floor ${userUnit.floor}` : 'Contact administration'}</p>
+              <div className={`mt-3 grid gap-2 ${tileSize === 'large' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                <div className="min-w-0 rounded-xl bg-white/70 p-2 dark:bg-slate-900/50">
+                  <p className="truncate text-[9px] font-black uppercase tracking-widest text-slate-400">Active requests</p>
+                  <p className="text-sm font-black text-slate-900 dark:text-white">{userOpenRequests.length}</p>
+                </div>
+                {tileSize === 'large' && (
+                  <div className="min-w-0 rounded-xl bg-white/70 p-2 dark:bg-slate-900/50">
+                    <p className="truncate text-[9px] font-black uppercase tracking-widest text-slate-400">Status</p>
+                    <p className="truncate text-sm font-black text-slate-900 dark:text-white">{userUnit?.status ?? 'Unknown'}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </button>
         );
@@ -290,10 +422,11 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <TileHeading tileId={tileId} icon="fa-list-check" action={<Link to="/maintenance" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Report issue</Link>} />
             <div className="space-y-2">
-              {userOpenRequests.slice(0, 4).map(request => (
+              {userOpenRequests.slice(0, tileSize === 'large' ? 5 : tileSize === 'small' ? 2 : 4).map(request => (
                 <button key={request.id} onClick={() => navigate(`/maintenance/${request.id}`)} className={`w-full rounded-2xl bg-slate-50 p-3 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
                   <div className="flex items-center justify-between gap-2">{renderRequestBadge(request)}<span className="text-[9px] font-black uppercase text-slate-400">{request.status}</span></div>
                   <p className="mt-2 line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{request.title || request.description}</p>
+                  {tileSize === 'large' && <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-slate-500">{request.description}</p>}
                 </button>
               ))}
               {userOpenRequests.length === 0 && <EmptyTile label="No active requests" />}
@@ -305,10 +438,10 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <TileHeading tileId={tileId} icon="fa-people-group" action={<Link to="/committees" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Committees</Link>} />
             <div className="space-y-3">
-              {committees.slice(0, 3).map(committee => (
+              {committees.slice(0, tileSize === 'small' ? 1 : 3).map(committee => (
                 <Link key={committee.id} to="/committees" className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
                   <p className="text-xs font-black text-slate-900 dark:text-white">{committee.name}</p>
-                  <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-slate-500">{committee.description}</p>
+                  <p className={`mt-1 text-[10px] font-semibold text-slate-500 ${tileSize === 'wide' ? 'line-clamp-2' : 'line-clamp-1'}`}>{committee.description}</p>
                 </Link>
               ))}
               {committees.length === 0 && <EmptyTile label="No committee prompts yet" />}
@@ -333,7 +466,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <TileHeading tileId={tileId} icon="fa-bolt" />
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {actions.map(action => (
+              {actions.slice(0, actionLimit).map(action => (
                 <button key={action.path} onClick={() => navigate(action.path)} className={`flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
                   <i className={`fa-solid ${action.icon} text-teal-600 dark:text-teal-300`}></i>
                   <span className="text-xs font-black text-slate-900 dark:text-white">{action.label}</span>

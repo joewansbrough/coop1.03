@@ -31,7 +31,7 @@ interface DashboardTileGridProps {
   preference: DashboardPreference;
   isEditing: boolean;
   onPreferenceChange: (preference: DashboardPreference) => void;
-  renderTile: (tileId: DashboardTileId) => React.ReactNode;
+  renderTile: (tile: DashboardTilePreference) => React.ReactNode;
 }
 
 const sizeClasses: Record<DashboardTileSize, string> = {
@@ -168,7 +168,7 @@ const DashboardTileGrid: React.FC<DashboardTileGridProps> = ({
               onPreferenceChange={onPreferenceChange}
               preference={preference}
             >
-              {renderTile(tile.id)}
+              {renderTile(tile)}
             </SortableTile>
           ))}
         </div>

@@ -64,7 +64,7 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     description: 'Upcoming calendar meeting or community event.',
     roles: ['admin', 'resident'],
     defaultSize: 'small',
-    allowedSizes: ['small', 'wide'],
+    allowedSizes: ['small', 'wide', 'large'],
     defaultOrder: { admin: 30, resident: 30 },
   },
   'announcement-digest': {
