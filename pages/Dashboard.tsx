@@ -75,17 +75,17 @@ const getNextEvent = (events: CoopEvent[]) => {
 };
 
 const TileHeading: React.FC<{ tileId: DashboardTileId; icon: string; action?: React.ReactNode }> = ({ tileId, icon, action }) => (
-  <div className="mb-5 flex items-start justify-between gap-3">
-    <div className="flex items-start gap-3">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-300">
+  <div className="mb-4 flex items-start justify-between gap-3 sm:mb-5">
+    <div className="flex min-w-0 items-start gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-300 sm:h-11 sm:w-11">
         <i className={`fa-solid ${icon}`}></i>
       </div>
-      <div>
+      <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Dashboard tile</p>
-        <h2 className="mt-1 text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white">{DASHBOARD_TILE_REGISTRY[tileId].title}</h2>
+        <h2 className="mt-1 line-clamp-2 text-xs font-black uppercase tracking-tight text-slate-900 dark:text-white sm:text-sm">{DASHBOARD_TILE_REGISTRY[tileId].title}</h2>
       </div>
     </div>
-    {action}
+    {action && <div className="shrink-0">{action}</div>}
   </div>
 );
 
@@ -164,10 +164,10 @@ const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div className="flex h-full flex-col">
             <TileHeading tileId={tileId} icon="fa-wrench" action={<Link to="/maintenance" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Open queue</Link>} />
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40"><p className="text-2xl font-black text-slate-900 dark:text-white">{openRequests.length}</p><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Open</p></div>
-              <div className="rounded-2xl bg-amber-50 p-4 dark:bg-amber-950/20"><p className="text-2xl font-black text-amber-600">{high}</p><p className="text-[9px] font-black uppercase tracking-widest text-amber-700/70">High</p></div>
-              <div className="rounded-2xl bg-rose-50 p-4 dark:bg-rose-950/20"><p className="text-2xl font-black text-rose-600">{emergency}</p><p className="text-[9px] font-black uppercase tracking-widest text-rose-700/70">Emergency</p></div>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40 sm:p-4"><p className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">{openRequests.length}</p><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Open</p></div>
+              <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20 sm:p-4"><p className="text-xl font-black text-amber-600 sm:text-2xl">{high}</p><p className="text-[9px] font-black uppercase tracking-widest text-amber-700/70">High</p></div>
+              <div className="rounded-2xl bg-rose-50 p-3 dark:bg-rose-950/20 sm:p-4"><p className="text-xl font-black text-rose-600 sm:text-2xl">{emergency}</p><p className="text-[9px] font-black uppercase tracking-widest text-rose-700/70">Emergency</p></div>
             </div>
             <div className="mt-4 space-y-2">
               {openRequests.slice(0, 3).map(request => (
@@ -189,7 +189,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               {floors.slice(0, 5).map(floor => (
                 <div key={floor} className="flex items-center gap-3">
                   <span className="w-12 text-[10px] font-black uppercase text-slate-400">Floor {floor}</span>
-                  <div className="grid flex-1 grid-cols-8 gap-1">
+                  <div className="grid flex-1 grid-cols-4 gap-1 min-[420px]:grid-cols-6 sm:grid-cols-8">
                     {unitsByFloor[floor].slice(0, 16).map(unit => (
                       <button key={unit.id} onClick={() => navigate(`/admin/units/${unit.id}`)} className={`aspect-square rounded-lg text-[8px] font-black transition-transform hover:scale-105 ${
                         unit.status === 'Occupied' ? 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300' :
@@ -210,7 +210,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         return nextEvent ? (
           <button onClick={() => navigate(`/calendar/${nextEvent.id}`)} className="group flex h-full min-h-0 w-full flex-col text-left">
             <TileHeading tileId={tileId} icon="fa-calendar-day" />
-            <div className={`min-h-0 overflow-hidden rounded-2xl bg-amber-50 p-4 dark:bg-amber-950/20 ${tileActionClass}`}>
+            <div className={`min-h-0 overflow-hidden rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20 sm:p-4 ${tileActionClass}`}>
               <p className="text-2xl font-black text-amber-700 dark:text-amber-300">{formatShortDate(nextEvent.date)}</p>
               <p className="mt-2 line-clamp-2 text-xs font-black leading-snug text-slate-900 dark:text-white">{nextEvent.title}</p>
               <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">{nextEvent.time} - {nextEvent.location}</p>
@@ -350,21 +350,21 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-12 animate-in fade-in duration-500">
-      <div className="relative overflow-hidden rounded-[20px] border border-white/5 bg-slate-900 p-6 text-white shadow-2xl shadow-teal-accent/10 dark:bg-slate-950 lg:p-10">
+      <div className="relative overflow-hidden rounded-[20px] border border-white/5 bg-slate-900 p-5 text-white shadow-2xl shadow-teal-accent/10 dark:bg-slate-950 sm:p-6 lg:p-10">
         <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 -translate-y-24 translate-x-24 rounded-full bg-teal-500/20 blur-[100px]"></div>
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-teal-300">{isAdmin ? 'Board command dashboard' : 'Member home dashboard'}</p>
-            <h1 className="mt-3 text-4xl font-black tracking-tight lg:text-5xl">Welcome home, {firstName}.</h1>
+            <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">Welcome home, {firstName}.</h1>
             <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-slate-400">
               Choose the tiles that keep the most relevant co-op information in view.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
             <button
               type="button"
               onClick={() => setIsEditing(!isEditing)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-950 active:scale-95"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-950 active:scale-95"
             >
               <i className={`fa-solid ${isEditing ? 'fa-check' : 'fa-sliders'}`}></i>
               {isEditing ? 'Done' : 'Customize'}
@@ -373,7 +373,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <button
                 type="button"
                 onClick={() => updatePreference(createDefaultDashboardLayout(role))}
-                className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white active:scale-95"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white active:scale-95"
               >
                 <i className="fa-solid fa-rotate-left"></i>
                 Restore defaults

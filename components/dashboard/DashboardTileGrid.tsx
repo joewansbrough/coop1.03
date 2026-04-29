@@ -42,10 +42,10 @@ const sizeClasses: Record<DashboardTileSize, string> = {
 };
 
 const minHeightClasses: Record<DashboardTileSize, string> = {
-  small: 'min-h-[11rem]',
-  wide: 'min-h-[14rem]',
-  tall: 'min-h-[22rem]',
-  large: 'min-h-[22rem]',
+  small: 'min-h-[10rem] sm:min-h-[11rem]',
+  wide: 'min-h-[13rem] sm:min-h-[14rem]',
+  tall: 'min-h-[18rem] sm:min-h-[22rem]',
+  large: 'min-h-[18rem] sm:min-h-[22rem]',
 };
 
 const nextSize = (tile: DashboardTilePreference): DashboardTileSize => {
@@ -84,24 +84,24 @@ const SortableTile: React.FC<{
       style={style}
       className={`${sizeClasses[tile.size]} ${minHeightClasses[tile.size]} ${sortable.isDragging ? 'z-20 opacity-80' : ''}`}
     >
-      <div className="h-full overflow-hidden rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm transition-all dark:border-white/5 dark:bg-slate-900">
+      <div className="h-full overflow-hidden rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition-all dark:border-white/5 dark:bg-slate-900 sm:p-5">
         {isEditing && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-white/5">
+          <div className="mb-3 grid gap-2 border-b border-slate-100 pb-3 dark:border-white/5 sm:mb-4 sm:flex sm:items-center sm:justify-between">
             <button
               type="button"
               {...sortable.attributes}
               {...sortable.listeners}
-              className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300"
+              className="inline-flex h-11 touch-none items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:justify-start sm:py-2"
               aria-label={`Drag ${definition.title}`}
             >
               <i className="fa-solid fa-grip-lines"></i>
               Move
             </button>
-            <div className="flex flex-wrap items-center gap-1">
-              <button type="button" onClick={() => moveBy(-1)} className="h-9 w-9 rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300" aria-label={`Move ${definition.title} earlier`}>
+            <div className="grid grid-cols-4 items-center gap-1 sm:flex sm:flex-wrap">
+              <button type="button" onClick={() => moveBy(-1)} className="h-11 rounded-xl bg-slate-100 text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-9" aria-label={`Move ${definition.title} earlier`}>
                 <i className="fa-solid fa-arrow-left"></i>
               </button>
-              <button type="button" onClick={() => moveBy(1)} className="h-9 w-9 rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300" aria-label={`Move ${definition.title} later`}>
+              <button type="button" onClick={() => moveBy(1)} className="h-11 rounded-xl bg-slate-100 text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:w-9" aria-label={`Move ${definition.title} later`}>
                 <i className="fa-solid fa-arrow-right"></i>
               </button>
               <button
@@ -110,7 +110,7 @@ const SortableTile: React.FC<{
                   ...preference,
                   tiles: preference.tiles.map(item => item.id === tile.id ? { ...item, size: nextSize(item) } : item),
                 })}
-                className="rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:bg-slate-800 dark:text-slate-300"
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-100 px-2 text-[10px] font-black uppercase tracking-widest text-slate-500 active:scale-95 dark:bg-slate-800 dark:text-slate-300 sm:h-9 sm:px-3 sm:py-2"
               >
                 {tile.size}
               </button>
@@ -120,7 +120,7 @@ const SortableTile: React.FC<{
                   ...preference,
                   tiles: preference.tiles.map(item => item.id === tile.id ? { ...item, hidden: true } : item),
                 })}
-                className="h-9 w-9 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-300"
+                className="h-11 rounded-xl bg-rose-50 text-rose-600 active:scale-95 dark:bg-rose-950/30 dark:text-rose-300 sm:h-9 sm:w-9"
                 aria-label={`Hide ${definition.title}`}
               >
                 <i className="fa-solid fa-eye-slash"></i>
@@ -158,7 +158,7 @@ const DashboardTileGrid: React.FC<DashboardTileGridProps> = ({
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={visibleTiles.map(tile => tile.id)} strategy={rectSortingStrategy}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
           {visibleTiles.map(tile => (
             <SortableTile
               key={tile.id}
