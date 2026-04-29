@@ -803,12 +803,14 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                       <i className="fa-solid fa-door-open text-2xl"></i>
                     </div>
                     <p className="text-slate-500 dark:text-slate-400 font-bold mb-6">This unit is currently vacant.</p>
-                    <button 
-                      onClick={() => setShowMoveInModal(true)}
-                      className="bg-brand-600 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand-700 active:scale-95 transition-all flex items-center justify-center gap-2"
-                    >
-                      <i className="fa-solid fa-plus"></i> Process Move-In
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => setShowMoveInModal(true)}
+                        className="bg-brand-600 text-white px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                      >
+                        <i className="fa-solid fa-plus"></i> Process Move-In
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1039,7 +1041,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
               <div className="p-4 sm:p-6 border-b border-slate-50 dark:border-white/5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                 <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Household Members ({currentResidents.length})</h3>
-                {unit.status === 'Occupied' && (
+                {isAdmin && unit.status === 'Occupied' && (
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setShowTransferModal(true)}
@@ -1055,7 +1057,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                     </button>
                   </div>
                 )}
-                {unit.status !== 'Occupied' && (
+                {isAdmin && unit.status !== 'Occupied' && (
                   <button
                     onClick={() => setShowMoveInModal(true)}
                     className="bg-brand-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center justify-center gap-2"
@@ -1135,7 +1137,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
       </div>
 
       {/* Turnover Management Modals - Moved outside tab blocks */}
-      {showMoveOutModal && (
+      {isAdmin && showMoveOutModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-white/5 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div className="flex justify-between items-center mb-8">
@@ -1265,7 +1267,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
         </div>
       )}
 
-      {showTransferModal && (
+      {isAdmin && showTransferModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-white/5">
             <div className="flex justify-between items-center mb-8">
@@ -1318,7 +1320,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
         </div>
       )}
 
-      {showMoveInModal && (
+      {isAdmin && showMoveInModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-white/5">
             <div className="flex justify-between items-center mb-8">
