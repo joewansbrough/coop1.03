@@ -4,7 +4,8 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import axios from 'axios';
 import cookieSession from 'cookie-session';
-import { put } from '@vercel/blob';
+import { get, put } from '@vercel/blob';
+import { Readable } from 'node:stream';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import driveRoutes from './drive.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
@@ -43,6 +44,16 @@ const sanitizeUtf8 = (str: any) => {
 };
 
 const getParam = (value: string | string[] | undefined): string => Array.isArray(value) ? value[0] ?? '' : value ?? '';
+
+const getBlobToken = () => process.env.BLOB_READ_WRITE_TOKEN || process.env.coophub_READ_WRITE_TOKEN;
+
+const isBlobStorageUrl = (value?: string | null) => Boolean(value?.includes('blob.vercel-storage.com'));
+
+const getSafeDownloadName = (title: string, fileType?: string | null) => {
+  const extension = fileType?.replace(/^\./, '') || 'pdf';
+  const safeTitle = title.replace(/[\\/:*?"<>|]+/g, '').trim() || 'document';
+  return safeTitle.toLowerCase().endsWith(`.${extension.toLowerCase()}`) ? safeTitle : `${safeTitle}.${extension}`;
+};
 
 const getCoopId = async (req: any, p: any = getPrisma()) => {
   const user = (req as any).user || (req as any).session?.user;
@@ -734,7 +745,51 @@ app.post('/api/documents', requireAuth, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-  app.put('/api/documents/:id', requireAuth, async (req, res) => {
+app.get('/api/documents/:id/original', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const documentId = getParam(req.params.id);
+    const document = await p.document.findFirst({
+      where: { id: documentId, cooperativeId: coopId },
+      include: { currentVersion: true },
+    });
+
+    if (!document) return res.status(404).json({ error: 'Document not found' });
+
+    const blobReference = document.currentVersion?.storageKey || document.currentVersion?.storageUrl || (isBlobStorageUrl(document.url) ? document.url : null);
+    if (!blobReference && document.url && document.url !== '#') {
+      return res.redirect(document.url);
+    }
+    if (!blobReference) return res.status(404).json({ error: 'Original file is not available.' });
+
+    const token = getBlobToken();
+    if (!token) {
+      return res.status(500).json({ error: 'Blob storage is not configured for document retrieval.' });
+    }
+
+    const blob = await get(blobReference, {
+      access: process.env.BLOB_ACCESS === 'public' ? 'public' : 'private',
+      token,
+    });
+
+    if (!blob || blob.statusCode === 304 || !blob.stream) {
+      return res.status(404).json({ error: 'Original file is not available.' });
+    }
+
+    const fileName = getSafeDownloadName(document.title, document.fileType);
+    const disposition = req.query.download === '1' ? 'attachment' : 'inline';
+    res.setHeader('Content-Type', blob.blob.contentType || 'application/octet-stream');
+    res.setHeader('Content-Length', String(blob.blob.size));
+    res.setHeader('Content-Disposition', `${disposition}; filename="${fileName}"`);
+    Readable.fromWeb(blob.stream as any).pipe(res);
+  } catch (e: any) {
+    console.error('Document original retrieval error:', e);
+    res.status(500).json({ error: 'Failed to retrieve original document.', details: e.message });
+  }
+});
+
+app.put('/api/documents/:id', requireAuth, async (req, res) => {
   const { title, category, tags, committee, content } = req.body;
   try {
     const documentId = getParam(req.params.id);
@@ -746,11 +801,12 @@ app.post('/api/documents', requireAuth, async (req, res) => {
         tags: tags ? { set: tags } : undefined, 
         committee: committee !== undefined ? (committee || null) : undefined,
         content 
-      } as any
+      } as any,
+      include: { currentVersion: true }
     });
     res.json(document);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
-  });
+});
 
 app.delete('/api/documents/:id', requireAuth, async (req, res) => {
   try {

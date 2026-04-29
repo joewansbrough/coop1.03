@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getDashboardDocumentLink } from '../utils/dashboardDocumentLinks.ts';
+import {
+  getDashboardDocumentLink,
+  getDocumentLibraryOriginalUrl,
+} from '../utils/dashboardDocumentLinks.ts';
 
 const minutesDocument = {
   id: 'doc-1',
@@ -42,4 +45,19 @@ test('falls back to the document library when no direct destination exists', () 
     type: 'route',
     href: '/documents',
   });
+});
+
+test('routes blob-backed documents through the authenticated original file endpoint', () => {
+  assert.equal(getDocumentLibraryOriginalUrl({
+    ...minutesDocument,
+    id: 'doc-blob',
+    url: '#',
+    currentVersion: {
+      id: 'version-1',
+      version: 1,
+      source: 'generated-minutes',
+      storageUrl: 'https://blob.example/minutes.pdf',
+      ingestionStatus: 'ready',
+    },
+  }), '/api/documents/doc-blob/original');
 });

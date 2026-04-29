@@ -25,6 +25,17 @@ export const getDocumentFileUrl = (document: Document) => {
   return null;
 };
 
+export const isBlobBackedDocument = (document: Document) =>
+  Boolean(document.currentVersion?.storageUrl || document.url?.includes('blob.vercel-storage.com'));
+
+export const getDocumentLibraryOriginalUrl = (document: Document) => {
+  if (isBlobBackedDocument(document)) {
+    return `/api/documents/${encodeURIComponent(document.id)}/original`;
+  }
+
+  return getDocumentFileUrl(document);
+};
+
 export const getDashboardDocumentLink = (document: Document): DashboardDocumentLink => {
   if (isMinutesDocument(document)) {
     const eventId = getMinutesEventId(document);

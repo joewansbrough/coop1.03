@@ -10,6 +10,7 @@ import AppAlert from '../components/AppAlert';
 import { useUser, useRefreshData } from '../hooks/useCoopData';
 import { formatDate } from '../utils/dateUtils';
 import { recordTutorialEvent } from '../utils/demoTutorial';
+import { getDocumentFileUrl, getDocumentLibraryOriginalUrl } from '../utils/dashboardDocumentLinks';
 
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
@@ -101,12 +102,17 @@ const ResourceLibrary: React.FC<{
     return URL.createObjectURL(new Blob([bytes], { type: mimeType }));
   };
 
-  const getLaunchUrl = (doc: Document) => doc.url?.startsWith('data:')
-    ? dataUrlToBlobUrl(doc.url)
-    : doc.url;
+  const getLaunchUrl = (doc: Document, download = false) => {
+    const fileUrl = getDocumentLibraryOriginalUrl(doc);
+    if (fileUrl?.startsWith('data:')) return dataUrlToBlobUrl(fileUrl);
+    if (download && fileUrl?.startsWith('/api/documents/')) {
+      return `${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`;
+    }
+    return fileUrl;
+  };
 
   const openDocument = (doc: Document) => {
-    if (!doc.url || doc.url === '#') {
+    if (!getDocumentFileUrl(doc)) {
       showAlert('This document is stored in the secure association vault. Open it from the viewer instead.', 'info');
       return;
     }
@@ -323,12 +329,12 @@ const ResourceLibrary: React.FC<{
 
   const handleDownload = (doc: Document, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (!doc.url || doc.url === '#') {
+    if (!getDocumentFileUrl(doc)) {
       showAlert('This document is stored in the secure association vault. Open it from the viewer instead.', 'info');
       return;
     }
 
-    const launchUrl = getLaunchUrl(doc);
+    const launchUrl = getLaunchUrl(doc, true);
     if (!launchUrl) return;
     const link = window.document.createElement('a');
     link.href = launchUrl;
@@ -345,7 +351,7 @@ const ResourceLibrary: React.FC<{
 
   const handleViewDoc = (doc: Document) => {
     recordTutorialEvent('document_opened');
-    if (doc.url && doc.url !== '#') {
+    if (getDocumentFileUrl(doc)) {
       openDocument(doc);
     } else {
       setReviewingDoc(getDocumentWithInferredCommittee(doc));
@@ -553,7 +559,8 @@ const ResourceLibrary: React.FC<{
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredDocs.map(doc => {
-            const isCloud = doc.url?.includes('drive.google.com');
+            const fileUrl = getDocumentFileUrl(doc);
+            const isCloud = fileUrl?.includes('drive.google.com');
             const ingestion = getIngestionDisplay(doc);
             return (
               <div
@@ -678,17 +685,17 @@ const ResourceLibrary: React.FC<{
               <div className="flex-1 overflow-y-auto p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <div className="h-[400px] bg-slate-50 dark:bg-slate-950/30 border border-slate-200 dark:border-white/10 rounded-[2rem] flex flex-col items-center justify-center text-center p-12">
-                    <div className={`w-20 h-20 ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-500/10 text-blue-500' : 'bg-brand-500/10 text-brand-500'} rounded-3xl flex items-center justify-center mb-6`}>
-                      <i className={`fa-solid ${reviewingDoc.url?.includes('drive.google.com') ? 'fa-brands fa-google-drive' : 'fa-file-shield'} text-3xl`}></i>
+                    <div className={`w-20 h-20 ${getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'bg-blue-500/10 text-blue-500' : 'bg-brand-500/10 text-brand-500'} rounded-3xl flex items-center justify-center mb-6`}>
+                      <i className={`fa-solid ${getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'fa-brands fa-google-drive' : 'fa-file-shield'} text-3xl`}></i>
                     </div>
                     <h4 className="text-lg font-black text-slate-800 dark:text-white mb-2 uppercase tracking-tight">Streamlined Metadata View</h4>
                     <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-xs">Association documents are now stored externally. Managing metadata below will update the searchable archive.</p>
                     <button
                       onClick={() => handleViewDoc(reviewingDoc)}
-                      className={`mt-8 ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-600 hover:bg-brand-600' : 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-brand-600 dark:hover:bg-brand-600'} px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all`}
+                      className={`mt-8 ${getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'bg-blue-600 hover:bg-brand-600' : 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-brand-600 dark:hover:bg-brand-600'} px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all`}
                     >
                       <i className="fa-solid fa-arrow-up-right-from-square"></i>
-                      {reviewingDoc.url?.includes('drive.google.com') ? 'Open in Drive' : 'Launch Original File'}
+                      {getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'Open in Drive' : 'View Original File'}
                     </button>
                   </div>
                 </div>
@@ -816,10 +823,10 @@ const ResourceLibrary: React.FC<{
                 )}
                 <button
                   onClick={(e) => handleDownload(reviewingDoc, e)}
-                  className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest ${reviewingDoc.url?.includes('drive.google.com') ? 'bg-blue-600' : 'bg-slate-900'} text-white hover:bg-brand-600 transition-all active:scale-95 flex items-center gap-2`}
+                  className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest ${getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'bg-blue-600' : 'bg-slate-900'} text-white hover:bg-brand-600 transition-all active:scale-95 flex items-center gap-2`}
                 >
-                  <i className={`fa-solid ${reviewingDoc.url?.includes('drive.google.com') ? 'fa-arrow-up-right-from-square' : 'fa-download'}`}></i>
-                  {reviewingDoc.url?.includes('drive.google.com') ? 'Open' : 'Download'}
+                  <i className={`fa-solid ${getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'fa-arrow-up-right-from-square' : 'fa-download'}`}></i>
+                  {getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'Open' : 'Download'}
                 </button>
               </div>
             </motion.div>
