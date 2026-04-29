@@ -14,6 +14,7 @@ import {
   type DashboardTileSize,
 } from '../utils/dashboardPreferences';
 import { formatDate, formatShortDate } from '../utils/dateUtils';
+import { getDashboardDocumentLink } from '../utils/dashboardDocumentLinks';
 import {
   Announcement,
   Committee,
@@ -128,27 +129,6 @@ const EmptyTile: React.FC<{ label: string }> = ({ label }) => (
 );
 
 const tileActionClass = 'transition-colors hover:bg-teal-50 dark:hover:bg-teal-950/30';
-
-const isMinutesDocument = (document: Document) => {
-  const searchable = [
-    document.category,
-    document.title,
-    ...(document.tags ?? []),
-  ].join(' ').toLowerCase();
-
-  return searchable.includes('minute');
-};
-
-const getMinutesEventId = (document: Document) => {
-  const taggedEvent = document.tags?.find(tag => tag.startsWith('minutes-meeting:'));
-  return taggedEvent?.split(':')[1] || null;
-};
-
-const getDocumentFileUrl = (document: Document) => {
-  if (document.currentVersion?.storageUrl) return document.currentVersion.storageUrl;
-  if (document.url && document.url !== '#') return document.url;
-  return null;
-};
 
 const Dashboard: React.FC<DashboardProps> = ({
   isAdmin,
@@ -504,8 +484,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <TileHeading tileId={tileId} icon="fa-file-lines" action={<Link to="/documents" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Library</Link>} />
             <div className="space-y-3">
               {recentDocuments.slice(0, documentLimit).map(document => {
-                const minutesEventId = !isAdmin && isMinutesDocument(document) ? getMinutesEventId(document) : null;
-                const fileUrl = getDocumentFileUrl(document);
+                const documentLink = getDashboardDocumentLink(document);
                 const card = (
                   <>
                     <div className="flex items-center justify-between gap-2">
@@ -521,26 +500,18 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </>
                 );
 
-                if (minutesEventId) {
+                if (documentLink.type === 'route') {
                   return (
-                    <Link key={document.id} to={`/calendar/${minutesEventId}?tab=minutes`} className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
+                    <Link key={document.id} to={documentLink.href} className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
                       {card}
                     </Link>
                   );
                 }
 
-                if (fileUrl) {
-                  return (
-                    <a key={document.id} href={fileUrl} target="_blank" rel="noopener noreferrer" className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
-                      {card}
-                    </a>
-                  );
-                }
-
                 return (
-                  <Link key={document.id} to="/documents" className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
+                  <a key={document.id} href={documentLink.href} target="_blank" rel="noopener noreferrer" className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
                     {card}
-                  </Link>
+                  </a>
                 );
               })}
               {recentDocuments.length === 0 && <EmptyTile label="No documents yet" />}
