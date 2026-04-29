@@ -12,11 +12,12 @@ import { MinutesPDF } from '../services/export/pdfGenerator';
 import { addUserAttendance, createAttendanceRequestInit } from '../utils/eventAttendance';
 import { applyEventEdit, createEventUpdateRequestInit, type EventEditPayload } from '../utils/eventEditing';
 import { demoStorage } from '../utils/demoStorage';
+import { getMinutesPanelMode } from '../utils/minutesPanelState';
 
 const readableTextClass = 'min-w-0 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]';
 const readableRichTextClass = `${readableTextClass} prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed [&_*]:max-w-full [&_*]:whitespace-normal [&_*]:break-words [&_*]:[overflow-wrap:anywhere]`;
 
-const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, event }) => {
+const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent; action?: React.ReactNode }> = ({ data, event, action }) => {
   const formData = data?.formData || data?.data;
   const [isExporting, setIsExporting] = useState(false);
 
@@ -121,15 +122,18 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
         <div className="text-right">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meeting Date</p>
           <p className="text-lg font-black text-white">{formData.meetingDate || event.date.split('T')[0]}</p>
-          <button
-            type="button"
-            onClick={handleExportPDF}
-            disabled={isExporting}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-slate-900 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <i className={`fa-solid ${isExporting ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i>
-            {isExporting ? 'Exporting...' : 'Export to PDF'}
-          </button>
+          <div className="mt-4 flex flex-wrap justify-end gap-2">
+            {action}
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-slate-900 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <i className={`fa-solid ${isExporting ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i>
+              {isExporting ? 'Exporting...' : 'Export to PDF'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -399,6 +403,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   const queryClient = useQueryClient();
   const [event, setEvent] = useState(events.find(e => e.id === eventId));
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingMinutes, setIsEditingMinutes] = useState(false);
   const [isAttending, setIsAttending] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'minutes'>('overview');
@@ -415,6 +420,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   useEffect(() => {
     const foundEvent = events.find(e => e.id === eventId);
     setEvent(foundEvent);
+    setIsEditingMinutes(false);
     if (foundEvent && foundEvent.attendees) {
       setIsAttending(foundEvent.attendees.some(a => a.email === user.email));
     }
@@ -430,6 +436,11 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   };
 
   const meetingMinutes = event ? minutesList?.find(m => m.meetingId === event.id) : null;
+  const minutesPanelMode = getMinutesPanelMode({
+    isAdmin,
+    hasMinutes: Boolean(meetingMinutes),
+    isEditingMinutes,
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -545,7 +556,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
 
       {activeTab === 'minutes' ? (
         <div className="animate-in fade-in slide-in-from-top-2">
-          {isAdmin ? (
+          {minutesPanelMode === 'form' ? (
             <MinutesBuilder
               meetingId={event.id}
               initialData={meetingMinutes}
@@ -562,11 +573,25 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                   return current.map((m, index) => index === existingIndex ? nextMinutes : m);
                 });
                 queryClient.invalidateQueries({ queryKey: ['minutes'] });
+                setIsEditingMinutes(false);
                 showAlert('Meeting minutes have been saved and archived.', 'success');
               }}
             />
-          ) : meetingMinutes ? (
-            <MinutesReadOnly data={meetingMinutes} event={event} />
+          ) : minutesPanelMode === 'record' && meetingMinutes ? (
+            <MinutesReadOnly
+              data={meetingMinutes}
+              event={event}
+              action={isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingMinutes(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-brand-600 transition-all"
+                >
+                  <i className="fa-solid fa-pen-to-square"></i>
+                  Edit
+                </button>
+              ) : undefined}
+            />
           ) : (
             <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 p-12 text-center">
               <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-[2rem] flex items-center justify-center mx-auto mb-6">
