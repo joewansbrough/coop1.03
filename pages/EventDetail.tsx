@@ -10,6 +10,7 @@ import MinutesBuilder from '../components/MinutesBuilder';
 import { isDemoMode, useMinutes } from '../hooks/useCoopData';
 import { MinutesPDF } from '../services/export/pdfGenerator';
 import { addUserAttendance, createAttendanceRequestInit } from '../utils/eventAttendance';
+import { applyEventEdit, createEventUpdateRequestInit, type EventEditPayload } from '../utils/eventEditing';
 import { demoStorage } from '../utils/demoStorage';
 
 const readableTextClass = 'min-w-0 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]';
@@ -440,7 +441,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
-    const payload = {
+    const payload: EventEditPayload = {
       title: (form.elements.namedItem('title') as HTMLInputElement).value,
       category: (form.elements.namedItem('category') as HTMLSelectElement).value as any,
       date: (form.elements.namedItem('date') as HTMLInputElement).value,
@@ -450,22 +451,27 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       committeeId: (form.elements.namedItem('committeeId') as HTMLSelectElement).value || null,
     };
 
-    if (isTemp) {
-      const updatedTempEvent = { ...event, ...payload };
-      setEvents(current => current.map(ev => ev.id === event.id ? updatedTempEvent : ev));
+    if (isDemoMode() || isTemp) {
+      const updatedEvent = applyEventEdit(event, payload);
+      if (isDemoMode() && !isTemp) {
+        demoStorage.updateEvent(updatedEvent);
+      }
+      setEvents(current => current.map(ev => ev.id === event.id ? updatedEvent : ev));
+      setEvent(updatedEvent);
       setIsEditing(false);
-      showAlert('Temporary event updated for this session.', 'success');
+      showAlert(isTemp ? 'Temporary event updated for this session.' : 'Event details updated for this demo.', 'success');
       return;
     }
 
     try {
-      const res = await fetch(`/api/events/${event.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const res = await fetch(`/api/events/${event.id}`, createEventUpdateRequestInit(payload));
       const data = await res.json();
+      if (!res.ok) {
+        showAlert(data.error || 'Failed to update event details.', 'error');
+        return;
+      }
       setEvents(current => current.map(ev => ev.id === event.id ? data : ev));
+      setEvent(data);
       setIsEditing(false);
       showAlert('Event details updated successfully.', 'success');
     } catch (err) {

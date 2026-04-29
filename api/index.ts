@@ -767,22 +767,33 @@ app.post('/api/events', requireAuth, async (req, res) => {
 });
 
 app.put('/api/events/:id', requireAuth, async (req, res) => {
-  const { title, description, date, time, location, category, committeeId } = req.body;
-  const eventId = getParam(req.params.id);
-  const event = await getPrisma().coopEvent.update({
-    where: { id: eventId },
-    data: { 
-      title, 
-      description, 
-      date: new Date(date), 
-      time, 
-      location, 
-      category,
-      committeeId: committeeId || null
-    },
-    include: { attendees: true }
-  });
-  res.json(event);
+  try {
+    const p = getPrisma();
+    const { title, description, date, time, location, category, committeeId } = req.body;
+    const eventId = getParam(req.params.id);
+    const coopId = await getCoopId(req, p);
+    const existingEvent = await p.coopEvent.findFirst({
+      where: { id: eventId, cooperativeId: coopId },
+    });
+    if (!existingEvent) return res.status(404).json({ error: 'Event not found' });
+
+    const event = await p.coopEvent.update({
+      where: { id: eventId },
+      data: {
+        title,
+        description,
+        date: new Date(date),
+        time,
+        location,
+        category,
+        committeeId: committeeId || null,
+      },
+      include: { attendees: true },
+    });
+    res.json(event);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/events/:id/attend', requireAuth, async (req, res) => {
