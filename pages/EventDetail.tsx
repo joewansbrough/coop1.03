@@ -7,8 +7,13 @@ import { saveAs } from 'file-saver';
 import { Committee, CoopEvent, Document as CoopDocument, Tenant } from '../types';
 import AppAlert from '../components/AppAlert';
 import MinutesBuilder from '../components/MinutesBuilder';
-import { useMinutes } from '../hooks/useCoopData';
+import { isDemoMode, useMinutes } from '../hooks/useCoopData';
 import { MinutesPDF } from '../services/export/pdfGenerator';
+import { addUserAttendance } from '../utils/eventAttendance';
+import { demoStorage } from '../utils/demoStorage';
+
+const readableTextClass = 'min-w-0 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]';
+const readableRichTextClass = `${readableTextClass} prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed [&_*]:max-w-full [&_*]:whitespace-normal [&_*]:break-words [&_*]:[overflow-wrap:anywhere]`;
 
 const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, event }) => {
   const formData = data?.formData || data?.data;
@@ -144,7 +149,7 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
                 <div key={linkedDocument.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
                   <div className="min-w-0">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attached Record</p>
-                    <p className="text-sm font-black text-slate-800 dark:text-slate-200 truncate">{linkedDocument.title}</p>
+                    <p className={`text-sm font-black text-slate-800 dark:text-slate-200 ${readableTextClass}`}>{linkedDocument.title}</p>
                   </div>
                   {linkedDocument.url && linkedDocument.url !== '#' && (
                     <button
@@ -265,10 +270,10 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
                       {m.result || 'Pending'}
                     </span>
                   </div>
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">{m.description}</p>
-                  <div className="flex gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <span>Moved by: <span className="text-slate-600 dark:text-slate-300">{m.mover}</span></span>
-                    <span>Seconded by: <span className="text-slate-600 dark:text-slate-300">{m.seconder}</span></span>
+                  <p className={`text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 ${readableTextClass}`}>{m.description}</p>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <span className={readableTextClass}>Moved by: <span className="text-slate-600 dark:text-slate-300">{m.mover}</span></span>
+                    <span className={readableTextClass}>Seconded by: <span className="text-slate-600 dark:text-slate-300">{m.seconder}</span></span>
                   </div>
                 </div>
               ))}
@@ -282,7 +287,7 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
               {actionItems.map((item: any, index: number) => (
                 <div key={item.id || index} className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Action Item #{index + 1}</p>
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4">{item.description || 'No action described.'}</p>
+                  <p className={`text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 ${readableTextClass}`}>{item.description || 'No action described.'}</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <ReadOnlyField label="Responsible" value={Array.isArray(item.responsible) && item.responsible.length > 0 ? item.responsible.join(', ') : 'Unassigned'} />
                     <ReadOnlyField label="Complete By" value={formatDateOnly(item.dueDate)} />
@@ -293,7 +298,7 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent }> = ({ data, even
           </ReadOnlySection>
         ) : formData.actionItems && (
           <ReadOnlySection title="Action Items" icon="fa-tasks">
-            <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: formData.actionItems }}></div>
+            <div className={readableRichTextClass} dangerouslySetInnerHTML={{ __html: formData.actionItems }}></div>
           </ReadOnlySection>
         )}
       </div>
@@ -325,23 +330,23 @@ const ReadOnlySection: React.FC<{ title: string; icon: string; children: React.R
       <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{title}</h3>
       <div className="h-px bg-slate-100 dark:bg-white/5 flex-1"></div>
     </div>
-    <div className="pl-14">
+    <div className="pl-0 sm:pl-14 min-w-0">
       {children}
     </div>
   </div>
 );
 
 const ReadOnlyField: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div>
+  <div className="min-w-0">
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{value || 'N/A'}</p>
+    <p className={`text-sm font-bold text-slate-800 dark:text-slate-200 ${readableTextClass}`}>{value || 'N/A'}</p>
   </div>
 );
 
 const ReadOnlyRichTextCard: React.FC<{ label: string; html: string }> = ({ label, html }) => (
   <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">{label}</p>
-    <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed" dangerouslySetInnerHTML={{ __html: html }}></div>
+    <div className={readableRichTextClass} dangerouslySetInnerHTML={{ __html: html }}></div>
   </div>
 );
 
@@ -368,7 +373,7 @@ const PersonChips: React.FC<{ people: string[] | string }> = ({ people }) => {
 };
 
 const ReadOnlyPeopleField: React.FC<{ label: string; people: string[] | string }> = ({ label, people }) => (
-  <div>
+  <div className="min-w-0">
     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{label}</p>
     <PersonChips people={people} />
   </div>
@@ -471,6 +476,16 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
 
   const handleAttend = async () => {
     if (isGuest) return;
+    if (isDemoMode()) {
+      const updatedEvent = addUserAttendance(event, user);
+      demoStorage.updateEvent(updatedEvent);
+      setEvents(current => current.map(ev => ev.id === event.id ? updatedEvent : ev));
+      setEvent(updatedEvent);
+      setIsAttending(true);
+      showAlert('Attendance confirmed.', 'success');
+      return;
+    }
+
     try {
       const res = await fetch(`/api/events/${event.id}/attend`, {
         method: 'POST',
@@ -647,7 +662,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                   )}
                   <div>
                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-50 dark:border-white/5 pb-2">Event Description</h3>
-                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                    <p className={`text-slate-600 dark:text-slate-400 leading-relaxed font-medium ${readableTextClass}`}>
                       {event.description || "No detailed description provided for this event. Please contact the board for further information regarding agendas or required preparation."}
                     </p>
                   </div>

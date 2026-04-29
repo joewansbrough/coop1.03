@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronDown, ExternalLink, RotateCcw, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -18,6 +18,9 @@ interface DemoTutorialPanelProps {
 const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateChange }) => {
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches
+  );
+  const [shouldNudge, setShouldNudge] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches
   );
   const track = getTutorialTrack(state.trackId);
@@ -45,12 +48,21 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
     persist(resetTutorialState(state));
   };
 
+  useEffect(() => {
+    if (!shouldNudge) return;
+    const timer = window.setTimeout(() => setShouldNudge(false), 2600);
+    return () => window.clearTimeout(timer);
+  }, [shouldNudge]);
+
   return (
-    <aside className="fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)]">
+    <aside className={`fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)] ${shouldNudge ? 'demo-guide-nudge' : ''}`}>
       <div className="px-4 py-3 sm:p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-950/50">
         <button
           type="button"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => {
+            setShouldNudge(false);
+            setIsCollapsed(!isCollapsed);
+          }}
           className="mx-auto mb-3 block h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700 sm:hidden"
           aria-label={isCollapsed ? 'Expand demo guide' : 'Collapse demo guide'}
         />
@@ -63,7 +75,7 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
             )}
           </div>
           <div className="flex gap-1">
-            <button onClick={() => setIsCollapsed(!isCollapsed)} className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-white dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center justify-center" aria-label={isCollapsed ? 'Expand tutorial panel' : 'Collapse tutorial panel'}>
+            <button onClick={() => { setShouldNudge(false); setIsCollapsed(!isCollapsed); }} className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-white dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center justify-center" aria-label={isCollapsed ? 'Expand tutorial panel' : 'Collapse tutorial panel'}>
               <ChevronDown className={`w-4 h-4 mx-auto transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
             </button>
             <button onClick={dismiss} className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-white dark:bg-white/10 text-slate-500 hover:text-rose-500 transition-colors flex items-center justify-center" aria-label="Dismiss tutorial panel">

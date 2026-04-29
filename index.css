@@ -61,6 +61,30 @@
   scrollbar-width: none;
 }
 
+@keyframes demo-guide-nudge {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  18% {
+    transform: translateY(-12px);
+  }
+  36% {
+    transform: translateY(0);
+  }
+  52% {
+    transform: translateY(-7px);
+  }
+  68% {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 639px) and (prefers-reduced-motion: no-preference) {
+  .demo-guide-nudge {
+    animation: demo-guide-nudge 1.3s ease-out 2;
+  }
+}
+
 /* Add these styles to your global CSS file (e.g., index.css or App.css) */
 
 .form-input {
