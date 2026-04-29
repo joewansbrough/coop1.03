@@ -185,6 +185,11 @@ export const DEMO_TUTORIAL_TRACKS: DemoTutorialTrack[] = [
 export const getTutorialTrack = (trackId?: string | null) =>
   DEMO_TUTORIAL_TRACKS.find(track => track.id === trackId) || null;
 
+const HIDDEN_TUTORIAL_TRACK_IDS = new Set<DemoTutorialTrackId>(['pitch']);
+
+export const getVisibleTutorialTracks = () =>
+  DEMO_TUTORIAL_TRACKS.filter(track => !HIDDEN_TUTORIAL_TRACK_IDS.has(track.id));
+
 export const createInitialTutorialState = (trackId: DemoTutorialTrackId): DemoTutorialState => ({
   trackId,
   completedStepIds: [],
@@ -257,6 +262,13 @@ export const clearTutorialState = () => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(DEMO_TUTORIAL_STORAGE_KEY);
   localStorage.removeItem(DEMO_TUTORIAL_ROLE_VIEW_KEY);
+};
+
+export const skipDemoTutorial = () => {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem('demo_mode', 'true');
+  localStorage.removeItem(DEMO_TUTORIAL_STORAGE_KEY);
+  localStorage.setItem(DEMO_TUTORIAL_ROLE_VIEW_KEY, 'false');
 };
 
 export const recordTutorialEvent = (eventName: DemoTutorialEvent) => {

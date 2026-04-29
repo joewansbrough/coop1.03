@@ -2,10 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   DEMO_TUTORIAL_TRACKS,
+  DEMO_TUTORIAL_ROLE_VIEW_KEY,
+  DEMO_TUTORIAL_STORAGE_KEY,
   createInitialTutorialState,
+  getVisibleTutorialTracks,
   getNextIncompleteStep,
   markTutorialStepDone,
   resetTutorialState,
+  skipDemoTutorial,
   updateTutorialProgress,
 } from '../utils/demoTutorial.ts';
 
@@ -18,6 +22,32 @@ test('creates initial state for each tutorial track', () => {
     assert.equal(state.isPanelDismissed, false);
     assert.equal(getNextIncompleteStep(state)?.id, track.steps[0].id);
   }
+});
+
+test('hides the pitch track from guided demo choices', () => {
+  const visibleTrackIds = getVisibleTutorialTracks().map(track => track.id);
+
+  assert.deepEqual(visibleTrackIds, ['admin', 'resident']);
+});
+
+test('skipping the tour starts demo mode in admin view without tutorial state', () => {
+  const store = new Map<string, string>();
+  (globalThis as any).localStorage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => { store.set(key, value); },
+    removeItem: (key: string) => { store.delete(key); },
+  };
+
+  store.set(DEMO_TUTORIAL_STORAGE_KEY, JSON.stringify(createInitialTutorialState('resident')));
+  store.set(DEMO_TUTORIAL_ROLE_VIEW_KEY, 'true');
+
+  skipDemoTutorial();
+
+  assert.equal(store.get('demo_mode'), 'true');
+  assert.equal(store.get(DEMO_TUTORIAL_ROLE_VIEW_KEY), 'false');
+  assert.equal(store.has(DEMO_TUTORIAL_STORAGE_KEY), false);
+
+  delete (globalThis as any).localStorage;
 });
 
 test('auto-completes route based tutorial milestones', () => {

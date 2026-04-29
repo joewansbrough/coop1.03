@@ -4,7 +4,9 @@ import {
   createInitialTutorialState,
   DEMO_TUTORIAL_ROLE_VIEW_KEY,
   DEMO_TUTORIAL_TRACKS,
+  getVisibleTutorialTracks,
   saveTutorialState,
+  skipDemoTutorial,
   type DemoTutorialTrackId,
 } from '../utils/demoTutorial';
 import { initializeDemoStorage } from '../utils/demoStorage';
@@ -31,6 +33,13 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
     onStart();
   };
 
+  const skipTour = () => {
+    skipDemoTutorial();
+    initializeDemoStorage();
+    window.location.hash = '/';
+    onStart();
+  };
+
   return (
     <div className="fixed inset-0 z-[300] bg-slate-950/80 backdrop-blur-md flex sm:items-center sm:justify-center sm:p-4">
       <div className="w-full h-[100dvh] sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-4xl bg-white dark:bg-slate-900 border-slate-200 dark:border-white/10 sm:border sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col">
@@ -51,8 +60,8 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 p-4 sm:p-8 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
-          {DEMO_TUTORIAL_TRACKS.map(track => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 p-4 sm:p-8 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {getVisibleTutorialTracks().map(track => (
             <button
               key={track.id}
               onClick={() => startTrack(track.id)}
@@ -71,6 +80,23 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
               </div>
             </button>
           ))}
+          <button
+            type="button"
+            onClick={skipTour}
+            className="text-left p-4 sm:p-5 rounded-2xl border border-dashed border-slate-300 dark:border-white/15 bg-white dark:bg-slate-950/20 hover:border-teal-500 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all group active:scale-[0.98] flex items-center sm:items-start gap-4 sm:gap-0 sm:flex-col sm:min-h-[220px]"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 flex items-center justify-center sm:mb-5 group-hover:scale-105 transition-transform shrink-0">
+              <ArrowRight className="w-6 h-6" />
+            </div>
+            <div className="min-w-0 flex-1 sm:flex sm:flex-col sm:min-h-[144px]">
+              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Skip Tour</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed mt-1.5 sm:mt-2">Open demo mode immediately with the admin dashboard and explore freely.</p>
+              <div className="mt-4 sm:mt-auto sm:pt-6 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">
+                <span>Admin view</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </button>
         </div>
       </div>
     </div>
