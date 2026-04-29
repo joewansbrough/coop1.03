@@ -57,7 +57,14 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
 
   const handleSheetPointerDown = (event: React.PointerEvent) => {
     if (event.pointerType === 'mouse') return;
+    event.currentTarget.setPointerCapture(event.pointerId);
     pointerStartRef.current = { x: event.clientX, y: event.clientY };
+  };
+
+  const handleSheetPointerMove = (event: React.PointerEvent) => {
+    if (pointerStartRef.current && event.pointerType !== 'mouse') {
+      event.preventDefault();
+    }
   };
 
   const handleSheetPointerUp = (event: React.PointerEvent) => {
@@ -85,8 +92,9 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
   return (
     <aside className={`fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)] ${isCollapsed ? '' : 'max-h-[88dvh]'} ${shouldNudge ? 'demo-guide-nudge' : ''}`}>
       <div
-        className="px-4 py-3 sm:p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-950/50 touch-pan-y"
+        className="px-4 py-3 sm:p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-950/50 touch-none select-none"
         onPointerDown={handleSheetPointerDown}
+        onPointerMove={handleSheetPointerMove}
         onPointerUp={handleSheetPointerUp}
         onPointerCancel={() => {
           pointerStartRef.current = null;
