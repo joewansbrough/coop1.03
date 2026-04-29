@@ -210,7 +210,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         return nextEvent ? (
           <button onClick={() => navigate(`/calendar/${nextEvent.id}`)} className="group flex h-full min-h-0 w-full flex-col text-left">
             <TileHeading tileId={tileId} icon="fa-calendar-day" />
-            <div className={`mt-auto min-h-0 overflow-hidden rounded-2xl bg-amber-50 p-4 dark:bg-amber-950/20 ${tileActionClass}`}>
+            <div className={`min-h-0 overflow-hidden rounded-2xl bg-amber-50 p-4 dark:bg-amber-950/20 ${tileActionClass}`}>
               <p className="text-2xl font-black text-amber-700 dark:text-amber-300">{formatShortDate(nextEvent.date)}</p>
               <p className="mt-2 line-clamp-2 text-xs font-black leading-snug text-slate-900 dark:text-white">{nextEvent.title}</p>
               <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">{nextEvent.time} - {nextEvent.location}</p>

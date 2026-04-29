@@ -41,6 +41,13 @@ const sizeClasses: Record<DashboardTileSize, string> = {
   large: 'md:col-span-2 md:row-span-2',
 };
 
+const minHeightClasses: Record<DashboardTileSize, string> = {
+  small: 'min-h-[11rem]',
+  wide: 'min-h-[14rem]',
+  tall: 'min-h-[22rem]',
+  large: 'min-h-[22rem]',
+};
+
 const nextSize = (tile: DashboardTilePreference): DashboardTileSize => {
   const allowedSizes = DASHBOARD_TILE_REGISTRY[tile.id].allowedSizes;
   const currentIndex = Math.max(0, allowedSizes.indexOf(tile.size));
@@ -75,7 +82,7 @@ const SortableTile: React.FC<{
     <section
       ref={sortable.setNodeRef}
       style={style}
-      className={`${sizeClasses[tile.size]} min-h-[14rem] ${sortable.isDragging ? 'z-20 opacity-80' : ''}`}
+      className={`${sizeClasses[tile.size]} ${minHeightClasses[tile.size]} ${sortable.isDragging ? 'z-20 opacity-80' : ''}`}
     >
       <div className="h-full overflow-hidden rounded-[20px] border border-slate-200 bg-white p-5 shadow-sm transition-all dark:border-white/5 dark:bg-slate-900">
         {isEditing && (
