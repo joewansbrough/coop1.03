@@ -9,6 +9,7 @@ import {
   saveTutorialState,
   type DemoTutorialState,
 } from '../utils/demoTutorial';
+import { getSheetGestureAction } from '../utils/demoTutorialSheetGesture';
 
 interface DemoTutorialPanelProps {
   state: DemoTutorialState;
@@ -17,6 +18,7 @@ interface DemoTutorialPanelProps {
 
 const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateChange }) => {
   const navigate = useNavigate();
+  const pointerStartRef = React.useRef<{ x: number; y: number } | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches
   );
@@ -53,6 +55,27 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
     setIsCollapsed(!isCollapsed);
   };
 
+  const handleSheetPointerDown = (event: React.PointerEvent) => {
+    if (event.pointerType === 'mouse') return;
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+  };
+
+  const handleSheetPointerUp = (event: React.PointerEvent) => {
+    const start = pointerStartRef.current;
+    pointerStartRef.current = null;
+    if (!start || event.pointerType === 'mouse') return;
+
+    const action = getSheetGestureAction({
+      deltaX: event.clientX - start.x,
+      deltaY: event.clientY - start.y,
+      isCollapsed,
+    });
+
+    if (!action) return;
+    setShouldNudge(false);
+    setIsCollapsed(action === 'collapse');
+  };
+
   useEffect(() => {
     if (!shouldNudge) return;
     const timer = window.setTimeout(() => setShouldNudge(false), 2600);
@@ -61,7 +84,14 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
 
   return (
     <aside className={`fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)] ${isCollapsed ? '' : 'max-h-[88dvh]'} ${shouldNudge ? 'demo-guide-nudge' : ''}`}>
-      <div className="px-4 py-3 sm:p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-950/50">
+      <div
+        className="px-4 py-3 sm:p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-950/50 touch-pan-y"
+        onPointerDown={handleSheetPointerDown}
+        onPointerUp={handleSheetPointerUp}
+        onPointerCancel={() => {
+          pointerStartRef.current = null;
+        }}
+      >
         <button
           type="button"
           onClick={toggleCollapsed}
