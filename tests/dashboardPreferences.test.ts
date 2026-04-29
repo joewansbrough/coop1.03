@@ -29,23 +29,24 @@ test('creates role-aware default dashboard layouts', () => {
   assert.deepEqual(
     adminLayout.tiles.map(tile => [tile.id, tile.size]),
     [
-      ['maintenance-pulse', 'wide'],
+      ['maintenance-pulse', 'large'],
+      ['quick-actions', 'wide'],
       ['scheduled-maintenance', 'wide'],
       ['next-meeting', 'wide'],
-      ['building-map', 'wide'],
-      ['announcement-digest', 'wide'],
       ['document-watch', 'wide'],
+      ['announcement-digest', 'large'],
+      ['building-map', 'wide'],
+      ['waitlist-snapshot', 'wide'],
     ],
   );
   assert.deepEqual(
     residentLayout.tiles.map(tile => [tile.id, tile.size]),
     [
       ['my-home', 'small'],
-      ['my-requests', 'wide'],
-      ['quick-actions', 'small'],
-      ['next-meeting', 'wide'],
+      ['next-meeting', 'small'],
+      ['my-requests', 'large'],
       ['community-updates', 'large'],
-      ['useful-documents', 'wide'],
+      ['useful-documents', 'large'],
     ],
   );
   assert.ok(residentLayout.tiles.every(tile => DASHBOARD_TILE_REGISTRY[tile.id].roles.includes('resident')));

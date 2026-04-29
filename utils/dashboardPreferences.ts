@@ -35,6 +35,7 @@ export interface DashboardTileDefinition {
   description: string;
   roles: DashboardRole[];
   defaultSize: DashboardTileSize;
+  defaultSizes?: Partial<Record<DashboardRole, DashboardTileSize>>;
   allowedSizes: DashboardTileSize[];
   defaultOrder: Record<DashboardRole, number | null>;
 }
@@ -45,7 +46,7 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     title: 'Maintenance Pulse',
     description: 'Open requests grouped by priority and status.',
     roles: ['admin'],
-    defaultSize: 'wide',
+    defaultSize: 'large',
     allowedSizes: ['small', 'wide', 'large'],
     defaultOrder: { admin: 10, resident: null },
   },
@@ -56,7 +57,7 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     roles: ['admin'],
     defaultSize: 'wide',
     allowedSizes: ['wide', 'large'],
-    defaultOrder: { admin: 40, resident: null },
+    defaultOrder: { admin: 70, resident: null },
   },
   'next-meeting': {
     id: 'next-meeting',
@@ -64,17 +65,18 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     description: 'Upcoming calendar meeting or community event.',
     roles: ['admin', 'resident'],
     defaultSize: 'wide',
+    defaultSizes: { resident: 'small' },
     allowedSizes: ['small', 'wide', 'large'],
-    defaultOrder: { admin: 30, resident: 40 },
+    defaultOrder: { admin: 40, resident: 20 },
   },
   'announcement-digest': {
     id: 'announcement-digest',
     title: 'Community Announcements',
     description: 'Urgent and recent community notices.',
     roles: ['admin'],
-    defaultSize: 'wide',
+    defaultSize: 'large',
     allowedSizes: ['small', 'wide', 'large'],
-    defaultOrder: { admin: 50, resident: null },
+    defaultOrder: { admin: 60, resident: null },
   },
   'document-watch': {
     id: 'document-watch',
@@ -83,16 +85,16 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     roles: ['admin'],
     defaultSize: 'wide',
     allowedSizes: ['small', 'wide', 'large'],
-    defaultOrder: { admin: 60, resident: null },
+    defaultOrder: { admin: 50, resident: null },
   },
   'waitlist-snapshot': {
     id: 'waitlist-snapshot',
     title: 'Waitlist Snapshot',
     description: 'Waitlist size and follow-up prompt.',
     roles: ['admin'],
-    defaultSize: 'small',
+    defaultSize: 'wide',
     allowedSizes: ['small', 'wide'],
-    defaultOrder: { admin: null, resident: null },
+    defaultOrder: { admin: 80, resident: null },
   },
   'scheduled-maintenance': {
     id: 'scheduled-maintenance',
@@ -101,16 +103,16 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     roles: ['admin'],
     defaultSize: 'wide',
     allowedSizes: ['small', 'wide', 'large'],
-    defaultOrder: { admin: 20, resident: null },
+    defaultOrder: { admin: 30, resident: null },
   },
   'quick-actions': {
     id: 'quick-actions',
     title: 'Quick Actions',
     description: 'Frequently used dashboard actions.',
     roles: ['admin', 'resident'],
-    defaultSize: 'small',
+    defaultSize: 'wide',
     allowedSizes: ['small', 'wide'],
-    defaultOrder: { admin: null, resident: 30 },
+    defaultOrder: { admin: 20, resident: null },
   },
   'my-home': {
     id: 'my-home',
@@ -126,9 +128,9 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     title: 'My Requests',
     description: 'Active maintenance request timeline.',
     roles: ['resident'],
-    defaultSize: 'wide',
+    defaultSize: 'large',
     allowedSizes: ['small', 'wide', 'large'],
-    defaultOrder: { admin: null, resident: 20 },
+    defaultOrder: { admin: null, resident: 30 },
   },
   'community-updates': {
     id: 'community-updates',
@@ -144,7 +146,7 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     title: 'Useful Documents',
     description: 'Policies, forms, and recently updated records.',
     roles: ['resident'],
-    defaultSize: 'wide',
+    defaultSize: 'large',
     allowedSizes: ['small', 'wide', 'large'],
     defaultOrder: { admin: null, resident: 60 },
   },
@@ -177,6 +179,11 @@ const resolveDashboardTileId = (id: unknown): DashboardTileId | null => {
 const isDashboardTileSize = (size: unknown): size is DashboardTileSize =>
   size === 'small' || size === 'wide' || size === 'tall' || size === 'large';
 
+const getDefaultDashboardTileSize = (
+  tile: DashboardTileDefinition,
+  role: DashboardRole,
+): DashboardTileSize => tile.defaultSizes?.[role] ?? tile.defaultSize;
+
 export const getAvailableDashboardTiles = (role: DashboardRole): DashboardTileDefinition[] =>
   Object.values(DASHBOARD_TILE_REGISTRY)
     .filter(tile => tile.roles.includes(role))
@@ -188,7 +195,7 @@ export const createDefaultDashboardLayout = (role: DashboardRole): DashboardPref
     .filter(tile => tile.defaultOrder[role] !== null)
     .map(tile => ({
       id: tile.id,
-      size: tile.defaultSize,
+      size: getDefaultDashboardTileSize(tile, role),
       hidden: false,
     })),
 });
@@ -220,9 +227,10 @@ export const normalizeDashboardPreference = (
     seen.add(tileId);
 
     const definition = DASHBOARD_TILE_REGISTRY[tileId];
+    const defaultSize = getDefaultDashboardTileSize(definition, role);
     const size = isDashboardTileSize(tile.size) && definition.allowedSizes.includes(tile.size)
       ? tile.size
-      : definition.defaultSize;
+      : defaultSize;
 
     normalizedTiles.push({
       id: tileId,
@@ -320,7 +328,7 @@ export const addDashboardTile = (
     ...preference,
     tiles: [
       ...preference.tiles,
-      { id: tileId, size: definition.defaultSize, hidden: false },
+      { id: tileId, size: getDefaultDashboardTileSize(definition, role), hidden: false },
     ],
   }, role);
 };
