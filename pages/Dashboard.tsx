@@ -29,6 +29,7 @@ import {
 
 interface DashboardProps {
   isAdmin: boolean;
+  coopName?: string;
   user: {
     name: string;
     tenantId?: string | null;
@@ -101,6 +102,11 @@ const getCalendarDays = (anchor?: string) => {
   });
 };
 
+const getDateKey = (value?: string) => {
+  const date = asDate(value);
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+};
+
 const TileHeading: React.FC<{ tileId: DashboardTileId; icon: string; action?: React.ReactNode }> = ({ tileId, icon, action }) => (
   <div className="mb-4 flex items-start justify-between gap-3 sm:mb-5">
     <div className="flex min-w-0 items-start gap-3">
@@ -126,6 +132,7 @@ const tileActionClass = 'transition-colors hover:bg-teal-50 dark:hover:bg-teal-9
 
 const Dashboard: React.FC<DashboardProps> = ({
   isAdmin,
+  coopName = 'your co-op',
   user,
   units,
   tenants,
@@ -189,7 +196,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     const tileSize: DashboardTileSize = tile.size;
 
     const listLimit = tileSize === 'small' ? 1 : tileSize === 'large' ? 5 : 3;
-    const documentLimit = tileSize === 'small' ? 2 : tileSize === 'large' ? 6 : 4;
+    const documentLimit = tileSize === 'small' ? 2 : tileSize === 'large' ? 6 : 3;
     const actionLimit = tileSize === 'small' ? 2 : 4;
 
     switch (tileId) {
@@ -266,8 +273,16 @@ const Dashboard: React.FC<DashboardProps> = ({
         }
 
         if (tileSize === 'large') {
-          const activeDay = asDate(nextEvent.date).getDate();
-          const eventDays = new Set(upcomingEvents.map(event => asDate(event.date).getDate()));
+          const anchorDate = asDate(nextEvent.date);
+          const activeDateKey = getDateKey(nextEvent.date);
+          const eventDateKeys = new Set(
+            events
+              .filter(event => {
+                const eventDate = asDate(event.date);
+                return eventDate.getFullYear() === anchorDate.getFullYear() && eventDate.getMonth() === anchorDate.getMonth();
+              })
+              .map(event => getDateKey(event.date)),
+          );
           return (
             <div className="flex h-full min-h-0 flex-col">
               <TileHeading tileId={tileId} icon="fa-calendar-day" action={<Link to="/calendar" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Calendar</Link>} />
@@ -281,29 +296,45 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                   <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-black uppercase text-slate-400">
                     {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
-                    {getCalendarDays(nextEvent.date).map((day, index) => (
-                      <button
-                        key={`${day ?? 'blank'}-${index}`}
-                        type="button"
-                        disabled={!day}
-                        onClick={() => navigate('/calendar')}
-                        className={`aspect-square rounded-lg text-[10px] font-black ${
-                          day === activeDay ? 'bg-amber-600 text-white' :
-                          day && eventDays.has(day) ? 'bg-white text-amber-700 dark:bg-slate-900 dark:text-amber-300' :
-                          day ? 'bg-amber-100/60 text-slate-500 dark:bg-amber-950/30' : 'bg-transparent'
-                        }`}
-                      >
-                        {day}
-                      </button>
-                    ))}
+                    {getCalendarDays(nextEvent.date).map((day, index) => {
+                      const baseDate = anchorDate;
+                      const dayKey = day ? `${baseDate.getFullYear()}-${baseDate.getMonth()}-${day}` : '';
+                      const hasEvent = day ? eventDateKeys.has(dayKey) : false;
+                      const isActive = dayKey === activeDateKey;
+
+                      return (
+                        <button
+                          key={`${day ?? 'blank'}-${index}`}
+                          type="button"
+                          disabled={!day}
+                          onClick={() => navigate('/calendar')}
+                          className={`relative aspect-square rounded-lg text-[10px] font-black transition-colors ${
+                            isActive ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30' :
+                            hasEvent ? 'bg-amber-200 text-amber-900 ring-1 ring-amber-500 dark:bg-amber-700 dark:text-white dark:ring-amber-400' :
+                            day ? 'bg-white/70 text-slate-500 dark:bg-slate-900/50 dark:text-slate-400' : 'bg-transparent'
+                          }`}
+                        >
+                          {day}
+                          {hasEvent && (
+                            <span className={`absolute bottom-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full ${isActive ? 'bg-white' : 'bg-amber-600 dark:bg-white'}`}></span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-                <button onClick={() => navigate(`/calendar/${nextEvent.id}`)} className={`flex min-h-0 flex-col justify-center rounded-2xl bg-amber-50 p-4 text-left dark:bg-amber-950/20 ${tileActionClass}`}>
-                  <p className="text-3xl font-black text-amber-700 dark:text-amber-300">{formatShortDate(nextEvent.date)}</p>
-                  <p className="mt-2 line-clamp-2 text-sm font-black leading-snug text-slate-900 dark:text-white">{nextEvent.title}</p>
-                  <p className="mt-2 truncate text-[10px] font-bold uppercase tracking-wider text-slate-500">{nextEvent.time} - {nextEvent.location}</p>
-                  <p className="mt-3 line-clamp-3 text-xs font-semibold leading-relaxed text-slate-500">{nextEvent.description}</p>
-                </button>
+                <div className="space-y-2">
+                  {upcomingEvents.slice(0, 3).map(event => (
+                    <button key={event.id} onClick={() => navigate(`/calendar/${event.id}`)} className={`w-full rounded-2xl bg-amber-50 p-3 text-left dark:bg-amber-950/20 ${tileActionClass}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-lg font-black text-amber-700 dark:text-amber-300">{formatShortDate(event.date)}</p>
+                        <span className="shrink-0 rounded-lg bg-white px-2 py-1 text-[8px] font-black uppercase tracking-widest text-amber-700 dark:bg-slate-900 dark:text-amber-300">{event.category}</span>
+                      </div>
+                      <p className="mt-1 line-clamp-1 text-xs font-black leading-snug text-slate-900 dark:text-white">{event.title}</p>
+                      <p className="mt-1 truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">{event.time} - {event.location}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           );
@@ -422,7 +453,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div>
             <TileHeading tileId={tileId} icon="fa-list-check" action={<Link to="/maintenance" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Report issue</Link>} />
             <div className="space-y-2">
-              {userOpenRequests.slice(0, tileSize === 'large' ? 5 : tileSize === 'small' ? 2 : 4).map(request => (
+              {userOpenRequests.slice(0, tileSize === 'large' ? 5 : tileSize === 'small' ? 2 : 3).map(request => (
                 <button key={request.id} onClick={() => navigate(`/maintenance/${request.id}`)} className={`w-full rounded-2xl bg-slate-50 p-3 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
                   <div className="flex items-center justify-between gap-2">{renderRequestBadge(request)}<span className="text-[9px] font-black uppercase text-slate-400">{request.status}</span></div>
                   <p className="mt-2 line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{request.title || request.description}</p>
@@ -483,35 +514,39 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-12 animate-in fade-in duration-500">
-      <div className="relative overflow-hidden rounded-[20px] border border-white/5 bg-slate-900 p-5 text-white shadow-2xl shadow-teal-accent/10 dark:bg-slate-950 sm:p-6 lg:p-10">
+      <div className="relative overflow-hidden rounded-[20px] border border-white/5 bg-slate-900 p-5 pr-20 text-white shadow-2xl shadow-teal-accent/10 dark:bg-slate-950 sm:p-6 sm:pr-24 lg:p-10 lg:pr-28">
         <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 -translate-y-24 translate-x-24 rounded-full bg-teal-500/20 blur-[100px]"></div>
+        <div className="absolute right-4 top-4 z-20 flex gap-2 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
+          <button
+            type="button"
+            onClick={() => setIsEditing(!isEditing)}
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl text-sm shadow-sm transition-all active:scale-95 ${
+              isEditing ? 'bg-teal-500 text-white' : 'bg-white text-slate-950 hover:bg-teal-50'
+            }`}
+            aria-label="Customize your personal dashboard layout"
+            title="Customize your personal dashboard layout"
+          >
+            <i className={`fa-solid ${isEditing ? 'fa-check' : 'fa-wrench'}`}></i>
+          </button>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={() => updatePreference(createDefaultDashboardLayout(role))}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-sm text-white transition-all hover:bg-white/20 active:scale-95"
+              aria-label="Restore default dashboard layout"
+              title="Restore default dashboard layout"
+            >
+              <i className="fa-solid fa-rotate-left"></i>
+            </button>
+          )}
+        </div>
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-teal-300">{isAdmin ? 'Board command dashboard' : 'Member home dashboard'}</p>
             <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">Welcome home, {firstName}.</h1>
             <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-slate-400">
-              Choose the tiles that keep the most relevant co-op information in view.
+              Welcome to {coopName}'s community space.
             </p>
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
-            <button
-              type="button"
-              onClick={() => setIsEditing(!isEditing)}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-950 active:scale-95"
-            >
-              <i className={`fa-solid ${isEditing ? 'fa-check' : 'fa-sliders'}`}></i>
-              {isEditing ? 'Done' : 'Customize'}
-            </button>
-            {isEditing && (
-              <button
-                type="button"
-                onClick={() => updatePreference(createDefaultDashboardLayout(role))}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white active:scale-95"
-              >
-                <i className="fa-solid fa-rotate-left"></i>
-                Restore defaults
-              </button>
-            )}
           </div>
         </div>
       </div>

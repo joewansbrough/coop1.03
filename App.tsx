@@ -184,6 +184,7 @@ const AppContent: React.FC = () => {
             element={
               <Dashboard
                 isAdmin={effectiveIsAdmin}
+                coopName={coopName}
                 user={user}
                 units={units}
                 isUnitsLoading={isUnitsLoading}
