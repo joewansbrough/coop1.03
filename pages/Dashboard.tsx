@@ -60,7 +60,7 @@ const openStatuses = new Set<string>([
   RequestStatus.IN_PROGRESS,
 ]);
 
-const asDate = (value?: string) => {
+const asDate = (value?: string | Date) => {
   const date = value ? new Date(value) : new Date(0);
   return Number.isNaN(date.getTime()) ? new Date(0) : date;
 };
@@ -90,7 +90,7 @@ const getUpcomingEvents = (events: CoopEvent[], limit = 6) => {
     .slice(0, limit);
 };
 
-const getCalendarDays = (anchor?: string) => {
+const getCalendarDays = (anchor?: string | Date) => {
   const base = anchor ? asDate(anchor) : new Date();
   const year = base.getFullYear();
   const month = base.getMonth();
@@ -102,7 +102,7 @@ const getCalendarDays = (anchor?: string) => {
   });
 };
 
-const getDateKey = (value?: string) => {
+const getDateKey = (value?: string | Date) => {
   const date = asDate(value);
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 };
@@ -114,8 +114,7 @@ const TileHeading: React.FC<{ tileId: DashboardTileId; icon: string; action?: Re
         <i className={`fa-solid ${icon}`}></i>
       </div>
       <div className="min-w-0">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Dashboard tile</p>
-        <h2 className="mt-1 line-clamp-2 text-xs font-black uppercase tracking-tight text-slate-900 dark:text-white sm:text-sm">{DASHBOARD_TILE_REGISTRY[tileId].title}</h2>
+        <h2 className="line-clamp-2 text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white sm:text-base">{DASHBOARD_TILE_REGISTRY[tileId].title}</h2>
       </div>
     </div>
     {action && <div className="shrink-0">{action}</div>}
@@ -145,6 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [calendarMonthOffset, setCalendarMonthOffset] = useState(0);
   const role: DashboardRole = isAdmin ? 'admin' : 'resident';
   const {
     preference,
@@ -167,7 +167,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const upcomingScheduled = [...scheduledMaintenance]
     .filter(task => !task.isCompleted)
     .sort((a, b) => asDate(a.dueDate).getTime() - asDate(b.dueDate).getTime())
-    .slice(0, 4);
+    .slice(0, 6);
 
   const unitsByFloor = useMemo(() => {
     return units.reduce((acc, unit) => {
@@ -197,7 +197,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
     const listLimit = tileSize === 'small' ? 1 : tileSize === 'large' ? 5 : 3;
     const documentLimit = listLimit;
-    const actionLimit = tileSize === 'small' ? 2 : 4;
+    const actionLimit = 4;
 
     switch (tileId) {
       case 'maintenance-pulse': {
@@ -287,14 +287,38 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         if (tileSize === 'wide' || tileSize === 'large') {
           const anchorDate = asDate(nextEvent.date);
+          const displayedMonth = new Date(anchorDate.getFullYear(), anchorDate.getMonth() + calendarMonthOffset, 1);
           const activeDateKey = getDateKey(nextEvent.date);
           const eventDateKeys = new Set(
             events
               .filter(event => {
                 const eventDate = asDate(event.date);
-                return eventDate.getFullYear() === anchorDate.getFullYear() && eventDate.getMonth() === anchorDate.getMonth();
+                return eventDate.getFullYear() === displayedMonth.getFullYear() && eventDate.getMonth() === displayedMonth.getMonth();
               })
               .map(event => getDateKey(event.date)),
+          );
+          const renderCalendarControls = (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setCalendarMonthOffset(value => value - 1)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[10px] text-amber-700 transition-colors hover:bg-amber-100 dark:bg-slate-900 dark:text-amber-300 dark:hover:bg-slate-800"
+                aria-label="Previous calendar month"
+                title="Previous month"
+              >
+                <i className="fa-solid fa-chevron-left"></i>
+              </button>
+              <span className="px-1 text-[9px] font-black uppercase tracking-widest text-slate-500">{upcomingEvents.length} upcoming</span>
+              <button
+                type="button"
+                onClick={() => setCalendarMonthOffset(value => value + 1)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-[10px] text-amber-700 transition-colors hover:bg-amber-100 dark:bg-slate-900 dark:text-amber-300 dark:hover:bg-slate-800"
+                aria-label="Next calendar month"
+                title="Next month"
+              >
+                <i className="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
           );
 
           if (tileSize === 'large') {
@@ -305,16 +329,16 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <div className="flex min-h-0 flex-1 flex-col rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20 sm:p-4">
                     <div className="mb-3 flex items-center justify-between">
                       <p className="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">
-                        {asDate(nextEvent.date).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                        {displayedMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
                       </p>
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{upcomingEvents.length} upcoming</span>
+                      {renderCalendarControls}
                     </div>
                     <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-black uppercase text-slate-400">
                       {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
                     </div>
                     <div className="mt-1 grid min-h-0 flex-1 grid-cols-7 gap-1.5">
-                      {getCalendarDays(nextEvent.date).map((day, index) => {
-                        const baseDate = anchorDate;
+                      {getCalendarDays(displayedMonth).map((day, index) => {
+                        const baseDate = displayedMonth;
                         const dayKey = day ? `${baseDate.getFullYear()}-${baseDate.getMonth()}-${day}` : '';
                         const hasEvent = day ? eventDateKeys.has(dayKey) : false;
                         const isActive = dayKey === activeDateKey;
@@ -363,14 +387,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                 <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20">
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">
-                      {asDate(nextEvent.date).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                      {displayedMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
                     </p>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{upcomingEvents.length} upcoming</span>
+                    {renderCalendarControls}
                   </div>
                   <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-black uppercase text-slate-400">
                     {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
-                    {getCalendarDays(nextEvent.date).map((day, index) => {
-                      const baseDate = anchorDate;
+                    {getCalendarDays(displayedMonth).map((day, index) => {
+                      const baseDate = displayedMonth;
                       const dayKey = day ? `${baseDate.getFullYear()}-${baseDate.getMonth()}-${day}` : '';
                       const hasEvent = day ? eventDateKeys.has(dayKey) : false;
                       const isActive = dayKey === activeDateKey;
@@ -476,15 +500,29 @@ const Dashboard: React.FC<DashboardProps> = ({
           </button>
         );
       case 'scheduled-maintenance':
+        const scheduledLimit = tileSize === 'small' ? 2 : tileSize === 'wide' ? 3 : 6;
+        const isCompactScheduled = tileSize === 'small';
         return (
           <div>
             <TileHeading tileId={tileId} icon="fa-screwdriver-wrench" />
-            <div className="space-y-2">
-              {upcomingScheduled.slice(0, listLimit).map(task => (
-                <button key={task.id} type="button" onClick={() => navigate('/maintenance')} className={`w-full rounded-2xl bg-slate-50 p-3 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
-                  <p className="text-xs font-black text-slate-900 dark:text-white">{task.task}</p>
-                  <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-400">Due {formatDate(task.dueDate)} - {task.assignedTo}</p>
-                  {tileSize === 'large' && <p className="mt-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">{task.category} - {task.frequency}</p>}
+            <div className={isCompactScheduled ? 'space-y-2' : 'space-y-3'}>
+              {upcomingScheduled.slice(0, scheduledLimit).map(task => (
+                <button
+                  key={task.id}
+                  type="button"
+                  onClick={() => navigate('/maintenance')}
+                  className={`block w-full rounded-2xl bg-slate-50 text-left dark:bg-slate-950/40 ${isCompactScheduled ? 'p-3' : 'p-4'} ${tileActionClass}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-lg bg-white px-2 py-1 text-[8px] font-black uppercase tracking-widest text-slate-500 dark:bg-slate-900 dark:text-slate-400">{task.category}</span>
+                    <span className="text-[9px] font-bold uppercase text-slate-400">Due {formatDate(task.dueDate)}</span>
+                  </div>
+                  <p className={`mt-2 font-black text-slate-900 dark:text-white ${isCompactScheduled ? 'line-clamp-1 text-xs' : 'line-clamp-2 text-sm'}`}>{task.task}</p>
+                  {tileSize !== 'small' && (
+                    <p className="mt-2 line-clamp-2 text-xs font-semibold leading-relaxed text-slate-500">
+                      {task.frequency} - {task.assignedTo}
+                    </p>
+                  )}
                 </button>
               ))}
               {upcomingScheduled.length === 0 && <EmptyTile label="No scheduled tasks due" />}
@@ -545,6 +583,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         );
       case 'quick-actions': {
+        const isCompactActions = tileSize === 'small';
         const actions = isAdmin
           ? [
             { label: 'Service Queue', path: '/maintenance', icon: 'fa-wrench' },
@@ -561,11 +600,15 @@ const Dashboard: React.FC<DashboardProps> = ({
         return (
           <div>
             <TileHeading tileId={tileId} icon="fa-bolt" />
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className={`grid gap-2 ${isCompactActions ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'}`}>
               {actions.slice(0, actionLimit).map(action => (
-                <button key={action.path} onClick={() => navigate(action.path)} className={`flex items-center gap-3 rounded-2xl bg-slate-50 p-4 text-left dark:bg-slate-950/40 ${tileActionClass}`}>
-                  <i className={`fa-solid ${action.icon} text-teal-600 dark:text-teal-300`}></i>
-                  <span className="text-xs font-black text-slate-900 dark:text-white">{action.label}</span>
+                <button
+                  key={action.path}
+                  onClick={() => navigate(action.path)}
+                  className={`min-w-0 rounded-2xl bg-slate-50 dark:bg-slate-950/40 ${isCompactActions ? 'flex min-h-[3.35rem] flex-col items-center justify-center gap-1 p-2 text-center' : 'flex items-center gap-3 p-4 text-left'} ${tileActionClass}`}
+                >
+                  <i className={`fa-solid ${action.icon} shrink-0 text-teal-600 dark:text-teal-300 ${isCompactActions ? 'text-sm' : ''}`}></i>
+                  <span className={`min-w-0 max-w-full font-black leading-tight text-slate-900 dark:text-white ${isCompactActions ? 'line-clamp-2 break-words text-[9px]' : 'text-xs'}`}>{action.label}</span>
                 </button>
               ))}
             </div>
