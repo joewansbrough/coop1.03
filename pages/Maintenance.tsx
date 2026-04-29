@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MaintenanceRequest, RequestStatus, RepairQuote, MaintenanceCategory, Unit, MaintenancePriority } from '../types';
 import { geminiService } from '../services/geminiService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
 import { useCreateMaintenance, useUpdateMaintenance } from '../hooks/useCoopData';
@@ -18,7 +18,10 @@ interface MaintenanceProps {
 
 const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, setRequests, units, isRequestsLoading, isRequestsError }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const userUnitId = units.length > 0 ? units[0].id : 'u1';
+  const statusParam = searchParams.get('status');
+  const priorityParam = searchParams.get('priority') as MaintenancePriority | null;
   
   const [quotes, setQuotes] = useState<RepairQuote[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -26,7 +29,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [selectedRequestIdForQuotes, setSelectedRequestIdForQuotes] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('All');
+  const [filter, setFilter] = useState(statusParam === 'open' ? 'Open' : 'All');
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<{id: string, status: RequestStatus} | null>(null);
   const [urgency, setUrgency] = useState<string>('Medium');
@@ -44,10 +47,14 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const allFilteredRequests = (Array.isArray(requests) ? requests : [])
     .filter(r => isAdmin || r.unitId === userUnitId)
     .filter(r => {
-      const matchesFilter = filter === 'All' || r.status === filter;
+      const matchesFilter =
+        filter === 'All' ||
+        (filter === 'Open' && (r.status === RequestStatus.PENDING || r.status === RequestStatus.IN_PROGRESS)) ||
+        r.status === filter;
+      const matchesPriority = !priorityParam || r.priority === priorityParam;
       const matchesSearch = r.description.toLowerCase().includes(search.toLowerCase()) || 
                            (units.find(u => u.id === r.unitId)?.number.includes(search));
-      return matchesFilter && matchesSearch;
+      return matchesFilter && matchesPriority && matchesSearch;
     });
 
   const openRequests = allFilteredRequests.filter(r => r.status === RequestStatus.PENDING || r.status === RequestStatus.IN_PROGRESS);
@@ -58,6 +65,10 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [unitId, setUnitId] = isAdmin ? useState('') : useState(userUnitId);
   const [category, setCategory] = useState<MaintenanceCategory[]>(['Other']);
   const [priority, setPriority] = useState<MaintenancePriority>(MaintenancePriority.LOW);
+
+  useEffect(() => {
+    setFilter(statusParam === 'open' ? 'Open' : 'All');
+  }, [statusParam]);
 
   const handleTriage = async () => {
     if (!description || description.length < 10) return;
@@ -197,8 +208,23 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
         searchPlaceholder="Search maintenance requests..."
         filter={filter}
         onFilterChange={setFilter}
-        filterOptions={['All', 'Pending', 'In Progress', 'Completed', 'Cancelled']}
+        filterOptions={['All', 'Open', 'Pending', 'In Progress', 'Completed', 'Cancelled']}
       />
+
+      {priorityParam && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-amber-800 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300">
+          <p className="text-[10px] font-black uppercase tracking-widest">
+            Showing {priorityParam} priority requests
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/maintenance')}
+            className="text-[10px] font-black uppercase tracking-widest text-amber-700 transition-colors hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100"
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {showForm && (
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 animate-in fade-in slide-in-from-top-4">

@@ -203,13 +203,26 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'maintenance-pulse': {
         const emergency = openRequests.filter(request => request.priority === MaintenancePriority.EMERGENCY).length;
         const high = openRequests.filter(request => request.priority === MaintenancePriority.HIGH).length;
+        const pulseStats = [
+          { label: 'Open', value: openRequests.length, path: '/maintenance?status=open', className: 'bg-slate-50 text-slate-900 dark:bg-slate-950/40 dark:text-white', labelClassName: 'text-slate-400' },
+          { label: 'High', value: high, path: `/maintenance?status=open&priority=${MaintenancePriority.HIGH}`, className: 'bg-amber-50 text-amber-600 dark:bg-amber-950/20', labelClassName: 'text-amber-700/70' },
+          { label: 'Emergency', value: emergency, path: `/maintenance?status=open&priority=${MaintenancePriority.EMERGENCY}`, className: 'bg-rose-50 text-rose-600 dark:bg-rose-950/20', labelClassName: 'text-rose-700/70' },
+        ];
         return (
           <div className="flex h-full flex-col">
             <TileHeading tileId={tileId} icon="fa-wrench" action={<Link to="/maintenance" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Open queue</Link>} />
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40 sm:p-4"><p className="text-xl font-black text-slate-900 dark:text-white sm:text-2xl">{openRequests.length}</p><p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Open</p></div>
-              <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20 sm:p-4"><p className="text-xl font-black text-amber-600 sm:text-2xl">{high}</p><p className="text-[9px] font-black uppercase tracking-widest text-amber-700/70">High</p></div>
-              <div className="rounded-2xl bg-rose-50 p-3 dark:bg-rose-950/20 sm:p-4"><p className="text-xl font-black text-rose-600 sm:text-2xl">{emergency}</p><p className="text-[9px] font-black uppercase tracking-widest text-rose-700/70">Emergency</p></div>
+              {pulseStats.map(stat => (
+                <button
+                  key={stat.label}
+                  type="button"
+                  onClick={() => navigate(stat.path)}
+                  className={`flex min-h-[4.5rem] flex-col items-center justify-center rounded-2xl p-3 text-center transition-all hover:-translate-y-0.5 hover:ring-2 hover:ring-teal-500/20 active:scale-[0.98] sm:p-4 ${stat.className}`}
+                >
+                  <p className="text-xl font-black sm:text-2xl">{stat.value}</p>
+                  <p className={`mt-1 text-center text-[9px] font-black uppercase tracking-widest ${stat.labelClassName}`}>{stat.label}</p>
+                </button>
+              ))}
             </div>
             {tileSize !== 'small' && (
               <div className="mt-4 space-y-2">
@@ -272,7 +285,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           );
         }
 
-        if (tileSize === 'large') {
+        if (tileSize === 'wide' || tileSize === 'large') {
           const anchorDate = asDate(nextEvent.date);
           const activeDateKey = getDateKey(nextEvent.date);
           const eventDateKeys = new Set(
@@ -283,6 +296,66 @@ const Dashboard: React.FC<DashboardProps> = ({
               })
               .map(event => getDateKey(event.date)),
           );
+
+          if (tileSize === 'large') {
+            return (
+              <div className="flex h-full min-h-0 flex-col">
+                <TileHeading tileId={tileId} icon="fa-calendar-day" action={<Link to="/calendar" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Calendar</Link>} />
+                <div className="flex min-h-0 flex-1 flex-col gap-3">
+                  <div className="flex min-h-0 flex-1 flex-col rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20 sm:p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">
+                        {asDate(nextEvent.date).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                      </p>
+                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{upcomingEvents.length} upcoming</span>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-black uppercase text-slate-400">
+                      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
+                    </div>
+                    <div className="mt-1 grid min-h-0 flex-1 grid-cols-7 gap-1.5">
+                      {getCalendarDays(nextEvent.date).map((day, index) => {
+                        const baseDate = anchorDate;
+                        const dayKey = day ? `${baseDate.getFullYear()}-${baseDate.getMonth()}-${day}` : '';
+                        const hasEvent = day ? eventDateKeys.has(dayKey) : false;
+                        const isActive = dayKey === activeDateKey;
+
+                        return (
+                          <button
+                            key={`${day ?? 'blank'}-${index}`}
+                            type="button"
+                            disabled={!day}
+                            onClick={() => navigate('/calendar')}
+                            className={`relative flex min-h-[2rem] items-center justify-center rounded-xl text-xs font-black transition-colors sm:text-sm ${
+                              isActive ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30' :
+                              hasEvent ? 'bg-amber-200 text-amber-900 ring-1 ring-amber-500 dark:bg-amber-700 dark:text-white dark:ring-amber-400' :
+                              day ? 'bg-white/70 text-slate-500 hover:bg-white dark:bg-slate-900/50 dark:text-slate-400 dark:hover:bg-slate-900' : 'bg-transparent'
+                            }`}
+                          >
+                            {day}
+                            {hasEvent && (
+                              <span className={`absolute bottom-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full ${isActive ? 'bg-white' : 'bg-amber-600 dark:bg-white'}`}></span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {upcomingEvents.slice(0, 4).map(event => (
+                      <button key={event.id} onClick={() => navigate(`/calendar/${event.id}`)} className={`min-w-0 rounded-2xl bg-amber-50 p-3 text-left dark:bg-amber-950/20 ${tileActionClass}`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-black text-amber-700 dark:text-amber-300">{formatShortDate(event.date)}</p>
+                          <span className="shrink-0 rounded-lg bg-white px-2 py-1 text-[8px] font-black uppercase tracking-widest text-amber-700 dark:bg-slate-900 dark:text-amber-300">{event.category}</span>
+                        </div>
+                        <p className="mt-1 line-clamp-1 text-xs font-black leading-snug text-slate-900 dark:text-white">{event.title}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div className="flex h-full min-h-0 flex-col">
               <TileHeading tileId={tileId} icon="fa-calendar-day" action={<Link to="/calendar" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Calendar</Link>} />
@@ -347,22 +420,6 @@ const Dashboard: React.FC<DashboardProps> = ({
               <p className="text-3xl font-black text-amber-700 dark:text-amber-300">{formatShortDate(nextEvent.date)}</p>
               <p className="mt-2 line-clamp-2 text-sm font-black leading-snug text-slate-900 dark:text-white">{nextEvent.title}</p>
               <p className="mt-1 max-w-full truncate text-[9px] font-bold uppercase tracking-wider text-slate-500">{nextEvent.time} - {nextEvent.location}</p>
-              {tileSize === 'wide' && (
-                <div className="mt-4 grid w-full gap-2 border-t border-amber-100 pt-3 text-left dark:border-amber-900/40 sm:grid-cols-2">
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Attendees</p>
-                    <p className="mt-1 line-clamp-2 text-xs font-bold text-slate-700 dark:text-slate-200">
-                      {nextEvent.attendees?.length
-                        ? nextEvent.attendees.slice(0, 3).map(attendee => `${attendee.firstName} ${attendee.lastName}`).join(', ')
-                        : 'No attendees yet'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Category</p>
-                    <p className="mt-1 line-clamp-2 text-xs font-bold text-slate-700 dark:text-slate-200">{nextEvent.category}</p>
-                  </div>
-                </div>
-              )}
             </button>
           </div>
         );
@@ -402,8 +459,8 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'waitlist-snapshot':
         return (
           <button onClick={() => navigate('/admin/waitlist')} className="group flex h-full min-h-0 w-full flex-col text-left">
-            <TileHeading tileId={tileId} icon="fa-clock-rotate-left" action={<span className="text-[10px] font-black uppercase tracking-widest text-teal-600">Waitlist</span>} />
-            <div className={`flex min-h-0 flex-1 flex-col justify-center overflow-hidden rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30 sm:p-4 ${tileActionClass}`}>
+            <TileHeading tileId={tileId} icon="fa-clock-rotate-left" action={<span className="rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-widest text-teal-600 transition-colors hover:bg-teal-50 hover:text-teal-700 dark:hover:bg-teal-950/30 dark:hover:text-teal-300">Waitlist</span>} />
+            <div className={`flex min-h-0 flex-1 flex-col justify-center overflow-hidden rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30 sm:p-4 ${tileSize === 'small' ? 'items-center text-center' : ''} ${tileActionClass}`}>
               <p className="text-3xl font-black text-teal-700 dark:text-teal-300">{waitlistCount}</p>
               <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">Applicants waiting</p>
               {tileSize === 'wide' && <p className="mt-3 line-clamp-2 text-xs font-semibold text-slate-500">Open the waitlist to review next applicant follow-ups and status changes.</p>}
