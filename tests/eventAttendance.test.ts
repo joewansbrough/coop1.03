@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { addUserAttendance } from '../utils/eventAttendance.ts';
+import { addUserAttendance, createAttendanceRequestInit } from '../utils/eventAttendance.ts';
 
 test('adds current user to event attendees once', () => {
   const event = { id: 'e5', attendees: [] };
@@ -14,4 +14,12 @@ test('adds current user to event attendees once', () => {
   assert.equal(updated.attendees[0].firstName, 'Margaret');
   assert.equal(updated.attendees[0].lastName, 'Chen');
   assert.equal(updatedAgain.attendees.length, 1);
+});
+
+test('attendance request includes session credentials', () => {
+  assert.deepEqual(createAttendanceRequestInit(), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  });
 });

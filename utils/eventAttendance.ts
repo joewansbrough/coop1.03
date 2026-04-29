@@ -39,3 +39,9 @@ export const addUserAttendance = <T extends Pick<CoopEvent, 'attendees'> & { id:
     attendees: [...attendees, attendee],
   };
 };
+
+export const createAttendanceRequestInit = (): RequestInit => ({
+  method: 'POST',
+  credentials: 'include',
+  headers: { 'Content-Type': 'application/json' },
+});

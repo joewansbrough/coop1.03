@@ -790,11 +790,31 @@ app.post('/api/events/:id/attend', requireAuth, async (req, res) => {
   if (!user || !user.email) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
+    const p = getPrisma();
     const eventId = getParam(req.params.id);
-    const tenant = await getPrisma().tenant.findUnique({ where: { email: user.email } });
+    const coopId = await getCoopId(req, p);
+    const userEmail = String(user.email).toLowerCase();
+    const tenant = await p.tenant.findFirst({
+      where: {
+        cooperativeId: coopId,
+        OR: [
+          { email: user.email },
+          { email: userEmail },
+        ],
+      },
+    });
     if (!tenant) return res.status(404).json({ error: 'Tenant record not found for this user' });
 
-    const event = await getPrisma().coopEvent.update({
+    const existingEvent = await p.coopEvent.findFirst({
+      where: { id: eventId, cooperativeId: coopId },
+      include: { attendees: true },
+    });
+    if (!existingEvent) return res.status(404).json({ error: 'Event not found' });
+    if (existingEvent.attendees.some((attendee: any) => attendee.id === tenant.id)) {
+      return res.json(existingEvent);
+    }
+
+    const event = await p.coopEvent.update({
       where: { id: eventId },
       data: {
         attendees: {

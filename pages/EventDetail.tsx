@@ -9,7 +9,7 @@ import AppAlert from '../components/AppAlert';
 import MinutesBuilder from '../components/MinutesBuilder';
 import { isDemoMode, useMinutes } from '../hooks/useCoopData';
 import { MinutesPDF } from '../services/export/pdfGenerator';
-import { addUserAttendance } from '../utils/eventAttendance';
+import { addUserAttendance, createAttendanceRequestInit } from '../utils/eventAttendance';
 import { demoStorage } from '../utils/demoStorage';
 
 const readableTextClass = 'min-w-0 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]';
@@ -487,13 +487,11 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
     }
 
     try {
-      const res = await fetch(`/api/events/${event.id}/attend`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const res = await fetch(`/api/events/${event.id}/attend`, createAttendanceRequestInit());
       const data = await res.json();
       if (res.ok) {
-        setEvents(events.map(ev => ev.id === event.id ? data : ev));
+        setEvents(current => current.map(ev => ev.id === event.id ? data : ev));
+        setEvent(data);
         setIsAttending(true);
         showAlert('Attendance confirmed.', 'success');
       } else {
