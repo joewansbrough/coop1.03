@@ -9,7 +9,7 @@ import {
   saveTutorialState,
   type DemoTutorialState,
 } from '../utils/demoTutorial';
-import { getSheetGestureAction } from '../utils/demoTutorialSheetGesture';
+import { getSheetDragOffset, getSheetGestureAction } from '../utils/demoTutorialSheetGesture';
 
 interface DemoTutorialPanelProps {
   state: DemoTutorialState;
@@ -18,7 +18,10 @@ interface DemoTutorialPanelProps {
 
 const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateChange }) => {
   const navigate = useNavigate();
-  const pointerStartRef = React.useRef<{ x: number; y: number } | null>(null);
+  const pointerStartRef = React.useRef<{ x: number; y: number; time: number } | null>(null);
+  const pointerLastRef = React.useRef<{ y: number; time: number } | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches
   );
@@ -53,23 +56,43 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
   const handleSheetPointerDown = (event: React.PointerEvent) => {
     if (event.pointerType === 'mouse') return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+    const time = event.timeStamp || performance.now();
+    pointerStartRef.current = { x: event.clientX, y: event.clientY, time };
+    pointerLastRef.current = { y: event.clientY, time };
+    setShouldNudge(false);
+    setIsDragging(true);
+    setDragOffset(0);
   };
 
   const handleSheetPointerMove = (event: React.PointerEvent) => {
-    if (pointerStartRef.current && event.pointerType !== 'mouse') {
-      event.preventDefault();
-    }
+    const start = pointerStartRef.current;
+    if (!start || event.pointerType === 'mouse') return;
+    event.preventDefault();
+    const deltaY = event.clientY - start.y;
+    setDragOffset(getSheetDragOffset(deltaY, isCollapsed));
+    pointerLastRef.current = {
+      y: event.clientY,
+      time: event.timeStamp || performance.now(),
+    };
   };
 
   const handleSheetPointerUp = (event: React.PointerEvent) => {
     const start = pointerStartRef.current;
+    const last = pointerLastRef.current;
     pointerStartRef.current = null;
+    pointerLastRef.current = null;
+    setIsDragging(false);
+    setDragOffset(0);
     if (!start || event.pointerType === 'mouse') return;
+
+    const currentTime = event.timeStamp || performance.now();
+    const velocityTime = Math.max(1, currentTime - (last?.time || start.time));
+    const velocityY = (event.clientY - (last?.y || start.y)) / velocityTime;
 
     const action = getSheetGestureAction({
       deltaX: event.clientX - start.x,
       deltaY: event.clientY - start.y,
+      velocityY,
       isCollapsed,
     });
 
@@ -90,7 +113,11 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
   const progress = Math.round((completedCount / track.steps.length) * 100);
 
   return (
-    <aside className={`fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)] ${isCollapsed ? '' : 'max-h-[88dvh]'} ${shouldNudge ? 'demo-guide-nudge' : ''}`}>
+    <aside
+      className={`fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)] will-change-transform ${isDragging ? '' : 'transition-transform duration-200 ease-out'} ${isCollapsed ? '' : 'max-h-[88dvh]'} ${shouldNudge ? 'demo-guide-nudge' : ''}`}
+      style={{ transform: `translateY(${dragOffset}px)` }}
+      data-dragging={isDragging ? 'true' : 'false'}
+    >
       <div
         className="px-4 py-3 sm:p-4 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-950/50 touch-none select-none"
         onPointerDown={handleSheetPointerDown}
@@ -98,6 +125,9 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
         onPointerUp={handleSheetPointerUp}
         onPointerCancel={() => {
           pointerStartRef.current = null;
+          pointerLastRef.current = null;
+          setIsDragging(false);
+          setDragOffset(0);
         }}
       >
         <button
