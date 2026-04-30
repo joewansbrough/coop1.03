@@ -9,6 +9,8 @@ import { formatDateTime } from '../utils/dateUtils';
 import AppAlert from '../components/AppAlert';
 import { MaintenanceRequestPDF } from '../services/export/maintenancePdfGenerator';
 import { canExportMaintenanceRequest, isCurrentTenantForMaintenanceRequest } from '../utils/maintenanceRequestAccess';
+import { isDemoMode } from '../hooks/useCoopData';
+import { demoStorage } from '../utils/demoStorage';
 
 interface MaintenanceDetailProps {
   isAdmin?: boolean;
@@ -74,9 +76,23 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
 
   const persistUpdate = async (updated: MaintenanceRequest) => {
     const uniqueCategories = Array.from(new Set(updated.category));
+    const normalizedUpdate = normalizeRequest({ ...updated, category: uniqueCategories });
+
+    if (isDemoMode()) {
+      demoStorage.updateMaintenance(normalizedUpdate);
+      if (setRequests) {
+        setRequests(prev => prev.map(r => r.id === normalizedUpdate.id ? normalizedUpdate : r));
+      }
+      queryClient.setQueryData<MaintenanceRequest[]>(['maintenance'], (current = []) =>
+        current.map(item => item.id === normalizedUpdate.id ? normalizedUpdate : item)
+      );
+      return normalizedUpdate;
+    }
+
     const res = await fetch(`/api/maintenance/${updated.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         ...updated,
         category: uniqueCategories,
