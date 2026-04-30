@@ -68,6 +68,20 @@ const getSafeBlobFileName = (fileName: string) =>
     .replace(/^-|-$/g, '')
     .toLowerCase() || 'document';
 
+const handleSingleDocumentUpload = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+) => {
+  upload.single('file')(req, res, (error: any) => {
+    if (!error) return next();
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'File is too large.', details: 'Document uploads are limited to 25 MB.' });
+    }
+    return res.status(400).json({ error: 'File upload failed.', details: error.message || String(error) });
+  });
+};
+
 const getCoopId = async (req: any, p: any = getPrisma()) => {
   const user = (req as any).user || (req as any).session?.user;
   
@@ -729,7 +743,7 @@ app.get('/api/documents', requireAuth, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/upload-to-blob', requireAuth, upload.single('file'), async (req, res) => {
+app.post('/api/upload-to-blob', requireAuth, handleSingleDocumentUpload, async (req, res) => {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'No file was uploaded.' });

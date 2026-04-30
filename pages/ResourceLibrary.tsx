@@ -419,6 +419,24 @@ const ResourceLibrary: React.FC<{
     e.preventDefault();
   };
 
+  const readFileAsDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read file.'));
+    reader.readAsDataURL(file);
+  });
+
+  const readUploadResponse = async (res: Response) => {
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) return res.json();
+
+    const text = await res.text();
+    if (text.toLowerCase().includes('request entity too large')) {
+      throw new Error('The file is too large for this upload path. Try a smaller file or link it from Google Drive.');
+    }
+    throw new Error(text.trim() || `Upload failed: ${res.status}`);
+  };
+
   const handleSimulatedUpload = async () => {
     if (isGuest || !selectedFile) return;
     if (!newDocTitle) {
@@ -436,6 +454,41 @@ const ResourceLibrary: React.FC<{
     }, 200);
 
     try {
+      if (isDemoMode()) {
+        const dataUrl = await readFileAsDataUrl(selectedFile);
+        const fileType = selectedFile.name.includes('.') ? selectedFile.name.split('.').pop()?.toLowerCase() || 'bin' : 'bin';
+        const demoDocument: Document = {
+          id: `upload-${Date.now()}`,
+          title: newDocTitle,
+          category: newDocCategory,
+          committee: newDocCommittee || undefined,
+          url: dataUrl,
+          fileType,
+          author: user?.name || user?.email || 'Demo User',
+          date: new Date().toISOString(),
+          tags: Array.from(new Set([
+            new Date().getFullYear().toString(),
+            newDocCategory,
+            ...(newDocCommittee ? [newDocCommittee] : []),
+            'Uploaded',
+          ])),
+          content: `Demo upload: ${selectedFile.name}`,
+        };
+
+        demoStorage.addDocument(demoDocument);
+        setDocuments(prev => [demoDocument, ...prev]);
+        clearInterval(interval);
+        setUploadProgress(100);
+        setShowUpload(false);
+        setUploadMode(null);
+        setNewDocTitle('');
+        setNewDocCategory('Policy');
+        setNewDocCommittee('');
+        setSelectedFile(null);
+        setReviewingDoc(demoDocument);
+        return;
+      }
+
       // Use FormData to send the file directly to the blob upload endpoint
       const formData = new FormData();
       formData.append('file', selectedFile);
@@ -445,13 +498,14 @@ const ResourceLibrary: React.FC<{
 
       const res = await fetch('/api/upload-to-blob', {
         method: 'POST',
+        credentials: 'include',
         body: formData,
       });
 
       clearInterval(interval);
       setUploadProgress(100);
 
-      const data = await res.json();
+      const data = await readUploadResponse(res);
 
       if (!res.ok) {
         throw new Error(data.details || data.error || `Upload failed: ${res.status}`);
