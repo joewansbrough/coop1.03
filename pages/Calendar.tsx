@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Committee, CoopEvent } from '../types';
 import AppAlert from '../components/AppAlert';
@@ -16,7 +16,7 @@ interface CalendarProps {
 
 const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, events, setEvents, committees = [], isEventsLoading, isEventsError }) => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -28,6 +28,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const createEventMutation = useCreateEvent();
   const updateEventMutation = useUpdateEvent();
   const deleteEventMutation = useDeleteEvent();
+  const isCreateEventSubmitting = useRef(false);
 
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertMessage({ message, type });
@@ -38,8 +39,11 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
     if (searchParams.get('action') === 'new-event' && isAdmin && !isGuest) {
       setEditEvent(null);
       setShowAddForm(true);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('action');
+      setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams, isAdmin, isGuest]);
+  }, [searchParams, setSearchParams, isAdmin, isGuest]);
 
   // Combine real events and session-only events
   const allEvents = [...events, ...tempEvents];
@@ -158,6 +162,8 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isGuest) return;
+    if (isCreateEventSubmitting.current || createEventMutation.isPending) return;
+    isCreateEventSubmitting.current = true;
 
     const payload = { 
       title, 
@@ -181,7 +187,10 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
         setDescription('');
         showAlert('Event added to community calendar.', 'success');
       },
-      onError: () => showAlert('Failed to add event.', 'error')
+      onError: () => showAlert('Failed to add event.', 'error'),
+      onSettled: () => {
+        isCreateEventSubmitting.current = false;
+      }
     });
   };
 
@@ -367,8 +376,8 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setShowAddForm(false); setEditEvent(null); }} className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 rounded-xl transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 active:scale-95 transition-all">
-                  <i className={`fa-solid ${editEvent ? 'fa-save' : 'fa-plus'}`}></i> {editEvent ? 'Save Changes' : 'Add New Event'}
+                <button type="submit" disabled={!editEvent && createEventMutation.isPending} className="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none">
+                  <i className={`fa-solid ${editEvent ? 'fa-save' : createEventMutation.isPending ? 'fa-spinner fa-spin' : 'fa-plus'}`}></i> {editEvent ? 'Save Changes' : createEventMutation.isPending ? 'Adding...' : 'Add New Event'}
                 </button>
               </div>
             </form>
