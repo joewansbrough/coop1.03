@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { geminiService } from '../services/geminiService';
 import { Document, Committee } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -22,6 +23,7 @@ const ResourceLibrary: React.FC<{
   isDocumentsLoading?: boolean,
   isDocumentsError?: boolean
 }> = ({ isAdmin, isGuest = false, documents, setDocuments, committees = [] }) => {
+  const [searchParams] = useSearchParams();
   const { data: user } = useUser();
   const refreshData = useRefreshData();
   const [filter, setFilter] = useState('All');
@@ -156,6 +158,13 @@ const ResourceLibrary: React.FC<{
 
     return () => clearInterval(checkScripts);
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'upload' && isAdmin && !isGuest) {
+      setShowUpload(true);
+      setUploadMode('file');
+    }
+  }, [searchParams, isAdmin, isGuest]);
 
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {
@@ -553,13 +562,25 @@ const ResourceLibrary: React.FC<{
             </p>
           </div>
           {isAdmin && !isGuest && (
-            <button
-              onClick={handleOpenPicker}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20"
-            >
-              <i className="fa-brands fa-google-drive"></i>
-              Link from Google Drive
-            </button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <button
+                onClick={() => {
+                  setShowUpload(true);
+                  setUploadMode('file');
+                }}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 bg-brand-600 text-white hover:bg-brand-700 active:scale-95 transition-all shadow-lg shadow-brand-500/20"
+              >
+                <i className="fa-solid fa-file-arrow-up"></i>
+                Upload Document
+              </button>
+              <button
+                onClick={handleOpenPicker}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-500/20"
+              >
+                <i className="fa-brands fa-google-drive"></i>
+                Link from Google Drive
+              </button>
+            </div>
           )}
         </div>
 
@@ -672,6 +693,114 @@ const ResourceLibrary: React.FC<{
           })}
         </div>
       </div>
+
+      <AnimatePresence>
+        {showUpload && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white dark:bg-slate-900 w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 dark:border-white/5 shadow-2xl"
+            >
+              <div className="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Upload Document</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Add a file to the searchable archive</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowUpload(false);
+                    setUploadMode(null);
+                  }}
+                  className="w-10 h-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              <div className="p-8 space-y-5">
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="cursor-pointer rounded-3xl border-2 border-dashed border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-950/40 p-8 text-center hover:border-brand-400 transition-colors"
+                >
+                  <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white dark:bg-slate-900 text-brand-600 shadow-sm">
+                    <i className="fa-solid fa-file-arrow-up text-xl"></i>
+                  </div>
+                  <p className="text-sm font-black text-slate-800 dark:text-white">{selectedFile ? selectedFile.name : 'Drop a file here or click to choose'}</p>
+                  <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">PDF, Word, spreadsheet, or image files</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Document Title</label>
+                    <input
+                      type="text"
+                      value={newDocTitle}
+                      onChange={(e) => setNewDocTitle(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
+                      placeholder="Enter document title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Category</label>
+                    <select
+                      value={newDocCategory}
+                      onChange={(e) => setNewDocCategory(e.target.value as Document['category'])}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
+                    >
+                      {categories.filter(category => category !== 'All').map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Committee</label>
+                    <select
+                      value={newDocCommittee}
+                      onChange={(e) => setNewDocCommittee(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
+                    >
+                      <option value="">None</option>
+                      {committees.map(committee => (
+                        <option key={committee.id} value={committee.name}>{committee.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {isUploading && (
+                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div className="h-full bg-brand-600 transition-all" style={{ width: `${uploadProgress}%` }}></div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-8 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-white/5 flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowUpload(false);
+                    setUploadMode(null);
+                  }}
+                  className="px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSimulatedUpload}
+                  disabled={!selectedFile || isUploading}
+                  className="px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-95"
+                >
+                  {isUploading ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Review & Tagging Modal */}
       <AnimatePresence>

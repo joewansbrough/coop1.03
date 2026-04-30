@@ -70,6 +70,14 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     setFilter(statusParam === 'open' ? 'Open' : 'All');
   }, [statusParam]);
 
+  useEffect(() => {
+    if (searchParams.get('action') === 'new-request') {
+      setActiveView('requests');
+      setSelectedRequestIdForQuotes(null);
+      setShowForm(true);
+    }
+  }, [searchParams]);
+
   const handleTriage = async () => {
     if (!description || description.length < 10) return;
     setLoading(true);

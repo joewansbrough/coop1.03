@@ -15,6 +15,7 @@ import {
 } from '../utils/dashboardPreferences';
 import { formatDate, formatShortDate } from '../utils/dateUtils';
 import { getDashboardDocumentLink } from '../utils/dashboardDocumentLinks';
+import { getDashboardQuickActions } from '../utils/dashboardQuickActions';
 import {
   Announcement,
   Committee,
@@ -605,19 +606,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         );
       case 'quick-actions': {
         const isCompactActions = tileSize === 'small';
-        const actions = isAdmin
-          ? [
-            { label: 'Service Queue', path: '/maintenance', icon: 'fa-wrench' },
-            { label: 'New Announcement', path: '/communications', icon: 'fa-bullhorn' },
-            { label: 'Schedule Event', path: '/calendar', icon: 'fa-calendar-plus' },
-            { label: 'Upload Document', path: '/documents', icon: 'fa-file-arrow-up' },
-          ]
-          : [
-            { label: 'Report Issue', path: '/maintenance', icon: 'fa-wrench' },
-            { label: 'Rules & Bylaws', path: '/documents', icon: 'fa-book-open' },
-            { label: 'Calendar', path: '/calendar', icon: 'fa-calendar-days' },
-            { label: 'Committees', path: '/committees', icon: 'fa-people-group' },
-          ];
+        const actions = getDashboardQuickActions(role);
         return (
           <div>
             <TileHeading tileId={tileId} icon="fa-bolt" />

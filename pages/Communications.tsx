@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import { Announcement } from '../types';
 import { useCreateAnnouncement } from '../hooks/useCoopData';
@@ -9,6 +9,7 @@ const Communications: React.FC<{
   announcements: Announcement[],
   setAnnouncements: React.Dispatch<React.SetStateAction<Announcement[]>>
 }> = ({ isAdmin, announcements, setAnnouncements }) => {
+  const [searchParams] = useSearchParams();
   const [annFilter, setAnnFilter] = useState('All');
   const [annSearch, setAnnSearch] = useState('');
   const [showNewAnnouncement, setShowNewAnnouncement] = useState(false);
@@ -17,6 +18,12 @@ const Communications: React.FC<{
   const [newAnnPriority, setNewAnnPriority] = useState<'Normal' | 'Urgent'>('Normal');
 
   const createAnnouncementMutation = useCreateAnnouncement();
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new-broadcast' && isAdmin) {
+      setShowNewAnnouncement(true);
+    }
+  }, [searchParams, isAdmin]);
 
   const handleCreateAnnouncement = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,8 +79,74 @@ const Communications: React.FC<{
         filterOptions={['All', 'Normal', 'Urgent']}
       />
 
+      {isAdmin && showNewAnnouncement && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl p-8 animate-in zoom-in-95 duration-200 shadow-2xl border border-slate-200 dark:border-white/5">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3 uppercase tracking-tight">
+                <i className="fa-solid fa-bullhorn text-brand-600"></i>
+                New Broadcast
+              </h3>
+              <button onClick={() => setShowNewAnnouncement(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <i className="fa-solid fa-xmark text-xl"></i>
+              </button>
+            </div>
+            <form onSubmit={handleCreateAnnouncement} className="space-y-5">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Broadcast Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Give your announcement a clear title"
+                  value={newAnnTitle}
+                  onChange={(e) => setNewAnnTitle(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Priority</label>
+                <select
+                  value={newAnnPriority}
+                  onChange={(e) => setNewAnnPriority(e.target.value as 'Normal' | 'Urgent')}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
+                >
+                  <option value="Normal">Normal Priority</option>
+                  <option value="Urgent">Urgent Broadcast</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Message</label>
+                <textarea
+                  required
+                  placeholder="Provide all essential details for members..."
+                  value={newAnnContent}
+                  onChange={(e) => setNewAnnContent(e.target.value)}
+                  className="w-full h-40 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-500 resize-none text-slate-900 dark:text-white"
+                ></textarea>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNewAnnouncement(false)}
+                  className="flex-1 py-3 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-brand-600 text-white rounded-xl text-xs font-black uppercase hover:bg-brand-700 active:scale-95 transition-all"
+                >
+                  <i className="fa-solid fa-paper-plane mr-2"></i>
+                  Send Broadcast
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {isAdmin && !showNewAnnouncement && (
+        {isAdmin && (
           <button
             onClick={() => setShowNewAnnouncement(true)}
             className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[2.5rem] p-12 flex flex-col items-center justify-center text-center hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/10 transition-all group"
@@ -86,54 +159,6 @@ const Communications: React.FC<{
             </h3>
             <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mt-1 max-w-[220px]">Post a new building-wide announcement</p>
           </button>
-        )}
-
-        {isAdmin && showNewAnnouncement && (
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border-2 border-brand-500 shadow-2xl shadow-brand-500/10 animate-in zoom-in-95 duration-200 flex flex-col h-full relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-brand-500"></div>
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-[10px] font-black text-brand-600 dark:text-brand-400 uppercase tracking-[0.2em]">New Broadcast Draft</h3>
-              <button onClick={() => setShowNewAnnouncement(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 text-slate-400 transition-colors"><i className="fa-solid fa-xmark"></i></button>
-            </div>
-            <form onSubmit={handleCreateAnnouncement} className="space-y-4 flex-1 flex flex-col">
-              <div>
-                <input
-                  type="text"
-                  placeholder="Give your announcement a clear title"
-                  value={newAnnTitle}
-                  onChange={(e) => setNewAnnTitle(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 rounded-xl px-5 py-3.5 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
-                />
-              </div>
-              <div className="flex-1">
-                <textarea
-                  placeholder="Provide all essential details for members..."
-                  value={newAnnContent}
-                  onChange={(e) => setNewAnnContent(e.target.value)}
-                  className="w-full h-40 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-white/5 rounded-xl px-5 py-4 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-500 resize-none dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
-                ></textarea>
-              </div>
-              <div className="flex items-center justify-between gap-4 mt-auto pt-6 border-t border-slate-50 dark:border-white/5">
-                <div className="flex items-center gap-2">
-                  <i className="fa-solid fa-flag text-xs text-slate-400"></i>
-                  <select
-                    value={newAnnPriority}
-                    onChange={(e) => setNewAnnPriority(e.target.value as 'Normal' | 'Urgent')}
-                    className="bg-transparent text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest outline-none cursor-pointer hover:text-brand-500 transition-colors"
-                  >
-                    <option value="Normal">Normal Priority</option>
-                    <option value="Urgent">Urgent Broadcast</option>
-                  </select>
-                </div>
-                <button
-                  type="submit"
-                  className="bg-brand-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-700 transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-brand-500/20"
-                >
-                  <i className="fa-solid fa-paper-plane mr-1"></i> Send Now
-                </button>
-              </div>
-            </form>
-          </div>
         )}
 
         {filteredAnnouncements.map((announcement) => (

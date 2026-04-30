@@ -4,6 +4,7 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import axios from 'axios';
 import cookieSession from 'cookie-session';
+import multer from 'multer';
 import { get, put } from '@vercel/blob';
 import { Readable } from 'node:stream';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
@@ -19,6 +20,10 @@ import { type DashboardRole } from '../utils/dashboardPreferences.js';
 
 
 const app = express();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
@@ -54,6 +59,14 @@ const getSafeDownloadName = (title: string, fileType?: string | null) => {
   const safeTitle = title.replace(/[\\/:*?"<>|]+/g, '').trim() || 'document';
   return safeTitle.toLowerCase().endsWith(`.${extension.toLowerCase()}`) ? safeTitle : `${safeTitle}.${extension}`;
 };
+
+const getSafeBlobFileName = (fileName: string) =>
+  fileName
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase() || 'document';
 
 const getCoopId = async (req: any, p: any = getPrisma()) => {
   const user = (req as any).user || (req as any).session?.user;
@@ -714,6 +727,89 @@ app.get('/api/documents', requireAuth, async (req, res) => {
     });
     res.json(documents);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/upload-to-blob', requireAuth, upload.single('file'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'No file was uploaded.' });
+
+    const token = getBlobToken();
+    if (!token) {
+      return res.status(500).json({ error: 'Blob storage is not configured for document uploads.' });
+    }
+
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const title = sanitizeUtf8(req.body.title) || file.originalname || 'Untitled Document';
+    const category = sanitizeUtf8(req.body.category) || 'General';
+    const committee = sanitizeUtf8(req.body.committee) || '';
+    const fileType = file.originalname.includes('.') ? file.originalname.split('.').pop()?.toLowerCase() || 'bin' : 'bin';
+    const storageKey = `coops/${coopId}/documents/${Date.now()}-${getSafeBlobFileName(file.originalname || title)}`;
+
+    const blob = await put(storageKey, file.buffer, {
+      access: process.env.BLOB_ACCESS === 'public' ? 'public' : 'private',
+      contentType: file.mimetype || 'application/octet-stream',
+      token,
+    });
+
+    const tags = Array.from(new Set([
+      new Date().getFullYear().toString(),
+      ...(committee ? [committee] : []),
+      category,
+    ].filter(Boolean)));
+
+    const document = await p.$transaction(async (tx) => {
+      const createdDocument = await tx.document.create({
+        data: {
+          cooperativeId: coopId,
+          title,
+          category,
+          url: blob.url,
+          fileType,
+          author: ((req as any).user?.name || 'Admin'),
+          date: new Date(),
+          tags,
+          committee,
+          content: null,
+        } as any,
+      });
+
+      const version = await tx.documentVersion.create({
+        data: {
+          documentId: createdDocument.id,
+          cooperativeId: coopId,
+          version: 1,
+          source: 'upload',
+          storageUrl: blob.url,
+          storageKey: blob.pathname || storageKey,
+          fileType,
+          mimeType: file.mimetype || 'application/octet-stream',
+          sizeBytes: file.size,
+        },
+      });
+
+      await tx.documentIngestionJob.create({
+        data: {
+          documentId: createdDocument.id,
+          documentVersionId: version.id,
+          cooperativeId: coopId,
+          status: 'queued',
+        },
+      });
+
+      return tx.document.update({
+        where: { id: createdDocument.id },
+        data: { currentVersionId: version.id },
+        include: { currentVersion: true },
+      });
+    });
+
+    res.json({ document });
+  } catch (e: any) {
+    console.error('Document upload error:', e);
+    res.status(500).json({ error: 'Failed to upload document.', details: e.message });
+  }
 });
 
 app.post('/api/documents', requireAuth, async (req, res) => {

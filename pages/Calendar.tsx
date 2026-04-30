@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Committee, CoopEvent } from '../types';
 import AppAlert from '../components/AppAlert';
 import { useCreateEvent, useUpdateEvent, useDeleteEvent } from '../hooks/useCoopData';
@@ -16,6 +16,7 @@ interface CalendarProps {
 
 const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, events, setEvents, committees = [], isEventsLoading, isEventsError }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -32,6 +33,13 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
     setAlertMessage({ message, type });
     window.setTimeout(() => setAlertMessage(null), 5000);
   };
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new-event' && isAdmin && !isGuest) {
+      setEditEvent(null);
+      setShowAddForm(true);
+    }
+  }, [searchParams, isAdmin, isGuest]);
 
   // Combine real events and session-only events
   const allEvents = [...events, ...tempEvents];
