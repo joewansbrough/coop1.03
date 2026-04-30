@@ -7,13 +7,13 @@ interface SheetGestureInput {
   velocityY?: number;
 }
 
-const MIN_VERTICAL_SWIPE_DISTANCE = 32;
-const MAX_HORIZONTAL_DRIFT = 64;
+const MIN_VERTICAL_SWIPE_DISTANCE = 28;
+const MAX_HORIZONTAL_TO_VERTICAL_RATIO = 1.35;
 const MIN_VERTICAL_SWIPE_VELOCITY = 0.35;
 
 export const getSheetDragOffset = (deltaY: number, isCollapsed: boolean) => {
-  if (isCollapsed) return Math.min(0, deltaY);
-  return Math.max(0, deltaY);
+  if (isCollapsed) return Math.max(-24, Math.min(0, deltaY * 0.25));
+  return Math.min(96, Math.max(0, deltaY));
 };
 
 export const getSheetGestureAction = ({
@@ -22,7 +22,7 @@ export const getSheetGestureAction = ({
   isCollapsed,
   velocityY = 0,
 }: SheetGestureInput): SheetGestureAction | null => {
-  if (Math.abs(deltaX) > MAX_HORIZONTAL_DRIFT) return null;
+  if (Math.abs(deltaX) > Math.abs(deltaY) * MAX_HORIZONTAL_TO_VERTICAL_RATIO) return null;
   if (Math.abs(deltaY) < MIN_VERTICAL_SWIPE_DISTANCE && Math.abs(velocityY) < MIN_VERTICAL_SWIPE_VELOCITY) return null;
 
   if (deltaY < 0 && isCollapsed) return 'expand';

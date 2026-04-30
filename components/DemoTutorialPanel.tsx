@@ -78,7 +78,6 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
 
   const handleSheetPointerUp = (event: React.PointerEvent) => {
     const start = pointerStartRef.current;
-    const last = pointerLastRef.current;
     pointerStartRef.current = null;
     pointerLastRef.current = null;
     setIsDragging(false);
@@ -86,8 +85,8 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
     if (!start || event.pointerType === 'mouse') return;
 
     const currentTime = event.timeStamp || performance.now();
-    const velocityTime = Math.max(1, currentTime - (last?.time || start.time));
-    const velocityY = (event.clientY - (last?.y || start.y)) / velocityTime;
+    const velocityTime = Math.max(1, currentTime - start.time);
+    const velocityY = (event.clientY - start.y) / velocityTime;
 
     const action = getSheetGestureAction({
       deltaX: event.clientX - start.x,
@@ -111,10 +110,12 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
 
   const completedCount = state.completedStepIds.length;
   const progress = Math.round((completedCount / track.steps.length) * 100);
+  const isPreviewingExpanded = isCollapsed && isDragging && dragOffset < 0;
+  const showExpandedContent = !isCollapsed || isPreviewingExpanded;
 
   return (
     <aside
-      className={`fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)] will-change-transform ${isDragging ? '' : 'transition-transform duration-200 ease-out'} ${isCollapsed ? '' : 'max-h-[88dvh]'} ${shouldNudge ? 'demo-guide-nudge' : ''}`}
+      className={`fixed inset-x-0 bottom-0 z-[120] sm:inset-x-auto sm:bottom-4 sm:right-4 w-full sm:w-[calc(100vw-2rem)] sm:max-w-sm rounded-t-3xl sm:rounded-3xl border-x border-t sm:border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden pb-[env(safe-area-inset-bottom)] will-change-transform ${isDragging ? '' : 'transition-transform duration-200 ease-out'} ${showExpandedContent ? 'max-h-[88dvh]' : ''} ${shouldNudge ? 'demo-guide-nudge' : ''}`}
       style={{ transform: `translateY(${dragOffset}px)` }}
       data-dragging={isDragging ? 'true' : 'false'}
     >
@@ -142,11 +143,11 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
             type="button"
             onClick={toggleCollapsed}
             className="min-w-0 flex-1 text-left sm:pointer-events-none"
-            aria-expanded={!isCollapsed}
+            aria-expanded={showExpandedContent}
           >
             <p className="text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-[0.22em]">Demo Guide</p>
             <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight mt-1 truncate">{track.title}</h3>
-            {isCollapsed && nextStep && (
+            {isCollapsed && !isPreviewingExpanded && nextStep && (
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold mt-1 truncate sm:hidden">{nextStep.title}</p>
             )}
           </button>
@@ -168,7 +169,7 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
             <div className="h-full bg-teal-600 transition-all" style={{ width: `${progress}%` }} />
           </div>
         </div>
-        {isCollapsed && (
+        {isCollapsed && !isPreviewingExpanded && (
           <button
             type="button"
             onClick={toggleCollapsed}
@@ -180,7 +181,7 @@ const DemoTutorialPanel: React.FC<DemoTutorialPanelProps> = ({ state, onStateCha
         )}
       </div>
 
-      {!isCollapsed && (
+      {showExpandedContent && (
         <div className="p-3 max-h-[calc(88dvh-9rem)] sm:max-h-[58vh] overflow-y-auto">
           {nextStep && (
             <div className="m-1 mb-3 p-3 rounded-2xl bg-teal-50 dark:bg-teal-950/30 border border-teal-100 dark:border-teal-900/40">
