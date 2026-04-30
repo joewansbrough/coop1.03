@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bot, Send, User, Sparkles, Shield, MessageSquare, ChevronRight, Info } from 'lucide-react';
+import { Bot, Send, User, Sparkles, Shield, MessageSquare } from 'lucide-react';
 import { geminiService } from '../services/geminiService';
 import { Document, Announcement } from '../types';
 import { recordTutorialEvent } from '../utils/demoTutorial';
@@ -17,36 +17,6 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isFirstRender = useRef(true);
-
-  const [resourceQuestion, setResourceQuestion] = useState('');
-  const [resourceAiResponse, setResourceAiResponse] = useState('');
-  const [isResourceSearching, setIsResourceSearching] = useState(false);
-
-  const handleResourceSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!resourceQuestion) return;
-    recordTutorialEvent('policy_question_asked');
-    setIsResourceSearching(true);
-    setResourceAiResponse('');
-
-    const docContext = documents.length > 0
-      ? documents.map(d =>
-        `[Document] Title: ${d.title} | Category: ${d.category}` +
-        (d.tags?.length ? ` | Tags: ${d.tags.join(', ')}` : '') +
-        (d.content?.trim() ? `\nContent: ${d.content.substring(0, 3000)}` : ' | (no extracted text)')
-      ).join('\n\n')
-      : 'No documents in the library.';
-    const context = `DOCUMENT CONTEXT:\n${docContext}`;
-
-    try {
-      const answer = await geminiService.askPolicyQuestion(resourceQuestion, context);
-      setResourceAiResponse(answer || 'Sorry, I could not find an answer.');
-    } catch (err) {
-      setResourceAiResponse('Error communicating with AI Assistant.');
-    } finally {
-      setIsResourceSearching(false);
-    }
-  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -230,51 +200,6 @@ const PolicyAssistant: React.FC<{ documents: Document[], announcements: Announce
                 <Send className="w-5 h-5" />
               </button>
             </form>
-          </div>
-        </div>
-      </div>
-
-      {/* Resource Search Module - Full Width with Separator */}
-      <div className="pt-2 border-t border-slate-100 dark:border-white/5">
-        <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-5 text-[15rem] pointer-events-none group-hover:opacity-10 transition-opacity">
-            <i className="fa-solid fa-wand-magic-sparkles"></i>
-          </div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-brand-500 rounded-2xl flex items-center justify-center">
-                <i className="fa-solid fa-robot text-xl"></i>
-              </div>
-              <div>
-                <h3 className="text-xl font-black uppercase tracking-tight">Resource Search</h3>
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Instant association rule lookup</p>
-              </div>
-            </div>
-            <form onSubmit={handleResourceSearch} className="relative">
-              <input
-                type="text"
-                className="w-full bg-slate-800 border border-slate-700 rounded-2xl px-6 py-4 pr-32 outline-none focus:ring-2 focus:ring-brand-500 transition-all text-sm font-medium"
-                placeholder="e.g., How many days notice for a general meeting?"
-                value={resourceQuestion}
-                onChange={(e) => setResourceQuestion(e.target.value)}
-              />
-              <button
-                type="submit"
-                disabled={isResourceSearching}
-                className="absolute right-2 top-2 bottom-2 bg-brand-600 hover:bg-brand-700 text-white px-6 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 active:scale-95"
-              >
-                {isResourceSearching ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-bolt"></i>}
-                Query
-              </button>
-            </form>
-            {resourceAiResponse && (
-              <div className="mt-6 p-6 bg-white/5 border border-white/10 rounded-2xl text-sm leading-relaxed animate-in fade-in slide-in-from-top-2">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[10px] font-black text-brand-400 uppercase tracking-widest border border-brand-500/30 px-2 py-0.5 rounded">Search Result</span>
-                </div>
-                <p className="text-slate-200 font-medium leading-relaxed">{resourceAiResponse}</p>
-              </div>
-            )}
           </div>
         </div>
       </div>

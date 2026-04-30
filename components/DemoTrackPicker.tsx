@@ -73,9 +73,9 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
               <div className="min-w-0 flex-1 sm:flex sm:flex-col sm:min-h-[144px]">
                 <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{track.title}</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed mt-1.5 sm:mt-2">{track.subtitle}</p>
-                <div className="mt-4 sm:mt-auto sm:pt-6 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-teal-600 dark:text-teal-400">
-                  <span>{track.steps.length} stops</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                <div className="mt-4 sm:mt-auto sm:pt-6 flex min-w-0 items-center justify-between gap-3 text-teal-600 dark:text-teal-400">
+                  <span className="min-w-0 break-words text-[10px] font-black uppercase leading-snug">{track.steps.length} stops</span>
+                  <ArrowRight className="w-4 h-4 shrink-0 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
             </button>
@@ -91,9 +91,9 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
             <div className="min-w-0 flex-1 sm:flex sm:flex-col sm:min-h-[144px]">
               <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Skip Tour</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed mt-1.5 sm:mt-2">Open demo mode immediately with the admin dashboard and explore freely.</p>
-              <div className="mt-4 sm:mt-auto sm:pt-6 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">
-                <span>Admin view</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              <div className="mt-4 sm:mt-auto sm:pt-6 flex min-w-0 items-center justify-between gap-3 text-slate-600 dark:text-slate-300">
+                <span className="min-w-0 break-words text-[10px] font-black uppercase leading-snug">Admin view</span>
+                <ArrowRight className="w-4 h-4 shrink-0 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
           </button>

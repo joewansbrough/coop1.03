@@ -2,9 +2,13 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { pdf } from '@react-pdf/renderer';
+import { saveAs } from 'file-saver';
 import { RequestStatus, MaintenanceNote, MaintenanceCategory, MaintenanceRequest, Unit, Tenant, MaintenancePriority } from '../types';
 import { formatDateTime } from '../utils/dateUtils';
 import AppAlert from '../components/AppAlert';
+import { MaintenanceRequestPDF } from '../services/export/maintenancePdfGenerator';
+import { canExportMaintenanceRequest, isCurrentTenantForMaintenanceRequest } from '../utils/maintenanceRequestAccess';
 
 interface MaintenanceDetailProps {
   isAdmin?: boolean;
@@ -12,6 +16,7 @@ interface MaintenanceDetailProps {
   setRequests?: React.Dispatch<React.SetStateAction<MaintenanceRequest[]>>;
   units?: Unit[];
   tenants?: Tenant[];
+  user?: { email?: string; name?: string; tenantId?: string; id?: string };
 }
 
 const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({ 
@@ -19,16 +24,18 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   requests = [], 
   setRequests,
   units = [],
-  tenants = []
+  tenants = [],
+  user
 }) => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   
-  const userUnitId = units.length > 0 ? units[0].id : null;
   const request = requests.find(r => r.id === requestId);
+  const unit = units.find(u => u.id === request?.unitId);
+  const tenant = tenants.find(t => t.id === request?.tenantId);
   
-  if (request && !isAdmin && request.unitId !== userUnitId) {
+  if (request && !isAdmin && !isCurrentTenantForMaintenanceRequest(request, unit, tenants, user)) {
     return (
       <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5">
         <i className="fa-solid fa-shield-halved text-5xl text-rose-500 mb-4 opacity-20"></i>
@@ -39,16 +46,14 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
     );
   }
 
-  const unit = units.find(u => u.id === request?.unitId);
-  const tenant = tenants.find(t => t.id === request?.tenantId);
-
   const [newNote, setNewNote] = useState('');
-  const [isEditingCategories, setIsEditingCategories] = useState(false);
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<RequestStatus | null>(null);
   const [reopenReason, setReopenReason] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [savingField, setSavingField] = useState<'status' | 'priority' | 'category' | null>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [showAllNotes, setShowAllNotes] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -60,41 +65,52 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   if (!request) return <div className="p-12 text-center text-slate-500 font-bold">Ticket not found in archive.</div>;
 
   const isLocked = request.status === RequestStatus.COMPLETED || request.status === RequestStatus.CANCELLED;
+  const canModifyRequest = isAdmin || isCurrentTenantForMaintenanceRequest(request, unit, tenants, user);
+  const canExportPdf = canExportMaintenanceRequest(request, unit, tenants, user, isAdmin);
+  const normalizeRequest = (data: MaintenanceRequest) => ({
+    ...data,
+    category: (Array.isArray(data.category) ? data.category : (data.category ? String(data.category).split(', ') : [])) as MaintenanceCategory[],
+  });
 
   const persistUpdate = async (updated: MaintenanceRequest) => {
-    try {
-      // Force uniqueness of categories before persistence
-      const uniqueCategories = Array.from(new Set(updated.category));
-      
-      const res = await fetch(`/api/maintenance/${updated.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...updated,
-          category: uniqueCategories // Send unique array, backend joins it
-        })
-      });
-      const data = await res.json();
-      
-      // Invalidate the maintenance query to trigger a re-fetch and UI update
-      await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
-      
-      if (setRequests) {
-        setRequests(prev => prev.map(r => r.id === data.id ? { 
-          ...data, 
-          category: Array.isArray(data.category) ? data.category : (data.category ? data.category.split(', ') : []) 
-        } : r));
-      }
-    } catch (err) {
-      console.error(err);
+    const uniqueCategories = Array.from(new Set(updated.category));
+    const res = await fetch(`/api/maintenance/${updated.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...updated,
+        category: uniqueCategories,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok || !data) {
+      throw new Error(data?.error || 'Failed to update maintenance request.');
     }
+
+    const normalized = normalizeRequest(data);
+    if (setRequests) {
+      setRequests(prev => prev.map(r => r.id === normalized.id ? normalized : r));
+    }
+    queryClient.setQueryData<MaintenanceRequest[]>(['maintenance'], (current = []) =>
+      current.map(item => item.id === normalized.id ? normalized : item)
+    );
+    await queryClient.invalidateQueries({ queryKey: ['maintenance'] });
+    return normalized;
   };
 
-  const confirmStatusChange = () => {
-    if (pendingStatus) {
-      persistUpdate({ ...request, status: pendingStatus, updatedAt: new Date().toISOString() });
+  const confirmStatusChange = async () => {
+    if (!pendingStatus) return;
+    setSavingField('status');
+    try {
+      await persistUpdate({ ...request, status: pendingStatus, updatedAt: new Date().toISOString() });
       setPendingStatus(null);
       setShowStatusConfirm(false);
+      showAlert(`Request status updated to ${pendingStatus}.`, 'success');
+    } catch (err: any) {
+      showAlert(err.message || 'Failed to update workflow stage.', 'error');
+    } finally {
+      setSavingField(null);
     }
   };
 
@@ -106,12 +122,11 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
     setShowStatusConfirm(true);
   };
 
-  const toggleCategory = (cat: MaintenanceCategory) => {
-    // Force uniqueness first to handle any legacy duplicates
+  const toggleCategory = async (cat: MaintenanceCategory) => {
+    if (!canModifyRequest || isLocked || savingField) return;
     const current = Array.from(new Set(request.category));
     const isSelected = current.includes(cat);
-    
-    // Requirement: at least one category required
+
     if (isSelected && current.length <= 1) {
       showAlert('At least one category is required.', 'error');
       return;
@@ -120,8 +135,15 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
     const next = isSelected 
       ? current.filter(c => c !== cat) 
       : [...current, cat];
-      
-    persistUpdate({ ...request, category: next, updatedAt: new Date().toISOString() });
+
+    setSavingField('category');
+    try {
+      await persistUpdate({ ...request, category: next, updatedAt: new Date().toISOString() });
+    } catch (err: any) {
+      showAlert(err.message || 'Failed to update service type.', 'error');
+    } finally {
+      setSavingField(null);
+    }
   };
 
   const addNote = async (e: React.FormEvent) => {
@@ -166,6 +188,35 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
     setReopenReason('');
   };
 
+  const handlePriorityChange = async (priority: MaintenancePriority) => {
+    if (!isAdmin || savingField || request.priority === priority) return;
+    setSavingField('priority');
+    try {
+      await persistUpdate({ ...request, priority, updatedAt: new Date().toISOString() });
+      showAlert(`Priority updated to ${priority}.`, 'success');
+    } catch (err: any) {
+      showAlert(err.message || 'Failed to update priority.', 'error');
+    } finally {
+      setSavingField(null);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!canExportPdf || isExportingPdf) return;
+    setIsExportingPdf(true);
+    try {
+      const blob = await pdf(
+        <MaintenanceRequestPDF request={request} unit={unit} tenant={tenant} exportedBy={user?.name || user?.email} />
+      ).toBlob();
+      saveAs(blob, `Maintenance_Request_${request.id}.pdf`);
+    } catch (err: any) {
+      console.error('Maintenance PDF export error:', err);
+      showAlert(err.message || 'Failed to export maintenance request PDF.', 'error');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const availableCategories: MaintenanceCategory[] = ['Plumbing', 'Electrical', 'Structural', 'Appliance', 'HVAC', 'Exterior', 'Safety', 'Other'];
 
   return (
@@ -195,7 +246,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 return (
                   <button
                     key={status}
-                    disabled={(isLocked || !isAdmin) && !isActive}
+                    disabled={savingField === 'status' || ((isLocked || !isAdmin) && !isActive)}
                     onClick={() => isAdmin && handleStatusChange(status)}
                     className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                       isActive 
@@ -229,7 +280,8 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                   return (
                     <button 
                       key={p}
-                      onClick={() => persistUpdate({ ...request, priority: p, updatedAt: new Date().toISOString() })}
+                      disabled={savingField === 'priority'}
+                      onClick={() => handlePriorityChange(p)}
                       className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                         isActive 
                           ? `${
@@ -255,23 +307,25 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
         <div className="lg:col-span-2 space-y-8">
           <section className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
             <div className="flex flex-wrap gap-2 mb-6">
-              {request.category.map(cat => (
-                <span key={cat} className="text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                  <i className="fa-solid fa-tag mr-2"></i>{cat}
-                </span>
-              ))}
-              {isAdmin && !isLocked && <button onClick={() => setIsEditingCategories(!isEditingCategories)} className="text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:border-brand-500 transition-colors flex items-center gap-2"><i className="fa-solid fa-plus"></i> Edit Service Type</button>}
-            </div>
-
-            {isEditingCategories && (
-              <div className="flex flex-wrap gap-2 mb-8 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
-                {availableCategories.map(cat => (
-                  <button key={cat} onClick={() => toggleCategory(cat)} className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${request.category.includes(cat) ? 'bg-brand-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-400 hover:text-brand-600 border border-slate-100 dark:border-white/5'}`}>
-                    {cat}
+              {availableCategories.map(cat => {
+                const isActive = request.category.includes(cat);
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    disabled={!canModifyRequest || isLocked || savingField === 'category'}
+                    onClick={() => toggleCategory(cat)}
+                    className={`text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-widest border transition-colors flex items-center gap-2 disabled:cursor-not-allowed ${
+                      isActive
+                        ? 'border-brand-600 bg-brand-600 text-white shadow-sm'
+                        : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:border-brand-400 hover:text-brand-600'
+                    }`}
+                  >
+                    <i className={`fa-solid ${isActive ? 'fa-check' : 'fa-plus'} text-[9px]`}></i>{cat}
                   </button>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
             
             <h1 className="text-4xl font-black text-slate-900 dark:text-white leading-tight mb-8">{request.description}</h1>
             
@@ -381,7 +435,14 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                     onChange={(e) => setNewNote(e.target.value)}
                   />
                   <div className="flex justify-end mt-3">
-                    <button type="submit" className="bg-slate-900 dark:bg-brand-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">Post Update</button>
+                    <button
+                      type="submit"
+                      disabled={isSavingNote || !newNote.trim()}
+                      className="bg-slate-900 dark:bg-brand-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <i className={`fa-solid ${isSavingNote ? 'fa-spinner fa-spin' : 'fa-paper-plane'}`}></i>
+                      {isSavingNote ? 'Posting...' : 'Post Update'}
+                    </button>
                   </div>
                 </form>
               )}
@@ -393,10 +454,16 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
           <div className="bg-slate-900 dark:bg-slate-950 text-white p-8 rounded-3xl">
              <h3 className="text-brand-400 font-black uppercase text-[10px] tracking-widest mb-6">Work Order Actions</h3>
              <div className="space-y-3">
-                <button onClick={() => window.print()} className="w-full p-4 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-brand-700 transition-all active:scale-95 group">
-                  <i className="fa-solid fa-print group-hover:scale-110 transition-transform"></i>
-                  <span className="text-[10px] font-black uppercase tracking-widest">Print Order</span>
-                </button>
+                {canExportPdf && (
+                  <button
+                    onClick={handleExportPdf}
+                    disabled={isExportingPdf}
+                    className="w-full p-4 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-brand-700 transition-all active:scale-95 group disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <i className={`fa-solid ${isExportingPdf ? 'fa-spinner fa-spin' : 'fa-file-pdf'} group-hover:scale-110 transition-transform`}></i>
+                    <span className="text-[10px] font-black uppercase tracking-widest">{isExportingPdf ? 'Exporting...' : 'Export to PDF'}</span>
+                  </button>
+                )}
                 {isLocked && isAdmin && (
                   <button onClick={() => setShowReopenModal(true)} className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center gap-3 hover:bg-white/20 transition-all">
                     <i className="fa-solid fa-rotate-left text-amber-500"></i>
@@ -460,6 +527,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
               </button>
               <button 
                 onClick={confirmStatusChange} 
+                disabled={savingField === 'status'}
                 className={`flex-1 py-3 text-white rounded-xl text-xs font-black uppercase shadow-lg transition-all active:scale-95 ${
                   pendingStatus === RequestStatus.COMPLETED ? 'bg-brand-600 shadow-brand-500/20' :
                   pendingStatus === RequestStatus.CANCELLED ? 'bg-rose-600 shadow-rose-500/20' :
@@ -467,7 +535,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                   'bg-amber-500 shadow-amber-500/20'
                 }`}
               >
-                Confirm Update
+                {savingField === 'status' ? 'Saving...' : 'Confirm Update'}
               </button>
             </div>
           </div>
