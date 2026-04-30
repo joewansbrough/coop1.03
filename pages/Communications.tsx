@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import { Announcement } from '../types';
 import { useCreateAnnouncement } from '../hooks/useCoopData';
+import { sortNewestFirst } from '../utils/contentOrdering';
 
 const Communications: React.FC<{
   isAdmin: boolean,
@@ -49,13 +50,13 @@ const Communications: React.FC<{
     });
   };
 
-  const filteredAnnouncements = announcements.filter((announcement) => {
+  const filteredAnnouncements = sortNewestFirst(announcements.filter((announcement) => {
     const matchesSearch =
       announcement.title.toLowerCase().includes(annSearch.toLowerCase()) ||
       announcement.content.toLowerCase().includes(annSearch.toLowerCase());
     const matchesFilter = annFilter === 'All' || announcement.priority === annFilter;
     return matchesSearch && matchesFilter;
-  });
+  }));
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">

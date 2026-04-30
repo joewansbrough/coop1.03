@@ -13,6 +13,7 @@ import { formatDate } from '../utils/dateUtils';
 import { recordTutorialEvent } from '../utils/demoTutorial';
 import { getDocumentFileUrl, getDocumentLibraryOriginalUrl } from '../utils/dashboardDocumentLinks';
 import { demoStorage } from '../utils/demoStorage';
+import { sortNewestFirst } from '../utils/contentOrdering';
 
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
@@ -320,12 +321,12 @@ const ResourceLibrary: React.FC<{
   };
 
   // Filtering logic that supports categories, tags, and search
-  const filteredDocs = !Array.isArray(documents) ? [] : documents.filter(d => {
+  const filteredDocs = sortNewestFirst(!Array.isArray(documents) ? [] : documents.filter(d => {
     const matchesFilter = filter === 'All' || d.category === filter || d.tags?.includes(filter);
     const matchesSearch = d.title.toLowerCase().includes(search.toLowerCase()) ||
       d.tags?.some(t => t.toLowerCase().includes(search.toLowerCase()));
     return matchesFilter && matchesSearch;
-  });
+  }));
 
   const handleTagClick = (tag: string, e: React.MouseEvent) => {
     e.stopPropagation();

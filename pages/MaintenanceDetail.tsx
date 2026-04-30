@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { RequestStatus, MaintenanceNote, MaintenanceExpense, MaintenanceCategory, MaintenanceRequest, Unit, Tenant, MaintenancePriority } from '../types';
-import { formatDate, formatDateTime } from '../utils/dateUtils';
+import { RequestStatus, MaintenanceNote, MaintenanceCategory, MaintenanceRequest, Unit, Tenant, MaintenancePriority } from '../types';
+import { formatDateTime } from '../utils/dateUtils';
 import AppAlert from '../components/AppAlert';
 
 interface MaintenanceDetailProps {
@@ -43,8 +43,6 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const tenant = tenants.find(t => t.id === request?.tenantId);
 
   const [newNote, setNewNote] = useState('');
-  const [newItem, setNewItem] = useState('');
-  const [newCost, setNewCost] = useState('');
   const [isEditingCategories, setIsEditingCategories] = useState(false);
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
@@ -160,20 +158,6 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
     }
   };
 
-  const addExpense = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newItem.trim() || !newCost || isLocked) return;
-    const expense: MaintenanceExpense = {
-      id: `ex${Date.now()}`,
-      item: newItem.trim(),
-      cost: parseFloat(newCost),
-      date: new Date().toISOString().split('T')[0]
-    };
-    persistUpdate({ ...request, expenses: [...(request.expenses || []), expense], updatedAt: new Date().toISOString() });
-    setNewItem('');
-    setNewCost('');
-  };
-
   const handleReopen = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reopenReason.trim()) return;
@@ -182,8 +166,6 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
     setReopenReason('');
   };
 
-  // Bug fix: Add null check for expenses
-  const totalExpenses = (request.expenses || []).reduce((acc, curr) => acc + curr.cost, 0);
   const availableCategories: MaintenanceCategory[] = ['Plumbing', 'Electrical', 'Structural', 'Appliance', 'HVAC', 'Exterior', 'Safety', 'Other'];
 
   return (
@@ -405,47 +387,6 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
               )}
             </div>
           </section>
-
-          {isAdmin && (
-            <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
-              <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex justify-between items-center">
-                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Incident Expenditure Ledger</h3>
-                <p className="text-sm font-black text-brand-600 dark:text-brand-400">Total: ${totalExpenses.toFixed(2)}</p>
-              </div>
-              <div className="p-6">
-                {!isLocked && (
-                  <form onSubmit={addExpense} className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 p-4 bg-slate-50 dark:bg-slate-950/30 rounded-2xl">
-                     <input type="text" placeholder="Service/Part" className="col-span-1 bg-white dark:bg-slate-800 border dark:border-white/10 rounded-xl px-4 py-2 text-xs font-bold" value={newItem} onChange={e => setNewItem(e.target.value)} />
-                     <input type="number" placeholder="0.00" className="col-span-1 bg-white dark:bg-slate-800 border dark:border-white/10 rounded-xl px-4 py-2 text-xs font-bold" value={newCost} onChange={e => setNewCost(e.target.value)} />
-                     <button type="submit" className="bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase shadow-brand-500/10 dark:shadow-none flex items-center justify-center gap-2 px-4"><i className="fa-solid fa-plus"></i> Add Item</button>
-                  </form>
-                )}
-                <div className="overflow-x-auto">
-                   <table className="w-full text-left">
-                      <thead className="bg-slate-50 dark:bg-slate-950/20">
-                         <tr>
-                            <th className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-slate-400">Date</th>
-                            <th className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-slate-400">Description</th>
-                            <th className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-slate-400 text-right">Cost</th>
-                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50 dark:divide-white/5">
-                         {(request.expenses || []).map(exp => (
-                           <tr key={exp.id}>
-                              <td className="px-4 py-3 text-[10px] font-bold text-slate-500">{formatDate(exp.date)}</td>
-                              <td className="px-4 py-3 text-xs font-black text-slate-800 dark:text-slate-200">{exp.item}</td>
-                              <td className="px-4 py-3 text-sm font-black text-slate-900 dark:text-white text-right">${exp.cost.toFixed(2)}</td>
-                           </tr>
-                         ))}
-                         {(!request.expenses || request.expenses.length === 0) && (
-                           <tr><td colSpan={3} className="px-4 py-8 text-center text-[10px] font-black uppercase text-slate-300">No costs recorded.</td></tr>
-                         )}
-                      </tbody>
-                   </table>
-                </div>
-              </div>
-            </section>
-          )}
         </div>
 
         <div className="space-y-6">

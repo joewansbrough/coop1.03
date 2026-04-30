@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MaintenanceRequest, RequestStatus, RepairQuote, MaintenanceCategory, Unit, MaintenancePriority } from '../types';
+import { MaintenanceRequest, RequestStatus, MaintenanceCategory, Unit, MaintenancePriority } from '../types';
 import { geminiService } from '../services/geminiService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
@@ -23,10 +23,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const statusParam = searchParams.get('status');
   const priorityParam = searchParams.get('priority') as MaintenancePriority | null;
   
-  const [quotes, setQuotes] = useState<RepairQuote[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [activeView, setActiveView] = useState<'requests' | 'quotes'>('requests');
-  const [selectedRequestIdForQuotes, setSelectedRequestIdForQuotes] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState(statusParam === 'open' ? 'Open' : 'All');
@@ -72,8 +69,6 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
 
   useEffect(() => {
     if (searchParams.get('action') === 'new-request') {
-      setActiveView('requests');
-      setSelectedRequestIdForQuotes(null);
       setShowForm(true);
     }
   }, [searchParams]);
@@ -163,15 +158,6 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     setShowStatusConfirm(true);
   };
 
-  const approveQuote = (quoteId: string) => {
-    setQuotes(quotes.map(q => q.id === quoteId ? { ...q, status: 'Approved' } : q));
-    showAlert('Quote approved. Vendor has been notified.', 'success');
-  };
-
-  const filteredQuotes = selectedRequestIdForQuotes 
-    ? quotes.filter(q => q.requestId === selectedRequestIdForQuotes)
-    : quotes;
-
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
@@ -185,22 +171,6 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          {isAdmin && (
-            <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl flex-1 sm:flex-none">
-              <button
-                onClick={() => { setActiveView('requests'); setSelectedRequestIdForQuotes(null); }}
-                className={`flex-1 sm:px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeView === 'requests' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}
-              >
-                Requests
-              </button>
-              <button
-                onClick={() => setActiveView('quotes')}
-                className={`flex-1 sm:px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${activeView === 'quotes' ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}
-              >
-                Quotes {quotes.length > 0 && `(${quotes.length})`}
-              </button>
-            </div>
-          )}
           <button 
             onClick={() => setShowForm(!showForm)}
             className="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 active:scale-95 transition-all"
@@ -312,8 +282,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
         </div>
       )}
 
-      {activeView === 'requests' ? (
-        <div className="space-y-10">
+      <div className="space-y-10">
           {/* Open Requests Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-3 px-2">
@@ -479,45 +448,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
               </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredQuotes.map(quote => (
-              <div key={quote.id} className={`bg-white dark:bg-slate-900 p-6 rounded-3xl border flex flex-col transition-all group ${quote.status === 'Approved' ? 'border-brand-500' : 'border-slate-200 dark:border-white/5'}`}>
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-brand-50 dark:group-hover:bg-brand-900/20 group-hover:text-brand-600 transition-colors">
-                    <i className="fa-solid fa-file-invoice-dollar text-xl"></i>
-                  </div>
-                  <span className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest ${
-                    quote.status === 'Approved' ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                  }`}>
-                    {quote.status}
-                  </span>
-                </div>
-                <h4 className="font-black text-slate-800 dark:text-white mb-1">{quote.vendorName}</h4>
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-4 tracking-widest">Submitted: {quote.date}</p>
-                <div className="flex-1 bg-slate-50 dark:bg-slate-950/50 p-3 rounded-2xl border border-slate-100 dark:border-white/5 mb-6">
-                  <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed italic">"{quote.details}"</p>
-                </div>
-                <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50 dark:border-white/5">
-                  <span className="text-2xl font-black text-slate-900 dark:text-white">${quote.amount.toLocaleString()}</span>
-                  <div className="flex gap-2">
-                    {quote.status !== 'Approved' && (
-                      <button 
-                        onClick={() => approveQuote(quote.id)}
-                        className="bg-slate-900 dark:bg-brand-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-brand-700 transition-all active:scale-95"
-                      >
-                        Approve
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
       {showStatusConfirm && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 animate-in zoom-in-95 duration-200 text-center">

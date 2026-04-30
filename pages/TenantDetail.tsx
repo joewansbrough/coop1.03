@@ -3,20 +3,23 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import StatCard from '../components/StatCard';
 import AppAlert from '../components/AppAlert';
-import { Tenant, Unit, MaintenanceRequest, TenantHistory } from '../types';
+import { Tenant, Unit, MaintenanceRequest, TenantHistory, Committee } from '../types';
+import { getTenantCommitteeAssignments } from '../utils/committeeMembership';
 
 interface TenantDetailProps {
   tenants: Tenant[];
   units: Unit[];
   requests: MaintenanceRequest[];
+  committees?: Committee[];
 }
 
-const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests }) => {
+const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests, committees = [] }) => {
   const { tenantId } = useParams<{ tenantId: string }>();
   const navigate = useNavigate();
   const tenant = tenants.find(t => t.id === tenantId);
   const unit = units.find(u => u.id === tenant?.unitId);
   const tenantRequests = requests.filter(r => r.unitId === tenant?.unitId);
+  const committeeAssignments = tenant ? getTenantCommitteeAssignments(tenant, committees) : [];
   
   const [activeTab, setActiveTab] = useState<'overview' | 'maintenance' | 'participation' | 'tenancy'>('overview');
   const [showMsgModal, setShowMsgModal] = useState(false);
@@ -363,8 +366,27 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests })
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5 space-y-6">
               <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-[10px] border-b border-slate-50 dark:border-white/5 pb-4">Committee Assignments</h3>
-              <div className="space-y-4">
-                <p className="text-xs text-slate-400 italic">No active committee assignments.</p>
+              <div className="space-y-3">
+                {committeeAssignments.length > 0 ? committeeAssignments.map(committee => (
+                  <Link
+                    key={committee.id}
+                    to={`/committees?id=${committee.id}`}
+                    className="flex items-center justify-between gap-4 p-4 rounded-2xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-950/50 hover:border-brand-300 dark:hover:border-brand-500/50 transition-all group"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 text-brand-600 flex items-center justify-center shrink-0">
+                        <i className={`fa-solid ${committee.icon || 'fa-users'}`}></i>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-200 group-hover:text-brand-600 truncate">{committee.name}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Chair: {committee.chair || 'Unassigned'}</p>
+                      </div>
+                    </div>
+                    <i className="fa-solid fa-arrow-up-right-from-square text-xs text-slate-300 group-hover:text-brand-500"></i>
+                  </Link>
+                )) : (
+                  <p className="text-xs text-slate-400 italic">No active committee assignments.</p>
+                )}
               </div>
             </div>
 

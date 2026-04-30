@@ -4,10 +4,12 @@ import { getSheetGestureAction } from '../utils/demoTutorialSheetGesture.ts';
 
 test('expands the demo guide after an upward mobile swipe', () => {
   assert.equal(getSheetGestureAction({ deltaY: -72, deltaX: 8, isCollapsed: true }), 'expand');
+  assert.equal(getSheetGestureAction({ deltaY: -34, deltaX: 20, isCollapsed: true }), 'expand');
 });
 
 test('collapses the demo guide after a downward mobile swipe', () => {
   assert.equal(getSheetGestureAction({ deltaY: 76, deltaX: 4, isCollapsed: false }), 'collapse');
+  assert.equal(getSheetGestureAction({ deltaY: 36, deltaX: 24, isCollapsed: false }), 'collapse');
 });
 
 test('ignores short or mostly horizontal swipes', () => {

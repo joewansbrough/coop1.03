@@ -223,7 +223,7 @@ const AppContent: React.FC = () => {
             <>
               <Route path="/admin/units" element={<AdminUnits units={units} setUnits={setUnits} tenants={tenants} />} />
               <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} />} />
-              <Route path="/admin/tenants/:tenantId" element={<TenantDetail tenants={tenants} units={units} requests={requests} />} />
+              <Route path="/admin/tenants/:tenantId" element={<TenantDetail tenants={tenants} units={units} requests={requests} committees={committees} />} />
               <Route path="/admin/waitlist" element={<Waitlist tenants={tenants} setTenants={setTenants} />} />
               <Route
                 path="/admin/reports"

@@ -6,8 +6,8 @@ interface SheetGestureInput {
   isCollapsed: boolean;
 }
 
-const MIN_VERTICAL_SWIPE_DISTANCE = 48;
-const MAX_HORIZONTAL_DRIFT = 44;
+const MIN_VERTICAL_SWIPE_DISTANCE = 32;
+const MAX_HORIZONTAL_DRIFT = 64;
 
 export const getSheetGestureAction = ({
   deltaX,

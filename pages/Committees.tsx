@@ -181,11 +181,12 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
     
     setCommittees(committees.map(c => {
       if (c.id === committeeId) {
-        if (c.members.includes(memberName)) {
+        const currentMembers = c.members || [];
+        if (currentMembers.includes(memberName)) {
           showAlert('Member is already in this committee.', 'error');
           return c;
         }
-        return { ...c, members: [...c.members, memberName] };
+        return { ...c, members: [...currentMembers, memberName] };
       }
       return c;
     }));
@@ -365,14 +366,14 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{committee.chair}</span>
                 </div>
                 <div className="flex -space-x-2">
-                  {committee.members.slice(0, 3).map((m, i) => (
+                  {(committee.members || []).slice(0, 3).map((m, i) => (
                     <div key={i} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[8px] font-black text-slate-400">
                       {m.split(' ').map(n => n[0]).join('')}
                     </div>
                   ))}
-                  {committee.members.length > 3 && (
+                  {(committee.members || []).length > 3 && (
                     <div className="w-8 h-8 rounded-full bg-brand-50 dark:bg-brand-900/30 border-2 border-white dark:border-slate-900 flex items-center justify-center text-[8px] font-black text-brand-600">
-                      +{committee.members.length - 3}
+                      +{(committee.members || []).length - 3}
                     </div>
                   )}
                 </div>
@@ -401,6 +402,14 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400 rounded-full text-[10px] font-black uppercase tracking-widest">
                       <i className="fa-solid fa-shield-halved"></i> Community Entity
                     </div>
+                    {isAdmin && !isGuest && selectedCommittee && (
+                      <button
+                        onClick={() => setShowAssignMember(selectedCommittee.id)}
+                        className="px-4 py-2 bg-brand-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-700 transition-all flex items-center gap-2"
+                      >
+                        <i className="fa-solid fa-user-plus"></i> Add Member
+                      </button>
+                    )}
                   </div>
                   <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tight">
                     {selectedCommittee?.name.toLowerCase().endsWith('committee') ? selectedCommittee?.name : `${selectedCommittee?.name} Committee`}
@@ -411,7 +420,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                     <div>
                       <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 dark:border-white/5 pb-2">Active Members</h4>
                       <div className="flex flex-wrap gap-2">
-                        {selectedCommittee?.members.map(member => (
+                        {(selectedCommittee?.members || []).map(member => (
                           <span key={member} className="px-4 py-2 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold border border-slate-200 dark:border-white/5 hover:border-brand-300 transition-colors cursor-default">{member}</span>
                         ))}
                       </div>
