@@ -1,7 +1,10 @@
 // All Gemini calls go through the backend API to keep the API key server-side
 
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
+import { createDemoMeetingAnalysis } from '../utils/meetingAnalysis.js';
 import { createOracleFallbackResponse } from '../utils/oracle.js';
+
+const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
 
 export const geminiService = {
   async triageMaintenanceRequest(description: string, visualDescription?: string) {
@@ -67,6 +70,8 @@ export const geminiService = {
   },
 
   async analyzeMeetingNotes(rawNotes: string, meetingId?: string) {
+    if (isDemoMode()) return createDemoMeetingAnalysis(rawNotes, meetingId);
+
     const res = await fetch('/api/ai/meeting-analysis', {
       method: 'POST',
       credentials: 'include',
@@ -74,6 +79,7 @@ export const geminiService = {
       body: JSON.stringify({ rawNotes, meetingId }),
     });
     const data = await res.json();
+    if (res.status === 401 && isDemoMode()) return createDemoMeetingAnalysis(rawNotes, meetingId);
     if (res.status === 401) throw new Error('Please sign in again before using AI meeting analysis.');
     if (res.status === 403) throw new Error('AI meeting analysis is available to admins only.');
     if (!res.ok) throw new Error(data.error || 'Failed to analyze meeting notes');

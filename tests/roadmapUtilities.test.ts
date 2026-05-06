@@ -14,6 +14,7 @@ import {
   shouldFlagTriageForReview,
 } from '../utils/maintenanceAI.ts';
 import {
+  createDemoMeetingAnalysis,
   mapMeetingActionsToNotifications,
 } from '../utils/meetingAnalysis.ts';
 import {
@@ -99,6 +100,19 @@ test('meeting actions become targeted governance notifications', () => {
   assert.equal(notifications[0].type, 'governance');
   assert.equal(notifications[0].entityType, 'meeting-analysis');
   assert.match(notifications[0].body, /Book plumber/);
+});
+
+test('demo meeting analysis maps rough notes into editable minutes fields', () => {
+  const analysis = createDemoMeetingAnalysis(
+    'Board approved repainting the lobby. Motion to accept the quote was carried. Action: Maintenance committee will book the painter by next Friday.',
+    'event-1',
+  );
+
+  assert.equal(analysis.meetingId, 'event-1');
+  assert.match(analysis.professionalSummary, /repainting/);
+  assert.equal(analysis.decisions.some(item => /approved repainting/.test(item)), true);
+  assert.equal(analysis.motionsMentioned.length, 1);
+  assert.equal(analysis.actionItems.some(item => /Maintenance committee/.test(item.description)), true);
 });
 
 test('units can be grouped by building while preserving floor-only defaults', () => {
