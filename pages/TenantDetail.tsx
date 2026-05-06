@@ -172,6 +172,10 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests, c
                       <p className="text-lg font-black text-slate-900 dark:text-white">{unit.type}</p>
                     </div>
                     <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Building</p>
+                      <p className="text-lg font-black text-slate-900 dark:text-white">{unit.building?.name || 'Building'}</p>
+                    </div>
+                    <div>
                       <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Status</p>
                       <span className="px-2 py-1 bg-brand-100 text-brand-700 rounded text-[10px] font-black uppercase">{unit.status}</span>
                     </div>

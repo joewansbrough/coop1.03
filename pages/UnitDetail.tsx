@@ -563,7 +563,9 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 {unit.status}
               </span>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 text-sm md:text-base">{unit.type} Residence • Floor {unit.floor} • Wing A</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 text-sm md:text-base">
+              {unit.type} Residence • {unit.building?.name ? `${unit.building.name} • ` : ''}Floor {unit.floor}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 md:gap-3 w-full lg:w-auto relative z-20 justify-start lg:justify-end">

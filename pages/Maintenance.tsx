@@ -30,6 +30,10 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<{id: string, status: RequestStatus} | null>(null);
   const [urgency, setUrgency] = useState<string>('Medium');
+  const [aiTriage, setAiTriage] = useState<any>(null);
+  const [residentTip, setResidentTip] = useState('');
+  const [visualDescription, setVisualDescription] = useState('');
+  const [imageAnalysisLoading, setImageAnalysisLoading] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const createMaintenanceMutation = useCreateMaintenance();
@@ -70,6 +74,8 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   useEffect(() => {
     if (searchParams.get('action') === 'new-request') {
       setShowForm(true);
+      const issue = searchParams.get('issue');
+      if (issue) setDescription(issue);
     }
   }, [searchParams]);
 
@@ -77,15 +83,38 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     if (!description || description.length < 10) return;
     setLoading(true);
     try {
-      const result = await geminiService.triageMaintenanceRequest(description);
-    if (result.category) setCategory([result.category as MaintenanceCategory]);
-    if (result.priority) setPriority(result.priority as MaintenancePriority);
-    if (result.urgency) setUrgency(result.urgency);
+      const result = await geminiService.triageMaintenanceRequest(description, visualDescription);
+      setAiTriage(result);
+      if (result.category) setCategory(Array.isArray(result.category) ? result.category as MaintenanceCategory[] : [result.category as MaintenanceCategory]);
+      if (result.priority) setPriority(result.priority as MaintenancePriority);
+      if (result.urgency) setUrgency(result.urgency);
+      if (result.residentTip) setResidentTip(result.residentTip);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+    setImageAnalysisLoading(true);
+    try {
+      const result = await geminiService.describeMaintenanceImage(file);
+      setVisualDescription(result.visualDescription || '');
+      if (result.likelyCategory) setCategory([result.likelyCategory as MaintenanceCategory]);
+      showAlert('Image description generated. Review it before submitting.', 'success');
+    } catch (err: any) {
+      showAlert(err.message || 'Failed to analyze image.', 'error');
+    } finally {
+      setImageAnalysisLoading(false);
+    }
+  };
+
+  const hearVisualDescription = () => {
+    if (!visualDescription || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(visualDescription));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -109,6 +138,9 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       notes: [],
       expenses: [],
       attachments: [],
+      aiTriage,
+      visualDescription,
+      residentTip,
       urgency,
     };
     
@@ -119,6 +151,9 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
         setDescription('');
         setCategory(['Other']);
         setUrgency('Medium');
+        setAiTriage(null);
+        setResidentTip('');
+        setVisualDescription('');
         if (isAdmin) setUnitId('');
         recordTutorialEvent('maintenance_submitted');
         showAlert('Maintenance request submitted successfully. The maintenance committee will review it shortly.', 'success');
@@ -272,6 +307,46 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
               </div>
             </div>
 
+            <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/5 dark:bg-slate-950/40">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Photo Documentation</label>
+                  <p className="text-[11px] font-semibold leading-relaxed text-slate-500 dark:text-slate-400">Only upload the issue area. Avoid people, personal papers, or private details.</p>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={event => handleImageUpload(event.target.files?.[0])}
+                  className="text-xs font-bold text-slate-500 file:mr-3 file:rounded-xl file:border-0 file:bg-teal-600 file:px-4 file:py-2 file:text-[10px] file:font-black file:uppercase file:text-white"
+                />
+              </div>
+              {imageAnalysisLoading && <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-teal-600">AI visual sight is analyzing...</p>}
+              {visualDescription && (
+                <div className="mt-4 rounded-2xl bg-white p-4 dark:bg-slate-900">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">AI visual description</p>
+                    <button type="button" onClick={hearVisualDescription} className="rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      Hear Audio Description
+                    </button>
+                  </div>
+                  <p className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">{visualDescription}</p>
+                </div>
+              )}
+            </div>
+
+            {aiTriage && (
+              <div className="md:col-span-2 rounded-2xl border border-teal-100 bg-teal-50 p-4 dark:border-teal-900/30 dark:bg-teal-950/20">
+                <p className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">AI triage suggestion</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase text-teal-700 dark:bg-slate-900 dark:text-teal-300">Priority: {aiTriage.priority}</span>
+                  <span className="rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase text-teal-700 dark:bg-slate-900 dark:text-teal-300">Urgency: {aiTriage.urgency}</span>
+                  <span className="rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase text-teal-700 dark:bg-slate-900 dark:text-teal-300">Confidence: {Math.round((aiTriage.confidence || 0) * 100)}%</span>
+                </div>
+                {residentTip && <p className="mt-3 text-sm font-semibold leading-relaxed text-teal-800 dark:text-teal-200">{residentTip}</p>}
+                {aiTriage.safetyWarning && <p className="mt-2 text-sm font-black text-rose-700 dark:text-rose-300">{aiTriage.safetyWarning}</p>}
+              </div>
+            )}
+
             <div className="md:col-span-2 flex flex-col-reverse sm:flex-row justify-end gap-3 mt-4 border-t border-slate-50 dark:border-white/5 pt-6">
               <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors">Dismiss</button>
               <button type="submit" className="px-10 py-3 bg-slate-900 dark:bg-brand-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-black dark:hover:bg-brand-700 active:scale-95 transition-all flex items-center justify-center gap-2">
@@ -317,6 +392,11 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                         <td className="px-6 py-4">
                           <p className="text-sm font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{req.description}</p>
                           <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Filed: {new Date(req.createdAt).toLocaleDateString()}</span>
+                          {isAdmin && req.aiTriage && (
+                            <span className="mt-1 inline-flex rounded bg-teal-50 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-teal-700 dark:bg-teal-950/30 dark:text-teal-300">
+                              AI suggested {req.aiTriage.priority} {req.aiTriage.category?.join(', ')}
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter ${

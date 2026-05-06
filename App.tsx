@@ -18,9 +18,10 @@ import Tenants from './pages/Tenants';
 import TenantDetail from './pages/TenantDetail';
 import Waitlist from './pages/Waitlist';
 import PolicyAssistant from './pages/PolicyAssistant';
+import Notifications from './pages/Notifications';
 import Login from './pages/Login';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { useUser, useUnits, useTenants, useMaintenance, useAnnouncements, useDocuments, useCommittees, useEvents, useScheduledMaintenance } from './hooks/useCoopData';
+import { useUser, useUnits, useTenants, useMaintenance, useAnnouncements, useDocuments, useCommittees, useEvents, useScheduledMaintenance, useNotifications, useBuildings } from './hooks/useCoopData';
 import { DEMO_TUTORIAL_ROLE_VIEW_KEY, recordTutorialEvent } from './utils/demoTutorial';
 
 const queryClient = new QueryClient({
@@ -100,6 +101,9 @@ const AppContent: React.FC = () => {
     isError: isScheduledMaintenanceError,
     error: scheduledMaintenanceError
   } = useScheduledMaintenance({ enabled: isEnabled });
+
+  const { data: notifications = [] } = useNotifications({ enabled: isEnabled });
+  const { data: buildings = [] } = useBuildings({ enabled: isEnabled });
 
   const createQueryArraySetter = <T,>(queryKey: string[]) =>
     (value: React.SetStateAction<T[]>) => {
@@ -204,6 +208,8 @@ const AppContent: React.FC = () => {
                 documents={documents}
                 committees={committees}
                 scheduledMaintenance={scheduledMaintenance}
+                notifications={notifications}
+                buildings={buildings}
               />
             }
           />
@@ -214,6 +220,7 @@ const AppContent: React.FC = () => {
           <Route path="/maintenance/:requestId" element={<MaintenanceDetail isAdmin={effectiveIsAdmin} requests={requests} setRequests={setRequests} units={units} tenants={tenants} user={user} />} />
           <Route path="/documents" element={<ResourceLibrary isAdmin={effectiveIsAdmin} isGuest={isGuest} documents={documents} setDocuments={setDocuments} committees={committees} isDocumentsLoading={isDocumentsLoading} isDocumentsError={isDocumentsError} />} />
           <Route path="/policy-assistant" element={<PolicyAssistant documents={documents} announcements={announcements} />} />
+          <Route path="/notifications" element={<Notifications notifications={notifications} />} />
           <Route path="/communications" element={<Communications isAdmin={effectiveIsAdmin} announcements={announcements} setAnnouncements={setAnnouncements} />} />
           <Route path="/directory" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} isTenantsLoading={isTenantsLoading} isTenantsError={isTenantsError} />} />
           <Route path="/admin/units/:unitId" element={<UnitDetail isAdmin={effectiveIsAdmin} units={units} setUnits={setUnits} tenants={tenants} setTenants={setTenants} requests={requests} setRequests={setRequests} documents={documents} />} />

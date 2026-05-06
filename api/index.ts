@@ -15,6 +15,9 @@ import {
   saveStoredDashboardPreference,
 } from '../services/dashboardPreferenceStore.js';
 import { type DashboardRole } from '../utils/dashboardPreferences.js';
+import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
+import { createOracleFallbackResponse, detectOracleIntent, normalizeOracleLanguage } from '../utils/oracle.js';
+import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 
 
 
@@ -169,6 +172,47 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
 const getDashboardRole = (req: express.Request): DashboardRole =>
   ((req as any).user?.isAdmin || (req as any).session?.user?.isAdmin) ? 'admin' : 'resident';
 
+const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const user = (req as any).user || (req as any).session?.user;
+  if (!user?.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+  next();
+};
+
+const normalizeNotification = (notification: any) => ({
+  ...notification,
+  isRead: Boolean(notification.readAt),
+  timestamp: notification.createdAt,
+});
+
+const createSystemNotification = async (
+  p: PrismaClient,
+  data: {
+    cooperativeId: string;
+    audience: string;
+    recipientUserEmail?: string | null;
+    type: string;
+    severity?: string;
+    title: string;
+    body: string;
+    entityType?: string | null;
+    entityId?: string | null;
+    actionUrl?: string | null;
+  },
+) => p.notification.create({
+  data: {
+    cooperativeId: data.cooperativeId,
+    audience: data.audience,
+    recipientUserEmail: data.recipientUserEmail?.toLowerCase() || null,
+    type: data.type,
+    severity: data.severity || 'info',
+    title: data.title,
+    body: data.body,
+    entityType: data.entityType || null,
+    entityId: data.entityId || null,
+    actionUrl: data.actionUrl || null,
+  },
+});
+
 // Robust Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
   const host = req.get('x-forwarded-host') || req.get('host');
@@ -232,6 +276,95 @@ app.put('/api/dashboard/preferences', requireAuth, async (req, res, next) => {
     });
 
     res.json(preference);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/notifications', requireAuth, async (req, res, next) => {
+  try {
+    const p = getPrisma();
+    const user = (req as any).user || (req as any).session?.user;
+    const coopId = await getCoopId(req, p);
+    const userEmail = user?.email?.toLowerCase();
+    const where: any = {
+      cooperativeId: coopId,
+      OR: [
+        { audience: 'all' },
+        { audience: 'member' },
+        ...(user?.isAdmin ? [{ audience: 'admin' }] : []),
+        ...(userEmail ? [{ audience: 'user', recipientUserEmail: userEmail }] : []),
+      ],
+    };
+    const notifications = await p.notification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    res.json(notifications.map(normalizeNotification));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/notifications', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const p = getPrisma();
+    const notification = await createSystemNotification(p, {
+      cooperativeId: await getCoopId(req, p),
+      audience: req.body.audience || 'admin',
+      recipientUserEmail: req.body.recipientUserEmail,
+      type: req.body.type || 'system',
+      severity: req.body.severity || 'info',
+      title: sanitizeUtf8(req.body.title || 'Notification'),
+      body: sanitizeUtf8(req.body.body || ''),
+      entityType: req.body.entityType,
+      entityId: req.body.entityId,
+      actionUrl: req.body.actionUrl,
+    });
+    res.json(normalizeNotification(notification));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/notifications/:id/read', requireAuth, async (req, res, next) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const notificationId = getParam(req.params.id);
+    const existing = await p.notification.findFirst({ where: { id: notificationId, cooperativeId: coopId } });
+    if (!existing) return res.status(404).json({ error: 'Notification not found' });
+    const notification = await p.notification.update({
+      where: { id: notificationId },
+      data: { readAt: new Date() },
+    });
+    res.json(normalizeNotification(notification));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/notifications/read-all', requireAuth, async (req, res, next) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const user = (req as any).user || (req as any).session?.user;
+    const userEmail = user?.email?.toLowerCase();
+    await p.notification.updateMany({
+      where: {
+        cooperativeId: coopId,
+        readAt: null,
+        OR: [
+          { audience: 'all' },
+          { audience: 'member' },
+          ...(user?.isAdmin ? [{ audience: 'admin' }] : []),
+          ...(userEmail ? [{ audience: 'user', recipientUserEmail: userEmail }] : []),
+        ],
+      },
+      data: { readAt: new Date() },
+    });
+    res.json({ success: true });
   } catch (error) {
     next(error);
   }
@@ -368,6 +501,7 @@ app.get('/api/units', requireAuth, async (req, res) => {
     const units = await p.unit.findMany({
       where: { cooperativeId: coopId },
       include: {
+        building: true,
         currentTenant: true,
         occupancyHistory: {
           include: { tenant: true },
@@ -376,6 +510,89 @@ app.get('/api/units', requireAuth, async (req, res) => {
       }
     });
     res.json(units);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/buildings', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const buildings = await p.building.findMany({
+      where: { cooperativeId: coopId },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+    res.json(buildings);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/buildings', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const building = await p.building.create({
+      data: {
+        cooperativeId: await getCoopId(req, p),
+        name: sanitizeUtf8(req.body.name || 'Building'),
+        code: sanitizeUtf8(req.body.code || null),
+        address: sanitizeUtf8(req.body.address || null),
+        sortOrder: Number(req.body.sortOrder || 1),
+      },
+    });
+    res.json(building);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/units', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const unit = await p.unit.create({
+      data: {
+        cooperativeId: coopId,
+        number: sanitizeUtf8(req.body.number),
+        type: sanitizeUtf8(req.body.type || '2BR'),
+        floor: Number(req.body.floor || 1),
+        status: sanitizeUtf8(req.body.status || 'Vacant'),
+        buildingId: req.body.buildingId || null,
+      },
+      include: {
+        building: true,
+        currentTenant: true,
+        occupancyHistory: {
+          include: { tenant: true },
+          orderBy: { startDate: 'desc' }
+        }
+      }
+    });
+    res.json(unit);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/units/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const unitId = getParam(req.params.id);
+    const unit = await p.unit.update({
+      where: { id: unitId },
+      data: {
+        ...(req.body.number !== undefined ? { number: sanitizeUtf8(req.body.number) } : {}),
+        ...(req.body.type !== undefined ? { type: sanitizeUtf8(req.body.type) } : {}),
+        ...(req.body.floor !== undefined ? { floor: Number(req.body.floor) } : {}),
+        ...(req.body.status !== undefined ? { status: sanitizeUtf8(req.body.status) } : {}),
+        ...(req.body.buildingId !== undefined ? { buildingId: req.body.buildingId || null } : {}),
+      },
+      include: { building: true, currentTenant: true },
+    });
+    if (unit.cooperativeId !== coopId) return res.status(403).json({ error: 'Forbidden' });
+    res.json(unit);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -618,7 +835,7 @@ app.get('/api/maintenance', requireAuth, async (req, res) => {
 });
 
 app.post('/api/maintenance', requireAuth, async (req, res) => {
-  const { title, description, status, priority, category, unitId, requestedBy, notes } = req.body;
+  const { title, description, status, priority, category, unitId, requestedBy, notes, attachments, aiTriage, visualDescription, residentTip } = req.body;
   const categoryString = Array.isArray(category) ? category.join(', ') : (category || 'General');
   
   try {
@@ -631,9 +848,10 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
       tenantId = t?.id || null;
     }
 
+    const coopId = await getCoopId(req, p);
     const request = await p.maintenanceRequest.create({
       data: {
-        cooperativeId: await getCoopId(req, p),
+        cooperativeId: coopId,
         title,
         description,
         status: status || 'Pending',
@@ -642,10 +860,29 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
         unitId,
         tenantId: tenantId,
         requestedBy: requestedBy || user?.email,
-        notes: notes || []
+        notes: notes || [],
+        attachments: attachments || [],
+        aiTriage: aiTriage || null,
+        visualDescription: visualDescription || null,
+        residentTip: residentTip || aiTriage?.residentTip || null,
       }
     });
-    res.json(request);
+    await createSystemNotification(p, {
+      cooperativeId: coopId,
+      audience: 'admin',
+      type: 'maintenance',
+      severity: request.priority === 'Emergency' ? 'urgent' : request.priority === 'High' ? 'high' : 'info',
+      title: `New ${request.priority} maintenance request`,
+      body: request.title || request.description,
+      entityType: 'maintenance',
+      entityId: request.id,
+      actionUrl: `/admin/maintenance/${request.id}`,
+    }).catch(error => console.error('Failed to create maintenance notification:', error));
+
+    res.json({
+      ...request,
+      category: request.category ? request.category.split(', ') : [],
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -666,14 +903,39 @@ app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
   if (body.requestedBy !== undefined) data.requestedBy = body.requestedBy;
   if (body.notes !== undefined) data.notes = body.notes;
   if (body.expenses !== undefined) data.expenses = body.expenses;
+  if (body.attachments !== undefined) data.attachments = body.attachments;
+  if (body.aiTriage !== undefined) data.aiTriage = body.aiTriage;
+  if (body.visualDescription !== undefined) data.visualDescription = body.visualDescription;
+  if (body.residentTip !== undefined) data.residentTip = body.residentTip;
+  if (body.triageReviewedBy !== undefined) data.triageReviewedBy = body.triageReviewedBy;
+  if (body.triageReviewedAt !== undefined) data.triageReviewedAt = body.triageReviewedAt ? new Date(body.triageReviewedAt) : null;
 
   try {
     const maintenanceId = getParam(req.params.id);
-    const request = await getPrisma().maintenanceRequest.update({
+    const p = getPrisma();
+    const previous = await p.maintenanceRequest.findUnique({ where: { id: maintenanceId } });
+    const request = await p.maintenanceRequest.update({
       where: { id: maintenanceId },
       data
     });
-    res.json(request);
+    if (previous?.status !== request.status) {
+      await createSystemNotification(p, {
+        cooperativeId: request.cooperativeId,
+        audience: 'user',
+        recipientUserEmail: request.requestedBy,
+        type: 'maintenance',
+        severity: request.status === 'Completed' ? 'info' : 'medium',
+        title: 'Maintenance request updated',
+        body: `${request.title} is now ${request.status}.`,
+        entityType: 'maintenance',
+        entityId: request.id,
+        actionUrl: `/maintenance/${request.id}`,
+      }).catch(error => console.error('Failed to create maintenance status notification:', error));
+    }
+    res.json({
+      ...request,
+      category: request.category ? request.category.split(', ') : [],
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -1201,8 +1463,21 @@ const getAI = () => {
   return new GoogleGenerativeAI(apiKey || '');
 };
 
+const parseJsonResponse = (text: string, fallback: any = {}) => {
+  try {
+    return JSON.parse(text || JSON.stringify(fallback));
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : fallback;
+  }
+};
+
 app.post('/api/ai/triage', requireAuth, async (req, res) => {
   try {
+    const { description, visualDescription } = req.body;
+    if (!description || String(description).trim().length < 10) {
+      return res.status(400).json({ error: 'A detailed description is required.' });
+    }
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
     const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
@@ -1214,20 +1489,65 @@ app.post('/api/ai/triage', requireAuth, async (req, res) => {
           type: SchemaType.OBJECT,
           properties: {
             priority: { type: SchemaType.STRING },
-            category: { type: SchemaType.STRING },
-            reasoning: { type: SchemaType.STRING }
+            urgency: { type: SchemaType.STRING },
+            category: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+            residentTip: { type: SchemaType.STRING },
+            confidence: { type: SchemaType.NUMBER },
+            safetyWarning: { type: SchemaType.STRING },
+            reasoning: { type: SchemaType.STRING },
           },
-          required: ['priority', 'category']
+          required: ['priority', 'urgency', 'category', 'residentTip', 'confidence']
         }
       }
     });
 
-    const { description } = req.body;
-    const result = await model.generateContent(`Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`);
+    const result = await model.generateContent(`Evaluate this BC housing co-op maintenance request. Return JSON only. Categories must be from Plumbing, Electrical, Structural, Appliance, HVAC, Exterior, Safety, Other. Priority and urgency must be Low, Medium, High, or Emergency. Provide a short residentTip that is helpful but does not diagnose beyond the evidence. Description: "${description}"${visualDescription ? `\nPhoto description: "${visualDescription}"` : ''}`);
     const response = await result.response;
-    res.json(JSON.parse(response.text() || '{}'));
+    res.json(createMaintenanceTriage(parseJsonResponse(response.text(), {})));
   } catch (e: any) {
-    res.status(500).json({ priority: 'Medium', category: 'Other', error: e.message });
+    res.status(500).json({ ...createMaintenanceTriage({}), error: e.message });
+  }
+});
+
+app.post('/api/ai/maintenance-image-description', requireAuth, upload.single('image'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'An image upload is required.' });
+    const genAI = getAI();
+    const user = (req as any).user || (req as any).session?.user;
+    const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
+    const model = genAI.getGenerativeModel({
+      model: resolvedModel,
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const result = await model.generateContent([
+      {
+        text: 'Describe this maintenance photo for a visually impaired resident. Return JSON with visualDescription, observedDamage, likelyCategory, safetyConcerns, confidence. Do not identify people or private documents.',
+      },
+      {
+        inlineData: {
+          data: file.buffer.toString('base64'),
+          mimeType: file.mimetype,
+        },
+      },
+    ]);
+    const response = await result.response;
+    res.json(parseJsonResponse(response.text(), {
+      visualDescription: 'The image could not be analyzed.',
+      observedDamage: '',
+      likelyCategory: 'Other',
+      safetyConcerns: '',
+      confidence: 0,
+    }));
+  } catch (e: any) {
+    res.status(500).json({
+      visualDescription: 'The image could not be analyzed at this time.',
+      observedDamage: '',
+      likelyCategory: 'Other',
+      safetyConcerns: '',
+      confidence: 0,
+      error: e.message,
+    });
   }
 });
 
@@ -1248,6 +1568,132 @@ app.post('/api/ai/policy', requireAuth, async (req, res) => {
       answer: 'Unable to answer at this time. Please contact the board.',
       error: e.message
     });
+  }
+});
+
+app.post('/api/oracle/query', requireAuth, async (req, res) => {
+  const startedAt = Date.now();
+  const { question, language, pageContext } = req.body;
+  if (!question || String(question).trim().length < 2) return res.status(400).json({ error: 'Question is required.' });
+  const normalizedLanguage = normalizeOracleLanguage(language);
+  const intent = detectOracleIntent(question);
+  const p = getPrisma();
+  const user = (req as any).user || (req as any).session?.user;
+  let coopId = '';
+
+  try {
+    coopId = await getCoopId(req, p);
+    const chunks = await p.documentChunk.findMany({
+      where: { cooperativeId: coopId, isActive: true },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+      include: { document: true },
+    });
+    const fallbackDocuments = chunks.length === 0
+      ? await p.document.findMany({ where: { cooperativeId: coopId, content: { not: null } }, take: 8 })
+      : [];
+    const context = chunks.length > 0
+      ? chunks.map(chunk => `[${chunk.document.title}] ${chunk.text}`).join('\n\n')
+      : fallbackDocuments.map(doc => `[${doc.title}] ${doc.content}`).join('\n\n');
+    const citations = chunks.length > 0
+      ? chunks.map(chunk => ({ title: chunk.document.title, documentId: chunk.documentId, pageNumber: chunk.pageNumber }))
+      : fallbackDocuments.map(doc => ({ title: doc.title, documentId: doc.id }));
+
+    const model = getAI().getGenerativeModel({ model: user?.geminiModel || DEFAULT_GEMINI_MODEL, generationConfig: { responseMimeType: 'application/json' } });
+    const result = await model.generateContent(`You are the Co-op Oracle for a BC housing co-op. Answer in ${normalizedLanguage}. Use the provided co-op documents first and cite document titles. If context is insufficient, say so and suggest checking with the board. Return JSON with answer, confidence. Intent: ${intent.intent}. Page context: ${pageContext || 'none'}.\n\nDocuments:\n${context || 'No indexed documents available.'}\n\nQuestion: ${question}`);
+    const response = await result.response;
+    const parsed = parseJsonResponse(response.text(), {});
+    const oracleResponse = {
+      answer: parsed.answer || response.text() || '',
+      citations,
+      language: normalizedLanguage,
+      confidence: Number(parsed.confidence ?? (context ? 0.72 : 0.35)),
+      ...intent,
+    };
+
+    await p.policyAssistantQuery.create({
+      data: {
+        cooperativeId: coopId,
+        userId: user?.email || 'unknown',
+        question,
+        retrievedChunks: chunks.map(chunk => ({ id: chunk.id, documentId: chunk.documentId })),
+        answer: oracleResponse.answer,
+        citations,
+        language: normalizedLanguage,
+        intent: intent.intent,
+        suggestedAction: intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined,
+        latencyMs: Date.now() - startedAt,
+      },
+    });
+    res.json(oracleResponse);
+  } catch (e: any) {
+    const fallback = createOracleFallbackResponse(question, normalizedLanguage);
+    if (coopId) {
+      await p.policyAssistantQuery.create({
+        data: {
+          cooperativeId: coopId,
+          userId: user?.email || 'unknown',
+          question,
+          retrievedChunks: [],
+          answer: fallback.answer,
+          citations: [],
+          language: fallback.language,
+          intent: fallback.intent,
+          suggestedAction: fallback.suggestedAction ? JSON.parse(JSON.stringify(fallback.suggestedAction)) : undefined,
+          latencyMs: Date.now() - startedAt,
+        },
+      }).catch(() => undefined);
+    }
+    res.status(500).json({ ...fallback, error: e.message });
+  }
+});
+
+app.post('/api/ai/meeting-analysis', requireAuth, requireAdmin, async (req, res) => {
+  const { rawNotes, meetingId } = req.body;
+  if (!rawNotes || String(rawNotes).trim().length < 20) return res.status(400).json({ error: 'Meeting notes must be at least 20 characters.' });
+  const p = getPrisma();
+  try {
+    const user = (req as any).user || (req as any).session?.user;
+    const coopId = await getCoopId(req, p);
+    const model = getAI().getGenerativeModel({
+      model: user?.geminiModel || DEFAULT_GEMINI_MODEL,
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const result = await model.generateContent(`Turn these rough BC housing co-op meeting notes into professional records. Return JSON with professionalSummary, decisions array, motionsMentioned array, actionItems array of {id, description, ownerName, committee, dueDate, priority, sourceSnippet}, risksOrFollowUps array. Notes:\n${rawNotes}`);
+    const response = await result.response;
+    const parsed = parseJsonResponse(response.text(), {});
+    const actionItems = Array.isArray(parsed.actionItems) ? parsed.actionItems : [];
+    const analysis = await p.meetingAnalysis.create({
+      data: {
+        cooperativeId: coopId,
+        meetingId: meetingId || null,
+        rawNotes,
+        professionalSummary: parsed.professionalSummary || 'Meeting summary could not be generated.',
+        decisions: parsed.decisions || [],
+        motionsMentioned: parsed.motionsMentioned || [],
+        actionItems,
+        risksOrFollowUps: parsed.risksOrFollowUps || [],
+        createdBy: user?.email || 'unknown',
+      },
+    });
+    const notifications = mapMeetingActionsToNotifications({ cooperativeId: coopId, meetingId, actions: actionItems });
+    for (const notification of notifications) {
+      await createSystemNotification(p, {
+        cooperativeId: coopId,
+        audience: notification.audience,
+        recipientUserEmail: notification.recipientUserEmail,
+        type: notification.type,
+        severity: notification.severity,
+        title: notification.title,
+        body: notification.body,
+        entityType: notification.entityType,
+        entityId: notification.entityId,
+        actionUrl: notification.actionUrl,
+      }).catch(error => console.error('Failed to notify action item:', error));
+    }
+    res.json(analysis);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -1290,6 +1736,80 @@ app.get('/api/migrate', async (req, res) => {
       );
     `);
     await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Cooperative_slug_key" ON "Cooperative"("slug");`);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Building" (
+        "id" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "code" TEXT,
+        "address" TEXT,
+        "sortOrder" INTEGER NOT NULL DEFAULT 1,
+        "cooperativeId" TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Building_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Building_cooperativeId_idx" ON "Building"("cooperativeId");`);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Building_cooperativeId_name_key" ON "Building"("cooperativeId", "name");`);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Notification" (
+        "id" TEXT NOT NULL,
+        "cooperativeId" TEXT NOT NULL,
+        "audience" TEXT NOT NULL,
+        "recipientUserEmail" TEXT,
+        "type" TEXT NOT NULL,
+        "severity" TEXT NOT NULL DEFAULT 'info',
+        "title" TEXT NOT NULL,
+        "body" TEXT NOT NULL,
+        "entityType" TEXT,
+        "entityId" TEXT,
+        "actionUrl" TEXT,
+        "readAt" TIMESTAMP(3),
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_cooperativeId_idx" ON "Notification"("cooperativeId");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_recipientUserEmail_idx" ON "Notification"("recipientUserEmail");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_readAt_idx" ON "Notification"("readAt");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_createdAt_idx" ON "Notification"("createdAt");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_type_idx" ON "Notification"("type");`);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "MeetingAnalysis" (
+        "id" TEXT NOT NULL,
+        "meetingId" TEXT,
+        "cooperativeId" TEXT NOT NULL,
+        "rawNotes" TEXT NOT NULL,
+        "professionalSummary" TEXT NOT NULL,
+        "decisions" JSONB NOT NULL,
+        "motionsMentioned" JSONB NOT NULL,
+        "actionItems" JSONB NOT NULL,
+        "risksOrFollowUps" JSONB NOT NULL,
+        "createdBy" TEXT NOT NULL,
+        "approvedAt" TIMESTAMP(3),
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "MeetingAnalysis_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "MeetingAnalysis_cooperativeId_idx" ON "MeetingAnalysis"("cooperativeId");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "MeetingAnalysis_meetingId_idx" ON "MeetingAnalysis"("meetingId");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "MeetingAnalysis_createdAt_idx" ON "MeetingAnalysis"("createdAt");`);
+
+    await p.$executeRawUnsafe(`ALTER TABLE "Unit" ADD COLUMN IF NOT EXISTS "buildingId" TEXT;`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Unit_buildingId_idx" ON "Unit"("buildingId");`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "attachments" JSONB;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "aiTriage" JSONB;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "visualDescription" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "residentTip" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "triageReviewedBy" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "triageReviewedAt" TIMESTAMP(3);`);
+    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "language" TEXT NOT NULL DEFAULT 'English';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "intent" TEXT NOT NULL DEFAULT 'policy';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "suggestedAction" JSONB;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "feedback" TEXT;`);
 
     // 2. Add cooperativeId to all models
     const tables = [

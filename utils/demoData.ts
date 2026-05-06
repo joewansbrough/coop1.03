@@ -1,11 +1,13 @@
 import {
   Announcement,
+  Building,
   Committee,
   CoopEvent,
   Document,
   MaintenancePriority,
   MaintenanceRequest,
   MinutesTemplate,
+  Notification,
   RequestStatus,
   ScheduledMaintenance,
   Tenant,
@@ -135,6 +137,17 @@ const adminEmails = new Set([
 const unitIdByNumber = new Map(unitDefs.map(([number], index) => [number, `u${index + 1}`]));
 const tenantIdByEmail = new Map(tenantDefs.map((tenant, index) => [tenant[2], `t${index + 1}`]));
 
+export const MOCK_BUILDINGS: Building[] = [
+  {
+    id: 'b1',
+    cooperativeId: 'demo-coop-id',
+    name: 'Main Building',
+    code: 'MAIN',
+    address: '1234 Foul Bay Road',
+    sortOrder: 1,
+  },
+];
+
 export const MOCK_TENANTS: Tenant[] = tenantDefs.map(([firstName, lastName, email, phone, startDate, status, unitNumber], index) => ({
   id: `t${index + 1}`,
   firstName,
@@ -164,6 +177,8 @@ export const MOCK_UNITS: Unit[] = unitDefs.map(([number, type, floor, status], i
     number,
     type,
     floor,
+    buildingId: 'b1',
+    building: MOCK_BUILDINGS[0],
     status,
     currentTenantId: currentTenant?.id,
   };
@@ -198,6 +213,41 @@ export const MOCK_MAINTENANCE: MaintenanceRequest[] = maintenanceDefs.map(([titl
   notes: index < 3 ? [{ id: `mn${index + 1}`, author: 'Board Admin', date: '2026-03-10T10:00:00Z', content: 'Seeded maintenance note for demo review.' }] : [],
   expenses: status === RequestStatus.COMPLETED ? [{ id: `ex${index + 1}`, item: 'Contractor service', cost: 125 + index * 15, date: '2026-03-12' }] : [],
 }));
+
+export const MOCK_NOTIFICATIONS: Notification[] = [
+  {
+    id: 'n1',
+    cooperativeId: 'demo-coop-id',
+    audience: 'admin',
+    title: 'High priority maintenance request',
+    body: 'Loose railing has been flagged for review.',
+    type: 'maintenance',
+    severity: 'high',
+    entityType: 'maintenance',
+    entityId: 'm12',
+    actionUrl: '/admin/maintenance/m12',
+    createdAt: '2026-05-01T09:00:00Z',
+    timestamp: '2026-05-01T09:00:00Z',
+    readAt: null,
+    isRead: false,
+  },
+  {
+    id: 'n2',
+    cooperativeId: 'demo-coop-id',
+    audience: 'member',
+    title: 'AGM minutes published',
+    body: 'The latest AGM minutes are available in the document library.',
+    type: 'governance',
+    severity: 'info',
+    entityType: 'document',
+    entityId: 'd3',
+    actionUrl: '/documents',
+    createdAt: '2026-04-29T12:00:00Z',
+    timestamp: '2026-04-29T12:00:00Z',
+    readAt: '2026-04-30T12:00:00Z',
+    isRead: true,
+  },
+];
 
 export const MOCK_ANNOUNCEMENTS: Announcement[] = [
   { id: 'a1', title: 'Annual General Meeting - April 12th', content: 'Co-op AGM details and agenda in the common room.', type: 'General', priority: 'High', author: 'Board', date: '2026-03-08' },

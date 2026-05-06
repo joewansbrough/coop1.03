@@ -6,6 +6,7 @@ import RichTextEditor from './RichTextEditor';
 import { MinutesPDF } from '../services/export/pdfGenerator';
 import { demoStorage } from '../utils/demoStorage';
 import { recordTutorialEvent } from '../utils/demoTutorial';
+import { geminiService } from '../services/geminiService';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
 
@@ -615,6 +616,9 @@ const handleSave = async () => {
 
 
   const [isExporting, setIsExporting] = useState(false);
+  const [rawAnalysisNotes, setRawAnalysisNotes] = useState('');
+  const [meetingAnalysis, setMeetingAnalysis] = useState<any>(null);
+  const [isAnalyzingNotes, setIsAnalyzingNotes] = useState(false);
 
   const handleExportPDF = async () => {
     setIsExporting(true);
@@ -631,6 +635,33 @@ const handleSave = async () => {
   const selectMeetingType = (type: MeetingType) => {
     setMeetingType(type);
     setStep('build');
+  };
+
+  const handleAnalyzeNotes = async () => {
+    if (rawAnalysisNotes.trim().length < 20) {
+      alert('Paste at least 20 characters of rough notes for analysis.');
+      return;
+    }
+    setIsAnalyzingNotes(true);
+    try {
+      const analysis = await geminiService.analyzeMeetingNotes(rawAnalysisNotes, meetingId);
+      setMeetingAnalysis(analysis);
+      if (analysis.professionalSummary) {
+        handleInputChange('boardReport', analysis.professionalSummary);
+      }
+      if (Array.isArray(analysis.actionItems)) {
+        handleInputChange('actionItemsList', analysis.actionItems.map((item: any, index: number) => ({
+          id: item.id || `ai-action-${Date.now()}-${index}`,
+          description: item.description,
+          responsible: item.ownerName ? [item.ownerName] : item.committee ? [item.committee] : [],
+          dueDate: item.dueDate || '',
+        })));
+      }
+    } catch (error: any) {
+      alert(`AI meeting analysis failed: ${error.message}`);
+    } finally {
+      setIsAnalyzingNotes(false);
+    }
   };
 
   if (step === 'select') {
@@ -837,6 +868,15 @@ const handleSave = async () => {
         <div className="flex gap-2 relative">
           <button
             type="button"
+            onClick={handleAnalyzeNotes}
+            disabled={isAnalyzingNotes}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-teal-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <i className={`fa-solid ${isAnalyzingNotes ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
+            {isAnalyzingNotes ? 'Analyzing...' : 'Analyze Notes'}
+          </button>
+          <button
+            type="button"
             onClick={handleExportPDF}
             disabled={isExporting}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed border border-slate-200 dark:border-white/5"
@@ -869,6 +909,26 @@ const handleSave = async () => {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 p-8">
+        <div className="mb-8 rounded-2xl border border-teal-100 bg-teal-50 p-5 dark:border-teal-900/30 dark:bg-teal-950/20">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">AI Meeting Analysis</p>
+              <textarea
+                value={rawAnalysisNotes}
+                onChange={event => setRawAnalysisNotes(event.target.value)}
+                placeholder="Paste rough meeting notes here, then use Analyze Notes to generate a professional summary and action items."
+                className="mt-3 min-h-[110px] w-full rounded-2xl border border-teal-100 bg-white p-4 text-sm font-medium text-slate-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200"
+              />
+            </div>
+            {meetingAnalysis && (
+              <div className="lg:w-80 rounded-2xl bg-white p-4 dark:bg-slate-900">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Latest analysis</p>
+                <p className="mt-2 line-clamp-4 text-xs font-semibold leading-relaxed text-slate-600 dark:text-slate-300">{meetingAnalysis.professionalSummary}</p>
+                <p className="mt-3 text-[10px] font-black uppercase text-teal-700 dark:text-teal-300">{meetingAnalysis.actionItems?.length || 0} action items extracted</p>
+              </div>
+            )}
+          </div>
+        </div>
         {meetingType === 'quick' && <QuickMeetingTemplate formData={formData} handleInputChange={handleInputChange} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
         {meetingType === 'regular' && <RegularMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
         {meetingType === 'agm' && <AGMMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}

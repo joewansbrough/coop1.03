@@ -3,6 +3,7 @@ import {
   DASHBOARD_TILE_REGISTRY,
   addDashboardTile,
   getAvailableDashboardTiles,
+  hideDashboardTile,
   type DashboardPreference,
   type DashboardRole,
 } from '../../utils/dashboardPreferences';
@@ -34,11 +35,8 @@ const DashboardTileCatalog: React.FC<DashboardTileCatalogProps> = ({
           const current = preference.tiles.find(item => item.id === tile.id);
           const isVisible = current && !current.hidden;
           return (
-            <button
+            <div
               key={tile.id}
-              type="button"
-              disabled={isVisible}
-              onClick={() => onPreferenceChange(addDashboardTile(preference, role, tile.id))}
               className={`min-h-24 rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
                 isVisible
                   ? 'cursor-default border-slate-100 bg-slate-50 text-slate-300 dark:border-white/5 dark:bg-slate-950/50 dark:text-slate-600'
@@ -47,8 +45,25 @@ const DashboardTileCatalog: React.FC<DashboardTileCatalogProps> = ({
             >
               <p className="text-xs font-black text-slate-900 dark:text-white">{DASHBOARD_TILE_REGISTRY[tile.id].title}</p>
               <p className="mt-1 line-clamp-2 text-[10px] font-semibold leading-relaxed text-slate-500 dark:text-slate-400">{tile.description}</p>
-              <p className="mt-3 text-[9px] font-black uppercase tracking-widest text-teal-600 dark:text-teal-400">{isVisible ? 'Visible' : current?.hidden ? 'Restore' : 'Add tile'}</p>
-            </button>
+              <div className="mt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onPreferenceChange(addDashboardTile(preference, role, tile.id))}
+                  className="rounded-lg bg-teal-50 px-2 py-1.5 text-[9px] font-black uppercase tracking-widest text-teal-700 disabled:opacity-40 dark:bg-teal-950/30 dark:text-teal-300"
+                  disabled={isVisible}
+                >
+                  {current?.hidden ? 'Show' : 'Add'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPreferenceChange(hideDashboardTile(preference, role, tile.id))}
+                  className="rounded-lg bg-slate-100 px-2 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-500 disabled:opacity-40 dark:bg-slate-800 dark:text-slate-300"
+                  disabled={!isVisible}
+                >
+                  Hide
+                </button>
+              </div>
+            </div>
           );
         })}
       </div>

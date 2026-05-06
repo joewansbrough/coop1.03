@@ -6,7 +6,9 @@ import ProfileModal from './ProfileModal';
 import HelpModal from './HelpModal';
 import OnboardingTour from './OnboardingTour';
 import DemoTutorialPanel from './DemoTutorialPanel';
+import OracleAssistant from './OracleAssistant';
 import { AnimatePresence } from 'motion/react';
+import { useMarkNotificationRead, useNotifications } from '../hooks/useCoopData';
 import {
   readTutorialState,
   saveTutorialState,
@@ -44,6 +46,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [tutorialState, setTutorialState] = useState<DemoTutorialState | null>(() => readTutorialState());
   const isDemo = typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
@@ -76,11 +79,18 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     }
   }, [isDarkMode]);
   const profileRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const { data: notifications = [] } = useNotifications();
+  const markNotificationRead = useMarkNotificationRead();
+  const unreadCount = notifications.filter(notification => !notification.isRead).length;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -147,6 +157,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     { label: 'Maintenance', path: '/maintenance', icon: 'fa-tools' },
     { label: 'Documents', path: '/documents', icon: 'fa-file-lines' },
     { label: 'Policy Assistant', path: '/policy-assistant', icon: 'fa-robot' },
+    { label: 'Notifications', path: '/notifications', icon: 'fa-bell' },
     { label: 'Communications', path: '/communications', icon: 'fa-comments' },
     { label: 'Directory', path: '/directory', icon: 'fa-address-book' },
   ];
@@ -294,6 +305,50 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             >
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
+
+            <div className="relative" ref={notificationsRef}>
+              <button
+                type="button"
+                onClick={() => setIsNotificationsOpen(value => !value)}
+                className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors hover:text-teal-600 dark:bg-slate-800 dark:text-slate-300"
+                aria-label="Open notifications"
+                title="Notifications"
+              >
+                <i className="fa-solid fa-bell"></i>
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-black text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {isNotificationsOpen && (
+                <div className="absolute right-0 z-[140] mt-3 w-80 overflow-hidden rounded-2xl border border-slate-100 bg-white py-2 shadow-xl dark:border-white/5 dark:bg-slate-800">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-white/5">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">Notifications</p>
+                    <button onClick={() => { navigate('/notifications'); setIsNotificationsOpen(false); }} className="text-[10px] font-black uppercase text-teal-600">Hub</button>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.slice(0, 5).length === 0 ? (
+                      <p className="px-4 py-8 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">No notices</p>
+                    ) : notifications.slice(0, 5).map(notification => (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() => {
+                          if (!notification.isRead) markNotificationRead.mutate(notification);
+                          if (notification.actionUrl) navigate(notification.actionUrl);
+                          setIsNotificationsOpen(false);
+                        }}
+                        className="w-full border-b border-slate-50 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5"
+                      >
+                        <p className="line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{notification.title}</p>
+                        <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-slate-500 dark:text-slate-400">{notification.body}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             
             <div className="relative" ref={profileRef}>
               <button 
@@ -410,6 +465,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             {children}
           </div>
         </section>
+        <OracleAssistant />
       </main>
     </div>
   );

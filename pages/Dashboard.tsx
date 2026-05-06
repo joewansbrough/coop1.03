@@ -18,6 +18,7 @@ import { getDashboardDocumentLink } from '../utils/dashboardDocumentLinks';
 import { getDashboardQuickActions } from '../utils/dashboardQuickActions';
 import {
   Announcement,
+  Building,
   Committee,
   CoopEvent,
   Document,
@@ -27,7 +28,10 @@ import {
   ScheduledMaintenance,
   Tenant,
   Unit,
+  Notification,
 } from '../types';
+import { shouldFlagTriageForReview } from '../utils/maintenanceAI';
+import { groupUnitsByBuildingAndFloor } from '../utils/buildingHierarchy';
 
 interface DashboardProps {
   isAdmin: boolean;
@@ -55,6 +59,8 @@ interface DashboardProps {
   documents?: Document[];
   committees?: Committee[];
   scheduledMaintenance?: ScheduledMaintenance[];
+  notifications?: Notification[];
+  buildings?: Building[];
 }
 
 const openStatuses = new Set<string>([
@@ -143,6 +149,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   documents = [],
   committees = [],
   scheduledMaintenance = [],
+  notifications = [],
+  buildings = [],
 }) => {
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
@@ -178,6 +186,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       return acc;
     }, {} as Record<number, Unit[]>);
   }, [units]);
+  const groupedBuildings = useMemo(() => groupUnitsByBuildingAndFloor(units, buildings), [units, buildings]);
+  const unreadNotifications = notifications.filter(notification => !notification.isRead);
+  const triageReviewRequests = openRequests.filter(request => shouldFlagTriageForReview(request.aiTriage));
+  const meetingActionNotices = notifications.filter(notification => notification.entityType === 'meeting-analysis');
+  const oracleNotices = notifications.filter(notification => notification.type === 'governance' && /oracle|policy/i.test(`${notification.title} ${notification.body}`));
 
   const updatePreference = (nextPreference: DashboardPreference) => {
     savePreference(normalizeDashboardPreference(nextPreference, role));
@@ -285,6 +298,93 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        );
+      }
+      case 'notifications-hub':
+        return (
+          <div>
+            <TileHeading tileId={tileId} icon="fa-bell" action={<Link to="/notifications" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Hub</Link>} />
+            <div className="space-y-2">
+              {unreadNotifications.slice(0, listLimit).map(notification => (
+                <Link key={notification.id} to={notification.actionUrl || '/notifications'} className={`block rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40 ${tileActionClass}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-lg bg-white px-2 py-1 text-[8px] font-black uppercase tracking-widest text-slate-500 dark:bg-slate-900">{notification.type}</span>
+                    <span className="text-[8px] font-black uppercase tracking-widest text-teal-600">{notification.severity}</span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-xs font-black text-slate-900 dark:text-white">{notification.title}</p>
+                </Link>
+              ))}
+              {unreadNotifications.length === 0 && <EmptyTile label="No unread notifications" />}
+            </div>
+          </div>
+        );
+      case 'triage-review':
+        return (
+          <div>
+            <TileHeading tileId={tileId} icon="fa-stethoscope" action={<Link to="/maintenance" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Queue</Link>} />
+            <div className="space-y-2">
+              {triageReviewRequests.slice(0, listLimit).map(request => (
+                <button key={request.id} onClick={() => navigate(`/admin/maintenance/${request.id}`)} className={`w-full rounded-2xl bg-rose-50 p-3 text-left dark:bg-rose-950/20 ${tileActionClass}`}>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-rose-700 dark:text-rose-300">AI suggested {request.aiTriage?.priority}</p>
+                  <p className="mt-1 line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{request.title || request.description}</p>
+                </button>
+              ))}
+              {triageReviewRequests.length === 0 && <EmptyTile label="No AI triage review needed" />}
+            </div>
+          </div>
+        );
+      case 'oracle-activity':
+        return (
+          <div>
+            <TileHeading tileId={tileId} icon="fa-robot" action={<Link to="/policy-assistant" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Oracle</Link>} />
+            <div className="space-y-2">
+              {oracleNotices.slice(0, listLimit).map(notification => (
+                <Link key={notification.id} to={notification.actionUrl || '/policy-assistant'} className={`block rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/40 ${tileActionClass}`}>
+                  <p className="line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{notification.title}</p>
+                  <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-slate-500">{notification.body}</p>
+                </Link>
+              ))}
+              {oracleNotices.length === 0 && <EmptyTile label="No recent Oracle notices" />}
+            </div>
+          </div>
+        );
+      case 'meeting-actions':
+        return (
+          <div>
+            <TileHeading tileId={tileId} icon="fa-list-check" action={<Link to="/calendar" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Calendar</Link>} />
+            <div className="space-y-2">
+              {meetingActionNotices.slice(0, listLimit).map(notification => (
+                <Link key={notification.id} to={notification.actionUrl || '/calendar'} className={`block rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20 ${tileActionClass}`}>
+                  <p className="line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{notification.title}</p>
+                  <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-slate-500">{notification.body}</p>
+                </Link>
+              ))}
+              {meetingActionNotices.length === 0 && <EmptyTile label="No meeting actions waiting" />}
+            </div>
+          </div>
+        );
+      case 'building-health': {
+        const buildingNames = Object.keys(groupedBuildings);
+        return (
+          <div>
+            <TileHeading tileId={tileId} icon="fa-building-shield" action={<Link to="/admin/units" className="text-[10px] font-black uppercase tracking-widest text-teal-600">Units</Link>} />
+            <div className="space-y-3">
+              {buildingNames.slice(0, listLimit).map(name => {
+                const buildingUnits = Object.values(groupedBuildings[name]).flat();
+                const openForBuilding = openRequests.filter(request => buildingUnits.some(unit => unit.id === request.unitId));
+                return (
+                  <div key={name} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-black text-slate-900 dark:text-white">{name}</p>
+                      <span className="text-[10px] font-black uppercase text-teal-600">{openForBuilding.length} open</span>
+                    </div>
+                    <p className="mt-1 text-[10px] font-semibold text-slate-500">{buildingUnits.length} units across {Object.keys(groupedBuildings[name]).length} floors</p>
+                  </div>
+                );
+              })}
+              {buildingNames.length === 0 && <EmptyTile label="No building data" />}
             </div>
           </div>
         );
@@ -633,7 +733,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-12 animate-in fade-in duration-500">
       <div className="relative overflow-hidden rounded-[20px] border border-white/5 bg-slate-900 p-5 pr-20 text-white shadow-2xl shadow-teal-accent/10 dark:bg-slate-950 sm:p-6 sm:pr-24 lg:p-10 lg:pr-28">
-        <div className="pointer-events-none absolute right-0 top-0 h-80 w-80 -translate-y-24 translate-x-24 rounded-full bg-teal-500/20 blur-[100px]"></div>
+        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 -translate-y-20 translate-x-20 rounded-full bg-teal-500/10 blur-[48px]"></div>
         <div className="absolute right-4 top-4 z-20 flex gap-2 sm:right-6 sm:top-6 lg:right-8 lg:top-8">
           <button
             type="button"

@@ -39,11 +39,24 @@ export interface Unit {
   number: string;
   type: string;
   floor: number;
+  buildingId?: string;
+  building?: Building;
   status: string;
   currentTenantId?: string;
   currentTenant?: Tenant;
   maintenanceHistory?: MaintenanceRequest[];
   occupancyHistory?: TenantHistory[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Building {
+  id: string;
+  cooperativeId?: string;
+  name: string;
+  code?: string;
+  address?: string;
+  sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -90,9 +103,23 @@ export interface MaintenanceRequest {
   notes?: MaintenanceNote[];
   expenses?: MaintenanceExpense[];
   attachments?: any[];
+  aiTriage?: MaintenanceAITriage;
+  visualDescription?: string;
+  residentTip?: string;
+  triageReviewedBy?: string;
+  triageReviewedAt?: string;
   createdAt?: string;
   updatedAt?: string;
   urgency?: string;
+}
+
+export interface MaintenanceAITriage {
+  priority: MaintenancePriority;
+  urgency: string;
+  category: MaintenanceCategory[];
+  residentTip: string;
+  confidence: number;
+  safetyWarning?: string;
 }
 
 export interface Announcement {
@@ -192,10 +219,19 @@ export interface RepairQuote {
 
 export interface Notification {
   id: string;
+  cooperativeId?: string;
+  audience: 'admin' | 'member' | 'user' | 'all';
+  recipientUserEmail?: string;
   title: string;
   body: string;
   type: string;
-  timestamp: string;
+  severity: string;
+  entityType?: string;
+  entityId?: string;
+  actionUrl?: string;
+  timestamp?: string;
+  createdAt: string;
+  readAt?: string | null;
   isRead: boolean;
 }
 
@@ -236,4 +272,45 @@ export interface MinutesTemplate {
   actionItems: { id: string; task: string; owner: string; dueDate: string }[];
   notes: string;
   status: 'Draft' | 'Finalized';
+}
+
+export type OracleLanguage = 'English' | 'Spanish' | 'French' | 'Cantonese' | 'Mandarin' | 'Punjabi' | 'Tagalog';
+
+export interface OracleSuggestedAction {
+  type: 'start-maintenance-request';
+  label: string;
+  href: string;
+}
+
+export interface OracleResponse {
+  answer: string;
+  citations: { title: string; documentId?: string; pageNumber?: number }[];
+  language: OracleLanguage;
+  intent: 'policy' | 'maintenance' | 'governance' | 'general';
+  suggestedAction?: OracleSuggestedAction;
+  confidence: number;
+}
+
+export interface MeetingAnalysisActionItem {
+  id: string;
+  description: string;
+  ownerName?: string;
+  committee?: string;
+  dueDate?: string;
+  priority: 'Low' | 'Medium' | 'High';
+  sourceSnippet?: string;
+}
+
+export interface MeetingAnalysis {
+  id: string;
+  meetingId?: string;
+  rawNotes: string;
+  professionalSummary: string;
+  decisions: string[];
+  motionsMentioned: string[];
+  actionItems: MeetingAnalysisActionItem[];
+  risksOrFollowUps: string[];
+  createdBy: string;
+  approvedAt?: string;
+  createdAt: string;
 }

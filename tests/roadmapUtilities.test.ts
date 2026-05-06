@@ -1,0 +1,131 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { MaintenancePriority } from '../types.ts';
+import {
+  canSeeNotification,
+  createNotification,
+} from '../utils/notifications.ts';
+import {
+  detectOracleIntent,
+  normalizeOracleLanguage,
+} from '../utils/oracle.ts';
+import {
+  createMaintenanceTriage,
+  shouldFlagTriageForReview,
+} from '../utils/maintenanceAI.ts';
+import {
+  mapMeetingActionsToNotifications,
+} from '../utils/meetingAnalysis.ts';
+import {
+  groupUnitsByBuildingAndFloor,
+} from '../utils/buildingHierarchy.ts';
+import {
+  addDashboardTile,
+  hideDashboardTile,
+} from '../utils/dashboardPreferences.ts';
+
+test('notification visibility respects admin audience and direct recipient targeting', () => {
+  const adminNotice = createNotification({
+    cooperativeId: 'coop-1',
+    audience: 'admin',
+    type: 'maintenance',
+    severity: 'high',
+    title: 'New high priority request',
+    body: 'Unit 101 has a leak.',
+  });
+  const directNotice = createNotification({
+    cooperativeId: 'coop-1',
+    audience: 'user',
+    recipientUserEmail: 'member@example.com',
+    type: 'governance',
+    severity: 'info',
+    title: 'Action assigned',
+    body: 'Please review your meeting action.',
+  });
+
+  assert.equal(canSeeNotification(adminNotice, { email: 'admin@example.com', isAdmin: true }), true);
+  assert.equal(canSeeNotification(adminNotice, { email: 'member@example.com', isAdmin: false }), false);
+  assert.equal(canSeeNotification(directNotice, { email: 'member@example.com', isAdmin: false }), true);
+  assert.equal(canSeeNotification(directNotice, { email: 'other@example.com', isAdmin: false }), false);
+});
+
+test('oracle language normalization supports the production language list', () => {
+  assert.equal(normalizeOracleLanguage('Cantonese'), 'Cantonese');
+  assert.equal(normalizeOracleLanguage('unknown'), 'English');
+});
+
+test('oracle detects maintenance intent without losing policy context', () => {
+  const intent = detectOracleIntent('My sink is leaking and I need to know what the rules say.');
+
+  assert.equal(intent.intent, 'maintenance');
+  assert.equal(intent.suggestedAction?.type, 'start-maintenance-request');
+  assert.equal(intent.suggestedAction?.href, '/maintenance?action=new-request');
+});
+
+test('maintenance triage stores advisory AI metadata and flags risky suggestions for review', () => {
+  const triage = createMaintenanceTriage({
+    priority: 'Emergency',
+    urgency: 'Emergency',
+    category: ['Plumbing'],
+    residentTip: 'Turn off the nearest shut-off valve while waiting for help.',
+    confidence: 0.62,
+    safetyWarning: 'Active leak near electrical fixtures.',
+  });
+
+  assert.equal(triage.priority, MaintenancePriority.EMERGENCY);
+  assert.equal(triage.category[0], 'Plumbing');
+  assert.equal(shouldFlagTriageForReview(triage), true);
+});
+
+test('meeting actions become targeted governance notifications', () => {
+  const notifications = mapMeetingActionsToNotifications({
+    cooperativeId: 'coop-1',
+    meetingId: 'event-1',
+    actions: [
+      {
+        id: 'a1',
+        description: 'Book plumber for backflow inspection.',
+        ownerName: 'Maintenance Committee',
+        committee: 'Maintenance',
+        dueDate: '2026-05-20',
+        priority: 'High',
+        sourceSnippet: 'Maintenance will book the plumber.',
+      },
+    ],
+  });
+
+  assert.equal(notifications.length, 1);
+  assert.equal(notifications[0].audience, 'admin');
+  assert.equal(notifications[0].type, 'governance');
+  assert.equal(notifications[0].entityType, 'meeting-analysis');
+  assert.match(notifications[0].body, /Book plumber/);
+});
+
+test('units can be grouped by building while preserving floor-only defaults', () => {
+  const grouped = groupUnitsByBuildingAndFloor(
+    [
+      { id: 'u1', number: '101', type: '1BR', floor: 1, status: 'Occupied', buildingId: 'b1' },
+      { id: 'u2', number: '201', type: '2BR', floor: 2, status: 'Vacant' },
+    ],
+    [{ id: 'b1', name: 'Main Building', cooperativeId: 'coop-1', sortOrder: 1 }],
+  );
+
+  assert.deepEqual(Object.keys(grouped), ['Main Building', 'Building']);
+  assert.equal(grouped['Main Building'][1][0].number, '101');
+  assert.equal(grouped.Building[2][0].number, '201');
+});
+
+test('new dashboard tiles can be hidden and restored by role', () => {
+  const base = {
+    version: 1,
+    tiles: [
+      { id: 'notifications-hub' as const, size: 'wide' as const, hidden: false },
+    ],
+  };
+
+  const hidden = hideDashboardTile(base, 'admin', 'notifications-hub');
+  const restored = addDashboardTile(hidden, 'admin', 'notifications-hub');
+
+  assert.equal(hidden.tiles.find(tile => tile.id === 'notifications-hub')?.hidden, true);
+  assert.equal(restored.tiles.find(tile => tile.id === 'notifications-hub')?.hidden, false);
+});
