@@ -8,6 +8,7 @@ export const geminiService = {
     try {
       const res = await fetch('/api/ai/triage', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description, visualDescription }),
       });
@@ -23,6 +24,7 @@ export const geminiService = {
     formData.append('image', file);
     const res = await fetch('/api/ai/maintenance-image-description', {
       method: 'POST',
+      credentials: 'include',
       body: formData,
     });
     const data = await res.json();
@@ -35,6 +37,7 @@ export const geminiService = {
   async askPolicyQuestion(question: string, context: string) {
     const res = await fetch('/api/ai/policy', {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, context }),
     });
@@ -50,6 +53,7 @@ export const geminiService = {
     try {
       const res = await fetch('/api/oracle/query', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, language, pageContext }),
       });
@@ -65,10 +69,13 @@ export const geminiService = {
   async analyzeMeetingNotes(rawNotes: string, meetingId?: string) {
     const res = await fetch('/api/ai/meeting-analysis', {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rawNotes, meetingId }),
     });
     const data = await res.json();
+    if (res.status === 401) throw new Error('Please sign in again before using AI meeting analysis.');
+    if (res.status === 403) throw new Error('AI meeting analysis is available to admins only.');
     if (!res.ok) throw new Error(data.error || 'Failed to analyze meeting notes');
     return data;
   },
@@ -77,6 +84,7 @@ export const geminiService = {
     try {
       const res = await fetch('/api/ai/summarize', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
       });

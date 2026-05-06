@@ -638,6 +638,14 @@ const handleSave = async () => {
   };
 
   const handleAnalyzeNotes = async () => {
+    if (!user) {
+      alert('Please sign in again before using AI meeting analysis.');
+      return;
+    }
+    if (!user.isAdmin) {
+      alert('AI meeting analysis is available to admins only.');
+      return;
+    }
     if (rawAnalysisNotes.trim().length < 20) {
       alert('Paste at least 20 characters of rough notes for analysis.');
       return;
