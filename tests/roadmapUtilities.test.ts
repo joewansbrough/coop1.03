@@ -6,6 +6,7 @@ import {
   createNotification,
 } from '../utils/notifications.ts';
 import {
+  createDemoOracleResponse,
   detectOracleIntent,
   normalizeOracleLanguage,
 } from '../utils/oracle.ts';
@@ -61,6 +62,16 @@ test('oracle detects maintenance intent without losing policy context', () => {
   assert.equal(intent.intent, 'maintenance');
   assert.equal(intent.suggestedAction?.type, 'start-maintenance-request');
   assert.equal(intent.suggestedAction?.href, '/maintenance?action=new-request');
+});
+
+test('demo oracle returns useful local answers without server auth', () => {
+  const response = createDemoOracleResponse('My sink is leaking, what should I do?', 'Spanish');
+
+  assert.equal(response.language, 'Spanish');
+  assert.equal(response.intent, 'maintenance');
+  assert.equal(response.suggestedAction?.type, 'start-maintenance-request');
+  assert.match(response.answer, /maintenance request/i);
+  assert.equal(response.citations[0].title, 'Demo Co-op Policy Guide');
 });
 
 test('maintenance triage stores advisory AI metadata and flags risky suggestions for review', () => {

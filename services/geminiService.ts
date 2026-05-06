@@ -2,7 +2,7 @@
 
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
 import { createDemoMeetingAnalysis } from '../utils/meetingAnalysis.js';
-import { createOracleFallbackResponse } from '../utils/oracle.js';
+import { createDemoOracleResponse, createOracleFallbackResponse } from '../utils/oracle.js';
 
 const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
 
@@ -53,6 +53,8 @@ export const geminiService = {
   },
 
   async askOracle(question: string, language: string, pageContext?: string) {
+    if (isDemoMode()) return createDemoOracleResponse(question, language);
+
     try {
       const res = await fetch('/api/oracle/query', {
         method: 'POST',
@@ -61,6 +63,7 @@ export const geminiService = {
         body: JSON.stringify({ question, language, pageContext }),
       });
       const data = await res.json();
+      if (res.status === 401 && isDemoMode()) return createDemoOracleResponse(question, language);
       if (!res.ok && data.answer) return data;
       if (!res.ok) throw new Error(data.error || 'Failed to query Oracle');
       return data;
