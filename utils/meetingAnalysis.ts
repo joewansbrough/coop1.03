@@ -1,5 +1,5 @@
 import type { MeetingAnalysisActionItem, Notification } from '../types';
-import { createNotification } from './notifications';
+import { createNotification } from './notifications.js';
 
 export const mapMeetingActionsToNotifications = ({
   cooperativeId,

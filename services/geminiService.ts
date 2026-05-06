@@ -1,7 +1,7 @@
 // All Gemini calls go through the backend API to keep the API key server-side
 
-import { createMaintenanceTriage } from '../utils/maintenanceAI';
-import { createOracleFallbackResponse } from '../utils/oracle';
+import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
+import { createOracleFallbackResponse } from '../utils/oracle.js';
 
 export const geminiService = {
   async triageMaintenanceRequest(description: string, visualDescription?: string) {
