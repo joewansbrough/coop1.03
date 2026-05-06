@@ -236,8 +236,8 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// App Configuration Route
-app.get('/api/config', requireAuth, (req, res) => {
+// Browser-safe configuration for Google Picker/OAuth client setup.
+app.get('/api/config', (req, res) => {
   res.json({
     googleClientId: process.env.GOOGLE_CLIENT_ID,
     googleApiKey: process.env.PICKER_API_KEY,
