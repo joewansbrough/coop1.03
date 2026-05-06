@@ -646,17 +646,42 @@ const handleSave = async () => {
     try {
       const analysis = await geminiService.analyzeMeetingNotes(rawAnalysisNotes, meetingId);
       setMeetingAnalysis(analysis);
-      if (analysis.professionalSummary) {
-        handleInputChange('boardReport', analysis.professionalSummary);
+
+      const listToHtml = (items: string[] = []) =>
+        items.filter(Boolean).map(item => `<p>${item}</p>`).join('');
+
+      const decisionsHtml = listToHtml(analysis.decisions || []);
+      const risksHtml = listToHtml(analysis.risksOrFollowUps || []);
+
+      setFormData(prev => ({
+        ...prev,
+        ...(analysis.professionalSummary ? { boardReport: analysis.professionalSummary } : {}),
+        ...(decisionsHtml ? { keyDecisions: decisionsHtml } : {}),
+        ...(meetingType === 'special' && analysis.professionalSummary ? { newBusiness: analysis.professionalSummary } : {}),
+        ...(risksHtml ? { nextSteps: risksHtml } : {}),
+      }));
+
+      if (Array.isArray(analysis.motionsMentioned) && analysis.motionsMentioned.length > 0) {
+        setMotions(analysis.motionsMentioned.map((motion: string, index: number) => ({
+          id: `ai-motion-${Date.now()}-${index}`,
+          description: motion,
+          mover: '',
+          seconder: '',
+          result: '',
+        })));
       }
+
       if (Array.isArray(analysis.actionItems)) {
-        handleInputChange('actionItemsList', analysis.actionItems.map((item: any, index: number) => ({
+        const actionItems = analysis.actionItems.map((item: any, index: number) => ({
           id: item.id || `ai-action-${Date.now()}-${index}`,
           description: item.description,
           responsible: item.ownerName ? [item.ownerName] : item.committee ? [item.committee] : [],
           dueDate: item.dueDate || '',
-        })));
+        }));
+        handleInputChange('actionItemsList', actionItems);
       }
+      setIsDirty(true);
+      setSaveStatus('idle');
     } catch (error: any) {
       alert(`AI meeting analysis failed: ${error.message}`);
     } finally {

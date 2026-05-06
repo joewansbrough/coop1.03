@@ -1,11 +1,18 @@
-import { MaintenancePriority, type MaintenanceAITriage, type MaintenanceCategory } from '../types';
+import type { MaintenanceAITriage, MaintenanceCategory, MaintenancePriority } from '../types';
+
+const MAINTENANCE_PRIORITY = {
+  LOW: 'Low' as MaintenancePriority,
+  MEDIUM: 'Medium' as MaintenancePriority,
+  HIGH: 'High' as MaintenancePriority,
+  EMERGENCY: 'Emergency' as MaintenancePriority,
+} as const;
 
 const normalizePriority = (priority?: string): MaintenancePriority => {
   const value = String(priority || '').toLowerCase();
-  if (value === 'emergency' || value === 'urgent') return MaintenancePriority.EMERGENCY;
-  if (value === 'high') return MaintenancePriority.HIGH;
-  if (value === 'low') return MaintenancePriority.LOW;
-  return MaintenancePriority.MEDIUM;
+  if (value === 'emergency' || value === 'urgent') return MAINTENANCE_PRIORITY.EMERGENCY;
+  if (value === 'high') return MAINTENANCE_PRIORITY.HIGH;
+  if (value === 'low') return MAINTENANCE_PRIORITY.LOW;
+  return MAINTENANCE_PRIORITY.MEDIUM;
 };
 
 const normalizeCategories = (category?: string[] | string): MaintenanceCategory[] => {
@@ -36,6 +43,6 @@ export const createMaintenanceTriage = (input: {
 export const shouldFlagTriageForReview = (triage?: MaintenanceAITriage | null) =>
   Boolean(triage && (
     triage.confidence < 0.7 ||
-    triage.priority === MaintenancePriority.EMERGENCY ||
-    triage.priority === MaintenancePriority.HIGH
+    triage.priority === MAINTENANCE_PRIORITY.EMERGENCY ||
+    triage.priority === MAINTENANCE_PRIORITY.HIGH
   ));
