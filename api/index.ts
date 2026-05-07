@@ -1601,6 +1601,32 @@ const parseJsonResponse = (text: string, fallback: any = {}) => {
 
 const asArray = (value: any) => Array.isArray(value) ? value : [];
 
+const extractCitationsFromToolResults = (toolResponses: any[]) => {
+  const results = toolResponses
+    .map(item => item?.functionResponse?.response?.result)
+    .filter(Boolean);
+  
+  const docs = results.flatMap(result => [
+    ...asArray(result.documents),
+    ...asArray(result.knowledge?.documents),
+    ...(Array.isArray(result) ? result.filter((item: any) => item?.documentId || item?.id) : []),
+  ]);
+  
+  const citations = docs.map((doc: any) => ({
+    title: doc.documentTitle || doc.title,
+    documentId: doc.documentId || doc.id,
+    pageNumber: doc.pageNumber
+  })).filter(c => c.title);
+  
+  const seen = new Set();
+  return citations.filter(c => {
+    const key = c.documentId || c.title;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 const createOracleAnswerFromToolResults = (question: string, toolResponses: any[], fallbackAnswer: string) => {
   const normalizedQuestion = String(question || '').toLowerCase();
   const results = toolResponses
@@ -1940,41 +1966,47 @@ Member Question: ${question}`;
       let response = result.response;
       
       let callCount = 0;
-      const MAX_CALLS = 3;
+      const MAX_CALLS = 2; // Strict limit for speed
       const allToolResponses: any[] = [];
 
       while (response.functionCalls()?.length && callCount < MAX_CALLS) {
         callCount++;
         const toolCalls = response.functionCalls() || [];
-        const toolResponses = [];
-
-        for (const call of toolCalls) {
+        
+        // Execute all tool calls in this turn in parallel
+        const toolResponses = await Promise.all(toolCalls.map(async (call) => {
           const toolName = call.name as keyof typeof oracleTools;
           const toolHandler = oracleTools[toolName];
           
           if (toolHandler) {
             try {
               const toolResult = await (toolHandler as any)(toolContext, call.args || {});
-              toolResponses.push({
+              return {
                 functionResponse: {
                   name: toolName,
                   response: { result: toolResult }
                 }
-              });
+              };
             } catch (err: any) {
-              toolResponses.push({
+              return {
                 functionResponse: {
                   name: toolName,
                   response: { error: err.message, toolName }
                 }
-              });
+              };
             }
           }
-        }
+          return {
+            functionResponse: {
+              name: toolName,
+              response: { error: "Tool not found" }
+            }
+          };
+        }));
 
         if (toolResponses.length > 0) {
           allToolResponses.push(...toolResponses);
-          result = await chat.sendMessage(toolResponses);
+          result = await withTimeout(chat.sendMessage(toolResponses), AI_TIMEOUT_MS, `Demo ToolResponse turn ${callCount}`);
           response = result.response;
         } else {
           break;
@@ -2068,6 +2100,7 @@ Answer style:
 - Use plain, resident-friendly language. Be concise (2-4 sentences).
 - Use bullets only for lists. Avoid legal jargon.
 - If urgent (leaks, safety), provide immediate next steps and advise checking with the board/emergency services.
+- If citing a document, providing the ID or Title is sufficient; the system will show a citation button.
 
 Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
 Page context: ${pageContext || 'none'}.
@@ -2086,7 +2119,7 @@ Return JSON:
 
 Member Question: ${question}`;
 
-      let result = await chat.sendMessage(prompt);
+      let result = await withTimeout(chat.sendMessage(prompt), AI_TIMEOUT_MS, 'Initial sendMessage');
       let response = result.response;
       
       // Loop to handle tool calls - optimized for parallel execution
@@ -2135,7 +2168,7 @@ Member Question: ${question}`;
 
         if (toolResponses.length > 0) {
           allToolResponses.push(...toolResponses);
-          result = await chat.sendMessage(toolResponses);
+          result = await withTimeout(chat.sendMessage(toolResponses), AI_TIMEOUT_MS, `ToolResponse turn ${callCount}`);
           response = result.response;
         } else {
           break;
@@ -2144,6 +2177,8 @@ Member Question: ${question}`;
 
       // Safety check for empty text (e.g. if loop hit limit and model didn't provide final text)
       const responseText = response.text();
+      const citations = extractCitationsFromToolResults(allToolResponses);
+
       if (!responseText) {
         const fallbackAnswer = createOracleAnswerFromToolResults(
           question,
@@ -2152,6 +2187,7 @@ Member Question: ${question}`;
         );
         return {
           answer: fallbackAnswer,
+          citations,
           confidence: 0.5,
           intent: "general"
         };
@@ -2160,7 +2196,7 @@ Member Question: ${question}`;
       const parsed = parseJsonResponse(responseText, { answer: responseText, confidence: 0.9 });
       return {
         answer: parsed.answer || responseText,
-        citations: [], 
+        citations, 
         language: normalizedLanguage,
         confidence: parsed.confidence || 0.9,
         intent: parsed.intent || intent.intent,

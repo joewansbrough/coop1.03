@@ -422,13 +422,20 @@ export const oracleTools = {
       return chunks.map((chunk: any) => ({
         documentId: chunk.documentId,
         documentTitle: chunk.document?.title,
+        documentUrl: chunk.document?.url,
         category: chunk.category || chunk.document?.category,
         text: chunk.text,
         pageNumber: chunk.pageNumber,
       }));
     }
     const documentsResult = await settledValue('documents', oracleTools.get_documents(context, { query, limit: params.limit || 5 }));
-    return Array.isArray(documentsResult.value) ? documentsResult.value : [];
+    return Array.isArray(documentsResult.value) ? documentsResult.value.map((d: any) => ({
+      documentId: d.id,
+      documentTitle: d.title,
+      documentUrl: d.url,
+      category: d.category,
+      text: d.content?.substring(0, 1000),
+    })) : [];
   },
 
   search_coop_knowledge: async (context: ToolContext, params: { query: string; limit?: number }) => {

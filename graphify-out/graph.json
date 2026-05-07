@@ -122,7 +122,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\App.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_app_tsx",
-      "community": 50,
+      "community": 51,
       "norm_label": "app.tsx"
     },
     {
@@ -131,7 +131,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\App.tsx",
       "source_location": "L108",
       "id": "app_createqueryarraysetter",
-      "community": 50,
+      "community": 51,
       "norm_label": "createqueryarraysetter()"
     },
     {
@@ -140,7 +140,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\compare_patch.py",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_compare_patch_py",
-      "community": 68,
+      "community": 69,
       "norm_label": "compare_patch.py"
     },
     {
@@ -149,7 +149,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\index.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_index_tsx",
-      "community": 69,
+      "community": 70,
       "norm_label": "index.tsx"
     },
     {
@@ -158,7 +158,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\patch_api_coop.py",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_patch_api_coop_py",
-      "community": 51,
+      "community": 52,
       "norm_label": "patch_api_coop.py"
     },
     {
@@ -167,7 +167,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\patch_api_coop.py",
       "source_location": "L4",
       "id": "patch_api_coop_patch_api_file",
-      "community": 51,
+      "community": 52,
       "norm_label": "patch_api_file()"
     },
     {
@@ -176,7 +176,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\patch_api_tenant.py",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_patch_api_tenant_py",
-      "community": 52,
+      "community": 53,
       "norm_label": "patch_api_tenant.py"
     },
     {
@@ -185,7 +185,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\patch_api_tenant.py",
       "source_location": "L4",
       "id": "patch_api_tenant_patch_api_file",
-      "community": 52,
+      "community": 53,
       "norm_label": "patch_api_file()"
     },
     {
@@ -194,7 +194,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\patch_seed.py",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_patch_seed_py",
-      "community": 70,
+      "community": 71,
       "norm_label": "patch_seed.py"
     },
     {
@@ -203,7 +203,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\patch_server_coop.py",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_patch_server_coop_py",
-      "community": 53,
+      "community": 54,
       "norm_label": "patch_server_coop.py"
     },
     {
@@ -212,7 +212,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\patch_server_coop.py",
       "source_location": "L4",
       "id": "patch_server_coop_patch_server_file",
-      "community": 53,
+      "community": 54,
       "norm_label": "patch_server_file()"
     },
     {
@@ -221,7 +221,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\prisma.config.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_prisma_config_ts",
-      "community": 71,
+      "community": 72,
       "norm_label": "prisma.config.ts"
     },
     {
@@ -230,7 +230,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\server.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_server_ts",
-      "community": 2,
+      "community": 0,
       "norm_label": "server.ts"
     },
     {
@@ -239,7 +239,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\server.ts",
       "source_location": "L12",
       "id": "server_startserver",
-      "community": 2,
+      "community": 0,
       "norm_label": "startserver()"
     },
     {
@@ -248,7 +248,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\types.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_types_ts",
-      "community": 5,
+      "community": 6,
       "norm_label": "types.ts"
     },
     {
@@ -257,7 +257,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\vite.config.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_vite_config_ts",
-      "community": 72,
+      "community": 73,
       "norm_label": "vite.config.ts"
     },
     {
@@ -266,7 +266,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\drive.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_api_drive_ts",
-      "community": 19,
+      "community": 20,
       "norm_label": "drive.ts"
     },
     {
@@ -275,7 +275,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\drive.ts",
       "source_location": "L22",
       "id": "drive_getparam",
-      "community": 19,
+      "community": 20,
       "norm_label": "getparam()"
     },
     {
@@ -284,7 +284,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\drive.ts",
       "source_location": "L26",
       "id": "drive_isfolderwithinroot",
-      "community": 19,
+      "community": 20,
       "norm_label": "isfolderwithinroot()"
     },
     {
@@ -293,241 +293,295 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
-      "community": 2,
+      "community": 0,
       "norm_label": "index.ts"
+    },
+    {
+      "label": "withTimeout()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L46",
+      "id": "index_withtimeout",
+      "community": 0,
+      "norm_label": "withtimeout()"
+    },
+    {
+      "label": "normalizeGeminiModelName()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L59",
+      "id": "index_normalizegeminimodelname",
+      "community": 0,
+      "norm_label": "normalizegeminimodelname()"
+    },
+    {
+      "label": "rankGeminiModel()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L61",
+      "id": "index_rankgeminimodel",
+      "community": 0,
+      "norm_label": "rankgeminimodel()"
     },
     {
       "label": "refreshModelRegistry()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L42",
+      "source_location": "L76",
       "id": "index_refreshmodelregistry",
-      "community": 2,
+      "community": 0,
       "norm_label": "refreshmodelregistry()"
     },
     {
       "label": "getBestModel()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L80",
+      "source_location": "L114",
       "id": "index_getbestmodel",
-      "community": 2,
+      "community": 0,
       "norm_label": "getbestmodel()"
     },
     {
       "label": "withAiFallback()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L85",
+      "source_location": "L119",
       "id": "index_withaifallback",
-      "community": 2,
+      "community": 0,
       "norm_label": "withaifallback()"
     },
     {
       "label": "getPrisma()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L128",
+      "source_location": "L163",
       "id": "index_getprisma",
-      "community": 2,
+      "community": 0,
       "norm_label": "getprisma()"
     },
     {
       "label": "sanitizeUtf8()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L141",
+      "source_location": "L176",
       "id": "index_sanitizeutf8",
-      "community": 2,
+      "community": 0,
       "norm_label": "sanitizeutf8()"
     },
     {
       "label": "getParam()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L146",
+      "source_location": "L181",
       "id": "index_getparam",
-      "community": 2,
+      "community": 0,
       "norm_label": "getparam()"
     },
     {
       "label": "getBlobToken()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L148",
+      "source_location": "L183",
       "id": "index_getblobtoken",
-      "community": 2,
+      "community": 0,
       "norm_label": "getblobtoken()"
     },
     {
       "label": "isBlobStorageUrl()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L150",
+      "source_location": "L185",
       "id": "index_isblobstorageurl",
-      "community": 2,
+      "community": 0,
       "norm_label": "isblobstorageurl()"
     },
     {
       "label": "getSafeDownloadName()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L152",
+      "source_location": "L187",
       "id": "index_getsafedownloadname",
-      "community": 2,
+      "community": 0,
       "norm_label": "getsafedownloadname()"
     },
     {
       "label": "getSafeBlobFileName()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L158",
+      "source_location": "L193",
       "id": "index_getsafeblobfilename",
-      "community": 2,
+      "community": 0,
       "norm_label": "getsafeblobfilename()"
     },
     {
       "label": "handleSingleDocumentUpload()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L166",
+      "source_location": "L201",
       "id": "index_handlesingledocumentupload",
-      "community": 2,
+      "community": 0,
       "norm_label": "handlesingledocumentupload()"
     },
     {
       "label": "getCoopId()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L180",
+      "source_location": "L215",
       "id": "index_getcoopid",
-      "community": 2,
+      "community": 0,
       "norm_label": "getcoopid()"
     },
     {
       "label": "validateRequest()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L209",
+      "source_location": "L244",
       "id": "index_validaterequest",
-      "community": 2,
+      "community": 0,
       "norm_label": "validaterequest()"
     },
     {
       "label": "requireAuth()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L255",
+      "source_location": "L290",
       "id": "index_requireauth",
-      "community": 2,
+      "community": 0,
       "norm_label": "requireauth()"
     },
     {
       "label": "getDashboardRole()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L264",
+      "source_location": "L299",
       "id": "index_getdashboardrole",
-      "community": 2,
+      "community": 0,
       "norm_label": "getdashboardrole()"
     },
     {
       "label": "requireAdmin()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L267",
+      "source_location": "L302",
       "id": "index_requireadmin",
-      "community": 2,
+      "community": 0,
       "norm_label": "requireadmin()"
     },
     {
       "label": "normalizeNotification()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L273",
+      "source_location": "L308",
       "id": "index_normalizenotification",
-      "community": 2,
+      "community": 0,
       "norm_label": "normalizenotification()"
     },
     {
       "label": "createSystemNotification()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L279",
+      "source_location": "L314",
       "id": "index_createsystemnotification",
-      "community": 2,
+      "community": 0,
       "norm_label": "createsystemnotification()"
     },
     {
       "label": "getBaseUrl()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L309",
+      "source_location": "L344",
       "id": "index_getbaseurl",
-      "community": 2,
+      "community": 0,
       "norm_label": "getbaseurl()"
     },
     {
       "label": "serializeMinutes()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L1416",
+      "source_location": "L1451",
       "id": "index_serializeminutes",
-      "community": 2,
+      "community": 0,
       "norm_label": "serializeminutes()"
     },
     {
       "label": "getAI()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L1550",
+      "source_location": "L1585",
       "id": "index_getai",
-      "community": 2,
+      "community": 0,
       "norm_label": "getai()"
     },
     {
       "label": "parseJsonResponse()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L1558",
+      "source_location": "L1593",
       "id": "index_parsejsonresponse",
-      "community": 2,
+      "community": 0,
       "norm_label": "parsejsonresponse()"
+    },
+    {
+      "label": "asArray()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L1602",
+      "id": "index_asarray",
+      "community": 0,
+      "norm_label": "asarray()"
+    },
+    {
+      "label": "extractCitationsFromToolResults()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L1604",
+      "id": "index_extractcitationsfromtoolresults",
+      "community": 0,
+      "norm_label": "extractcitationsfromtoolresults()"
+    },
+    {
+      "label": "createOracleAnswerFromToolResults()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L1630",
+      "id": "index_createoracleanswerfromtoolresults",
+      "community": 0,
+      "norm_label": "createoracleanswerfromtoolresults()"
     },
     {
       "label": "getMeetingTypeGuidance()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2062",
+      "source_location": "L2246",
       "id": "index_getmeetingtypeguidance",
-      "community": 2,
+      "community": 0,
       "norm_label": "getmeetingtypeguidance()"
     },
     {
       "label": "buildMeetingAnalysisPrompt()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2076",
+      "source_location": "L2260",
       "id": "index_buildmeetinganalysisprompt",
-      "community": 2,
+      "community": 0,
       "norm_label": "buildmeetinganalysisprompt()"
     },
     {
       "label": "normalizeMeetingAnalysis()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2121",
+      "source_location": "L2305",
       "id": "index_normalizemeetinganalysis",
-      "community": 2,
+      "community": 0,
       "norm_label": "normalizemeetinganalysis()"
     },
     {
       "label": "generateMeetingAnalysis()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2155",
+      "source_location": "L2339",
       "id": "index_generatemeetinganalysis",
-      "community": 2,
+      "community": 0,
       "norm_label": "generatemeetinganalysis()"
     },
     {
@@ -536,7 +590,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\validation.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_api_validation_ts",
-      "community": 2,
+      "community": 0,
       "norm_label": "validation.ts"
     },
     {
@@ -545,7 +599,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\AppAlert.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_appalert_tsx",
-      "community": 73,
+      "community": 74,
       "norm_label": "appalert.tsx"
     },
     {
@@ -554,7 +608,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DemoTrackPicker.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_demotrackpicker_tsx",
-      "community": 1,
+      "community": 2,
       "norm_label": "demotrackpicker.tsx"
     },
     {
@@ -563,7 +617,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DemoTrackPicker.tsx",
       "source_location": "L26",
       "id": "demotrackpicker_starttrack",
-      "community": 1,
+      "community": 2,
       "norm_label": "starttrack()"
     },
     {
@@ -572,7 +626,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DemoTrackPicker.tsx",
       "source_location": "L36",
       "id": "demotrackpicker_skiptour",
-      "community": 1,
+      "community": 2,
       "norm_label": "skiptour()"
     },
     {
@@ -581,7 +635,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DemoTutorialPanel.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_demotutorialpanel_tsx",
-      "community": 1,
+      "community": 2,
       "norm_label": "demotutorialpanel.tsx"
     },
     {
@@ -590,7 +644,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DemoTutorialPanel.tsx",
       "source_location": "L19",
       "id": "demotutorialpanel_demotutorialpanel",
-      "community": 1,
+      "community": 2,
       "norm_label": "demotutorialpanel()"
     },
     {
@@ -599,7 +653,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DriveExplorer.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_driveexplorer_tsx",
-      "community": 12,
+      "community": 13,
       "norm_label": "driveexplorer.tsx"
     },
     {
@@ -608,7 +662,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DriveExplorer.tsx",
       "source_location": "L37",
       "id": "driveexplorer_getfileicon",
-      "community": 12,
+      "community": 13,
       "norm_label": "getfileicon()"
     },
     {
@@ -617,7 +671,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DriveExplorer.tsx",
       "source_location": "L41",
       "id": "driveexplorer_formatsize",
-      "community": 12,
+      "community": 13,
       "norm_label": "formatsize()"
     },
     {
@@ -626,7 +680,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DriveExplorer.tsx",
       "source_location": "L49",
       "id": "driveexplorer_formatdate",
-      "community": 12,
+      "community": 13,
       "norm_label": "formatdate()"
     },
     {
@@ -635,7 +689,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DriveExplorer.tsx",
       "source_location": "L78",
       "id": "driveexplorer_loadroot",
-      "community": 12,
+      "community": 13,
       "norm_label": "loadroot()"
     },
     {
@@ -644,7 +698,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DriveExplorer.tsx",
       "source_location": "L114",
       "id": "driveexplorer_loadrootfolder",
-      "community": 12,
+      "community": 13,
       "norm_label": "loadrootfolder()"
     },
     {
@@ -653,7 +707,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DriveExplorer.tsx",
       "source_location": "L135",
       "id": "driveexplorer_loadfolder",
-      "community": 12,
+      "community": 13,
       "norm_label": "loadfolder()"
     },
     {
@@ -662,7 +716,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DriveExplorer.tsx",
       "source_location": "L155",
       "id": "driveexplorer_navigatetobreadcrumb",
-      "community": 12,
+      "community": 13,
       "norm_label": "navigatetobreadcrumb()"
     },
     {
@@ -671,7 +725,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\DriveExplorer.tsx",
       "source_location": "L209",
       "id": "driveexplorer_openfile",
-      "community": 12,
+      "community": 13,
       "norm_label": "openfile()"
     },
     {
@@ -680,7 +734,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\FilterBar.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_filterbar_tsx",
-      "community": 74,
+      "community": 75,
       "norm_label": "filterbar.tsx"
     },
     {
@@ -689,7 +743,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\HelpModal.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_helpmodal_tsx",
-      "community": 54,
+      "community": 55,
       "norm_label": "helpmodal.tsx"
     },
     {
@@ -698,7 +752,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\HelpModal.tsx",
       "source_location": "L15",
       "id": "helpmodal_goto",
-      "community": 54,
+      "community": 55,
       "norm_label": "goto()"
     },
     {
@@ -707,7 +761,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\Layout.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_layout_tsx",
-      "community": 1,
+      "community": 2,
       "norm_label": "layout.tsx"
     },
     {
@@ -716,7 +770,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\Layout.tsx",
       "source_location": "L88",
       "id": "layout_handleclickoutside",
-      "community": 1,
+      "community": 8,
       "norm_label": "handleclickoutside()"
     },
     {
@@ -725,7 +779,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\Layout.tsx",
       "source_location": "L122",
       "id": "layout_handlestorage",
-      "community": 1,
+      "community": 2,
       "norm_label": "handlestorage()"
     },
     {
@@ -734,7 +788,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\Layout.tsx",
       "source_location": "L123",
       "id": "layout_handletutorialevent",
-      "community": 1,
+      "community": 2,
       "norm_label": "handletutorialevent()"
     },
     {
@@ -743,7 +797,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\Layout.tsx",
       "source_location": "L141",
       "id": "layout_toggledarkmode",
-      "community": 1,
+      "community": 2,
       "norm_label": "toggledarkmode()"
     },
     {
@@ -752,7 +806,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\Layout.tsx",
       "source_location": "L175",
       "id": "layout_handlelogout",
-      "community": 1,
+      "community": 2,
       "norm_label": "handlelogout()"
     },
     {
@@ -761,7 +815,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\MinutesBuilder.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_minutesbuilder_tsx",
-      "community": 28,
+      "community": 29,
       "norm_label": "minutesbuilder.tsx"
     },
     {
@@ -770,7 +824,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\MinutesBuilder.tsx",
       "source_location": "L1082",
       "id": "minutesbuilder_addname",
-      "community": 28,
+      "community": 29,
       "norm_label": "addname()"
     },
     {
@@ -779,7 +833,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\MinutesBuilder.tsx",
       "source_location": "L1083",
       "id": "minutesbuilder_removename",
-      "community": 28,
+      "community": 29,
       "norm_label": "removename()"
     },
     {
@@ -788,7 +842,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\MinutesBuilder.tsx",
       "source_location": "L1084",
       "id": "minutesbuilder_updatename",
-      "community": 28,
+      "community": 29,
       "norm_label": "updatename()"
     },
     {
@@ -797,7 +851,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\OnboardingTour.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_onboardingtour_tsx",
-      "community": 23,
+      "community": 24,
       "norm_label": "onboardingtour.tsx"
     },
     {
@@ -806,7 +860,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\OnboardingTour.tsx",
       "source_location": "L82",
       "id": "onboardingtour_handlenext",
-      "community": 23,
+      "community": 24,
       "norm_label": "handlenext()"
     },
     {
@@ -815,7 +869,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\OnboardingTour.tsx",
       "source_location": "L90",
       "id": "onboardingtour_handleback",
-      "community": 23,
+      "community": 24,
       "norm_label": "handleback()"
     },
     {
@@ -824,7 +878,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\OnboardingTour.tsx",
       "source_location": "L96",
       "id": "onboardingtour_handleskip",
-      "community": 23,
+      "community": 24,
       "norm_label": "handleskip()"
     },
     {
@@ -833,7 +887,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\OnboardingTour.tsx",
       "source_location": "L101",
       "id": "onboardingtour_handlecomplete",
-      "community": 23,
+      "community": 24,
       "norm_label": "handlecomplete()"
     },
     {
@@ -842,7 +896,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\OracleAssistant.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_oracleassistant_tsx",
-      "community": 55,
+      "community": 56,
       "norm_label": "oracleassistant.tsx"
     },
     {
@@ -851,7 +905,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\OracleAssistant.tsx",
       "source_location": "L30",
       "id": "oracleassistant_ask",
-      "community": 55,
+      "community": 56,
       "norm_label": "ask()"
     },
     {
@@ -860,7 +914,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\ProfileModal.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_profilemodal_tsx",
-      "community": 75,
+      "community": 76,
       "norm_label": "profilemodal.tsx"
     },
     {
@@ -869,7 +923,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\RichTextEditor.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_richtexteditor_tsx",
-      "community": 76,
+      "community": 77,
       "norm_label": "richtexteditor.tsx"
     },
     {
@@ -878,7 +932,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\ScrollToTop.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_scrolltotop_tsx",
-      "community": 56,
+      "community": 57,
       "norm_label": "scrolltotop.tsx"
     },
     {
@@ -887,7 +941,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\ScrollToTop.tsx",
       "source_location": "L4",
       "id": "scrolltotop_scrolltotop",
-      "community": 56,
+      "community": 57,
       "norm_label": "scrolltotop()"
     },
     {
@@ -896,7 +950,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\StatCard.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_statcard_tsx",
-      "community": 77,
+      "community": 78,
       "norm_label": "statcard.tsx"
     },
     {
@@ -905,7 +959,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\dashboard\\DashboardTileCatalog.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_dashboard_dashboardtilecatalog_tsx",
-      "community": 78,
+      "community": 79,
       "norm_label": "dashboardtilecatalog.tsx"
     },
     {
@@ -914,7 +968,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\dashboard\\DashboardTileGrid.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_components_dashboard_dashboardtilegrid_tsx",
-      "community": 24,
+      "community": 25,
       "norm_label": "dashboardtilegrid.tsx"
     },
     {
@@ -923,7 +977,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\dashboard\\DashboardTileGrid.tsx",
       "source_location": "L51",
       "id": "dashboardtilegrid_nextsize",
-      "community": 24,
+      "community": 25,
       "norm_label": "nextsize()"
     },
     {
@@ -932,7 +986,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\dashboard\\DashboardTileGrid.tsx",
       "source_location": "L73",
       "id": "dashboardtilegrid_moveby",
-      "community": 24,
+      "community": 25,
       "norm_label": "moveby()"
     },
     {
@@ -941,7 +995,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\dashboard\\DashboardTileGrid.tsx",
       "source_location": "L152",
       "id": "dashboardtilegrid_handledragend",
-      "community": 24,
+      "community": 25,
       "norm_label": "handledragend()"
     },
     {
@@ -1139,7 +1193,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\hooks\\useMinutesManager.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_hooks_useminutesmanager_ts",
-      "community": 20,
+      "community": 21,
       "norm_label": "useminutesmanager.ts"
     },
     {
@@ -1148,7 +1202,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\hooks\\useMinutesManager.ts",
       "source_location": "L27",
       "id": "useminutesmanager_useminutesmanager",
-      "community": 20,
+      "community": 21,
       "norm_label": "useminutesmanager()"
     },
     {
@@ -1157,7 +1211,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\hooks\\useMinutesManager.ts",
       "source_location": "L192",
       "id": "useminutesmanager_useminuteslist",
-      "community": 20,
+      "community": 21,
       "norm_label": "useminuteslist()"
     },
     {
@@ -1166,7 +1220,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\hooks\\useMinutesManager.ts",
       "source_location": "L232",
       "id": "useminutesmanager_needsapproval",
-      "community": 20,
+      "community": 21,
       "norm_label": "needsapproval()"
     },
     {
@@ -1175,7 +1229,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\hooks\\useMinutesManager.ts",
       "source_location": "L240",
       "id": "useminutesmanager_formatminutespreview",
-      "community": 20,
+      "community": 21,
       "norm_label": "formatminutespreview()"
     },
     {
@@ -1184,7 +1238,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\hooks\\useMinutesManager.ts",
       "source_location": "L259",
       "id": "useminutesmanager_getcompletionpercentage",
-      "community": 20,
+      "community": 21,
       "norm_label": "getcompletionpercentage()"
     },
     {
@@ -1193,7 +1247,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\lib\\prisma.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_lib_prisma_ts",
-      "community": 36,
+      "community": 37,
       "norm_label": "prisma.ts"
     },
     {
@@ -1202,7 +1256,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\lib\\prisma.ts",
       "source_location": "L13",
       "id": "prisma_prismaclientsingleton",
-      "community": 36,
+      "community": 37,
       "norm_label": "prismaclientsingleton()"
     },
     {
@@ -1211,7 +1265,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\lib\\prisma.ts",
       "source_location": "L33",
       "id": "prisma_disconnect",
-      "community": 36,
+      "community": 37,
       "norm_label": "disconnect()"
     },
     {
@@ -1220,7 +1274,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\AdminUnits.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_adminunits_tsx",
-      "community": 37,
+      "community": 38,
       "norm_label": "adminunits.tsx"
     },
     {
@@ -1229,7 +1283,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\AdminUnits.tsx",
       "source_location": "L25",
       "id": "adminunits_showalert",
-      "community": 37,
+      "community": 38,
       "norm_label": "showalert()"
     },
     {
@@ -1238,7 +1292,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\AdminUnits.tsx",
       "source_location": "L30",
       "id": "adminunits_handleaddunit",
-      "community": 37,
+      "community": 38,
       "norm_label": "handleaddunit()"
     },
     {
@@ -1247,7 +1301,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\AnnouncementDetail.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_announcementdetail_tsx",
-      "community": 57,
+      "community": 58,
       "norm_label": "announcementdetail.tsx"
     },
     {
@@ -1256,7 +1310,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\AnnouncementDetail.tsx",
       "source_location": "L6",
       "id": "announcementdetail_announcementdetail",
-      "community": 57,
+      "community": 58,
       "norm_label": "announcementdetail()"
     },
     {
@@ -1265,7 +1319,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_calendar_tsx",
-      "community": 9,
+      "community": 10,
       "norm_label": "calendar.tsx"
     },
     {
@@ -1274,7 +1328,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L33",
       "id": "calendar_showalert",
-      "community": 9,
+      "community": 10,
       "norm_label": "showalert()"
     },
     {
@@ -1283,7 +1337,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L51",
       "id": "calendar_handleexportics",
-      "community": 9,
+      "community": 10,
       "norm_label": "handleexportics()"
     },
     {
@@ -1292,7 +1346,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L82",
       "id": "calendar_handleimportics",
-      "community": 9,
+      "community": 10,
       "norm_label": "handleimportics()"
     },
     {
@@ -1301,7 +1355,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L146",
       "id": "calendar_handleprevmonth",
-      "community": 9,
+      "community": 10,
       "norm_label": "handleprevmonth()"
     },
     {
@@ -1310,7 +1364,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L150",
       "id": "calendar_handlenextmonth",
-      "community": 9,
+      "community": 10,
       "norm_label": "handlenextmonth()"
     },
     {
@@ -1319,7 +1373,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L162",
       "id": "calendar_handleaddevent",
-      "community": 9,
+      "community": 10,
       "norm_label": "handleaddevent()"
     },
     {
@@ -1328,7 +1382,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L197",
       "id": "calendar_handleupdateevent",
-      "community": 9,
+      "community": 10,
       "norm_label": "handleupdateevent()"
     },
     {
@@ -1337,7 +1391,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L211",
       "id": "calendar_deleteevent",
-      "community": 9,
+      "community": 10,
       "norm_label": "deleteevent()"
     },
     {
@@ -1346,7 +1400,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L228",
       "id": "calendar_formateventdateonly",
-      "community": 9,
+      "community": 10,
       "norm_label": "formateventdateonly()"
     },
     {
@@ -1355,7 +1409,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L234",
       "id": "calendar_parseeventdate",
-      "community": 9,
+      "community": 10,
       "norm_label": "parseeventdate()"
     },
     {
@@ -1364,7 +1418,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Calendar.tsx",
       "source_location": "L242",
       "id": "calendar_formattime12h",
-      "community": 9,
+      "community": 10,
       "norm_label": "formattime12h()"
     },
     {
@@ -1373,7 +1427,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_committees_tsx",
-      "community": 10,
+      "community": 11,
       "norm_label": "committees.tsx"
     },
     {
@@ -1382,7 +1436,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L52",
       "id": "committees_showalert",
-      "community": 10,
+      "community": 11,
       "norm_label": "showalert()"
     },
     {
@@ -1391,7 +1445,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L60",
       "id": "committees_getdateonly",
-      "community": 10,
+      "community": 11,
       "norm_label": "getdateonly()"
     },
     {
@@ -1400,7 +1454,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L61",
       "id": "committees_parsedateonly",
-      "community": 10,
+      "community": 11,
       "norm_label": "parsedateonly()"
     },
     {
@@ -1409,7 +1463,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L65",
       "id": "committees_getlocaldateonly",
-      "community": 10,
+      "community": 11,
       "norm_label": "getlocaldateonly()"
     },
     {
@@ -1418,7 +1472,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L79",
       "id": "committees_handleschedulemeeting",
-      "community": 10,
+      "community": 11,
       "norm_label": "handleschedulemeeting()"
     },
     {
@@ -1427,7 +1481,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L141",
       "id": "committees_handlesendmessage",
-      "community": 10,
+      "community": 11,
       "norm_label": "handlesendmessage()"
     },
     {
@@ -1436,7 +1490,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L156",
       "id": "committees_handleaddcommittee",
-      "community": 10,
+      "community": 11,
       "norm_label": "handleaddcommittee()"
     },
     {
@@ -1445,7 +1499,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L175",
       "id": "committees_handleassignmember",
-      "community": 10,
+      "community": 11,
       "norm_label": "handleassignmember()"
     },
     {
@@ -1454,7 +1508,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L198",
       "id": "committees_opencommitteedocument",
-      "community": 10,
+      "community": 11,
       "norm_label": "opencommitteedocument()"
     },
     {
@@ -1463,7 +1517,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Committees.tsx",
       "source_location": "L521",
       "id": "committees_formatdate",
-      "community": 10,
+      "community": 11,
       "norm_label": "formatdate()"
     },
     {
@@ -1472,7 +1526,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Communications.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_communications_tsx",
-      "community": 58,
+      "community": 59,
       "norm_label": "communications.tsx"
     },
     {
@@ -1481,7 +1535,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Communications.tsx",
       "source_location": "L29",
       "id": "communications_handlecreateannouncement",
-      "community": 58,
+      "community": 59,
       "norm_label": "handlecreateannouncement()"
     },
     {
@@ -1490,7 +1544,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Dashboard.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_dashboard_tsx",
-      "community": 13,
+      "community": 14,
       "norm_label": "dashboard.tsx"
     },
     {
@@ -1499,7 +1553,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Dashboard.tsx",
       "source_location": "L71",
       "id": "dashboard_asdate",
-      "community": 13,
+      "community": 14,
       "norm_label": "asdate()"
     },
     {
@@ -1508,7 +1562,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Dashboard.tsx",
       "source_location": "L76",
       "id": "dashboard_getnextevent",
-      "community": 13,
+      "community": 14,
       "norm_label": "getnextevent()"
     },
     {
@@ -1517,7 +1571,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Dashboard.tsx",
       "source_location": "L88",
       "id": "dashboard_getupcomingevents",
-      "community": 13,
+      "community": 14,
       "norm_label": "getupcomingevents()"
     },
     {
@@ -1526,7 +1580,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Dashboard.tsx",
       "source_location": "L101",
       "id": "dashboard_getcalendardays",
-      "community": 13,
+      "community": 14,
       "norm_label": "getcalendardays()"
     },
     {
@@ -1535,7 +1589,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Dashboard.tsx",
       "source_location": "L113",
       "id": "dashboard_getdatekey",
-      "community": 13,
+      "community": 14,
       "norm_label": "getdatekey()"
     },
     {
@@ -1544,7 +1598,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Dashboard.tsx",
       "source_location": "L118",
       "id": "dashboard_tileheading",
-      "community": 13,
+      "community": 14,
       "norm_label": "tileheading()"
     },
     {
@@ -1553,7 +1607,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Dashboard.tsx",
       "source_location": "L132",
       "id": "dashboard_emptytile",
-      "community": 13,
+      "community": 14,
       "norm_label": "emptytile()"
     },
     {
@@ -1562,7 +1616,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Dashboard.tsx",
       "source_location": "L195",
       "id": "dashboard_updatepreference",
-      "community": 13,
+      "community": 14,
       "norm_label": "updatepreference()"
     },
     {
@@ -1571,7 +1625,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetail.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_eventdetail_tsx",
-      "community": 8,
+      "community": 9,
       "norm_label": "eventdetail.tsx"
     },
     {
@@ -1580,7 +1634,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetail.tsx",
       "source_location": "L49",
       "id": "eventdetail_getmeetinglabel",
-      "community": 8,
+      "community": 9,
       "norm_label": "getmeetinglabel()"
     },
     {
@@ -1589,7 +1643,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetail.tsx",
       "source_location": "L59",
       "id": "eventdetail_getpresentlabel",
-      "community": 8,
+      "community": 9,
       "norm_label": "getpresentlabel()"
     },
     {
@@ -1598,7 +1652,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetail.tsx",
       "source_location": "L73",
       "id": "eventdetail_formattime12h",
-      "community": 8,
+      "community": 9,
       "norm_label": "formattime12h()"
     },
     {
@@ -1607,7 +1661,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetail.tsx",
       "source_location": "L83",
       "id": "eventdetail_formatdateonly",
-      "community": 8,
+      "community": 9,
       "norm_label": "formatdateonly()"
     },
     {
@@ -1616,7 +1670,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetail.tsx",
       "source_location": "L94",
       "id": "eventdetail_handleexportpdf",
-      "community": 8,
+      "community": 9,
       "norm_label": "handleexportpdf()"
     },
     {
@@ -1625,7 +1679,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetail.tsx",
       "source_location": "L418",
       "id": "eventdetail_showalert",
-      "community": 8,
+      "community": 9,
       "norm_label": "showalert()"
     },
     {
@@ -1634,7 +1688,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetail.tsx",
       "source_location": "L507",
       "id": "eventdetail_handleattend",
-      "community": 8,
+      "community": 9,
       "norm_label": "handleattend()"
     },
     {
@@ -1643,7 +1697,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetailOld.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_eventdetailold_tsx",
-      "community": 29,
+      "community": 30,
       "norm_label": "eventdetailold.tsx"
     },
     {
@@ -1652,7 +1706,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetailOld.tsx",
       "source_location": "L25",
       "id": "eventdetailold_showalert",
-      "community": 29,
+      "community": 30,
       "norm_label": "showalert()"
     },
     {
@@ -1661,7 +1715,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetailOld.tsx",
       "source_location": "L40",
       "id": "eventdetailold_formattime12h",
-      "community": 29,
+      "community": 30,
       "norm_label": "formattime12h()"
     },
     {
@@ -1670,7 +1724,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\EventDetailOld.tsx",
       "source_location": "L87",
       "id": "eventdetailold_handleattend",
-      "community": 29,
+      "community": 30,
       "norm_label": "handleattend()"
     },
     {
@@ -1679,7 +1733,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Login.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_login_tsx",
-      "community": 59,
+      "community": 60,
       "norm_label": "login.tsx"
     },
     {
@@ -1688,7 +1742,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Login.tsx",
       "source_location": "L17",
       "id": "login_handlegooglelogin",
-      "community": 59,
+      "community": 60,
       "norm_label": "handlegooglelogin()"
     },
     {
@@ -1697,7 +1751,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Maintenance.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_maintenance_tsx",
-      "community": 6,
+      "community": 5,
       "norm_label": "maintenance.tsx"
     },
     {
@@ -1706,7 +1760,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Maintenance.tsx",
       "source_location": "L44",
       "id": "maintenance_showalert",
-      "community": 6,
+      "community": 5,
       "norm_label": "showalert()"
     },
     {
@@ -1715,7 +1769,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Maintenance.tsx",
       "source_location": "L84",
       "id": "maintenance_handletriage",
-      "community": 6,
+      "community": 5,
       "norm_label": "handletriage()"
     },
     {
@@ -1724,7 +1778,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Maintenance.tsx",
       "source_location": "L122",
       "id": "maintenance_filetodataurl",
-      "community": 6,
+      "community": 5,
       "norm_label": "filetodataurl()"
     },
     {
@@ -1733,7 +1787,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Maintenance.tsx",
       "source_location": "L129",
       "id": "maintenance_handleimageupload",
-      "community": 6,
+      "community": 5,
       "norm_label": "handleimageupload()"
     },
     {
@@ -1742,7 +1796,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Maintenance.tsx",
       "source_location": "L158",
       "id": "maintenance_hearvisualdescription",
-      "community": 6,
+      "community": 5,
       "norm_label": "hearvisualdescription()"
     },
     {
@@ -1751,7 +1805,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Maintenance.tsx",
       "source_location": "L164",
       "id": "maintenance_handlesubmit",
-      "community": 6,
+      "community": 5,
       "norm_label": "handlesubmit()"
     },
     {
@@ -1760,7 +1814,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Maintenance.tsx",
       "source_location": "L210",
       "id": "maintenance_confirmrequeststatus",
-      "community": 6,
+      "community": 5,
       "norm_label": "confirmrequeststatus()"
     },
     {
@@ -1769,7 +1823,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Maintenance.tsx",
       "source_location": "L235",
       "id": "maintenance_updaterequeststatus",
-      "community": 6,
+      "community": 5,
       "norm_label": "updaterequeststatus()"
     },
     {
@@ -1778,7 +1832,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_maintenancedetail_tsx",
-      "community": 11,
+      "community": 12,
       "norm_label": "maintenancedetail.tsx"
     },
     {
@@ -1787,7 +1841,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L62",
       "id": "maintenancedetail_showalert",
-      "community": 11,
+      "community": 12,
       "norm_label": "showalert()"
     },
     {
@@ -1796,7 +1850,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L73",
       "id": "maintenancedetail_normalizerequest",
-      "community": 11,
+      "community": 12,
       "norm_label": "normalizerequest()"
     },
     {
@@ -1805,7 +1859,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L78",
       "id": "maintenancedetail_persistupdate",
-      "community": 11,
+      "community": 12,
       "norm_label": "persistupdate()"
     },
     {
@@ -1814,7 +1868,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L119",
       "id": "maintenancedetail_confirmstatuschange",
-      "community": 11,
+      "community": 12,
       "norm_label": "confirmstatuschange()"
     },
     {
@@ -1823,7 +1877,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L134",
       "id": "maintenancedetail_handlestatuschange",
-      "community": 11,
+      "community": 12,
       "norm_label": "handlestatuschange()"
     },
     {
@@ -1832,7 +1886,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L142",
       "id": "maintenancedetail_togglecategory",
-      "community": 11,
+      "community": 12,
       "norm_label": "togglecategory()"
     },
     {
@@ -1841,7 +1895,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L166",
       "id": "maintenancedetail_addnote",
-      "community": 11,
+      "community": 12,
       "norm_label": "addnote()"
     },
     {
@@ -1850,7 +1904,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L200",
       "id": "maintenancedetail_handlereopen",
-      "community": 11,
+      "community": 12,
       "norm_label": "handlereopen()"
     },
     {
@@ -1859,7 +1913,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L208",
       "id": "maintenancedetail_handleprioritychange",
-      "community": 11,
+      "community": 12,
       "norm_label": "handleprioritychange()"
     },
     {
@@ -1868,7 +1922,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\MaintenanceDetail.tsx",
       "source_location": "L221",
       "id": "maintenancedetail_handleexportpdf",
-      "community": 11,
+      "community": 12,
       "norm_label": "handleexportpdf()"
     },
     {
@@ -1877,7 +1931,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Notifications.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_notifications_tsx",
-      "community": 79,
+      "community": 80,
       "norm_label": "notifications.tsx"
     },
     {
@@ -1886,7 +1940,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\PolicyAssistant.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_policyassistant_tsx",
-      "community": 60,
+      "community": 61,
       "norm_label": "policyassistant.tsx"
     },
     {
@@ -1895,7 +1949,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\PolicyAssistant.tsx",
       "source_location": "L5",
       "id": "policyassistant_policyassistant",
-      "community": 60,
+      "community": 61,
       "norm_label": "policyassistant()"
     },
     {
@@ -1904,7 +1958,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Reports.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_reports_tsx",
-      "community": 38,
+      "community": 39,
       "norm_label": "reports.tsx"
     },
     {
@@ -1913,7 +1967,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Reports.tsx",
       "source_location": "L11",
       "id": "reports_calculateaveragedaysopen",
-      "community": 38,
+      "community": 39,
       "norm_label": "calculateaveragedaysopen()"
     },
     {
@@ -1922,7 +1976,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Reports.tsx",
       "source_location": "L29",
       "id": "reports_reports",
-      "community": 38,
+      "community": 39,
       "norm_label": "reports()"
     },
     {
@@ -1931,7 +1985,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_resourcelibrary_tsx",
-      "community": 0,
+      "community": 1,
       "norm_label": "resourcelibrary.tsx"
     },
     {
@@ -1940,7 +1994,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L58",
       "id": "resourcelibrary_getdocumentwithinferredcommittee",
-      "community": 0,
+      "community": 1,
       "norm_label": "getdocumentwithinferredcommittee()"
     },
     {
@@ -1949,7 +2003,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L69",
       "id": "resourcelibrary_getdocumentfilename",
-      "community": 0,
+      "community": 1,
       "norm_label": "getdocumentfilename()"
     },
     {
@@ -1958,7 +2012,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L75",
       "id": "resourcelibrary_getstoragelabel",
-      "community": 0,
+      "community": 1,
       "norm_label": "getstoragelabel()"
     },
     {
@@ -1967,7 +2021,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L82",
       "id": "resourcelibrary_getingestiondisplay",
-      "community": 0,
+      "community": 1,
       "norm_label": "getingestiondisplay()"
     },
     {
@@ -1976,7 +2030,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L98",
       "id": "resourcelibrary_dataurltobloburl",
-      "community": 0,
+      "community": 1,
       "norm_label": "dataurltobloburl()"
     },
     {
@@ -1985,7 +2039,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L109",
       "id": "resourcelibrary_getlaunchurl",
-      "community": 0,
+      "community": 1,
       "norm_label": "getlaunchurl()"
     },
     {
@@ -1994,7 +2048,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L118",
       "id": "resourcelibrary_opendocument",
-      "community": 0,
+      "community": 1,
       "norm_label": "opendocument()"
     },
     {
@@ -2003,7 +2057,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L132",
       "id": "resourcelibrary_showalert",
-      "community": 0,
+      "community": 1,
       "norm_label": "showalert()"
     },
     {
@@ -2012,7 +2066,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L170",
       "id": "resourcelibrary_handleopenpicker",
-      "community": 0,
+      "community": 1,
       "norm_label": "handleopenpicker()"
     },
     {
@@ -2021,7 +2075,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L198",
       "id": "resourcelibrary_createpicker",
-      "community": 0,
+      "community": 1,
       "norm_label": "createpicker()"
     },
     {
@@ -2030,7 +2084,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L331",
       "id": "resourcelibrary_handletagclick",
-      "community": 0,
+      "community": 1,
       "norm_label": "handletagclick()"
     },
     {
@@ -2039,7 +2093,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L336",
       "id": "resourcelibrary_handlecategoryclick",
-      "community": 0,
+      "community": 1,
       "norm_label": "handlecategoryclick()"
     },
     {
@@ -2048,7 +2102,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L341",
       "id": "resourcelibrary_handledownload",
-      "community": 0,
+      "community": 1,
       "norm_label": "handledownload()"
     },
     {
@@ -2057,7 +2111,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L363",
       "id": "resourcelibrary_handleviewdoc",
-      "community": 0,
+      "community": 1,
       "norm_label": "handleviewdoc()"
     },
     {
@@ -2066,7 +2120,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L372",
       "id": "resourcelibrary_handleaskai",
-      "community": 0,
+      "community": 1,
       "norm_label": "handleaskai()"
     },
     {
@@ -2075,7 +2129,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L397",
       "id": "resourcelibrary_handlefileselect",
-      "community": 0,
+      "community": 1,
       "norm_label": "handlefileselect()"
     },
     {
@@ -2084,7 +2138,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L407",
       "id": "resourcelibrary_handledrop",
-      "community": 0,
+      "community": 1,
       "norm_label": "handledrop()"
     },
     {
@@ -2093,7 +2147,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L418",
       "id": "resourcelibrary_handledragover",
-      "community": 0,
+      "community": 1,
       "norm_label": "handledragover()"
     },
     {
@@ -2102,7 +2156,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L422",
       "id": "resourcelibrary_readfileasdataurl",
-      "community": 0,
+      "community": 1,
       "norm_label": "readfileasdataurl()"
     },
     {
@@ -2111,7 +2165,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L429",
       "id": "resourcelibrary_readuploadresponse",
-      "community": 0,
+      "community": 1,
       "norm_label": "readuploadresponse()"
     },
     {
@@ -2120,7 +2174,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L440",
       "id": "resourcelibrary_handlesimulatedupload",
-      "community": 0,
+      "community": 1,
       "norm_label": "handlesimulatedupload()"
     },
     {
@@ -2129,7 +2183,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L533",
       "id": "resourcelibrary_handlesavereview",
-      "community": 0,
+      "community": 1,
       "norm_label": "handlesavereview()"
     },
     {
@@ -2138,7 +2192,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L579",
       "id": "resourcelibrary_deletedoc",
-      "community": 0,
+      "community": 1,
       "norm_label": "deletedoc()"
     },
     {
@@ -2147,7 +2201,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\ResourceLibrary.tsx",
       "source_location": "L675",
       "id": "resourcelibrary_formatdate",
-      "community": 0,
+      "community": 1,
       "norm_label": "formatdate()"
     },
     {
@@ -2156,7 +2210,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\TenantDetail.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_tenantdetail_tsx",
-      "community": 30,
+      "community": 31,
       "norm_label": "tenantdetail.tsx"
     },
     {
@@ -2165,7 +2219,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\TenantDetail.tsx",
       "source_location": "L32",
       "id": "tenantdetail_showalert",
-      "community": 30,
+      "community": 31,
       "norm_label": "showalert()"
     },
     {
@@ -2174,7 +2228,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\TenantDetail.tsx",
       "source_location": "L39",
       "id": "tenantdetail_fetchhistory",
-      "community": 30,
+      "community": 31,
       "norm_label": "fetchhistory()"
     },
     {
@@ -2183,7 +2237,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\TenantDetail.tsx",
       "source_location": "L64",
       "id": "tenantdetail_handlesendmessage",
-      "community": 30,
+      "community": 31,
       "norm_label": "handlesendmessage()"
     },
     {
@@ -2192,7 +2246,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Tenants.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_tenants_tsx",
-      "community": 39,
+      "community": 40,
       "norm_label": "tenants.tsx"
     },
     {
@@ -2201,7 +2255,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Tenants.tsx",
       "source_location": "L35",
       "id": "tenants_showalert",
-      "community": 39,
+      "community": 40,
       "norm_label": "showalert()"
     },
     {
@@ -2210,7 +2264,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Tenants.tsx",
       "source_location": "L40",
       "id": "tenants_handleaddtenant",
-      "community": 39,
+      "community": 40,
       "norm_label": "handleaddtenant()"
     },
     {
@@ -2219,7 +2273,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\UnitDetail.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_unitdetail_tsx",
-      "community": 14,
+      "community": 15,
       "norm_label": "unitdetail.tsx"
     },
     {
@@ -2228,7 +2282,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\UnitDetail.tsx",
       "source_location": "L100",
       "id": "unitdetail_handleopenpicker",
-      "community": 14,
+      "community": 15,
       "norm_label": "handleopenpicker()"
     },
     {
@@ -2237,7 +2291,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\UnitDetail.tsx",
       "source_location": "L128",
       "id": "unitdetail_createpicker",
-      "community": 14,
+      "community": 15,
       "norm_label": "createpicker()"
     },
     {
@@ -2246,7 +2300,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\UnitDetail.tsx",
       "source_location": "L183",
       "id": "unitdetail_shownotification",
-      "community": 14,
+      "community": 15,
       "norm_label": "shownotification()"
     },
     {
@@ -2255,7 +2309,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\UnitDetail.tsx",
       "source_location": "L200",
       "id": "unitdetail_handlemoveout",
-      "community": 14,
+      "community": 15,
       "norm_label": "handlemoveout()"
     },
     {
@@ -2264,7 +2318,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\UnitDetail.tsx",
       "source_location": "L260",
       "id": "unitdetail_handlemovein",
-      "community": 14,
+      "community": 15,
       "norm_label": "handlemovein()"
     },
     {
@@ -2273,7 +2327,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\UnitDetail.tsx",
       "source_location": "L343",
       "id": "unitdetail_handleseedpreventative",
-      "community": 14,
+      "community": 15,
       "norm_label": "handleseedpreventative()"
     },
     {
@@ -2282,7 +2336,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\UnitDetail.tsx",
       "source_location": "L363",
       "id": "unitdetail_handletransfer",
-      "community": 14,
+      "community": 15,
       "norm_label": "handletransfer()"
     },
     {
@@ -2291,7 +2345,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\UnitDetail.tsx",
       "source_location": "L730",
       "id": "unitdetail_formatdate",
-      "community": 14,
+      "community": 15,
       "norm_label": "formatdate()"
     },
     {
@@ -2300,7 +2354,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Waitlist.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_pages_waitlist_tsx",
-      "community": 40,
+      "community": 41,
       "norm_label": "waitlist.tsx"
     },
     {
@@ -2309,7 +2363,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Waitlist.tsx",
       "source_location": "L18",
       "id": "waitlist_showalert",
-      "community": 40,
+      "community": 41,
       "norm_label": "showalert()"
     },
     {
@@ -2318,7 +2372,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\pages\\Waitlist.tsx",
       "source_location": "L32",
       "id": "waitlist_handleaddapplication",
-      "community": 40,
+      "community": 41,
       "norm_label": "handleaddapplication()"
     },
     {
@@ -2327,7 +2381,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\prisma\\seed.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_prisma_seed_ts",
-      "community": 61,
+      "community": 62,
       "norm_label": "seed.ts"
     },
     {
@@ -2336,7 +2390,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\prisma\\seed.ts",
       "source_location": "L6",
       "id": "seed_main",
-      "community": 61,
+      "community": 62,
       "norm_label": "main()"
     },
     {
@@ -2345,7 +2399,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\reference materials\\CoopOracle.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_reference_materials_cooporacle_tsx",
-      "community": 25,
+      "community": 26,
       "norm_label": "cooporacle.tsx"
     },
     {
@@ -2354,7 +2408,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\reference materials\\CoopOracle.tsx",
       "source_location": "L31",
       "id": "cooporacle_scrolltobottom",
-      "community": 25,
+      "community": 26,
       "norm_label": "scrolltobottom()"
     },
     {
@@ -2363,7 +2417,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\reference materials\\CoopOracle.tsx",
       "source_location": "L39",
       "id": "cooporacle_handlesend",
-      "community": 25,
+      "community": 26,
       "norm_label": "handlesend()"
     },
     {
@@ -2372,7 +2426,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\reference materials\\CoopOracle.tsx",
       "source_location": "L88",
       "id": "cooporacle_handlesimplify",
-      "community": 25,
+      "community": 26,
       "norm_label": "handlesimplify()"
     },
     {
@@ -2381,7 +2435,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\reference materials\\CoopOracle.tsx",
       "source_location": "L111",
       "id": "cooporacle_startvoiceinput",
-      "community": 25,
+      "community": 26,
       "norm_label": "startvoiceinput()"
     },
     {
@@ -2390,7 +2444,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\archiveMinutesPdf.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_services_archiveminutespdf_ts",
-      "community": 16,
+      "community": 17,
       "norm_label": "archiveminutespdf.ts"
     },
     {
@@ -2399,7 +2453,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\archiveMinutesPdf.ts",
       "source_location": "L21",
       "id": "archiveminutespdf_tosafepathpart",
-      "community": 16,
+      "community": 17,
       "norm_label": "tosafepathpart()"
     },
     {
@@ -2408,7 +2462,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\archiveMinutesPdf.ts",
       "source_location": "L23",
       "id": "archiveminutespdf_decodepdfdataurl",
-      "community": 16,
+      "community": 17,
       "norm_label": "decodepdfdataurl()"
     },
     {
@@ -2417,7 +2471,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\archiveMinutesPdf.ts",
       "source_location": "L31",
       "id": "archiveminutespdf_getblobtoken",
-      "community": 16,
+      "community": 17,
       "norm_label": "getblobtoken()"
     },
     {
@@ -2426,7 +2480,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\archiveMinutesPdf.ts",
       "source_location": "L34",
       "id": "archiveminutespdf_archiveminutespdf",
-      "community": 16,
+      "community": 17,
       "norm_label": "archiveminutespdf()"
     },
     {
@@ -2471,17 +2525,26 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\geminiService.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_services_geminiservice_ts",
-      "community": 6,
+      "community": 5,
       "norm_label": "geminiservice.ts"
     },
     {
       "label": "isDemoMode()",
       "file_type": "code",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\geminiService.ts",
-      "source_location": "L5",
+      "source_location": "L7",
       "id": "geminiservice_isdemomode",
-      "community": 6,
+      "community": 5,
       "norm_label": "isdemomode()"
+    },
+    {
+      "label": "getDemoOracleUser()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\geminiService.ts",
+      "source_location": "L9",
+      "id": "geminiservice_getdemooracleuser",
+      "community": 5,
+      "norm_label": "getdemooracleuser()"
     },
     {
       "label": "googleDrive.ts",
@@ -2489,7 +2552,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\googleDrive.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_services_googledrive_ts",
-      "community": 19,
+      "community": 20,
       "norm_label": "googledrive.ts"
     },
     {
@@ -2498,7 +2561,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\googleDrive.ts",
       "source_location": "L3",
       "id": "googledrive_getauthclient",
-      "community": 19,
+      "community": 20,
       "norm_label": "getauthclient()"
     },
     {
@@ -2507,7 +2570,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\googleDrive.ts",
       "source_location": "L52",
       "id": "googledrive_driveclient",
-      "community": 19,
+      "community": 20,
       "norm_label": "driveclient()"
     },
     {
@@ -2516,7 +2579,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\export\\maintenancePdfGenerator.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_services_export_maintenancepdfgenerator_tsx",
-      "community": 41,
+      "community": 42,
       "norm_label": "maintenancepdfgenerator.tsx"
     },
     {
@@ -2525,7 +2588,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\export\\maintenancePdfGenerator.tsx",
       "source_location": "L25",
       "id": "maintenancepdfgenerator_formatdate",
-      "community": 41,
+      "community": 42,
       "norm_label": "formatdate()"
     },
     {
@@ -2534,7 +2597,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\export\\maintenancePdfGenerator.tsx",
       "source_location": "L31",
       "id": "maintenancepdfgenerator_formatdatetime",
-      "community": 41,
+      "community": 42,
       "norm_label": "formatdatetime()"
     },
     {
@@ -2543,7 +2606,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\export\\pdfGenerator.tsx",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_services_export_pdfgenerator_tsx",
-      "community": 26,
+      "community": 27,
       "norm_label": "pdfgenerator.tsx"
     },
     {
@@ -2552,7 +2615,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\export\\pdfGenerator.tsx",
       "source_location": "L119",
       "id": "pdfgenerator_parsehtmltopdf",
-      "community": 26,
+      "community": 27,
       "norm_label": "parsehtmltopdf()"
     },
     {
@@ -2561,7 +2624,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\export\\pdfGenerator.tsx",
       "source_location": "L202",
       "id": "pdfgenerator_getmeetinglabel",
-      "community": 26,
+      "community": 27,
       "norm_label": "getmeetinglabel()"
     },
     {
@@ -2570,7 +2633,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\export\\pdfGenerator.tsx",
       "source_location": "L212",
       "id": "pdfgenerator_formattime12h",
-      "community": 26,
+      "community": 27,
       "norm_label": "formattime12h()"
     },
     {
@@ -2579,7 +2642,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\export\\pdfGenerator.tsx",
       "source_location": "L222",
       "id": "pdfgenerator_formatdateonly",
-      "community": 26,
+      "community": 27,
       "norm_label": "formatdateonly()"
     },
     {
@@ -2588,7 +2651,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\archiveMinutesPdf.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_archiveminutespdf_test_ts",
-      "community": 16,
+      "community": 17,
       "norm_label": "archiveminutespdf.test.ts"
     },
     {
@@ -2597,7 +2660,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\archiveMinutesPdf.test.ts",
       "source_location": "L7",
       "id": "archiveminutespdf_test_createprisma",
-      "community": 16,
+      "community": 17,
       "norm_label": "createprisma()"
     },
     {
@@ -2606,7 +2669,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\committeeMembership.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_committeemembership_test_ts",
-      "community": 5,
+      "community": 6,
       "norm_label": "committeemembership.test.ts"
     },
     {
@@ -2615,7 +2678,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\contentOrdering.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_contentordering_test_ts",
-      "community": 27,
+      "community": 28,
       "norm_label": "contentordering.test.ts"
     },
     {
@@ -2624,7 +2687,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\dashboardDocumentLinks.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_dashboarddocumentlinks_test_ts",
-      "community": 0,
+      "community": 1,
       "norm_label": "dashboarddocumentlinks.test.ts"
     },
     {
@@ -2669,7 +2732,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\dashboardQuickActions.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_dashboardquickactions_test_ts",
-      "community": 42,
+      "community": 43,
       "norm_label": "dashboardquickactions.test.ts"
     },
     {
@@ -2678,7 +2741,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\demoSeedData.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_demoseeddata_test_ts",
-      "community": 1,
+      "community": 5,
       "norm_label": "demoseeddata.test.ts"
     },
     {
@@ -2687,7 +2750,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\demoTutorial.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_demotutorial_test_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "demotutorial.test.ts"
     },
     {
@@ -2696,7 +2759,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\demoTutorialSheetGesture.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_demotutorialsheetgesture_test_ts",
-      "community": 32,
+      "community": 33,
       "norm_label": "demotutorialsheetgesture.test.ts"
     },
     {
@@ -2705,7 +2768,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\eventAttendance.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_eventattendance_test_ts",
-      "community": 8,
+      "community": 9,
       "norm_label": "eventattendance.test.ts"
     },
     {
@@ -2714,7 +2777,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\eventEditing.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_eventediting_test_ts",
-      "community": 33,
+      "community": 34,
       "norm_label": "eventediting.test.ts"
     },
     {
@@ -2723,7 +2786,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\maintenanceRequestAccess.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_maintenancerequestaccess_test_ts",
-      "community": 5,
+      "community": 6,
       "norm_label": "maintenancerequestaccess.test.ts"
     },
     {
@@ -2732,7 +2795,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\meetingAnalysisFormMapping.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_meetinganalysisformmapping_test_ts",
-      "community": 5,
+      "community": 6,
       "norm_label": "meetinganalysisformmapping.test.ts"
     },
     {
@@ -2741,7 +2804,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\minutesEventDetails.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_minuteseventdetails_test_ts",
-      "community": 34,
+      "community": 35,
       "norm_label": "minuteseventdetails.test.ts"
     },
     {
@@ -2750,7 +2813,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\minutesPanelState.test.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tests_minutespanelstate_test_ts",
-      "community": 43,
+      "community": 44,
       "norm_label": "minutespanelstate.test.ts"
     },
     {
@@ -2768,7 +2831,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tmp\\fix_db.mjs",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tmp_fix_db_mjs",
-      "community": 62,
+      "community": 63,
       "norm_label": "fix_db.mjs"
     },
     {
@@ -2777,7 +2840,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tmp\\fix_db.mjs",
       "source_location": "L5",
       "id": "fix_db_main",
-      "community": 62,
+      "community": 63,
       "norm_label": "main()"
     },
     {
@@ -2786,7 +2849,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tmp\\fix_db_prisma.mjs",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tmp_fix_db_prisma_mjs",
-      "community": 63,
+      "community": 64,
       "norm_label": "fix_db_prisma.mjs"
     },
     {
@@ -2795,7 +2858,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tmp\\fix_db_prisma.mjs",
       "source_location": "L4",
       "id": "fix_db_prisma_main",
-      "community": 63,
+      "community": 64,
       "norm_label": "main()"
     },
     {
@@ -2804,7 +2867,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tmp\\test_assistant_api.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_tmp_test_assistant_api_ts",
-      "community": 64,
+      "community": 65,
       "norm_label": "test_assistant_api.ts"
     },
     {
@@ -2813,7 +2876,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tmp\\test_assistant_api.ts",
       "source_location": "L1",
       "id": "test_assistant_api_testassistant",
-      "community": 64,
+      "community": 65,
       "norm_label": "testassistant()"
     },
     {
@@ -2840,7 +2903,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\committeeMembership.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_committeemembership_ts",
-      "community": 5,
+      "community": 6,
       "norm_label": "committeemembership.ts"
     },
     {
@@ -2849,7 +2912,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\committeeMembership.ts",
       "source_location": "L3",
       "id": "committeemembership_normalizename",
-      "community": 5,
+      "community": 6,
       "norm_label": "normalizename()"
     },
     {
@@ -2858,7 +2921,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\committeeMembership.ts",
       "source_location": "L5",
       "id": "committeemembership_gettenantdisplayname",
-      "community": 5,
+      "community": 6,
       "norm_label": "gettenantdisplayname()"
     },
     {
@@ -2867,7 +2930,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\committeeMembership.ts",
       "source_location": "L7",
       "id": "committeemembership_gettenantcommitteeassignments",
-      "community": 5,
+      "community": 6,
       "norm_label": "gettenantcommitteeassignments()"
     },
     {
@@ -2876,7 +2939,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\contentOrdering.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_contentordering_ts",
-      "community": 27,
+      "community": 28,
       "norm_label": "contentordering.ts"
     },
     {
@@ -2885,7 +2948,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\contentOrdering.ts",
       "source_location": "L7",
       "id": "contentordering_gettimestamp",
-      "community": 27,
+      "community": 28,
       "norm_label": "gettimestamp()"
     },
     {
@@ -2894,7 +2957,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\contentOrdering.ts",
       "source_location": "L13",
       "id": "contentordering_getcontenttimestamp",
-      "community": 27,
+      "community": 28,
       "norm_label": "getcontenttimestamp()"
     },
     {
@@ -2903,7 +2966,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\contentOrdering.ts",
       "source_location": "L16",
       "id": "contentordering_sortnewestfirst",
-      "community": 27,
+      "community": 28,
       "norm_label": "sortnewestfirst()"
     },
     {
@@ -2912,7 +2975,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dashboardDocumentLinks.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_dashboarddocumentlinks_ts",
-      "community": 0,
+      "community": 1,
       "norm_label": "dashboarddocumentlinks.ts"
     },
     {
@@ -2921,7 +2984,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dashboardDocumentLinks.ts",
       "source_location": "L7",
       "id": "dashboarddocumentlinks_isminutesdocument",
-      "community": 0,
+      "community": 1,
       "norm_label": "isminutesdocument()"
     },
     {
@@ -2930,7 +2993,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dashboardDocumentLinks.ts",
       "source_location": "L17",
       "id": "dashboarddocumentlinks_getminuteseventid",
-      "community": 0,
+      "community": 1,
       "norm_label": "getminuteseventid()"
     },
     {
@@ -2939,7 +3002,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dashboardDocumentLinks.ts",
       "source_location": "L22",
       "id": "dashboarddocumentlinks_getdocumentfileurl",
-      "community": 0,
+      "community": 1,
       "norm_label": "getdocumentfileurl()"
     },
     {
@@ -2948,7 +3011,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dashboardDocumentLinks.ts",
       "source_location": "L28",
       "id": "dashboarddocumentlinks_isblobbackeddocument",
-      "community": 0,
+      "community": 1,
       "norm_label": "isblobbackeddocument()"
     },
     {
@@ -2957,7 +3020,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dashboardDocumentLinks.ts",
       "source_location": "L31",
       "id": "dashboarddocumentlinks_getdocumentlibraryoriginalurl",
-      "community": 0,
+      "community": 1,
       "norm_label": "getdocumentlibraryoriginalurl()"
     },
     {
@@ -2966,7 +3029,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dashboardDocumentLinks.ts",
       "source_location": "L39",
       "id": "dashboarddocumentlinks_getdashboarddocumentlink",
-      "community": 0,
+      "community": 1,
       "norm_label": "getdashboarddocumentlink()"
     },
     {
@@ -3065,7 +3128,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dashboardPreferences.ts",
       "source_location": "L321",
       "id": "dashboardpreferences_movedashboardtile",
-      "community": 24,
+      "community": 25,
       "norm_label": "movedashboardtile()"
     },
     {
@@ -3101,7 +3164,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dashboardQuickActions.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_dashboardquickactions_ts",
-      "community": 42,
+      "community": 43,
       "norm_label": "dashboardquickactions.ts"
     },
     {
@@ -3110,7 +3173,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dashboardQuickActions.ts",
       "source_location": "L23",
       "id": "dashboardquickactions_getdashboardquickactions",
-      "community": 42,
+      "community": 43,
       "norm_label": "getdashboardquickactions()"
     },
     {
@@ -3119,7 +3182,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dateUtils.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_dateutils_ts",
-      "community": 31,
+      "community": 32,
       "norm_label": "dateutils.ts"
     },
     {
@@ -3128,7 +3191,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dateUtils.ts",
       "source_location": "L1",
       "id": "dateutils_formatdate",
-      "community": 31,
+      "community": 32,
       "norm_label": "formatdate()"
     },
     {
@@ -3137,7 +3200,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dateUtils.ts",
       "source_location": "L13",
       "id": "dateutils_formatdatetime",
-      "community": 31,
+      "community": 32,
       "norm_label": "formatdatetime()"
     },
     {
@@ -3146,7 +3209,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\dateUtils.ts",
       "source_location": "L33",
       "id": "dateutils_formatshortdate",
-      "community": 31,
+      "community": 32,
       "norm_label": "formatshortdate()"
     },
     {
@@ -3155,7 +3218,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoData.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_demodata_ts",
-      "community": 1,
+      "community": 5,
       "norm_label": "demodata.ts"
     },
     {
@@ -3164,7 +3227,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoData.ts",
       "source_location": "L313",
       "id": "demodata_makeminutes",
-      "community": 1,
+      "community": 5,
       "norm_label": "makeminutes()"
     },
     {
@@ -3173,7 +3236,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoStorage.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_demostorage_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "demostorage.ts"
     },
     {
@@ -3182,7 +3245,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoStorage.ts",
       "source_location": "L24",
       "id": "demostorage_cleardemostoragecollections",
-      "community": 1,
+      "community": 2,
       "norm_label": "cleardemostoragecollections()"
     },
     {
@@ -3191,7 +3254,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoStorage.ts",
       "source_location": "L33",
       "id": "demostorage_initializedemostorage",
-      "community": 1,
+      "community": 2,
       "norm_label": "initializedemostorage()"
     },
     {
@@ -3200,7 +3263,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_demotutorial_ts",
-      "community": 1,
+      "community": 2,
       "norm_label": "demotutorial.ts"
     },
     {
@@ -3209,7 +3272,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L185",
       "id": "demotutorial_gettutorialtrack",
-      "community": 1,
+      "community": 2,
       "norm_label": "gettutorialtrack()"
     },
     {
@@ -3218,7 +3281,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L190",
       "id": "demotutorial_getvisibletutorialtracks",
-      "community": 1,
+      "community": 2,
       "norm_label": "getvisibletutorialtracks()"
     },
     {
@@ -3227,7 +3290,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L193",
       "id": "demotutorial_createinitialtutorialstate",
-      "community": 1,
+      "community": 2,
       "norm_label": "createinitialtutorialstate()"
     },
     {
@@ -3236,7 +3299,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L199",
       "id": "demotutorial_getnextincompletestep",
-      "community": 1,
+      "community": 2,
       "norm_label": "getnextincompletestep()"
     },
     {
@@ -3245,7 +3308,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L205",
       "id": "demotutorial_unique",
-      "community": 1,
+      "community": 2,
       "norm_label": "unique()"
     },
     {
@@ -3254,7 +3317,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L207",
       "id": "demotutorial_marktutorialstepdone",
-      "community": 1,
+      "community": 2,
       "norm_label": "marktutorialstepdone()"
     },
     {
@@ -3263,7 +3326,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L215",
       "id": "demotutorial_routematches",
-      "community": 1,
+      "community": 2,
       "norm_label": "routematches()"
     },
     {
@@ -3272,7 +3335,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L218",
       "id": "demotutorial_updatetutorialprogress",
-      "community": 1,
+      "community": 2,
       "norm_label": "updatetutorialprogress()"
     },
     {
@@ -3281,7 +3344,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L242",
       "id": "demotutorial_resettutorialstate",
-      "community": 1,
+      "community": 2,
       "norm_label": "resettutorialstate()"
     },
     {
@@ -3290,7 +3353,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L244",
       "id": "demotutorial_readtutorialstate",
-      "community": 1,
+      "community": 2,
       "norm_label": "readtutorialstate()"
     },
     {
@@ -3299,7 +3362,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L256",
       "id": "demotutorial_savetutorialstate",
-      "community": 1,
+      "community": 2,
       "norm_label": "savetutorialstate()"
     },
     {
@@ -3308,7 +3371,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L261",
       "id": "demotutorial_cleartutorialstate",
-      "community": 1,
+      "community": 2,
       "norm_label": "cleartutorialstate()"
     },
     {
@@ -3317,7 +3380,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L267",
       "id": "demotutorial_skipdemotutorial",
-      "community": 1,
+      "community": 2,
       "norm_label": "skipdemotutorial()"
     },
     {
@@ -3326,7 +3389,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorial.ts",
       "source_location": "L274",
       "id": "demotutorial_recordtutorialevent",
-      "community": 6,
+      "community": 5,
       "norm_label": "recordtutorialevent()"
     },
     {
@@ -3335,7 +3398,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorialSheetGesture.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_demotutorialsheetgesture_ts",
-      "community": 32,
+      "community": 33,
       "norm_label": "demotutorialsheetgesture.ts"
     },
     {
@@ -3344,7 +3407,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorialSheetGesture.ts",
       "source_location": "L14",
       "id": "demotutorialsheetgesture_getsheetdragoffset",
-      "community": 32,
+      "community": 33,
       "norm_label": "getsheetdragoffset()"
     },
     {
@@ -3353,7 +3416,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\demoTutorialSheetGesture.ts",
       "source_location": "L19",
       "id": "demotutorialsheetgesture_getsheetgestureaction",
-      "community": 32,
+      "community": 33,
       "norm_label": "getsheetgestureaction()"
     },
     {
@@ -3362,7 +3425,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\eventAttendance.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_eventattendance_ts",
-      "community": 8,
+      "community": 9,
       "norm_label": "eventattendance.ts"
     },
     {
@@ -3371,7 +3434,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\eventAttendance.ts",
       "source_location": "L10",
       "id": "eventattendance_splitname",
-      "community": 8,
+      "community": 9,
       "norm_label": "splitname()"
     },
     {
@@ -3380,7 +3443,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\eventAttendance.ts",
       "source_location": "L17",
       "id": "eventattendance_adduserattendance",
-      "community": 8,
+      "community": 9,
       "norm_label": "adduserattendance()"
     },
     {
@@ -3389,7 +3452,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\eventAttendance.ts",
       "source_location": "L43",
       "id": "eventattendance_createattendancerequestinit",
-      "community": 8,
+      "community": 9,
       "norm_label": "createattendancerequestinit()"
     },
     {
@@ -3398,7 +3461,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\eventEditing.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_eventediting_ts",
-      "community": 33,
+      "community": 34,
       "norm_label": "eventediting.ts"
     },
     {
@@ -3407,7 +3470,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\eventEditing.ts",
       "source_location": "L7",
       "id": "eventediting_applyeventedit",
-      "community": 33,
+      "community": 34,
       "norm_label": "applyeventedit()"
     },
     {
@@ -3416,7 +3479,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\eventEditing.ts",
       "source_location": "L13",
       "id": "eventediting_createeventupdaterequestinit",
-      "community": 33,
+      "community": 34,
       "norm_label": "createeventupdaterequestinit()"
     },
     {
@@ -3425,7 +3488,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\maintenanceAI.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_maintenanceai_ts",
-      "community": 6,
+      "community": 5,
       "norm_label": "maintenanceai.ts"
     },
     {
@@ -3434,7 +3497,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\maintenanceAI.ts",
       "source_location": "L10",
       "id": "maintenanceai_normalizepriority",
-      "community": 6,
+      "community": 5,
       "norm_label": "normalizepriority()"
     },
     {
@@ -3443,7 +3506,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\maintenanceAI.ts",
       "source_location": "L18",
       "id": "maintenanceai_normalizecategories",
-      "community": 6,
+      "community": 5,
       "norm_label": "normalizecategories()"
     },
     {
@@ -3452,7 +3515,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\maintenanceAI.ts",
       "source_location": "L27",
       "id": "maintenanceai_createmaintenancetriage",
-      "community": 6,
+      "community": 5,
       "norm_label": "createmaintenancetriage()"
     },
     {
@@ -3461,7 +3524,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\maintenanceAI.ts",
       "source_location": "L43",
       "id": "maintenanceai_shouldflagtriageforreview",
-      "community": 6,
+      "community": 5,
       "norm_label": "shouldflagtriageforreview()"
     },
     {
@@ -3470,7 +3533,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\maintenanceRequestAccess.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_maintenancerequestaccess_ts",
-      "community": 5,
+      "community": 6,
       "norm_label": "maintenancerequestaccess.ts"
     },
     {
@@ -3479,7 +3542,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\maintenanceRequestAccess.ts",
       "source_location": "L9",
       "id": "maintenancerequestaccess_iscurrenttenantformaintenancerequest",
-      "community": 5,
+      "community": 6,
       "norm_label": "iscurrenttenantformaintenancerequest()"
     },
     {
@@ -3488,7 +3551,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\maintenanceRequestAccess.ts",
       "source_location": "L29",
       "id": "maintenancerequestaccess_canexportmaintenancerequest",
-      "community": 5,
+      "community": 6,
       "norm_label": "canexportmaintenancerequest()"
     },
     {
@@ -3587,7 +3650,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\meetingAnalysisFormMapping.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_meetinganalysisformmapping_ts",
-      "community": 5,
+      "community": 6,
       "norm_label": "meetinganalysisformmapping.ts"
     },
     {
@@ -3596,7 +3659,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\meetingAnalysisFormMapping.ts",
       "source_location": "L9",
       "id": "meetinganalysisformmapping_escapehtml",
-      "community": 5,
+      "community": 6,
       "norm_label": "escapehtml()"
     },
     {
@@ -3605,7 +3668,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\meetingAnalysisFormMapping.ts",
       "source_location": "L17",
       "id": "meetinganalysisformmapping_paragraphstohtml",
-      "community": 5,
+      "community": 6,
       "norm_label": "paragraphstohtml()"
     },
     {
@@ -3614,7 +3677,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\meetingAnalysisFormMapping.ts",
       "source_location": "L25",
       "id": "meetinganalysisformmapping_listtohtml",
-      "community": 5,
+      "community": 6,
       "norm_label": "listtohtml()"
     },
     {
@@ -3623,7 +3686,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\meetingAnalysisFormMapping.ts",
       "source_location": "L31",
       "id": "meetinganalysisformmapping_topicbriefingstominuteshtml",
-      "community": 5,
+      "community": 6,
       "norm_label": "topicbriefingstominuteshtml()"
     },
     {
@@ -3632,7 +3695,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\meetingAnalysisFormMapping.ts",
       "source_location": "L39",
       "id": "meetinganalysisformmapping_buildmeetinganalysisformpatch",
-      "community": 5,
+      "community": 6,
       "norm_label": "buildmeetinganalysisformpatch()"
     },
     {
@@ -3641,7 +3704,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\minutesEventDetails.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_minuteseventdetails_ts",
-      "community": 34,
+      "community": 35,
       "norm_label": "minuteseventdetails.ts"
     },
     {
@@ -3650,7 +3713,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\minutesEventDetails.ts",
       "source_location": "L9",
       "id": "minuteseventdetails_getminuteseventdetails",
-      "community": 34,
+      "community": 35,
       "norm_label": "getminuteseventdetails()"
     },
     {
@@ -3659,7 +3722,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\minutesEventDetails.ts",
       "source_location": "L15",
       "id": "minuteseventdetails_applyminuteseventdetails",
-      "community": 34,
+      "community": 35,
       "norm_label": "applyminuteseventdetails()"
     },
     {
@@ -3668,7 +3731,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\minutesPanelState.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_minutespanelstate_ts",
-      "community": 43,
+      "community": 44,
       "norm_label": "minutespanelstate.ts"
     },
     {
@@ -3677,7 +3740,7 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\minutesPanelState.ts",
       "source_location": "L9",
       "id": "minutespanelstate_getminutespanelmode",
-      "community": 43,
+      "community": 44,
       "norm_label": "getminutespanelmode()"
     },
     {
@@ -3776,8 +3839,116 @@
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
       "source_location": "L1",
       "id": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
-      "community": 2,
+      "community": 8,
       "norm_label": "oracletools.ts"
+    },
+    {
+      "label": "limitFor()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L25",
+      "id": "oracletools_limitfor",
+      "community": 8,
+      "norm_label": "limitfor()"
+    },
+    {
+      "label": "textFilter()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L26",
+      "id": "oracletools_textfilter",
+      "community": 8,
+      "norm_label": "textfilter()"
+    },
+    {
+      "label": "contains()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L27",
+      "id": "oracletools_contains",
+      "community": 8,
+      "norm_label": "contains()"
+    },
+    {
+      "label": "settledValue()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L28",
+      "id": "oracletools_settledvalue",
+      "community": 8,
+      "norm_label": "settledvalue()"
+    },
+    {
+      "label": "canUsePrivilegedOracleTools()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L36",
+      "id": "oracletools_canuseprivilegedoracletools",
+      "community": 8,
+      "norm_label": "canuseprivilegedoracletools()"
+    },
+    {
+      "label": "deny()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L41",
+      "id": "oracletools_deny",
+      "community": 8,
+      "norm_label": "deny()"
+    },
+    {
+      "label": "documentVisibilityWhere()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L43",
+      "id": "oracletools_documentvisibilitywhere",
+      "community": 8,
+      "norm_label": "documentvisibilitywhere()"
+    },
+    {
+      "label": "memberScopedUnitIds()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L53",
+      "id": "oracletools_memberscopedunitids",
+      "community": 8,
+      "norm_label": "memberscopedunitids()"
+    },
+    {
+      "label": "stringProp()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L656",
+      "id": "oracletools_stringprop",
+      "community": 8,
+      "norm_label": "stringprop()"
+    },
+    {
+      "label": "numberProp()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L657",
+      "id": "oracletools_numberprop",
+      "community": 8,
+      "norm_label": "numberprop()"
+    },
+    {
+      "label": "booleanProp()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L658",
+      "id": "oracletools_booleanprop",
+      "community": 8,
+      "norm_label": "booleanprop()"
+    },
+    {
+      "label": "declaration()",
+      "file_type": "code",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L665",
+      "id": "oracletools_declaration",
+      "community": 8,
+      "norm_label": "declaration()"
     },
     {
       "label": "Model Rules 2.0",
@@ -3788,7 +3959,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 15,
+      "community": 16,
       "norm_label": "model rules 2.0",
       "id": "0910_step_by_step_guide_model_rules_2_0"
     },
@@ -3801,7 +3972,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 15,
+      "community": 16,
       "norm_label": "cooperative association act",
       "id": "0910_step_by_step_guide_coop_act"
     },
@@ -3814,7 +3985,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 15,
+      "community": 16,
       "norm_label": "acknowledgement of receipt of rules and occupancy agreement",
       "id": "1150_acknowledgement_of_receipt_of_rules_and_occupancy_agreement_instructions_form_receipt"
     },
@@ -3827,7 +3998,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 17,
+      "community": 18,
       "norm_label": "personal information protection act (pipa)",
       "id": "1290_pipa_overview_of_contents_pipa"
     },
@@ -3840,7 +4011,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 17,
+      "community": 18,
       "norm_label": "accountability principle",
       "id": "1310_ten_principles_of_personal_information_protection_accountability"
     },
@@ -3853,7 +4024,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 17,
+      "community": 18,
       "norm_label": "consent principle",
       "id": "1310_ten_principles_of_personal_information_protection_consent"
     },
@@ -3866,7 +4037,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 80,
+      "community": 81,
       "norm_label": "pipa audit program",
       "id": "1320_pipa_checklist_audit_program"
     },
@@ -3879,7 +4050,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 17,
+      "community": 18,
       "norm_label": "confidentiality agreement sample",
       "id": "1370_confidentiality_agreement_sample_confidentiality_agreement"
     },
@@ -3892,7 +4063,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 81,
+      "community": 82,
       "norm_label": "pipa record keeping tips",
       "id": "1510_pipa_record_keeping_tips_data_retention"
     },
@@ -3905,7 +4076,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 82,
+      "community": 83,
       "norm_label": "office of the information and privacy commissioner (oipc)",
       "id": "1560_pipa_useful_websites_and_contacts_oipc"
     },
@@ -3918,7 +4089,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 17,
+      "community": 18,
       "norm_label": "privacy officer role",
       "id": "1570_a_guide_to_b_privacy_officer"
     },
@@ -3931,7 +4102,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 15,
+      "community": 16,
       "norm_label": "board of directors",
       "id": "1580_board_of_directors_job_description_sample_board_of_directors"
     },
@@ -3944,7 +4115,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 15,
+      "community": 16,
       "norm_label": "board president and vice president",
       "id": "1600_board__president_and_vice_president_job_description_sample_president"
     },
@@ -3957,7 +4128,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 83,
+      "community": 84,
       "norm_label": "meeting chair",
       "id": "1620__chair_job_description_sample_chair"
     },
@@ -3970,7 +4141,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 84,
+      "community": 85,
       "norm_label": "chf bc delegate",
       "id": "1640__chf_bc_delegate_job_description_sample_chf_bc_delegate"
     },
@@ -3983,7 +4154,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 15,
+      "community": 16,
       "norm_label": "board treasurer",
       "id": "1660_board_treasurer_job_description_sample_treasurer"
     },
@@ -3996,7 +4167,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 17,
+      "community": 18,
       "norm_label": "staff confidentiality agreement",
       "id": "1700_staff_and_designated_members__confidentiality_agreement_sample_staff_confidentiality"
     },
@@ -4009,7 +4180,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 15,
+      "community": 16,
       "norm_label": "ethical conduct declaration",
       "id": "1720_board_directors_ethical_conduct_declaration_sample_ethical_conduct_declaration"
     },
@@ -4022,7 +4193,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 15,
+      "community": 16,
       "norm_label": "democratic member control",
       "id": "1740_co_op_principles_democratic_control"
     },
@@ -4035,7 +4206,7 @@
       "captured_at": null,
       "author": null,
       "contributor": null,
-      "community": 17,
+      "community": 18,
       "norm_label": "member selection process",
       "id": "2240_managing_applications_discussion_notes_member_selection"
     },
@@ -4043,7 +4214,7 @@
       "label": "Membership Application Form",
       "file_type": "document",
       "source_file": "reference materials/info/2530_Membership_Application-Form_Guide-1.pdf",
-      "community": 44,
+      "community": 45,
       "norm_label": "membership application form",
       "id": "2530_membership_application_form"
     },
@@ -4051,7 +4222,7 @@
       "label": "Co-op Marketing Strategies",
       "file_type": "document",
       "source_file": "reference materials/info/2530_Membership_Application-Form_Guide-1.pdf",
-      "community": 44,
+      "community": 45,
       "norm_label": "co-op marketing strategies",
       "id": "2530_marketing_strategies"
     },
@@ -4059,7 +4230,7 @@
       "label": "Interviewer's Guide",
       "file_type": "document",
       "source_file": "reference materials/info/2540_Assessing-Potential-Members-Interviewera-s-Guide.pdf",
-      "community": 44,
+      "community": 45,
       "norm_label": "interviewer's guide",
       "id": "2540_interview_guide"
     },
@@ -4067,7 +4238,7 @@
       "label": "Member Manual",
       "file_type": "document",
       "source_file": "reference materials/info/2570_Thoughts-on-Members-Manuals.pdf",
-      "community": 85,
+      "community": 86,
       "norm_label": "member manual",
       "id": "2570_member_manual"
     },
@@ -4075,7 +4246,7 @@
       "label": "Cooperative Association Act (BC)",
       "file_type": "document",
       "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
-      "community": 18,
+      "community": 19,
       "norm_label": "cooperative association act (bc)",
       "id": "2830_co_op_act"
     },
@@ -4083,7 +4254,7 @@
       "label": "Ordinary Resolution",
       "file_type": "document",
       "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
-      "community": 18,
+      "community": 19,
       "norm_label": "ordinary resolution",
       "id": "2830_ordinary_resolution"
     },
@@ -4091,7 +4262,7 @@
       "label": "Special Resolution",
       "file_type": "document",
       "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
-      "community": 18,
+      "community": 19,
       "norm_label": "special resolution",
       "id": "2830_special_resolution"
     },
@@ -4099,7 +4270,7 @@
       "label": "Fiduciary Duty",
       "file_type": "document",
       "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
-      "community": 45,
+      "community": 46,
       "norm_label": "fiduciary duty",
       "id": "2830_fiduciary_duty"
     },
@@ -4107,7 +4278,7 @@
       "label": "Rules of Order",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/040_Rules_of_Order_Sample.pdf",
-      "community": 18,
+      "community": 19,
       "norm_label": "rules of order",
       "id": "040_rules_of_order"
     },
@@ -4115,7 +4286,7 @@
       "label": "Meeting Minutes",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/140_Minutes_Board_Meetings_Sample.pdf",
-      "community": 45,
+      "community": 46,
       "norm_label": "meeting minutes",
       "id": "140_meeting_minutes"
     },
@@ -4123,7 +4294,7 @@
       "label": "Annual General Meeting (AGM)",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/210_AGM_Overview.pdf",
-      "community": 18,
+      "community": 19,
       "norm_label": "annual general meeting (agm)",
       "id": "210_agm"
     },
@@ -4131,7 +4302,7 @@
       "label": "Semi-Annual General Meeting (SAGM)",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/290_SAGM_Overview.pdf",
-      "community": 18,
+      "community": 19,
       "norm_label": "semi-annual general meeting (sagm)",
       "id": "290_sagm"
     },
@@ -4139,7 +4310,7 @@
       "label": "Special General Meeting (SGM)",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/300_Special_General_Meeting_Overview.pdf",
-      "community": 18,
+      "community": 19,
       "norm_label": "special general meeting (sgm)",
       "id": "300_sgm"
     },
@@ -4147,7 +4318,7 @@
       "label": "Quorum",
       "file_type": "document",
       "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
-      "community": 86,
+      "community": 87,
       "norm_label": "quorum",
       "id": "2830_quorum"
     },
@@ -4155,7 +4326,7 @@
       "label": "Board of Directors",
       "file_type": "document",
       "source_file": "reference materials/info/2830-Guide_to_the_Co-op_Act.pdf",
-      "community": 45,
+      "community": 46,
       "norm_label": "board of directors",
       "id": "2830_board_of_directors"
     },
@@ -4163,7 +4334,7 @@
       "label": "Checklist: Appeal of Membership Termination",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/370_Appeal_of_Membership_Termination_Checklist.pdf",
-      "community": 21,
+      "community": 23,
       "norm_label": "checklist: appeal of membership termination",
       "id": "370_appeal_of_membership_termination_checklist_termination_appeal_checklist"
     },
@@ -4171,7 +4342,7 @@
       "label": "Agenda: Appeal of Membership Termination",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/380_Appeal_of_Membership_Termination_Agenda_Sample-Copy.pdf",
-      "community": 21,
+      "community": 23,
       "norm_label": "agenda: appeal of membership termination",
       "id": "380_appeal_of_membership_termination_agenda_sample_copy_termination_appeal_agenda"
     },
@@ -4179,7 +4350,7 @@
       "label": "Notice: Termination Appeal (Breach of Material Condition)",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/400_Appeal_of_Membership_Termination_Breach_Notice_Sample.pdf",
-      "community": 21,
+      "community": 23,
       "norm_label": "notice: termination appeal (breach of material condition)",
       "id": "400_appeal_of_membership_termination_breach_notice_sample_termination_appeal_breach_notice"
     },
@@ -4187,7 +4358,7 @@
       "label": "Notice: Termination Appeal (Conduct Detrimental)",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/420_Appeal-of-Membership-Termination-Conduct_Notice_Sample.pdf",
-      "community": 21,
+      "community": 23,
       "norm_label": "notice: termination appeal (conduct detrimental)",
       "id": "420_appeal_of_membership_termination_conduct_notice_sample_termination_appeal_conduct_notice"
     },
@@ -4195,7 +4366,7 @@
       "label": "Checklist: Removal of Director",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/440_Removal-of-Director-Meeting_Checklist.pdf",
-      "community": 46,
+      "community": 47,
       "norm_label": "checklist: removal of director",
       "id": "440_removal_of_director_meeting_checklist_removal_of_director_checklist"
     },
@@ -4203,7 +4374,7 @@
       "label": "Notice: Removal of Director Meeting",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/460_Removal-of-Director-Meeting_Notice_Sample.pdf",
-      "community": 46,
+      "community": 47,
       "norm_label": "notice: removal of director meeting",
       "id": "460_removal_of_director_meeting_notice_sample_removal_of_director_notice"
     },
@@ -4211,7 +4382,7 @@
       "label": "Agenda: Removal of Director Meeting",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/480_Removal_of_Director_Meeting_Agenda_Sample.pdf",
-      "community": 46,
+      "community": 47,
       "norm_label": "agenda: removal of director meeting",
       "id": "480_removal_of_director_meeting_agenda_sample_removal_of_director_agenda"
     },
@@ -4243,7 +4414,7 @@
       "label": "Invitation: Town Hall Meeting (Parking Policy)",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/530_Town-Hall-Meeting_Invitation_Sample.pdf",
-      "community": 48,
+      "community": 49,
       "norm_label": "invitation: town hall meeting (parking policy)",
       "id": "530_town_hall_meeting_invitation_sample_town_hall_meeting_invitation"
     },
@@ -4267,7 +4438,7 @@
       "label": "Flowchart: Member Placed in Care Procedure",
       "file_type": "document",
       "source_file": "reference materials/info/Policies - Community/2380_Flowchart_Procedure_when_a_member_is_Placed_in_Care.pdf",
-      "community": 47,
+      "community": 48,
       "norm_label": "flowchart: member placed in care procedure",
       "id": "2380_flowchart_procedure_when_a_member_is_placed_in_care_member_placed_in_care_flowchart"
     },
@@ -4275,7 +4446,7 @@
       "label": "Flowchart: Member Death Procedure",
       "file_type": "document",
       "source_file": "reference materials/info/Policies - Community/2382_Flowchart_Procedure_when_a_member_dies.pdf",
-      "community": 47,
+      "community": 48,
       "norm_label": "flowchart: member death procedure",
       "id": "2382_flowchart_procedure_when_a_member_dies_member_death_flowchart"
     },
@@ -4283,7 +4454,7 @@
       "label": "Guidelines: Community Care Committee",
       "file_type": "document",
       "source_file": "reference materials/info/Policies - Community/2390_Community_Care_Guidelines.pdf",
-      "community": 47,
+      "community": 48,
       "norm_label": "guidelines: community care committee",
       "id": "2390_community_care_guidelines_community_care_committee_guidelines"
     },
@@ -4291,7 +4462,7 @@
       "label": "Policy: Parking",
       "file_type": "document",
       "source_file": "reference materials/info/Policies - Community/2400_Parking_Policy_Sample.pdf",
-      "community": 48,
+      "community": 49,
       "norm_label": "policy: parking",
       "id": "2400_parking_policy_sample_parking_policy"
     },
@@ -4299,7 +4470,7 @@
       "label": "Rationale: Parking Policy Discussion Notes",
       "file_type": "document",
       "source_file": "reference materials/info/Policies - Community/2420_Parking_Policy_Discussion-Notes.pdf",
-      "community": 48,
+      "community": 49,
       "norm_label": "rationale: parking policy discussion notes",
       "id": "2420_parking_policy_discussion_notes_parking_policy_rationale"
     },
@@ -4315,7 +4486,7 @@
       "label": "Entity: Personal Information Protection Act (PIPA)",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/370_Appeal_of_Membership_Termination_Checklist.pdf",
-      "community": 21,
+      "community": 23,
       "norm_label": "entity: personal information protection act (pipa)",
       "id": "shared_concept_pipa"
     },
@@ -4323,7 +4494,7 @@
       "label": "Entity: CHF BC",
       "file_type": "document",
       "source_file": "reference materials/info/Meetings/370_Appeal_of_Membership_Termination_Checklist.pdf",
-      "community": 21,
+      "community": 23,
       "norm_label": "entity: chf bc",
       "id": "shared_concept_chf_bc"
     },
@@ -4331,7 +4502,7 @@
       "label": "Pet Policy Sample",
       "file_type": "document",
       "source_file": "reference materials/info/Policies - Community/2430_Pet_Policy_Sample.pdf",
-      "community": 49,
+      "community": 50,
       "norm_label": "pet policy sample",
       "id": "2430_pet_policy_sample_pet_policy"
     },
@@ -4339,7 +4510,7 @@
       "label": "Pet Policy Rationale",
       "file_type": "document",
       "source_file": "reference materials/info/Policies - Community/2450_Pet_Policy_Discussion-Notes.pdf",
-      "community": 49,
+      "community": 50,
       "norm_label": "pet policy rationale",
       "id": "2450_pet_policy_discussion_notes_pet_rationale"
     },
@@ -4347,7 +4518,7 @@
       "label": "Member Complaint Form",
       "file_type": "document",
       "source_file": "reference materials/info/Policies - Community/2460_Complaint-Form_sample.pdf",
-      "community": 87,
+      "community": 88,
       "norm_label": "member complaint form",
       "id": "2460_complaint_form_sample_complaint_form"
     },
@@ -4356,7 +4527,7 @@
       "file_type": "document",
       "author": "Thom Armstrong",
       "source_file": "reference materials/info/Policies - Community/2480_Good-policies.pdf",
-      "community": 49,
+      "community": 50,
       "norm_label": "good policies guidelines",
       "id": "2480_good_policies_policy_guidelines"
     },
@@ -4365,7 +4536,7 @@
       "file_type": "document",
       "author": "Thom Armstrong, Nicholas Gazzard",
       "source_file": "reference materials/info/Policies - Community/2500_Beyond-Participation-a-foundation-for-real-member-involvement-2010.pdf",
-      "community": 65,
+      "community": 66,
       "norm_label": "real member involvement",
       "id": "2500_beyond_participation_member_involvement"
     },
@@ -4374,7 +4545,7 @@
       "file_type": "document",
       "author": "Thom Armstrong, Nicholas Gazzard",
       "source_file": "reference materials/info/Policies - Community/2490-End-of-Participation-Newsbriefs-2008.pdf",
-      "community": 65,
+      "community": 66,
       "norm_label": "seven myths of participation",
       "id": "2490_end_of_participation_participation_myths"
     },
@@ -4382,7 +4553,7 @@
       "label": "Video Surveillance Discussion Notes",
       "file_type": "document",
       "source_file": "reference materials/info/Policies - Community/2700_Video-Surveillance_Discussion-Notes.pdf",
-      "community": 88,
+      "community": 89,
       "norm_label": "video surveillance discussion notes",
       "id": "2700_video_surveillance_discussion_notes_surveillance_policy"
     },
@@ -4390,7 +4561,7 @@
       "label": "Sustainability Policy Principles",
       "file_type": "document",
       "source_file": "reference materials/info/Sustainability/2580-Model-Sustainability-Policy-Discussion-Notes.pdf",
-      "community": 66,
+      "community": 67,
       "norm_label": "sustainability policy principles",
       "id": "2580_model_sustainability_policy_sustainability_principles"
     },
@@ -4398,7 +4569,7 @@
       "label": "Sustainability Sample Actions",
       "file_type": "document",
       "source_file": "reference materials/info/Sustainability/Sustainability-Sample-Actions.pdf",
-      "community": 66,
+      "community": 67,
       "norm_label": "sustainability sample actions",
       "id": "sustainability_sample_actions_action_list"
     },
@@ -4406,7 +4577,7 @@
       "label": "Record of Ballot - Removal of Director",
       "file_type": "document",
       "source_file": "reference materials/info/Voting/610_Record-of-Ballot-Counting_Removal-of-Director_Sample.pdf",
-      "community": 67,
+      "community": 68,
       "norm_label": "record of ballot - removal of director",
       "id": "610_removal_of_director_removal_ballot"
     },
@@ -4414,7 +4585,7 @@
       "label": "Record of Ballot - Appeal of Termination",
       "file_type": "document",
       "source_file": "reference materials/info/Voting/630_Record-of-Ballot-Counting_Appeal-of-Termination_Sample.pdf",
-      "community": 67,
+      "community": 68,
       "norm_label": "record of ballot - appeal of termination",
       "id": "630_appeal_of_termination_appeal_ballot"
     },
@@ -4422,7 +4593,7 @@
       "label": "Election Preparation Workflow",
       "file_type": "document",
       "source_file": "reference materials/info/Voting/Election/680_Preparing-For-The-Election_Step-By-Step.pdf",
-      "community": 35,
+      "community": 36,
       "norm_label": "election preparation workflow",
       "id": "680_preparing_for_the_election_election_workflow"
     },
@@ -4430,7 +4601,7 @@
       "label": "Nominations Committee Job Description",
       "file_type": "document",
       "source_file": "reference materials/info/Voting/Election/690_Nominations-Committee_Job-Description_Sample.pdf",
-      "community": 35,
+      "community": 36,
       "norm_label": "nominations committee job description",
       "id": "690_nominations_committee_committee_job_description"
     },
@@ -4438,7 +4609,7 @@
       "label": "Register of Directors",
       "file_type": "document",
       "source_file": "reference materials/info/Voting/Election/740_Register-of-Directors_Sample.pdf",
-      "community": 89,
+      "community": 90,
       "norm_label": "register of directors",
       "id": "740_register_of_directors_director_register"
     },
@@ -4446,7 +4617,7 @@
       "label": "Candidate's Declaration and Eligibility",
       "file_type": "document",
       "source_file": "reference materials/info/Voting/Election/770_Candidates-Declaration_Sample.pdf",
-      "community": 35,
+      "community": 36,
       "norm_label": "candidate's declaration and eligibility",
       "id": "770_candidates_declaration_candidate_eligibility"
     },
@@ -4454,7 +4625,7 @@
       "label": "Arrears Report and Disqualification",
       "file_type": "document",
       "source_file": "reference materials/info/Voting/Election/840_Arrears-Report_Sample.pdf",
-      "community": 35,
+      "community": 36,
       "norm_label": "arrears report and disqualification",
       "id": "840_arrears_report_disqualification_criteria"
     }
@@ -4560,7 +4731,7 @@
       "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\roadmapUtilities.test.ts",
-      "source_location": "L3",
+      "source_location": "L4",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_tests_roadmaputilities_test_ts",
       "_tgt": "c_users_joe_desktop_coop103_coop1_03_types_ts",
@@ -4740,7 +4911,43 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L42",
+      "source_location": "L46",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "_tgt": "index_withtimeout",
+      "source": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "target": "index_withtimeout",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L59",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "_tgt": "index_normalizegeminimodelname",
+      "source": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "target": "index_normalizegeminimodelname",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L61",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "_tgt": "index_rankgeminimodel",
+      "source": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "target": "index_rankgeminimodel",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L76",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_refreshmodelregistry",
@@ -4752,7 +4959,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L80",
+      "source_location": "L114",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getbestmodel",
@@ -4764,7 +4971,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L85",
+      "source_location": "L119",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_withaifallback",
@@ -4776,7 +4983,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L128",
+      "source_location": "L163",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getprisma",
@@ -4788,7 +4995,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L141",
+      "source_location": "L176",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_sanitizeutf8",
@@ -4800,7 +5007,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L146",
+      "source_location": "L181",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getparam",
@@ -4812,7 +5019,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L148",
+      "source_location": "L183",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getblobtoken",
@@ -4824,7 +5031,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L150",
+      "source_location": "L185",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_isblobstorageurl",
@@ -4836,7 +5043,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L152",
+      "source_location": "L187",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getsafedownloadname",
@@ -4848,7 +5055,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L158",
+      "source_location": "L193",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getsafeblobfilename",
@@ -4860,7 +5067,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L166",
+      "source_location": "L201",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_handlesingledocumentupload",
@@ -4872,7 +5079,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L180",
+      "source_location": "L215",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getcoopid",
@@ -4884,7 +5091,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L209",
+      "source_location": "L244",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_validaterequest",
@@ -4896,7 +5103,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L255",
+      "source_location": "L290",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_requireauth",
@@ -4908,7 +5115,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L264",
+      "source_location": "L299",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getdashboardrole",
@@ -4920,7 +5127,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L267",
+      "source_location": "L302",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_requireadmin",
@@ -4932,7 +5139,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L273",
+      "source_location": "L308",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_normalizenotification",
@@ -4944,7 +5151,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L279",
+      "source_location": "L314",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_createsystemnotification",
@@ -4956,7 +5163,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L309",
+      "source_location": "L344",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getbaseurl",
@@ -4968,7 +5175,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L1416",
+      "source_location": "L1451",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_serializeminutes",
@@ -4980,7 +5187,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L1550",
+      "source_location": "L1585",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getai",
@@ -4992,7 +5199,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L1558",
+      "source_location": "L1593",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_parsejsonresponse",
@@ -5004,7 +5211,43 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2062",
+      "source_location": "L1602",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "_tgt": "index_asarray",
+      "source": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "target": "index_asarray",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L1604",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "_tgt": "index_extractcitationsfromtoolresults",
+      "source": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "target": "index_extractcitationsfromtoolresults",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L1630",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "_tgt": "index_createoracleanswerfromtoolresults",
+      "source": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
+      "target": "index_createoracleanswerfromtoolresults",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
+      "source_location": "L2246",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_getmeetingtypeguidance",
@@ -5016,7 +5259,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2076",
+      "source_location": "L2260",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_buildmeetinganalysisprompt",
@@ -5028,7 +5271,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2121",
+      "source_location": "L2305",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_normalizemeetinganalysis",
@@ -5040,7 +5283,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2155",
+      "source_location": "L2339",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_api_index_ts",
       "_tgt": "index_generatemeetinganalysis",
@@ -5052,19 +5295,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L44",
-      "weight": 1.0,
-      "_src": "index_refreshmodelregistry",
-      "_tgt": "index_getai",
-      "source": "index_refreshmodelregistry",
-      "target": "index_getai",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L93",
+      "source_location": "L125",
       "weight": 1.0,
       "_src": "index_withaifallback",
       "_tgt": "index_refreshmodelregistry",
@@ -5076,7 +5307,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2156",
+      "source_location": "L2340",
       "weight": 1.0,
       "_src": "index_generatemeetinganalysis",
       "_tgt": "index_getai",
@@ -5088,7 +5319,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2162",
+      "source_location": "L2346",
       "weight": 1.0,
       "_src": "index_generatemeetinganalysis",
       "_tgt": "index_parsejsonresponse",
@@ -5100,7 +5331,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2078",
+      "source_location": "L2262",
       "weight": 1.0,
       "_src": "index_buildmeetinganalysisprompt",
       "_tgt": "index_getmeetingtypeguidance",
@@ -5112,7 +5343,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2160",
+      "source_location": "L2344",
       "weight": 1.0,
       "_src": "index_generatemeetinganalysis",
       "_tgt": "index_buildmeetinganalysisprompt",
@@ -5124,7 +5355,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\api\\index.ts",
-      "source_location": "L2162",
+      "source_location": "L2346",
       "weight": 1.0,
       "_src": "index_generatemeetinganalysis",
       "_tgt": "index_normalizemeetinganalysis",
@@ -5407,6 +5638,18 @@
       "source": "c_users_joe_desktop_coop103_coop1_03_components_layout_tsx",
       "target": "layout_handlelogout",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\components\\Layout.tsx",
+      "source_location": "L89",
+      "weight": 1.0,
+      "_src": "layout_handleclickoutside",
+      "_tgt": "oracletools_contains",
+      "source": "layout_handleclickoutside",
+      "target": "oracletools_contains"
     },
     {
       "relation": "calls",
@@ -8433,15 +8676,63 @@
       "confidence_score": 1.0
     },
     {
-      "relation": "contains",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\geminiService.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_services_geminiservice_ts",
+      "_tgt": "c_users_joe_desktop_coop103_coop1_03_utils_demodata_ts",
+      "source": "c_users_joe_desktop_coop103_coop1_03_services_geminiservice_ts",
+      "target": "c_users_joe_desktop_coop103_coop1_03_utils_demodata_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\geminiService.ts",
       "source_location": "L5",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_services_geminiservice_ts",
+      "_tgt": "c_users_joe_desktop_coop103_coop1_03_utils_demotutorial_ts",
+      "source": "c_users_joe_desktop_coop103_coop1_03_services_geminiservice_ts",
+      "target": "c_users_joe_desktop_coop103_coop1_03_utils_demotutorial_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\geminiService.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_services_geminiservice_ts",
       "_tgt": "geminiservice_isdemomode",
       "source": "c_users_joe_desktop_coop103_coop1_03_services_geminiservice_ts",
       "target": "geminiservice_isdemomode",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\geminiService.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_services_geminiservice_ts",
+      "_tgt": "geminiservice_getdemooracleuser",
+      "source": "c_users_joe_desktop_coop103_coop1_03_services_geminiservice_ts",
+      "target": "geminiservice_getdemooracleuser",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\services\\geminiService.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_src": "geminiservice_getdemooracleuser",
+      "_tgt": "geminiservice_isdemomode",
+      "source": "geminiservice_isdemomode",
+      "target": "geminiservice_getdemooracleuser",
       "confidence_score": 1.0
     },
     {
@@ -8772,7 +9063,7 @@
       "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\roadmapUtilities.test.ts",
-      "source_location": "L4",
+      "source_location": "L5",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_tests_roadmaputilities_test_ts",
       "_tgt": "c_users_joe_desktop_coop103_coop1_03_utils_notifications_ts",
@@ -8784,7 +9075,7 @@
       "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\roadmapUtilities.test.ts",
-      "source_location": "L8",
+      "source_location": "L9",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_tests_roadmaputilities_test_ts",
       "_tgt": "c_users_joe_desktop_coop103_coop1_03_utils_oracle_ts",
@@ -8796,7 +9087,19 @@
       "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\roadmapUtilities.test.ts",
-      "source_location": "L13",
+      "source_location": "L14",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_tests_roadmaputilities_test_ts",
+      "_tgt": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "source": "c_users_joe_desktop_coop103_coop1_03_tests_roadmaputilities_test_ts",
+      "target": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\roadmapUtilities.test.ts",
+      "source_location": "L19",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_tests_roadmaputilities_test_ts",
       "_tgt": "c_users_joe_desktop_coop103_coop1_03_utils_maintenanceai_ts",
@@ -8808,7 +9111,7 @@
       "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\roadmapUtilities.test.ts",
-      "source_location": "L17",
+      "source_location": "L23",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_tests_roadmaputilities_test_ts",
       "_tgt": "c_users_joe_desktop_coop103_coop1_03_utils_meetinganalysis_ts",
@@ -8820,7 +9123,7 @@
       "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\roadmapUtilities.test.ts",
-      "source_location": "L21",
+      "source_location": "L27",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_tests_roadmaputilities_test_ts",
       "_tgt": "c_users_joe_desktop_coop103_coop1_03_utils_buildinghierarchy_ts",
@@ -8832,7 +9135,7 @@
       "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\tests\\roadmapUtilities.test.ts",
-      "source_location": "L24",
+      "source_location": "L30",
       "weight": 1.0,
       "_src": "c_users_joe_desktop_coop103_coop1_03_tests_roadmaputilities_test_ts",
       "_tgt": "c_users_joe_desktop_coop103_coop1_03_utils_dashboardpreferences_ts",
@@ -10494,6 +10797,162 @@
       "_tgt": "oracle_detectoracleintent",
       "source": "oracle_detectoracleintent",
       "target": "oracle_createdemooracleresponse",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L25",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_limitfor",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_limitfor",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L26",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_textfilter",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_textfilter",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L27",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_contains",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_contains",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_settledvalue",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_settledvalue",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L36",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_canuseprivilegedoracletools",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_canuseprivilegedoracletools",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L41",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_deny",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_deny",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L43",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_documentvisibilitywhere",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_documentvisibilitywhere",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L53",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_memberscopedunitids",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_memberscopedunitids",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L656",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_stringprop",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_stringprop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L657",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_numberprop",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_numberprop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L658",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_booleanprop",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_booleanprop",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L665",
+      "weight": 1.0,
+      "_src": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "_tgt": "oracletools_declaration",
+      "source": "c_users_joe_desktop_coop103_coop1_03_utils_oracletools_ts",
+      "target": "oracletools_declaration",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "C:\\Users\\Joe\\Desktop\\Coop103\\coop1.03\\utils\\oracleTools.ts",
+      "source_location": "L44",
+      "weight": 1.0,
+      "_src": "oracletools_documentvisibilitywhere",
+      "_tgt": "oracletools_canuseprivilegedoracletools",
+      "source": "oracletools_canuseprivilegedoracletools",
+      "target": "oracletools_documentvisibilitywhere",
       "confidence_score": 1.0
     },
     {

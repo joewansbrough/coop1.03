@@ -45,6 +45,54 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     }
   };
 
+  const renderContent = (content: string, response?: OracleResponse) => {
+    // Simple regex to find internal links like [Title](/path)
+    const parts = content.split(/(\[.+?\]\(.+?\))/g);
+    
+    return (
+      <div className="space-y-3">
+        <p className="whitespace-pre-wrap">
+          {parts.map((part, i) => {
+            const match = part.match(/\[(.+?)\]\((.+?)\)/);
+            if (match) {
+              const [_, label, href] = match;
+              return (
+                <button
+                  key={i}
+                  onClick={() => navigate(href)}
+                  className="mx-1 font-bold text-teal-600 underline decoration-teal-600/30 underline-offset-2 hover:text-teal-700"
+                >
+                  {label}
+                </button>
+              );
+            }
+            return part;
+          })}
+        </p>
+        
+        {/* Render Citations */}
+        {response?.citations && response.citations.length > 0 && (
+          <div className="mt-4 space-y-2 border-t border-slate-200/50 pt-3 dark:border-white/5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sources</p>
+            <div className="flex flex-wrap gap-2">
+              {response.citations.map((citation, i) => (
+                <button
+                  key={i}
+                  onClick={() => navigate(`/resource-library?id=${citation.documentId}`)}
+                  className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-slate-600 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:ring-white/10"
+                >
+                  <Sparkles className="h-3 w-3 text-teal-500" />
+                  {citation.title}
+                  {citation.pageNumber && <span className="opacity-50">(p. {citation.pageNumber})</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const panel = (
     <div className={embedded ? 'h-full rounded-[24px] border border-slate-200 bg-white dark:border-white/5 dark:bg-slate-900' : 'fixed bottom-20 right-4 z-[120] w-[calc(100vw-2rem)] max-w-md rounded-[24px] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900'}>
       <div className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-white/5">
@@ -72,7 +120,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         {messages.map((message, index) => (
           <div key={index} className={message.role === 'user' ? 'text-right' : 'text-left'}>
             <div className={`inline-block max-w-[88%] rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed ${message.role === 'user' ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-200'}`}>
-              {message.content}
+              {message.role === 'assistant' ? renderContent(message.content, message.response) : message.content}
               {message.response?.suggestedAction && (
                 <button
                   type="button"
