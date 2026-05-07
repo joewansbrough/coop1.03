@@ -31,9 +31,15 @@ const upload = multer({
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const STABLE_GEMINI_FALLBACK_MODELS = [
+  DEFAULT_GEMINI_MODEL,
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-2.0-flash',
+];
 
 // Dynamic model registry
-let activeModels: string[] = [DEFAULT_GEMINI_MODEL]; // Hard fallback
+let activeModels: string[] = [...STABLE_GEMINI_FALLBACK_MODELS]; // Hard fallback
 let lastModelUpdate = 0;
 
 /**
@@ -63,12 +69,7 @@ async function refreshModelRegistry() {
       console.log('[AI Registry] Discovered models:', activeModels);
     } else {
       // If listModels fails or returns empty, use a curated 2026-forward list
-      activeModels = [
-        DEFAULT_GEMINI_MODEL,
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'gemini-2.0-flash',
-      ];
+      activeModels = [...STABLE_GEMINI_FALLBACK_MODELS];
       console.log('[AI Registry] Using curated fallback list:', activeModels);
     }
     lastModelUpdate = Date.now();
@@ -98,7 +99,8 @@ async function withAiFallback<T>(
 
   const modelsToTry = Array.from(new Set([
     ...(preferredModel ? [preferredModel] : []),
-    ...activeModels
+    ...activeModels,
+    ...STABLE_GEMINI_FALLBACK_MODELS,
   ]));
   
   let lastError: any;
@@ -106,14 +108,19 @@ async function withAiFallback<T>(
     try {
       return await operation(modelName);
     } catch (err: any) {
-      const isTransient = 
+      const isModelUnavailable =
+        err.message?.includes('404') ||
+        err.message?.includes('not found') ||
+        err.message?.includes('not supported for generateContent');
+      const isTransient =
         err.message?.includes('503') || 
         err.message?.includes('429') || 
         err.message?.includes('high demand') ||
         err.message?.includes('overloaded');
       
-      if (isTransient && modelName !== modelsToTry[modelsToTry.length - 1]) {
-        console.warn(`[AI Fallback] Model ${modelName} failed/overloaded. Trying next model...`);
+      if ((isTransient || isModelUnavailable) && modelName !== modelsToTry[modelsToTry.length - 1]) {
+        console.warn(`[AI Fallback] Model ${modelName} failed (${err.message}). Trying next model...`);
+        if (isModelUnavailable) activeModels = activeModels.filter(model => model !== modelName);
         continue;
       }
       lastError = err;
@@ -1573,29 +1580,31 @@ app.post('/api/ai/triage', requireAuth, async (req, res) => {
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
     const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
-    const model = genAI.getGenerativeModel({
-      model: resolvedModel,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            priority: { type: SchemaType.STRING },
-            urgency: { type: SchemaType.STRING },
-            category: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
-            residentTip: { type: SchemaType.STRING },
-            confidence: { type: SchemaType.NUMBER },
-            safetyWarning: { type: SchemaType.STRING },
-            reasoning: { type: SchemaType.STRING },
-          },
-          required: ['priority', 'urgency', 'category', 'residentTip', 'confidence']
+    const triage = await withAiFallback(async (modelName) => {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              priority: { type: SchemaType.STRING },
+              urgency: { type: SchemaType.STRING },
+              category: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+              residentTip: { type: SchemaType.STRING },
+              confidence: { type: SchemaType.NUMBER },
+              safetyWarning: { type: SchemaType.STRING },
+              reasoning: { type: SchemaType.STRING },
+            },
+            required: ['priority', 'urgency', 'category', 'residentTip', 'confidence']
+          }
         }
-      }
-    });
-
-    const result = await model.generateContent(`Evaluate this BC housing co-op maintenance request. Return JSON only. Categories must be from Plumbing, Electrical, Structural, Appliance, HVAC, Exterior, Safety, Other. Priority and urgency must be Low, Medium, High, or Emergency. Provide a short residentTip that is helpful but does not diagnose beyond the evidence. Description: "${description}"${visualDescription ? `\nPhoto description: "${visualDescription}"` : ''}`);
-    const response = await result.response;
-    res.json(createMaintenanceTriage(parseJsonResponse(response.text(), {})));
+      });
+      const result = await model.generateContent(`Evaluate this BC housing co-op maintenance request. Return JSON only. Categories must be from Plumbing, Electrical, Structural, Appliance, HVAC, Exterior, Safety, Other. Priority and urgency must be Low, Medium, High, or Emergency. Provide a short residentTip that is helpful but does not diagnose beyond the evidence. Description: "${description}"${visualDescription ? `\nPhoto description: "${visualDescription}"` : ''}`);
+      const response = await result.response;
+      return createMaintenanceTriage(parseJsonResponse(response.text(), {}));
+    }, resolvedModel);
+    res.json(triage);
   } catch (e: any) {
     res.status(500).json({ error: `Gemini maintenance triage failed: ${e.message}` });
   }
@@ -1654,29 +1663,31 @@ app.post('/api/ai/maintenance-image-description', requireAuth, upload.single('im
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
     const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
-    const model = genAI.getGenerativeModel({
-      model: resolvedModel,
-      generationConfig: { responseMimeType: 'application/json' },
-    });
-    const result = await model.generateContent([
-      {
-        text: `Describe this maintenance photo for a visually impaired resident. Use the resident's written problem description as context when it helps interpret the image, but do not claim visual details unless they are visible. Return JSON with visualDescription, observedDamage, likelyCategory, safetyConcerns, confidence. Do not identify people or private documents.${description ? `\n\nResident problem description: ${description}` : ''}`,
-      },
-      {
-        inlineData: {
-          data: file.buffer.toString('base64'),
-          mimeType: file.mimetype,
+    const imageAnalysis = await withAiFallback(async (modelName) => {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { responseMimeType: 'application/json' },
+      });
+      const result = await model.generateContent([
+        {
+          text: `Describe this maintenance photo for a visually impaired resident. Use the resident's written problem description as context when it helps interpret the image, but do not claim visual details unless they are visible. Return JSON with visualDescription, observedDamage, likelyCategory, safetyConcerns, confidence. Do not identify people or private documents.${description ? `\n\nResident problem description: ${description}` : ''}`,
         },
-      },
-    ]);
-    const response = await result.response;
-    const imageAnalysis = parseJsonResponse(response.text(), {
-      visualDescription: 'The image could not be analyzed.',
-      observedDamage: '',
-      likelyCategory: 'Other',
-      safetyConcerns: '',
-      confidence: 0,
-    });
+        {
+          inlineData: {
+            data: file.buffer.toString('base64'),
+            mimeType: file.mimetype,
+          },
+        },
+      ]);
+      const response = await result.response;
+      return parseJsonResponse(response.text(), {
+        visualDescription: 'The image could not be analyzed.',
+        observedDamage: '',
+        likelyCategory: 'Other',
+        safetyConcerns: '',
+        confidence: 0,
+      });
+    }, resolvedModel);
     res.json({
       ...imageAnalysis,
       attachment: blob ? {
