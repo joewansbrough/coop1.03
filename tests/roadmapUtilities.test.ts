@@ -121,9 +121,12 @@ test('demo meeting analysis maps rough notes into editable minutes fields', () =
 
   assert.equal(analysis.meetingId, 'event-1');
   assert.match(analysis.professionalSummary, /repainting/);
+  assert.equal(Array.isArray(analysis.topicBriefings), true);
+  assert.match(analysis.topicBriefings?.[0].recommendedMinuteText || '', /meeting discussed/i);
   assert.equal(analysis.decisions.some(item => /approved repainting/.test(item)), true);
   assert.equal(analysis.motionsMentioned.length, 1);
   assert.equal(analysis.actionItems.some(item => /Maintenance committee/.test(item.description)), true);
+  assert.match(analysis.confidenceNotes?.[0] || '', /Review/i);
 });
 
 test('units can be grouped by building while preserving floor-only defaults', () => {

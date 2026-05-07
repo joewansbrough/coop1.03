@@ -660,13 +660,26 @@ const handleSave = async () => {
 
       const decisionsHtml = listToHtml(analysis.decisions || []);
       const risksHtml = listToHtml(analysis.risksOrFollowUps || []);
+      const confidenceHtml = listToHtml(analysis.confidenceNotes || []);
+      const topicBriefingsHtml = Array.isArray(analysis.topicBriefings)
+        ? analysis.topicBriefings.map((briefing: any) => {
+          const parts = [
+            briefing.context ? `<p><strong>Context:</strong> ${briefing.context}</p>` : '',
+            briefing.discussionSummary ? `<p><strong>Discussion:</strong> ${briefing.discussionSummary}</p>` : '',
+            briefing.implications ? `<p><strong>Implications:</strong> ${briefing.implications}</p>` : '',
+            briefing.recommendedMinuteText ? `<p><strong>Recommended minute text:</strong> ${briefing.recommendedMinuteText}</p>` : '',
+          ].filter(Boolean).join('');
+          return `<h4>${briefing.topic || 'Meeting Topic'}</h4>${parts}`;
+        }).join('')
+        : '';
 
       setFormData(prev => ({
         ...prev,
         ...(analysis.professionalSummary ? { boardReport: analysis.professionalSummary } : {}),
+        ...(topicBriefingsHtml ? { committeeReports: topicBriefingsHtml } : {}),
         ...(decisionsHtml ? { keyDecisions: decisionsHtml } : {}),
         ...(meetingType === 'special' && analysis.professionalSummary ? { newBusiness: analysis.professionalSummary } : {}),
-        ...(risksHtml ? { nextSteps: risksHtml } : {}),
+        ...(risksHtml || confidenceHtml ? { nextSteps: `${risksHtml}${confidenceHtml}` } : {}),
       }));
 
       if (Array.isArray(analysis.motionsMentioned) && analysis.motionsMentioned.length > 0) {

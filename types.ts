@@ -301,15 +301,25 @@ export interface MeetingAnalysisActionItem {
   sourceSnippet?: string;
 }
 
+export interface MeetingAnalysisTopicBriefing {
+  topic: string;
+  context: string;
+  discussionSummary: string;
+  implications: string;
+  recommendedMinuteText: string;
+}
+
 export interface MeetingAnalysis {
   id: string;
   meetingId?: string;
   rawNotes: string;
   professionalSummary: string;
+  topicBriefings?: MeetingAnalysisTopicBriefing[];
   decisions: string[];
   motionsMentioned: string[];
   actionItems: MeetingAnalysisActionItem[];
   risksOrFollowUps: string[];
+  confidenceNotes?: string[];
   createdBy: string;
   approvedAt?: string;
   createdAt: string;
