@@ -25,6 +25,13 @@ const DEFAULT_LIMIT = 20;
 const limitFor = (value?: number) => Math.max(1, Math.min(Number(value || DEFAULT_LIMIT), MAX_LIMIT));
 const textFilter = (value?: string) => String(value || '').trim();
 const contains = (value: string) => ({ contains: value, mode: 'insensitive' as const });
+const settledValue = async <T>(label: string, promise: Promise<T>) => {
+  try {
+    return { label, value: await promise };
+  } catch (error: any) {
+    return { label, value: [], error: error?.message || String(error) };
+  }
+};
 
 export const canUsePrivilegedOracleTools = (context: Pick<ToolContext, 'isAdmin' | 'role'>) => {
   const role = String(context.role || '').toUpperCase();
@@ -408,7 +415,9 @@ export const oracleTools = {
   },
 
   search_documents: async (context: ToolContext, params: { query: string; limit?: number }) => {
-    const chunks = await oracleTools.get_document_chunks(context, { query: params.query, limit: params.limit || 8 });
+    const query = textFilter(params.query);
+    const chunksResult = await settledValue('documentChunks', oracleTools.get_document_chunks(context, { query, limit: params.limit || 8 }));
+    const chunks = chunksResult.value;
     if (Array.isArray(chunks) && chunks.length > 0) {
       return chunks.map((chunk: any) => ({
         documentId: chunk.documentId,
@@ -418,70 +427,69 @@ export const oracleTools = {
         pageNumber: chunk.pageNumber,
       }));
     }
-    return oracleTools.get_documents(context, { query: params.query, limit: params.limit || 5 });
+    const documentsResult = await settledValue('documents', oracleTools.get_documents(context, { query, limit: params.limit || 5 }));
+    return Array.isArray(documentsResult.value) ? documentsResult.value : [];
   },
 
   search_coop_knowledge: async (context: ToolContext, params: { query: string; limit?: number }) => {
     const limit = limitFor(params.limit || 8);
-    const [documents, announcements] = await Promise.all([
-      oracleTools.search_documents(context, { query: params.query, limit }),
-      oracleTools.get_announcements(context, { query: params.query, limit }),
+    const query = textFilter(params.query);
+    const [documentsResult, announcementsResult] = await Promise.all([
+      settledValue('documents', oracleTools.search_documents(context, { query, limit })),
+      settledValue('announcements', oracleTools.get_announcements(context, { query, limit })),
     ]);
 
     return {
-      query: params.query,
-      documents: Array.isArray(documents) ? documents : [],
-      announcements: Array.isArray(announcements) ? announcements : [],
+      query,
+      documents: Array.isArray(documentsResult.value) ? documentsResult.value : [],
+      announcements: Array.isArray(announcementsResult.value) ? announcementsResult.value : [],
+      errors: [documentsResult, announcementsResult]
+        .filter(result => result.error)
+        .map(result => ({ source: result.label, error: result.error })),
     };
   },
 
   search_coop_database: async (context: ToolContext, params: { query: string; limit?: number }) => {
     const limit = Math.min(limitFor(params.limit || 5), 10);
+    const query = textFilter(params.query);
     const privileged = canUsePrivilegedOracleTools(context);
-    const [
-      buildings,
-      units,
-      tenants,
-      maintenanceRequests,
-      scheduledMaintenance,
-      notifications,
-      announcements,
-      knowledge,
-      events,
-      committees,
-      meetingMinutes,
-      meetingAnalyses,
-    ] = await Promise.all([
-      oracleTools.get_buildings(context, { query: params.query, limit }),
-      oracleTools.get_units(context, { query: params.query, limit }),
-      oracleTools.get_tenants(context, { query: params.query, limit }),
-      oracleTools.get_maintenance_requests(context, { query: params.query, limit }),
-      oracleTools.get_scheduled_maintenance(context, { limit }),
-      oracleTools.get_notifications(context, { type: params.query, limit }),
-      oracleTools.get_announcements(context, { query: params.query, limit }),
-      oracleTools.search_coop_knowledge(context, { query: params.query, limit }),
-      oracleTools.get_events(context, { query: params.query, limit }),
-      oracleTools.get_committees(context, { query: params.query, limit }),
-      privileged ? oracleTools.get_meeting_minutes(context, { limit }) : Promise.resolve([]),
-      privileged ? oracleTools.get_meeting_analyses(context, { limit }) : Promise.resolve([]),
+    const results = await Promise.all([
+      settledValue('buildings', oracleTools.get_buildings(context, { query, limit })),
+      settledValue('units', oracleTools.get_units(context, { query, limit })),
+      settledValue('tenants', oracleTools.get_tenants(context, { query, limit })),
+      settledValue('maintenanceRequests', oracleTools.get_maintenance_requests(context, { query, limit })),
+      settledValue('scheduledMaintenance', oracleTools.get_scheduled_maintenance(context, { limit })),
+      settledValue('notifications', oracleTools.get_notifications(context, { type: query, limit })),
+      settledValue('announcements', oracleTools.get_announcements(context, { query, limit })),
+      settledValue('knowledge', oracleTools.search_coop_knowledge(context, { query, limit })),
+      settledValue('events', oracleTools.get_events(context, { query, limit })),
+      settledValue('committees', oracleTools.get_committees(context, { query, limit })),
+      settledValue('meetingMinutes', privileged ? oracleTools.get_meeting_minutes(context, { limit }) : Promise.resolve([])),
+      settledValue('meetingAnalyses', privileged ? oracleTools.get_meeting_analyses(context, { limit }) : Promise.resolve([])),
     ]);
+    const byLabel = Object.fromEntries(results.map(result => [result.label, result]));
+    const valueFor = (label: string) => byLabel[label]?.value || [];
+    const knowledge = valueFor('knowledge') as any;
 
     return {
-      query: params.query,
+      query,
       access: privileged ? 'privileged' : 'member-scoped',
-      buildings,
-      units,
-      tenants,
-      maintenanceRequests,
-      scheduledMaintenance,
-      notifications,
-      announcements,
-      documents: knowledge.documents,
-      documentAnnouncements: knowledge.announcements,
-      events,
-      committees,
-      meetingMinutes,
-      meetingAnalyses,
+      buildings: valueFor('buildings'),
+      units: valueFor('units'),
+      tenants: valueFor('tenants'),
+      maintenanceRequests: valueFor('maintenanceRequests'),
+      scheduledMaintenance: valueFor('scheduledMaintenance'),
+      notifications: valueFor('notifications'),
+      announcements: valueFor('announcements'),
+      documents: knowledge.documents || [],
+      documentAnnouncements: knowledge.announcements || [],
+      events: valueFor('events'),
+      committees: valueFor('committees'),
+      meetingMinutes: valueFor('meetingMinutes'),
+      meetingAnalyses: valueFor('meetingAnalyses'),
+      errors: results
+        .filter(result => result.error)
+        .map(result => ({ source: result.label, error: result.error })),
     };
   },
 

@@ -222,6 +222,37 @@ test('oracle knowledge search includes announcements for policy questions', asyn
   assert.equal(calls[0].where.cooperativeId, 'coop-1');
 });
 
+test('oracle knowledge search returns announcements even if document search fails', async () => {
+  const fakePrisma = {
+    documentChunk: {
+      findMany: async () => {
+        throw new Error('chunk table unavailable');
+      },
+    },
+    document: {
+      findMany: async () => {
+        throw new Error('document table unavailable');
+      },
+    },
+    announcement: {
+      findMany: async () => [{ title: 'New Pet Policy Adopted', content: 'Pet registration rules are now in effect.' }],
+    },
+  };
+
+  const result = await oracleTools.search_coop_knowledge({
+    prisma: fakePrisma as any,
+    cooperativeId: 'coop-1',
+    userId: 't1',
+    userEmail: 'member@example.com',
+    role: 'MEMBER',
+    isAdmin: false,
+  }, { query: 'pet policy' });
+
+  assert.equal(result.documents.length, 0);
+  assert.equal(result.announcements[0].title, 'New Pet Policy Adopted');
+  assert.equal(result.errors.length, 0);
+});
+
 test('oracle database search can use committees and announcements as context', async () => {
   const fakePrisma = {
     building: { findMany: async () => [] },
