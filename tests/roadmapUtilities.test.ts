@@ -129,6 +129,30 @@ test('demo meeting analysis maps rough notes into editable minutes fields', () =
   assert.match(analysis.confidenceNotes?.[0] || '', /Review/i);
 });
 
+test('demo meeting analysis groups community garden notes into professional minutes', () => {
+  const analysis = createDemoMeetingAnalysis(
+    [
+      'Bob introduced the idea of creating a community garden space in the front',
+      'Seconded by Margaret',
+      'Consideration to be given to visual layout',
+      'City said they could contribute trees at no cost',
+      'Volunteers needed',
+      'Committee should be stood up to address plan',
+    ].join('\n'),
+    'event-2',
+  );
+
+  assert.match(analysis.professionalSummary, /community garden/i);
+  assert.match(analysis.professionalSummary, /seconded by Margaret/i);
+  assert.equal(analysis.topicBriefings?.length, 1);
+  assert.match(analysis.topicBriefings?.[0].recommendedMinuteText || '', /City support for trees at no cost/i);
+  assert.equal(analysis.motionsMentioned.length, 1);
+  assert.equal(analysis.decisions.length, 0);
+  assert.equal(analysis.actionItems.some(item => /committee or working group/i.test(item.description)), true);
+  assert.equal(analysis.actionItems.some(item => /visual layout/i.test(item.description)), true);
+  assert.match(analysis.confidenceNotes?.join(' ') || '', /do not state the final outcome/i);
+});
+
 test('units can be grouped by building while preserving floor-only defaults', () => {
   const grouped = groupUnitsByBuildingAndFloor(
     [
