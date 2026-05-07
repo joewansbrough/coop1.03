@@ -31,6 +31,45 @@ const upload = multer({
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+
+/**
+ * Executes a Gemini operation with automatic model fallback on 503/429 errors.
+ */
+async function withAiFallback<T>(
+  operation: (modelName: string) => Promise<T>,
+  primaryModel?: string
+): Promise<T> {
+  const modelsToTry = [
+    ...(primaryModel ? [primaryModel] : []),
+    DEFAULT_GEMINI_MODEL,
+    ...GEMINI_FALLBACK_MODELS
+  ];
+  
+  // Deduplicate
+  const uniqueModels = Array.from(new Set(modelsToTry));
+  let lastError: any;
+
+  for (const modelName of uniqueModels) {
+    try {
+      return await operation(modelName);
+    } catch (err: any) {
+      const isTransient = 
+        err.message?.includes('503') || 
+        err.message?.includes('429') || 
+        err.message?.includes('high demand') ||
+        err.message?.includes('overloaded');
+      
+      if (isTransient && modelName !== uniqueModels[uniqueModels.length - 1]) {
+        console.warn(`[AI Fallback] Model ${modelName} failed/overloaded. Trying next model...`);
+        continue;
+      }
+      lastError = err;
+      break;
+    }
+  }
+  throw lastError;
+}
 
 // Prisma singleton helper
 let prismaInstance: PrismaClient;
@@ -1701,14 +1740,16 @@ app.post('/api/oracle/query-demo', async (req, res) => {
     };
 
     const genAI = getAI();
-    const model = genAI.getGenerativeModel({
-      model: DEFAULT_GEMINI_MODEL,
-      tools: [{ functionDeclarations: oracleToolDeclarations as any }]
-    });
-
-    const chat = model.startChat();
     
-    const prompt = `You are the Co-op Oracle for a BC housing co-op DEMO environment. Answer in ${normalizedLanguage}. 
+    const oracleResponse = await withAiFallback(async (modelName) => {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        tools: [{ functionDeclarations: oracleToolDeclarations as any }]
+      });
+
+      const chat = model.startChat();
+      
+      const prompt = `You are the Co-op Oracle for a BC housing co-op DEMO environment. Answer in ${normalizedLanguage}. 
 You have access to tools that can query the co-op database (maintenance, events, announcements, committees, documents, unit info).
 Always use these tools to answer accurately based on real data in the demo database.
 Role: MEMBER (Demo Mode).
@@ -1716,57 +1757,59 @@ Page context: ${pageContext || 'none'}.
 
 Member Question: ${question}`;
 
-    let result = await chat.sendMessage(prompt);
-    let response = result.response;
-    
-    let callCount = 0;
-    const MAX_CALLS = 5;
+      let result = await chat.sendMessage(prompt);
+      let response = result.response;
+      
+      let callCount = 0;
+      const MAX_CALLS = 5;
 
-    while (response.functionCalls()?.length && callCount < MAX_CALLS) {
-      callCount++;
-      const toolCalls = response.functionCalls() || [];
-      const toolResponses = [];
+      while (response.functionCalls()?.length && callCount < MAX_CALLS) {
+        callCount++;
+        const toolCalls = response.functionCalls() || [];
+        const toolResponses = [];
 
-      for (const call of toolCalls) {
-        const toolName = call.name as keyof typeof oracleTools;
-        const toolHandler = oracleTools[toolName];
-        
-        if (toolHandler) {
-          try {
-            const toolResult = await (toolHandler as any)(toolContext, call.args);
-            toolResponses.push({
-              functionResponse: {
-                name: toolName,
-                response: { result: toolResult }
-              }
-            });
-          } catch (err: any) {
-            toolResponses.push({
-              functionResponse: {
-                name: toolName,
-                response: { error: err.message }
-              }
-            });
+        for (const call of toolCalls) {
+          const toolName = call.name as keyof typeof oracleTools;
+          const toolHandler = oracleTools[toolName];
+          
+          if (toolHandler) {
+            try {
+              const toolResult = await (toolHandler as any)(toolContext, call.args);
+              toolResponses.push({
+                functionResponse: {
+                  name: toolName,
+                  response: { result: toolResult }
+                }
+              });
+            } catch (err: any) {
+              toolResponses.push({
+                functionResponse: {
+                  name: toolName,
+                  response: { error: err.message }
+                }
+              });
+            }
           }
+        }
+
+        if (toolResponses.length > 0) {
+          result = await chat.sendMessage(toolResponses);
+          response = result.response;
+        } else {
+          break;
         }
       }
 
-      if (toolResponses.length > 0) {
-        result = await chat.sendMessage(toolResponses);
-        response = result.response;
-      } else {
-        break;
-      }
-    }
-
-    const answer = response.text();
-    res.json({
-      answer,
-      citations: [],
-      language: normalizedLanguage,
-      confidence: 0.85,
-      ...intent,
+      return {
+        answer: response.text(),
+        citations: [],
+        language: normalizedLanguage,
+        confidence: 0.85,
+        ...intent,
+      };
     });
+
+    res.json(oracleResponse);
   } catch (e: any) {
     console.error(`[Oracle Demo Query Failure]: ${e.message}`, e);
     res.status(500).json({ error: `Gemini Oracle demo query failed: ${e.message}` });
@@ -1797,17 +1840,18 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
     };
 
     const genAI = getAI();
-    const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
+    const primaryModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
     
-    // Initialize model with tools
-    const model = genAI.getGenerativeModel({
-      model: resolvedModel,
-      tools: [{ functionDeclarations: oracleToolDeclarations as any }]
-    });
+    const oracleResponse = await withAiFallback(async (modelName) => {
+      // Initialize model with tools
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        tools: [{ functionDeclarations: oracleToolDeclarations as any }]
+      });
 
-    const chat = model.startChat();
-    
-    const prompt = `You are the Co-op Oracle for a BC housing co-op. Answer in ${normalizedLanguage}. 
+      const chat = model.startChat();
+      
+      const prompt = `You are the Co-op Oracle for a BC housing co-op. Answer in ${normalizedLanguage}. 
 You have access to tools that can query the live co-op database (maintenance, events, announcements, committees, documents, unit info).
 Always use these tools to answer member questions accurately based on real data when possible.
 If the member asks about their own unit, maintenance requests, or info, the tools will automatically scope to their data.
@@ -1816,68 +1860,69 @@ Page context: ${pageContext || 'none'}.
 
 Member Question: ${question}`;
 
-    let result = await chat.sendMessage(prompt);
-    let response = result.response;
-    
-    // Loop to handle tool calls (Gemini might call multiple tools or call them sequentially)
-    let callCount = 0;
-    const MAX_CALLS = 5;
+      let result = await chat.sendMessage(prompt);
+      let response = result.response;
+      
+      // Loop to handle tool calls
+      let callCount = 0;
+      const MAX_CALLS = 5;
 
-    while (response.functionCalls()?.length && callCount < MAX_CALLS) {
-      callCount++;
-      const toolCalls = response.functionCalls() || [];
-      const toolResponses = [];
+      while (response.functionCalls()?.length && callCount < MAX_CALLS) {
+        callCount++;
+        const toolCalls = response.functionCalls() || [];
+        const toolResponses = [];
 
-      for (const call of toolCalls) {
-        const toolName = call.name as keyof typeof oracleTools;
-        const toolHandler = oracleTools[toolName];
-        
-        if (toolHandler) {
-          console.log(`[Oracle] Executing tool: ${toolName}`, call.args);
-          try {
-            const toolResult = await (toolHandler as any)(toolContext, call.args);
+        for (const call of toolCalls) {
+          const toolName = call.name as keyof typeof oracleTools;
+          const toolHandler = oracleTools[toolName];
+          
+          if (toolHandler) {
+            console.log(`[Oracle] Executing tool: ${toolName}`, call.args);
+            try {
+              const toolResult = await (toolHandler as any)(toolContext, call.args);
+              toolResponses.push({
+                functionResponse: {
+                  name: toolName,
+                  response: { result: toolResult }
+                }
+              });
+            } catch (err: any) {
+              console.error(`[Oracle] Tool execution error (${toolName}):`, err);
+              toolResponses.push({
+                functionResponse: {
+                  name: toolName,
+                  response: { error: err.message }
+                }
+              });
+            }
+          } else {
+            console.warn(`[Oracle] Unknown tool called: ${toolName}`);
             toolResponses.push({
               functionResponse: {
                 name: toolName,
-                response: { result: toolResult }
-              }
-            });
-          } catch (err: any) {
-            console.error(`[Oracle] Tool execution error (${toolName}):`, err);
-            toolResponses.push({
-              functionResponse: {
-                name: toolName,
-                response: { error: err.message }
+                response: { error: "Tool not found" }
               }
             });
           }
+        }
+
+        if (toolResponses.length > 0) {
+          result = await chat.sendMessage(toolResponses);
+          response = result.response;
         } else {
-          console.warn(`[Oracle] Unknown tool called: ${toolName}`);
-          toolResponses.push({
-            functionResponse: {
-              name: toolName,
-              response: { error: "Tool not found" }
-            }
-          });
+          break;
         }
       }
 
-      if (toolResponses.length > 0) {
-        result = await chat.sendMessage(toolResponses);
-        response = result.response;
-      } else {
-        break;
-      }
-    }
-
-    const answer = response.text();
-    const oracleResponse = {
-      answer,
-      citations: [], // Tools can return data directly, we can add citation logic later if needed
-      language: normalizedLanguage,
-      confidence: 0.92,
-      ...intent,
-    };
+      const answer = response.text();
+      return {
+        answer,
+        citations: [], 
+        language: normalizedLanguage,
+        confidence: 0.92,
+        ...intent,
+      };
+    }, primaryModel);
 
     // Log the query
     await p.policyAssistantQuery.create({
@@ -1905,7 +1950,7 @@ Member Question: ${question}`;
           userId: user?.email || 'unknown',
           question,
           retrievedChunks: [],
-          answer: 'Error occurred during processing.',
+          answer: `Error occurred during processing: ${e.message}`,
           citations: [],
           language: normalizedLanguage,
           intent: intent.intent,
