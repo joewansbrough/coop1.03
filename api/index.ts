@@ -2076,49 +2076,49 @@ Member Question: ${question}`;
       let result = await chat.sendMessage(prompt);
       let response = result.response;
       
-      // Loop to handle tool calls
+      // Loop to handle tool calls - optimized for parallel execution
       let callCount = 0;
-      const MAX_CALLS = 3;
+      const MAX_CALLS = 2; // Strict limit for speed
       const allToolResponses: any[] = [];
 
       while (response.functionCalls()?.length && callCount < MAX_CALLS) {
         callCount++;
         const toolCalls = response.functionCalls() || [];
-        const toolResponses = [];
-
-        for (const call of toolCalls) {
+        
+        // Execute all tool calls in this turn in parallel
+        const toolResponses = await Promise.all(toolCalls.map(async (call) => {
           const toolName = call.name as keyof typeof oracleTools;
           const toolHandler = oracleTools[toolName];
           
           if (toolHandler) {
-            console.log(`[Oracle] Executing tool: ${toolName}`, call.args);
+            console.log(`[Oracle] Executing tool (Parallel): ${toolName}`, call.args);
             try {
               const toolResult = await (toolHandler as any)(toolContext, call.args || {});
-              toolResponses.push({
+              return {
                 functionResponse: {
                   name: toolName,
                   response: { result: toolResult }
                 }
-              });
+              };
             } catch (err: any) {
               console.error(`[Oracle] Tool execution error (${toolName}):`, err);
-              toolResponses.push({
+              return {
                 functionResponse: {
                   name: toolName,
                   response: { error: err.message, toolName }
                 }
-              });
+              };
             }
           } else {
             console.warn(`[Oracle] Unknown tool called: ${toolName}`);
-            toolResponses.push({
+            return {
               functionResponse: {
                 name: toolName,
                 response: { error: "Tool not found" }
               }
-            });
+            };
           }
-        }
+        }));
 
         if (toolResponses.length > 0) {
           allToolResponses.push(...toolResponses);
