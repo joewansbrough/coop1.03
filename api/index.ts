@@ -30,7 +30,7 @@ const upload = multer({
 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
-const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
 
 // Dynamic model registry
 let activeModels: string[] = [DEFAULT_GEMINI_MODEL]; // Hard fallback
@@ -64,11 +64,10 @@ async function refreshModelRegistry() {
     } else {
       // If listModels fails or returns empty, use a curated 2026-forward list
       activeModels = [
-        'gemini-3.1-flash-lite',
-        'gemini-3.1-flash',
-        'gemini-3.1-pro-preview',
+        DEFAULT_GEMINI_MODEL,
+        'gemini-2.5-flash',
+        'gemini-2.5-pro',
         'gemini-2.0-flash',
-        'gemini-1.5-flash'
       ];
       console.log('[AI Registry] Using curated fallback list:', activeModels);
     }
@@ -78,7 +77,7 @@ async function refreshModelRegistry() {
   }
 }
 
-const getBestModel = () => activeModels[0] || 'gemini-1.5-flash';
+const getBestModel = () => activeModels[0] || DEFAULT_GEMINI_MODEL;
 
 /**
  * Executes a Gemini operation with automatic model fallback on 503/429 errors.
@@ -87,9 +86,14 @@ async function withAiFallback<T>(
   operation: (modelName: string) => Promise<T>,
   preferredModel?: string
 ): Promise<T> {
-  // Refresh every 24h
+  // Refresh every 24h, but don't block the very first request if we have fallbacks
   if (Date.now() - lastModelUpdate > 24 * 60 * 60 * 1000) {
-    await refreshModelRegistry();
+    if (lastModelUpdate === 0) {
+      // First boot: trigger refresh but don't wait for it if it's slow
+      refreshModelRegistry().catch(console.error);
+    } else {
+      await refreshModelRegistry();
+    }
   }
 
   const modelsToTry = Array.from(new Set([
@@ -1799,21 +1803,23 @@ app.post('/api/oracle/query-demo', async (req, res) => {
       const chat = model.startChat();
       
       const prompt = `You are the Co-op Oracle for a BC housing co-op DEMO environment. Answer in ${normalizedLanguage}. 
-You have access to tools that can query the co-op database (maintenance, events, announcements, committees, documents, unit info).
-Always use these tools to answer accurately based on real data in the demo database.
+You have access to tools that query the demo database. Use them to provide accurate answers.
+
+Database Overview:
+- Unit: number, type, floor, status
+- MaintenanceRequest: title, status, priority, category, unit (with number/floor)
+- 'open' requests = status 'Pending' or 'In Progress'
+
+Always try to answer in a single tool call if possible (e.g. use filters like 'floor' or 'status' in 'get_maintenance_requests').
 Role: MEMBER (Demo Mode).
 Page context: ${pageContext || 'none'}.
 
-Return JSON in this format:
+Return JSON:
 {
-  "answer": "Your detailed answer based on demo data",
+  "answer": "...",
   "confidence": 0.9,
   "intent": "maintenance" | "governance" | "policy" | "general",
-  "suggestedAction": {
-    "type": "start-maintenance-request" | "view-event" | "contact-board",
-    "label": "Button Label",
-    "href": "/target-page"
-  } (optional)
+  "suggestedAction": { "type": "...", "label": "...", "href": "..." } (optional)
 }
 
 Member Question: ${question}`;

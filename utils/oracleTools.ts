@@ -82,6 +82,11 @@ export const oracleTools = {
         Committee: ["id", "name", "description", "chair"],
         Building: ["id", "name", "code", "address"]
       },
+      enums: {
+        MaintenanceStatus: ["Pending", "In Progress", "Resolved", "On Hold", "Cancelled"],
+        MaintenancePriority: ["Low", "Medium", "High", "Emergency"],
+        MaintenanceCategory: ["Plumbing", "Electrical", "HVAC", "Safety", "General", "Exterior", "Appliance", "Carpentry", "Flooring"]
+      },
       note: "All queries are automatically filtered by cooperativeId for security."
     };
   },
@@ -260,14 +265,14 @@ export const oracleToolDeclarations = [
   },
   {
     name: "get_maintenance_requests",
-    description: "Retrieve maintenance requests. Residents see only their own, admins see all for the co-op.",
+    description: "Retrieve maintenance requests. Residents see only their own, admins see all for the co-op. Note: 'open' requests are those with status 'Pending' or 'In Progress'.",
     parameters: {
       type: "object",
       properties: {
-        status: { type: "string", description: "Filter by status (e.g., Open, Pending, Completed)" },
-        priority: { type: "string", description: "Filter by priority (e.g., Low, Medium, High, Emergency)" },
+        status: { type: "string", description: "Filter by status: 'Pending', 'In Progress', 'Resolved', 'On Hold', 'Cancelled'" },
+        priority: { type: "string", description: "Filter by priority: 'Low', 'Medium', 'High', 'Emergency'" },
         unitId: { type: "string", description: "Filter by specific unit ID" },
-        floor: { type: "number", description: "Filter by unit floor number" },
+        floor: { type: "number", description: "Filter by unit floor number (e.g. 1, 2, 3)" },
         buildingId: { type: "string", description: "Filter by building ID" }
       }
     }
