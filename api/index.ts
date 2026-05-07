@@ -1593,7 +1593,7 @@ const createOracleAnswerFromToolResults = (question: string, toolResponses: any[
   const results = toolResponses
     .map(item => item?.functionResponse?.response?.result)
     .filter(Boolean);
-  const committees = results.flatMap(result => asArray(result.committees || result));
+  const committees = results.flatMap(result => asArray(result.committees || result)).filter(c => c.name);
   const announcements = results.flatMap(result => [
     ...asArray(result.announcements),
     ...asArray(result.documentAnnouncements),
@@ -1604,13 +1604,23 @@ const createOracleAnswerFromToolResults = (question: string, toolResponses: any[
     ...(Array.isArray(result) ? result.filter((item: any) => item?.documentTitle || item?.title) : []),
   ]);
 
-  if (normalizedQuestion.includes('committee') && normalizedQuestion.includes('chair')) {
+  if (normalizedQuestion.includes('committee')) {
     const target = committees.find((committee: any) => {
       const name = String(committee?.name || '').toLowerCase();
       return normalizedQuestion.split(/\s+/).some(word => word.length > 3 && name.includes(word));
-    }) || committees.find((committee: any) => committee?.chair);
-    if (target?.name && target?.chair) {
-      return `${target.chair} is listed as the chair of the ${target.name}.`;
+    }) || (normalizedQuestion.includes('all') ? null : committees[0]);
+
+    if (normalizedQuestion.includes('all')) {
+      const list = committees.map((c: any) => `- ${c.name} (Chair: ${c.chairName || c.chair || 'Unknown'})`).join('\n');
+      if (list) return `Here are the co-op committees:\n${list}`;
+    }
+
+    if (target?.name) {
+      const chair = target.chairName || target.chair;
+      if (normalizedQuestion.includes('chair')) {
+        return chair ? `${chair} is the chair of the ${target.name}.` : `The chair of the ${target.name} is not listed.`;
+      }
+      return `${target.name} is led by ${chair || 'an unlisted chair'}. ${target.description || ''}`;
     }
   }
 
@@ -2018,36 +2028,30 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
       const chat = model.startChat();
       
       const prompt = `You are the Co-op Oracle for a BC housing co-op. Answer in ${normalizedLanguage}. 
-You have access to tools that query the live database. Use them to provide accurate answers.
+You have access to tools that query the live database. Always use them to verify facts before answering.
+If a member asks about a specific committee, unit, or person, search for it using the tools.
+NEVER say something doesn't exist unless you have searched and found no matching records.
+
+Database Overview:
+- Unit: number, type, floor, status
+- MaintenanceRequest: title, status, priority, category, unit (with number/floor)
+- Tenant: firstName, lastName, email, role, unit
+- Committee: name, chair, description, members
+- CoopEvent, Announcement, Building
+
 If unsure about available data, use 'get_database_schema'.
-
-Database coverage:
-- Use get_database_schema when you need to see the complete tool and model map.
-- You can retrieve co-op profile, buildings, units, tenants, tenant history, maintenance, scheduled maintenance, notifications, announcements, documents, document versions, document chunks, document ingestion status, document access logs, events, committees, meeting minutes, meeting analyses, Oracle query history, and dashboard preferences.
-- All tools enforce cooperative scoping and user permissions. If a tool returns an access error, explain that the information is not available to this user.
-- 'open' maintenance requests = status 'Pending' or 'In Progress'.
-
-Reasoning:
-- Use tools before answering factual questions about co-op records, policies, members, units, meetings, or maintenance.
-- For broad factual questions, use search_coop_database first so the whole permission-accessible database can inform the answer.
-- For policy questions, use search_coop_knowledge first; it searches document text and announcements together.
-- Chain tools when needed, for example committee -> chair/member -> tenant -> unit.
-- Prefer specific filtered calls over broad calls.
-- If a tool returns usable records plus errors, answer from the usable records and do not say the tool failed.
-- Only mention a failed lookup when no usable records were returned for the member's question.
 Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
 Page context: ${pageContext || 'none'}.
-
-Answer style:
-- Use plain, resident-friendly language by default.
-- Be concise: usually 2-4 short sentences.
-- Use bullets only when they make the answer easier to scan.
-- Avoid legal jargon and long policy explanations unless the member asks for detail.
-- If the question is urgent, safety-related, or legal, say what to do next and advise checking with the board or emergency services as appropriate.
 
 Return JSON:
 {
   "answer": "...",
+  "confidence": 0.95,
+  "intent": "maintenance" | "governance" | "policy" | "general",
+  "suggestedAction": { "type": "...", "label": "...", "href": "..." } (optional)
+}
+
+Member Question: ${question}`;
   "confidence": 0.95,
   "intent": "maintenance" | "governance" | "policy" | "general",
   "suggestedAction": { "type": "...", "label": "...", "href": "..." } (optional)

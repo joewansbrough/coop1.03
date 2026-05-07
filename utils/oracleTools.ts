@@ -548,22 +548,19 @@ export const oracleTools = {
       include: {
         members: {
           select: {
-            id: true,
             firstName: true,
-            lastName: true,
-            email: canUsePrivilegedOracleTools(context),
-            unit: canUsePrivilegedOracleTools(context) ? { select: { id: true, number: true, floor: true, building: true } } : false,
+            lastName: true
           },
-        },
-        events: { select: { id: true, title: true, date: true, category: true }, take: 5, orderBy: { date: 'desc' } },
+        }
       },
     });
-    return committees.map((committee: any) => ({
-      ...committee,
-      members: committee.members.map((member: any) => ({
-        ...member,
-        name: `${member.firstName} ${member.lastName}`,
-      })),
+    return committees.map((c: any) => ({
+      id: c.id,
+      name: c.name,
+      chairName: c.chair,
+      description: c.description,
+      memberCount: c.members.length,
+      memberNames: c.members.map((m: any) => `${m.firstName} ${m.lastName}`)
     }));
   },
 
@@ -763,7 +760,7 @@ export const oracleToolDeclarations: ToolDeclaration[] = [
     upcomingOnly: booleanProp('Only future events.'),
   }),
   declaration('get_upcoming_events', 'Get upcoming co-op events and meetings.'),
-  declaration('get_committees', 'Get committees, chairs, members, and recent events.', commonFilters),
+  declaration('get_committees', 'Get committees, chairs (chairName), and member names (memberNames).', commonFilters),
   declaration('get_meeting_minutes', 'Board/admin only: get structured meeting minutes records.', {
     meetingId: stringProp('Filter by meeting/event ID.'),
     meetingType: stringProp('Filter by quick, regular, agm, or special.'),
