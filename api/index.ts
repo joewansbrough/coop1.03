@@ -18,6 +18,7 @@ import { type DashboardRole } from '../utils/dashboardPreferences.js';
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
 import { detectOracleIntent, normalizeOracleLanguage } from '../utils/oracle.js';
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
+import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
 
 
 
@@ -1547,6 +1548,18 @@ app.post('/api/ai/maintenance-image-description', requireAuth, upload.single('im
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'An image upload is required.' });
     const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const token = getBlobToken();
+    const storageKey = `coops/${coopId}/maintenance/${Date.now()}-${getSafeBlobFileName(file.originalname || 'maintenance-photo')}`;
+    const blob = token
+      ? await put(storageKey, file.buffer, {
+        access: process.env.BLOB_ACCESS === 'public' ? 'public' : 'private',
+        token,
+        contentType: file.mimetype,
+        addRandomSuffix: false,
+      })
+      : null;
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
     const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
@@ -1566,13 +1579,28 @@ app.post('/api/ai/maintenance-image-description', requireAuth, upload.single('im
       },
     ]);
     const response = await result.response;
-    res.json(parseJsonResponse(response.text(), {
+    const imageAnalysis = parseJsonResponse(response.text(), {
       visualDescription: 'The image could not be analyzed.',
       observedDamage: '',
       likelyCategory: 'Other',
       safetyConcerns: '',
       confidence: 0,
-    }));
+    });
+    res.json({
+      ...imageAnalysis,
+      attachment: blob ? {
+        id: `maintenance-attachment-${Date.now()}`,
+        fileName: file.originalname || 'maintenance-photo',
+        url: blob.url,
+        storageUrl: blob.url,
+        storageKey: blob.pathname || storageKey,
+        contentType: file.mimetype,
+        size: file.size,
+        visualDescription: imageAnalysis.visualDescription || '',
+        uploadedAt: new Date().toISOString(),
+      } : undefined,
+      attachmentUploadError: token ? undefined : 'Blob storage is not configured for maintenance image uploads.',
+    });
   } catch (e: any) {
     res.status(500).json({
       visualDescription: 'The image could not be analyzed at this time.',
@@ -1606,13 +1634,24 @@ app.post('/api/ai/maintenance-image-description-demo', upload.single('image'), a
       },
     ]);
     const response = await result.response;
-    res.json(parseJsonResponse(response.text(), {
+    const imageAnalysis = parseJsonResponse(response.text(), {
       visualDescription: '',
       observedDamage: '',
       likelyCategory: 'Other',
       safetyConcerns: '',
       confidence: 0,
-    }));
+    });
+    res.json({
+      ...imageAnalysis,
+      attachment: {
+        id: `demo-maintenance-attachment-${Date.now()}`,
+        fileName: file.originalname || 'maintenance-photo',
+        contentType: file.mimetype,
+        size: file.size,
+        visualDescription: imageAnalysis.visualDescription || '',
+        uploadedAt: new Date().toISOString(),
+      },
+    });
   } catch (e: any) {
     res.status(500).json({ error: `Gemini maintenance image analysis failed: ${e.message}` });
   }
@@ -1681,50 +1720,119 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
 
   try {
     coopId = await getCoopId(req, p);
-    const chunks = await p.documentChunk.findMany({
-      where: { cooperativeId: coopId, isActive: true },
-      orderBy: { createdAt: 'desc' },
-      take: 8,
-      include: { document: true },
-    });
-    const fallbackDocuments = chunks.length === 0
-      ? await p.document.findMany({ where: { cooperativeId: coopId, content: { not: null } }, take: 8 })
-      : [];
-    const context = chunks.length > 0
-      ? chunks.map(chunk => `[${chunk.document.title}] ${chunk.text}`).join('\n\n')
-      : fallbackDocuments.map(doc => `[${doc.title}] ${doc.content}`).join('\n\n');
-    const citations = chunks.length > 0
-      ? chunks.map(chunk => ({ title: chunk.document.title, documentId: chunk.documentId, pageNumber: chunk.pageNumber }))
-      : fallbackDocuments.map(doc => ({ title: doc.title, documentId: doc.id }));
 
-    const model = getAI().getGenerativeModel({ model: user?.geminiModel || DEFAULT_GEMINI_MODEL, generationConfig: { responseMimeType: 'application/json' } });
-    const result = await model.generateContent(`You are the Co-op Oracle for a BC housing co-op. Answer in ${normalizedLanguage}. Use the provided co-op documents first and cite document titles. If context is insufficient, say so and suggest checking with the board. Return JSON with answer, confidence. Intent: ${intent.intent}. Page context: ${pageContext || 'none'}.\n\nDocuments:\n${context || 'No indexed documents available.'}\n\nQuestion: ${question}`);
-    const response = await result.response;
-    const parsed = parseJsonResponse(response.text(), {});
+    // Tool Context for checking permissions and scoping queries
+    const toolContext: ToolContext = {
+      prisma: p,
+      cooperativeId: coopId,
+      userId: user?.tenantId || 'unknown',
+      userEmail: user?.email || '',
+      role: user?.role || 'MEMBER',
+      isAdmin: !!user?.isAdmin
+    };
+
+    const genAI = getAI();
+    const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
+    
+    // Initialize model with tools
+    const model = genAI.getGenerativeModel({
+      model: resolvedModel,
+      tools: [{ functionDeclarations: oracleToolDeclarations as any }]
+    });
+
+    const chat = model.startChat();
+    
+    const prompt = `You are the Co-op Oracle for a BC housing co-op. Answer in ${normalizedLanguage}. 
+You have access to tools that can query the live co-op database (maintenance, events, announcements, committees, documents, unit info).
+Always use these tools to answer member questions accurately based on real data when possible.
+If the member asks about their own unit, maintenance requests, or info, the tools will automatically scope to their data.
+Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
+Page context: ${pageContext || 'none'}.
+
+Member Question: ${question}`;
+
+    let result = await chat.sendMessage(prompt);
+    let response = result.response;
+    
+    // Loop to handle tool calls (Gemini might call multiple tools or call them sequentially)
+    let callCount = 0;
+    const MAX_CALLS = 5;
+
+    while (response.functionCalls()?.length && callCount < MAX_CALLS) {
+      callCount++;
+      const toolCalls = response.functionCalls() || [];
+      const toolResponses = [];
+
+      for (const call of toolCalls) {
+        const toolName = call.name as keyof typeof oracleTools;
+        const toolHandler = oracleTools[toolName];
+        
+        if (toolHandler) {
+          console.log(`[Oracle] Executing tool: ${toolName}`, call.args);
+          try {
+            const toolResult = await (toolHandler as any)(toolContext, call.args);
+            toolResponses.push({
+              functionResponse: {
+                name: toolName,
+                response: { result: toolResult }
+              }
+            });
+          } catch (err: any) {
+            console.error(`[Oracle] Tool execution error (${toolName}):`, err);
+            toolResponses.push({
+              functionResponse: {
+                name: toolName,
+                response: { error: err.message }
+              }
+            });
+          }
+        } else {
+          console.warn(`[Oracle] Unknown tool called: ${toolName}`);
+          toolResponses.push({
+            functionResponse: {
+              name: toolName,
+              response: { error: "Tool not found" }
+            }
+          });
+        }
+      }
+
+      if (toolResponses.length > 0) {
+        result = await chat.sendMessage(toolResponses);
+        response = result.response;
+      } else {
+        break;
+      }
+    }
+
+    const answer = response.text();
     const oracleResponse = {
-      answer: parsed.answer || response.text() || '',
-      citations,
+      answer,
+      citations: [], // Tools can return data directly, we can add citation logic later if needed
       language: normalizedLanguage,
-      confidence: Number(parsed.confidence ?? (context ? 0.72 : 0.35)),
+      confidence: 0.92,
       ...intent,
     };
 
+    // Log the query
     await p.policyAssistantQuery.create({
       data: {
         cooperativeId: coopId,
         userId: user?.email || 'unknown',
         question,
-        retrievedChunks: chunks.map(chunk => ({ id: chunk.id, documentId: chunk.documentId })),
+        retrievedChunks: [], // We used direct DB tools
         answer: oracleResponse.answer,
-        citations,
+        citations: [],
         language: normalizedLanguage,
         intent: intent.intent,
         suggestedAction: intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined,
         latencyMs: Date.now() - startedAt,
       },
     });
+
     res.json(oracleResponse);
   } catch (e: any) {
+    console.error(`[Oracle Query Failure]: ${e.message}`, e);
     if (coopId) {
       await p.policyAssistantQuery.create({
         data: {
@@ -1732,7 +1840,7 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
           userId: user?.email || 'unknown',
           question,
           retrievedChunks: [],
-          answer: '',
+          answer: 'Error occurred during processing.',
           citations: [],
           language: normalizedLanguage,
           intent: intent.intent,
