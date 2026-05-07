@@ -169,6 +169,20 @@ test('oracle tool calling does not request json response mime type', () => {
   }
 });
 
+test('demo oracle uses the effective demo user role instead of hardcoded member access', () => {
+  const apiSource = readFileSync(new URL('../api/index.ts', import.meta.url), 'utf8');
+  const demoRoute = apiSource.slice(
+    apiSource.indexOf("app.post('/api/oracle/query-demo'"),
+    apiSource.indexOf("app.post('/api/oracle/query'", apiSource.indexOf("app.post('/api/oracle/query-demo'") + 1),
+  );
+
+  assert.match(demoRoute, /demoUser/);
+  assert.match(demoRoute, /isDemoAdmin/);
+  assert.doesNotMatch(demoRoute, /userEmail:\s*'demo@example\.com'/);
+  assert.doesNotMatch(demoRoute, /role:\s*'MEMBER'/);
+  assert.doesNotMatch(demoRoute, /isAdmin:\s*false/);
+});
+
 test('maintenance triage stores advisory AI metadata and flags risky suggestions for review', () => {
   const triage = createMaintenanceTriage({
     priority: 'Emergency',

@@ -1796,7 +1796,7 @@ app.post('/api/ai/policy', requireAuth, async (req, res) => {
 
 app.post('/api/oracle/query-demo', async (req, res) => {
   const startedAt = Date.now();
-  const { question, language, pageContext } = req.body;
+  const { question, language, pageContext, demoUser } = req.body;
   if (!question || String(question).trim().length < 2) return res.status(400).json({ error: 'Question is required.' });
   const normalizedLanguage = normalizeOracleLanguage(language);
   const intent = detectOracleIntent(question);
@@ -1807,14 +1807,20 @@ app.post('/api/oracle/query-demo', async (req, res) => {
     const firstCoop = await p.cooperative.findFirst();
     const coopId = firstCoop?.id || 'demo-coop-id';
 
+    const isDemoAdmin = demoUser?.isAdmin !== false;
+    const demoEmail = typeof demoUser?.email === 'string' && demoUser.email.includes('@')
+      ? demoUser.email
+      : 'margaret.chen@email.com';
+    const demoRole = isDemoAdmin ? 'ADMIN' : 'MEMBER';
+
     // Demo Tool Context
     const toolContext: ToolContext = {
       prisma: p,
       cooperativeId: coopId,
-      userId: 'demo-user-id',
-      userEmail: 'demo@example.com',
-      role: 'MEMBER',
-      isAdmin: false
+      userId: demoUser?.tenantId || demoUser?.id || 'demo-user-id',
+      userEmail: demoEmail,
+      role: demoRole,
+      isAdmin: isDemoAdmin
     };
 
     const genAI = getAI();
@@ -1840,7 +1846,7 @@ Reasoning:
 - Use tools before answering factual questions about co-op records, policies, members, units, meetings, or maintenance.
 - Chain tools when needed, for example committee -> chair/member -> tenant -> unit.
 - Prefer specific filtered calls over broad calls.
-Role: MEMBER (Demo Mode).
+Role: ${demoRole} (Demo Mode, isAdmin: ${isDemoAdmin}).
 Page context: ${pageContext || 'none'}.
 
 Answer style:

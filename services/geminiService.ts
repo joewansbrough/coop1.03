@@ -1,8 +1,22 @@
 // All Gemini calls go through the backend API to keep the API key server-side
 
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
+import { MOCK_USER } from '../utils/demoData.js';
+import { DEMO_TUTORIAL_ROLE_VIEW_KEY } from '../utils/demoTutorial.js';
 
 const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
+
+const getDemoOracleUser = () => {
+  if (!isDemoMode() || typeof window === 'undefined') return undefined;
+  const isResidentView = localStorage.getItem(DEMO_TUTORIAL_ROLE_VIEW_KEY) === 'true';
+  return {
+    id: MOCK_USER.id,
+    tenantId: MOCK_USER.tenantId,
+    email: MOCK_USER.email,
+    role: isResidentView ? 'MEMBER' : MOCK_USER.role,
+    isAdmin: !isResidentView && !!MOCK_USER.isAdmin,
+  };
+};
 
 export const geminiService = {
   async triageMaintenanceRequest(description: string, visualDescription?: string) {
@@ -53,7 +67,7 @@ export const geminiService = {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, language, pageContext }),
+      body: JSON.stringify({ question, language, pageContext, demoUser: getDemoOracleUser() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to query Oracle with Gemini');
