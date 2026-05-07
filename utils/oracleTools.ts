@@ -11,7 +11,26 @@ export interface ToolContext {
 }
 
 export const oracleTools = {
-  get_maintenance_requests: async (context: ToolContext, params: { status?: string, priority?: string }) => {
+  get_units: async (context: ToolContext, params: { floor?: number }) => {
+    const { prisma, cooperativeId } = context;
+    const where: any = { cooperativeId };
+    if (params.floor !== undefined) where.floor = params.floor;
+    
+    const units = await prisma.unit.findMany({
+      where,
+      orderBy: { number: 'asc' },
+      select: {
+        id: true,
+        number: true,
+        floor: true,
+        type: true,
+        status: true
+      }
+    });
+    return units;
+  },
+
+  get_maintenance_requests: async (context: ToolContext, params: { status?: string, priority?: string, unitId?: string }) => {
     const { prisma, cooperativeId, userEmail, isAdmin } = context;
     
     const where: any = { cooperativeId };
@@ -23,21 +42,23 @@ export const oracleTools = {
     
     if (params.status) where.status = params.status;
     if (params.priority) where.priority = params.priority;
+    if (params.unitId) where.unitId = params.unitId;
     
     const requests = await prisma.maintenanceRequest.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
-      take: 10,
+      take: 50, // Increased to allow more comprehensive answers
       select: {
         id: true,
         title: true,
         status: true,
         priority: true,
         category: true,
+        unitId: true,
         createdAt: true,
         updatedAt: true,
         unit: {
-          select: { number: true }
+          select: { number: true, floor: true }
         }
       }
     });
@@ -208,13 +229,24 @@ export const oracleTools = {
 
 export const oracleToolDeclarations = [
   {
+    name: "get_units",
+    description: "Get a list of co-op units, optionally filtered by floor.",
+    parameters: {
+      type: "object",
+      properties: {
+        floor: { type: "number", description: "Filter by floor number" }
+      }
+    }
+  },
+  {
     name: "get_maintenance_requests",
     description: "Retrieve maintenance requests. Residents see only their own, admins see all for the co-op.",
     parameters: {
       type: "object",
       properties: {
         status: { type: "string", description: "Filter by status (e.g., Open, Pending, Completed)" },
-        priority: { type: "string", description: "Filter by priority (e.g., Low, Medium, High, Emergency)" }
+        priority: { type: "string", description: "Filter by priority (e.g., Low, Medium, High, Emergency)" },
+        unitId: { type: "string", description: "Filter by specific unit ID" }
       }
     }
   },
