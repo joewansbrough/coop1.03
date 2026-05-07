@@ -79,11 +79,11 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     }
   }, [searchParams]);
 
-  const handleTriage = async () => {
-    if (!description || description.length < 10) return;
+  const handleTriage = async (nextDescription = description, nextVisualDescription = visualDescription) => {
+    if (!nextDescription || nextDescription.length < 10) return;
     setLoading(true);
     try {
-      const result = await geminiService.triageMaintenanceRequest(description, visualDescription);
+      const result = await geminiService.triageMaintenanceRequest(nextDescription, nextVisualDescription);
       setAiTriage(result);
       if (result.category) setCategory(Array.isArray(result.category) ? result.category as MaintenanceCategory[] : [result.category as MaintenanceCategory]);
       if (result.priority) setPriority(result.priority as MaintenancePriority);
@@ -101,9 +101,13 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     if (!file) return;
     setImageAnalysisLoading(true);
     try {
-      const result = await geminiService.describeMaintenanceImage(file);
-      setVisualDescription(result.visualDescription || '');
+      const result = await geminiService.describeMaintenanceImage(file, description);
+      const nextVisualDescription = result.visualDescription || '';
+      setVisualDescription(nextVisualDescription);
       if (result.likelyCategory) setCategory([result.likelyCategory as MaintenanceCategory]);
+      if (description.trim().length >= 10) {
+        await handleTriage(description, nextVisualDescription);
+      }
       showAlert('Image description generated. Review it before submitting.', 'success');
     } catch (err: any) {
       showAlert(err.message || 'Failed to analyze image.', 'error');
@@ -258,7 +262,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                 placeholder="Where is it? What happened? When did it start?"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                onBlur={handleTriage}
+                onBlur={() => handleTriage()}
                 required
               />
               {loading && <p className="text-[10px] text-brand-600 mt-2 font-black animate-pulse flex items-center gap-2"><i className="fa-solid fa-sparkles"></i> AI TRIAGING IN PROGRESS...</p>}

@@ -17,9 +17,10 @@ export const geminiService = {
     return createMaintenanceTriage(data);
   },
 
-  async describeMaintenanceImage(file: File) {
+  async describeMaintenanceImage(file: File, description?: string) {
     const formData = new FormData();
     formData.append('image', file);
+    if (description?.trim()) formData.append('description', description.trim());
     const res = await fetch(isDemoMode() ? '/api/ai/maintenance-image-description-demo' : '/api/ai/maintenance-image-description', {
       method: 'POST',
       credentials: 'include',

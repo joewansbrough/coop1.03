@@ -1546,6 +1546,7 @@ app.post('/api/ai/maintenance-image-description', requireAuth, upload.single('im
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'An image upload is required.' });
+    const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
     const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
@@ -1555,7 +1556,7 @@ app.post('/api/ai/maintenance-image-description', requireAuth, upload.single('im
     });
     const result = await model.generateContent([
       {
-        text: 'Describe this maintenance photo for a visually impaired resident. Return JSON with visualDescription, observedDamage, likelyCategory, safetyConcerns, confidence. Do not identify people or private documents.',
+        text: `Describe this maintenance photo for a visually impaired resident. Use the resident's written problem description as context when it helps interpret the image, but do not claim visual details unless they are visible. Return JSON with visualDescription, observedDamage, likelyCategory, safetyConcerns, confidence. Do not identify people or private documents.${description ? `\n\nResident problem description: ${description}` : ''}`,
       },
       {
         inlineData: {
@@ -1588,13 +1589,14 @@ app.post('/api/ai/maintenance-image-description-demo', upload.single('image'), a
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'An image upload is required.' });
+    const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
     const model = getAI().getGenerativeModel({
       model: DEFAULT_GEMINI_MODEL,
       generationConfig: { responseMimeType: 'application/json' },
     });
     const result = await model.generateContent([
       {
-        text: 'Describe this maintenance photo for a visually impaired resident. Return JSON with visualDescription, observedDamage, likelyCategory, safetyConcerns, confidence. Do not identify people or private documents.',
+        text: `Describe this maintenance photo for a visually impaired resident. Use the resident's written problem description as context when it helps interpret the image, but do not claim visual details unless they are visible. Return JSON with visualDescription, observedDamage, likelyCategory, safetyConcerns, confidence. Do not identify people or private documents.${description ? `\n\nResident problem description: ${description}` : ''}`,
       },
       {
         inlineData: {
