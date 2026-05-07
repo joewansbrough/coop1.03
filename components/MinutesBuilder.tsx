@@ -7,6 +7,7 @@ import { MinutesPDF } from '../services/export/pdfGenerator';
 import { demoStorage } from '../utils/demoStorage';
 import { recordTutorialEvent } from '../utils/demoTutorial';
 import { applyMinutesEventDetails, getMinutesEventDetails, type MinutesEventDetails } from '../utils/minutesEventDetails';
+import { buildMeetingAnalysisFormPatch } from '../utils/meetingAnalysisFormMapping';
 import { geminiService } from '../services/geminiService';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
@@ -110,6 +111,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, event, initi
     additionalNotes: '',
     actionItemsList: [] as ActionItem[],
     // Quick meeting specific
+    discussionOverview: '',
     keyDecisions: '',
     nextSteps: '',
     // AGM specific
@@ -195,7 +197,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, event, initi
   const sanitizeFormData = (data: typeof formData) => {
     const richTextFields = [
       'boardReport', 'financeReport', 'committeeReports', 'actionItems', 
-      'newBusiness', 'keyDecisions', 'nextSteps', 'auditorReport', 
+      'newBusiness', 'discussionOverview', 'keyDecisions', 'nextSteps', 'auditorReport',
       'nominations', 'electionResults'
     ];
     
@@ -663,36 +665,14 @@ const handleSave = async () => {
       const analysis = await geminiService.analyzeMeetingNotes(rawAnalysisNotes, meetingId, meetingType);
       setMeetingAnalysis(analysis);
 
-      const listToHtml = (items: string[] = []) =>
-        items.filter(Boolean).map(item => `<p>${item}</p>`).join('');
-
-      const decisionsHtml = listToHtml(analysis.decisions || []);
-      const risksHtml = listToHtml(analysis.risksOrFollowUps || []);
-      const confidenceHtml = listToHtml(analysis.confidenceNotes || []);
-      const topicBriefingsHtml = Array.isArray(analysis.topicBriefings)
-        ? analysis.topicBriefings.map((briefing: any) => {
-          const minutesText = briefing.recommendedMinuteText || briefing.discussionSummary || briefing.context;
-          return minutesText ? `<p>${minutesText}</p>` : '';
-        }).join('')
-        : '';
-      const shouldUseTopicMinutes = topicBriefingsHtml && !analysis.professionalSummary;
-
       setFormData(prev => {
-        const summaryPatch =
-          meetingType === 'quick'
-            ? { keyDecisions: decisionsHtml || analysis.professionalSummary || prev.keyDecisions }
-            : meetingType === 'special'
-              ? { newBusiness: analysis.professionalSummary || prev.newBusiness }
-              : meetingType === 'agm'
-                ? { managementReport: analysis.professionalSummary || prev.managementReport }
-                : { boardReport: analysis.professionalSummary || prev.boardReport };
-
         return {
           ...prev,
-          ...summaryPatch,
-          ...(shouldUseTopicMinutes && meetingType === 'regular' ? { committeeReports: topicBriefingsHtml } : {}),
-          ...(decisionsHtml && meetingType !== 'quick' ? { keyDecisions: decisionsHtml } : {}),
-          ...(risksHtml || confidenceHtml ? { nextSteps: `${risksHtml}${confidenceHtml}` } : {}),
+          ...buildMeetingAnalysisFormPatch({
+            meetingType,
+            analysis,
+            previousFormData: prev,
+          }),
         };
       });
 
@@ -1380,8 +1360,15 @@ const QuickMeetingTemplate: React.FC<any> = ({ formData, eventDetails, handleInp
     </FormSection>
 
     <FormSection title="Key Points" icon="fa-list-check">
+      <FormField label="Discussion Overview">
+        <RichTextEditor
+          value={formData.discussionOverview}
+          onChange={(val) => handleInputChange('discussionOverview', val)}
+          placeholder="Summarize the main discussion, context, and considerations."
+        />
+      </FormField>
       <FormField label="Decisions Made">
-        <RichTextEditor value={formData.keyDecisions} onChange={(val) => handleInputChange('keyDecisions', val)} placeholder="What was decided or discussed?" />
+        <RichTextEditor value={formData.keyDecisions} onChange={(val) => handleInputChange('keyDecisions', val)} placeholder="Record only clear decisions or resolutions." />
       </FormField>
     </FormSection>
     <ActionItemsEditor actionItems={actionItems} members={members} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />

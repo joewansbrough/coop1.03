@@ -305,14 +305,22 @@ export const MinutesPDF: React.FC<PDFMinutesProps> = ({ data, event }) => {
           )}
         </View>
 
-        {formData.keyDecisions && (
+        {(formData.discussionOverview || formData.keyDecisions) && (
           <View style={styles.section}>
             <View wrap={false}>
               <Text style={styles.sectionTitle}>Key Points</Text>
-              <View style={styles.reportCard}>
-                <Text style={styles.reportTitle}>Decisions Made</Text>
-                {parseHtmlToPdf(formData.keyDecisions)}
-              </View>
+              {formData.discussionOverview && (
+                <View style={styles.reportCard}>
+                  <Text style={styles.reportTitle}>Discussion Overview</Text>
+                  {parseHtmlToPdf(formData.discussionOverview)}
+                </View>
+              )}
+              {formData.keyDecisions && (
+                <View style={styles.reportCard}>
+                  <Text style={styles.reportTitle}>Decisions Made</Text>
+                  {parseHtmlToPdf(formData.keyDecisions)}
+                </View>
+              )}
             </View>
           </View>
         )}

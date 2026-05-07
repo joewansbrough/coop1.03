@@ -200,9 +200,14 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent; action?: React.Re
           </div>
         </ReadOnlySection>
 
-        {formData.keyDecisions && (
+        {(formData.discussionOverview || formData.keyDecisions) && (
           <ReadOnlySection title="Key Points" icon="fa-list-check">
-            <ReadOnlyRichTextCard label="Decisions Made" html={formData.keyDecisions} />
+            {formData.discussionOverview && (
+              <ReadOnlyRichTextCard label="Discussion Overview" html={formData.discussionOverview} />
+            )}
+            {formData.keyDecisions && (
+              <ReadOnlyRichTextCard label="Decisions Made" html={formData.keyDecisions} />
+            )}
           </ReadOnlySection>
         )}
 

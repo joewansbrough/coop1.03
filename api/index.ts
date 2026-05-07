@@ -1746,7 +1746,7 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
 const getMeetingTypeGuidance = (meetingType?: string) => {
   switch (meetingType) {
     case 'quick':
-      return 'Meeting type: Quick Meeting. Prioritize a short Decisions Made section, concise next steps, and action items. Avoid board-report style narrative.';
+      return 'Meeting type: Quick Meeting. Use professionalSummary as a concise overview of the discussion. Put only clear decisions or resolutions in decisions, and keep action items separate. Avoid board-report style narrative.';
     case 'agm':
       return 'Meeting type: Annual General Meeting. Organize output around AGM business such as reports, nominations/elections, motions, decisions, and statutory follow-up. Do not invent election results or auditor details.';
     case 'special':
