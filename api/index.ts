@@ -30,9 +30,10 @@ const upload = multer({
 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
 // Dynamic model registry
-let activeModels: string[] = ['gemini-1.5-flash']; // Hard fallback
+let activeModels: string[] = [DEFAULT_GEMINI_MODEL]; // Hard fallback
 let lastModelUpdate = 0;
 
 /**
