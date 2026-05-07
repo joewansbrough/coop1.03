@@ -30,7 +30,7 @@ export const oracleTools = {
     return units;
   },
 
-  get_maintenance_requests: async (context: ToolContext, params: { status?: string, priority?: string, unitId?: string }) => {
+  get_maintenance_requests: async (context: ToolContext, params: { status?: string, priority?: string, unitId?: string, floor?: number, buildingId?: string }) => {
     const { prisma, cooperativeId, userEmail, isAdmin } = context;
     
     const where: any = { cooperativeId };
@@ -43,11 +43,16 @@ export const oracleTools = {
     if (params.status) where.status = params.status;
     if (params.priority) where.priority = params.priority;
     if (params.unitId) where.unitId = params.unitId;
+    if (params.floor !== undefined || params.buildingId) {
+      where.unit = {};
+      if (params.floor !== undefined) where.unit.floor = params.floor;
+      if (params.buildingId) where.unit.buildingId = params.buildingId;
+    }
     
     const requests = await prisma.maintenanceRequest.findMany({
       where,
       orderBy: { updatedAt: 'desc' },
-      take: 50, // Increased to allow more comprehensive answers
+      take: 50,
       select: {
         id: true,
         title: true,
@@ -64,6 +69,21 @@ export const oracleTools = {
     });
     
     return requests;
+  },
+
+  get_database_schema: async (context: ToolContext) => {
+    return {
+      tables: {
+        Unit: ["id", "number", "type", "floor", "status", "buildingId"],
+        Tenant: ["id", "firstName", "lastName", "email", "role", "unitId", "status"],
+        MaintenanceRequest: ["id", "title", "description", "status", "priority", "category", "unitId", "requestedBy"],
+        CoopEvent: ["id", "title", "description", "date", "time", "location", "category", "committeeId"],
+        Announcement: ["id", "title", "content", "type", "priority", "author", "date"],
+        Committee: ["id", "name", "description", "chair"],
+        Building: ["id", "name", "code", "address"]
+      },
+      note: "All queries are automatically filtered by cooperativeId for security."
+    };
   },
 
   get_upcoming_events: async (context: ToolContext) => {
@@ -246,9 +266,16 @@ export const oracleToolDeclarations = [
       properties: {
         status: { type: "string", description: "Filter by status (e.g., Open, Pending, Completed)" },
         priority: { type: "string", description: "Filter by priority (e.g., Low, Medium, High, Emergency)" },
-        unitId: { type: "string", description: "Filter by specific unit ID" }
+        unitId: { type: "string", description: "Filter by specific unit ID" },
+        floor: { type: "number", description: "Filter by unit floor number" },
+        buildingId: { type: "string", description: "Filter by building ID" }
       }
     }
+  },
+  {
+    name: "get_database_schema",
+    description: "Get the structure of the co-op database to know what tables and fields are available for querying.",
+    parameters: { type: "object", properties: {} }
   },
   {
     name: "get_upcoming_events",

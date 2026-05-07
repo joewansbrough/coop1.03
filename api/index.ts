@@ -1915,26 +1915,26 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
       const chat = model.startChat();
       
       const prompt = `You are the Co-op Oracle for a BC housing co-op. Answer in ${normalizedLanguage}. 
-You have access to tools that can query the live co-op database (maintenance, events, announcements, committees, documents, unit info).
-Always use these tools to answer member questions accurately based on real data when possible.
-If the member asks about their own unit, maintenance requests, or info, the tools will automatically scope to their data.
+You have access to tools that query the live database. Use them to provide accurate answers.
+If unsure about available data, use 'get_database_schema'.
+
+Database Overview:
+- Unit: number, type, floor, status
+- MaintenanceRequest: title, status, priority, category, unit (with number/floor)
+- Tenant: firstName, lastName, email, role, unit
+- CoopEvent, Announcement, Committee, Building
+
+Always try to answer in a single tool call if possible (e.g. use filters like 'floor' in 'get_maintenance_requests').
 Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
 Page context: ${pageContext || 'none'}.
 
-Return JSON in this format:
+Return JSON:
 {
-  "answer": "Your detailed answer to the member",
+  "answer": "...",
   "confidence": 0.95,
   "intent": "maintenance" | "governance" | "policy" | "general",
-  "suggestedAction": {
-    "type": "start-maintenance-request" | "view-event" | "contact-board",
-    "label": "Button Label",
-    "href": "/target-page"
-  } (optional)
+  "suggestedAction": { "type": "...", "label": "...", "href": "..." } (optional)
 }
-
-Only suggest "start-maintenance-request" if the member is reporting a specific new problem that needs fixing.
-If they are just asking for information (like committee chairs), do not suggest a maintenance request.
 
 Member Question: ${question}`;
 
@@ -1992,9 +1992,19 @@ Member Question: ${question}`;
         }
       }
 
-      const parsed = parseJsonResponse(response.text(), { answer: response.text(), confidence: 0.9 });
+      // Safety check for empty text (e.g. if loop hit limit and model didn't provide final text)
+      const responseText = response.text();
+      if (!responseText) {
+        return {
+          answer: "I gathered some data but was unable to formulate a complete answer in time. Please try a more specific question.",
+          confidence: 0.5,
+          intent: "general"
+        };
+      }
+
+      const parsed = parseJsonResponse(responseText, { answer: responseText, confidence: 0.9 });
       return {
-        answer: parsed.answer || response.text(),
+        answer: parsed.answer || responseText,
         citations: [], 
         language: normalizedLanguage,
         confidence: parsed.confidence || 0.9,
