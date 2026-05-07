@@ -30,27 +30,74 @@ const upload = multer({
 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
-const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite';
-const GEMINI_FALLBACK_MODELS = ['gemini-3.1-flash', 'gemini-3.1-pro-preview', 'gemini-2.5-flash', 'gemini-2.5-pro'];
+
+// Dynamic model registry
+let activeModels: string[] = ['gemini-1.5-flash']; // Hard fallback
+let lastModelUpdate = 0;
+
+/**
+ * Programmatically discovers and prioritizes the best available Gemini models.
+ */
+async function refreshModelRegistry() {
+  try {
+    const genAI = getAI();
+    // listModels might not be available on all versions of the SDK or with all keys,
+    // so we wrap it and provide a robust sorted list based on known patterns.
+    const response = await (genAI as any).listModels?.() || { models: [] };
+    const available = response.models || [];
+    
+    if (available.length > 0) {
+      // Filter for generative models and sort by version (descending) and tier
+      const validModels = available
+        .filter((m: any) => m.supportedGenerationMethods.includes('generateContent'))
+        .map((m: any) => m.name.replace('models/', ''))
+        .sort((a: string, b: string) => b.localeCompare(a)); // Higher versions usually come first alphabetically
+      
+      // Prioritize "flash" for speed, then "pro"
+      const flashModels = validModels.filter((m: string) => m.includes('flash'));
+      const proModels = validModels.filter((m: string) => m.includes('pro'));
+      const others = validModels.filter((m: string) => !m.includes('flash') && !m.includes('pro'));
+      
+      activeModels = [...flashModels, ...proModels, ...others];
+      console.log('[AI Registry] Discovered models:', activeModels);
+    } else {
+      // If listModels fails or returns empty, use a curated 2026-forward list
+      activeModels = [
+        'gemini-3.1-flash-lite',
+        'gemini-3.1-flash',
+        'gemini-3.1-pro-preview',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash'
+      ];
+      console.log('[AI Registry] Using curated fallback list:', activeModels);
+    }
+    lastModelUpdate = Date.now();
+  } catch (err) {
+    console.error('[AI Registry] Discovery failed, using current list:', err);
+  }
+}
+
+const getBestModel = () => activeModels[0] || 'gemini-1.5-flash';
 
 /**
  * Executes a Gemini operation with automatic model fallback on 503/429 errors.
  */
 async function withAiFallback<T>(
   operation: (modelName: string) => Promise<T>,
-  primaryModel?: string
+  preferredModel?: string
 ): Promise<T> {
-  const modelsToTry = [
-    ...(primaryModel ? [primaryModel] : []),
-    DEFAULT_GEMINI_MODEL,
-    ...GEMINI_FALLBACK_MODELS
-  ];
-  
-  // Deduplicate
-  const uniqueModels = Array.from(new Set(modelsToTry));
-  let lastError: any;
+  // Refresh every 24h
+  if (Date.now() - lastModelUpdate > 24 * 60 * 60 * 1000) {
+    await refreshModelRegistry();
+  }
 
-  for (const modelName of uniqueModels) {
+  const modelsToTry = Array.from(new Set([
+    ...(preferredModel ? [preferredModel] : []),
+    ...activeModels
+  ]));
+  
+  let lastError: any;
+  for (const modelName of modelsToTry) {
     try {
       return await operation(modelName);
     } catch (err: any) {
@@ -60,7 +107,7 @@ async function withAiFallback<T>(
         err.message?.includes('high demand') ||
         err.message?.includes('overloaded');
       
-      if (isTransient && modelName !== uniqueModels[uniqueModels.length - 1]) {
+      if (isTransient && modelName !== modelsToTry[modelsToTry.length - 1]) {
         console.warn(`[AI Fallback] Model ${modelName} failed/overloaded. Trying next model...`);
         continue;
       }
