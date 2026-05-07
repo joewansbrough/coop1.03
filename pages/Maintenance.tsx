@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MaintenanceRequest, RequestStatus, MaintenanceCategory, Unit, MaintenancePriority } from '../types';
 import { geminiService } from '../services/geminiService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -36,6 +36,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [attachments, setAttachments] = useState<any[]>([]);
   const [imageAnalysisLoading, setImageAnalysisLoading] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const lastTriageKey = useRef('');
 
   const createMaintenanceMutation = useCreateMaintenance();
   const updateMaintenanceMutation = useUpdateMaintenance();
@@ -81,22 +82,42 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   }, [searchParams]);
 
   const handleTriage = async (nextDescription = description, nextVisualDescription = visualDescription) => {
-    if (!nextDescription || nextDescription.length < 10) return;
+    const trimmedDescription = nextDescription.trim();
+    const trimmedVisualDescription = nextVisualDescription.trim();
+    if (trimmedDescription.length < 10 && trimmedVisualDescription.length < 10) return;
+    const triageKey = `${trimmedDescription}::${trimmedVisualDescription}`;
+    if (triageKey === lastTriageKey.current) return;
+    lastTriageKey.current = triageKey;
+    const triageDescription = trimmedDescription || 'Resident uploaded a maintenance photo for AI triage. No written description was provided.';
     setLoading(true);
     try {
-      const result = await geminiService.triageMaintenanceRequest(nextDescription, nextVisualDescription);
+      const result = await geminiService.triageMaintenanceRequest(triageDescription, trimmedVisualDescription);
       setAiTriage(result);
       if (result.category) setCategory(Array.isArray(result.category) ? result.category as MaintenanceCategory[] : [result.category as MaintenanceCategory]);
       if (result.priority) setPriority(result.priority as MaintenancePriority);
       if (result.urgency) setUrgency(result.urgency);
       if (result.residentTip) setResidentTip(result.residentTip);
     } catch (err) {
+      lastTriageKey.current = '';
       console.error(err);
       showAlert('Gemini could not triage this request. You can still submit it manually.', 'error');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!showForm) return;
+    const trimmedDescription = description.trim();
+    const trimmedVisualDescription = visualDescription.trim();
+    if (trimmedDescription.length < 10 && trimmedVisualDescription.length < 10) return;
+
+    const timeout = window.setTimeout(() => {
+      handleTriage(trimmedDescription, trimmedVisualDescription);
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+  }, [description, visualDescription, showForm]);
 
   const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -125,9 +146,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
         setAttachments(prev => [...prev, nextAttachment]);
       }
       if (result.likelyCategory) setCategory([result.likelyCategory as MaintenanceCategory]);
-      if (description.trim().length >= 10) {
-        await handleTriage(description, nextVisualDescription);
-      }
+      await handleTriage(description, nextVisualDescription);
       showAlert(nextAttachment?.url ? 'Image saved and analyzed. Review it before submitting.' : 'Image analyzed, but no stored attachment was returned.', nextAttachment?.url ? 'success' : 'info');
     } catch (err: any) {
       showAlert(err.message || 'Failed to analyze image.', 'error');
