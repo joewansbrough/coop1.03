@@ -663,20 +663,16 @@ const handleSave = async () => {
       const confidenceHtml = listToHtml(analysis.confidenceNotes || []);
       const topicBriefingsHtml = Array.isArray(analysis.topicBriefings)
         ? analysis.topicBriefings.map((briefing: any) => {
-          const parts = [
-            briefing.context ? `<p><strong>Context:</strong> ${briefing.context}</p>` : '',
-            briefing.discussionSummary ? `<p><strong>Discussion:</strong> ${briefing.discussionSummary}</p>` : '',
-            briefing.implications ? `<p><strong>Implications:</strong> ${briefing.implications}</p>` : '',
-            briefing.recommendedMinuteText ? `<p><strong>Recommended minute text:</strong> ${briefing.recommendedMinuteText}</p>` : '',
-          ].filter(Boolean).join('');
-          return `<h4>${briefing.topic || 'Meeting Topic'}</h4>${parts}`;
+          const minutesText = briefing.recommendedMinuteText || briefing.discussionSummary || briefing.context;
+          return minutesText ? `<p>${minutesText}</p>` : '';
         }).join('')
         : '';
+      const shouldUseTopicMinutes = topicBriefingsHtml && !analysis.professionalSummary;
 
       setFormData(prev => ({
         ...prev,
         ...(analysis.professionalSummary ? { boardReport: analysis.professionalSummary } : {}),
-        ...(topicBriefingsHtml ? { committeeReports: topicBriefingsHtml } : {}),
+        ...(shouldUseTopicMinutes ? { committeeReports: topicBriefingsHtml } : {}),
         ...(decisionsHtml ? { keyDecisions: decisionsHtml } : {}),
         ...(meetingType === 'special' && analysis.professionalSummary ? { newBusiness: analysis.professionalSummary } : {}),
         ...(risksHtml || confidenceHtml ? { nextSteps: `${risksHtml}${confidenceHtml}` } : {}),

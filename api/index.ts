@@ -1648,38 +1648,27 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/ai/meeting-analysis', requireAuth, requireAdmin, async (req, res) => {
-  const { rawNotes, meetingId } = req.body;
-  if (!rawNotes || String(rawNotes).trim().length < 20) return res.status(400).json({ error: 'Meeting notes must be at least 20 characters.' });
-  const p = getPrisma();
-  try {
-    const user = (req as any).user || (req as any).session?.user;
-    const coopId = await getCoopId(req, p);
-    const model = getAI().getGenerativeModel({
-      model: user?.geminiModel || DEFAULT_GEMINI_MODEL,
-      generationConfig: { responseMimeType: 'application/json' },
-    });
-    const result = await model.generateContent(`You are an experienced secretary for a BC housing co-operative board or committee.
+const buildMeetingAnalysisPrompt = (rawNotes: string) => `You are an experienced secretary for a BC housing co-operative board or committee.
 
-Transform rough, incomplete meeting notes into a thoughtful, professional draft for the Minutes Builder. Do not merely restate or lightly paraphrase the notes. Expand terse bullets into clear governance language while preserving the facts that are actually present. Do not invent votes, approvals, names, dollar amounts, deadlines, or legal conclusions. If something is implied but uncertain, flag it in confidenceNotes.
+Transform rough, incomplete meeting notes into polished meeting minutes. Do not merely restate or lightly paraphrase the notes. Convert terse bullets into clear, professional minutes language while preserving only the facts that are actually present. Do not invent votes, approvals, names, dollar amounts, deadlines, or legal conclusions. If something is implied but uncertain, flag it in confidenceNotes.
 
 Tone and structure:
 - Neutral, concise, board-ready minutes language.
 - Use complete sentences and coherent paragraphs.
 - Summarize discussion by topic, not by transcript order when possible.
 - Separate discussion, decisions, motions, action items, and unresolved follow-up.
-- For each topic, explain why it mattered to the co-op and provide recommended minutes text.
+- For each topic, produce final minutes text. Avoid meta labels such as "context", "discussion", or "implications" inside recommendedMinuteText.
 
 Return valid JSON only with this shape:
 {
-  "professionalSummary": "2-4 professional paragraphs summarizing the meeting's main business and outcomes.",
+  "professionalSummary": "1-3 concise professional paragraphs suitable for meeting minutes.",
   "topicBriefings": [
     {
       "topic": "Short topic heading",
       "context": "What prompted or framed the topic.",
       "discussionSummary": "A polished discussion summary expanding terse notes into board-ready language.",
       "implications": "Operational, governance, resident, budget, timing, or accountability implications if present.",
-      "recommendedMinuteText": "A concise paragraph suitable to paste directly into meeting minutes."
+      "recommendedMinuteText": "A concise final paragraph suitable to paste directly into meeting minutes, with no labels or commentary."
     }
   ],
   "decisions": ["Clear decisions or resolutions. Use professional wording. Do not list undecided discussion here."],
@@ -1700,48 +1689,92 @@ Return valid JSON only with this shape:
 }
 
 Rough notes:
-${rawNotes}`);
-    const response = await result.response;
-    const parsed = parseJsonResponse(response.text(), {});
-    const asStringArray = (value: any) => Array.isArray(value) ? value.filter(Boolean).map(item => String(item)) : [];
-    const topicBriefings = Array.isArray(parsed.topicBriefings)
-      ? parsed.topicBriefings.map((item: any) => ({
-        topic: String(item?.topic || 'Meeting Topic'),
-        context: String(item?.context || ''),
-        discussionSummary: String(item?.discussionSummary || ''),
-        implications: String(item?.implications || ''),
-        recommendedMinuteText: String(item?.recommendedMinuteText || ''),
-      }))
-      : [];
-    const actionItems = Array.isArray(parsed.actionItems)
-      ? parsed.actionItems.map((item: any, index: number) => ({
-        id: String(item?.id || `ai-action-${index + 1}`),
-        description: String(item?.description || '').trim(),
-        ownerName: item?.ownerName ? String(item.ownerName) : undefined,
-        committee: item?.committee ? String(item.committee) : undefined,
-        dueDate: item?.dueDate ? String(item.dueDate) : undefined,
-        priority: ['Low', 'Medium', 'High'].includes(String(item?.priority)) ? String(item.priority) : 'Medium',
-        sourceSnippet: item?.sourceSnippet ? String(item.sourceSnippet) : undefined,
-      })).filter((item: any) => item.description)
-      : [];
-    const decisions = asStringArray(parsed.decisions);
-    const motionsMentioned = asStringArray(parsed.motionsMentioned);
-    const risksOrFollowUps = asStringArray(parsed.risksOrFollowUps);
-    const confidenceNotes = asStringArray(parsed.confidenceNotes);
+${rawNotes}`;
+
+const normalizeMeetingAnalysis = (parsed: any) => {
+  const asStringArray = (value: any) => Array.isArray(value) ? value.filter(Boolean).map(item => String(item)) : [];
+  const topicBriefings = Array.isArray(parsed.topicBriefings)
+    ? parsed.topicBriefings.map((item: any) => ({
+      topic: String(item?.topic || 'Meeting Topic'),
+      context: String(item?.context || ''),
+      discussionSummary: String(item?.discussionSummary || ''),
+      implications: String(item?.implications || ''),
+      recommendedMinuteText: String(item?.recommendedMinuteText || ''),
+    }))
+    : [];
+  const actionItems = Array.isArray(parsed.actionItems)
+    ? parsed.actionItems.map((item: any, index: number) => ({
+      id: String(item?.id || `ai-action-${index + 1}`),
+      description: String(item?.description || '').trim(),
+      ownerName: item?.ownerName ? String(item.ownerName) : undefined,
+      committee: item?.committee ? String(item.committee) : undefined,
+      dueDate: item?.dueDate ? String(item.dueDate) : undefined,
+      priority: ['Low', 'Medium', 'High'].includes(String(item?.priority)) ? String(item.priority) : 'Medium',
+      sourceSnippet: item?.sourceSnippet ? String(item.sourceSnippet) : undefined,
+    })).filter((item: any) => item.description)
+    : [];
+
+  return {
+    professionalSummary: String(parsed.professionalSummary || 'Meeting summary could not be generated.'),
+    topicBriefings,
+    decisions: asStringArray(parsed.decisions),
+    motionsMentioned: asStringArray(parsed.motionsMentioned),
+    actionItems,
+    risksOrFollowUps: asStringArray(parsed.risksOrFollowUps),
+    confidenceNotes: asStringArray(parsed.confidenceNotes),
+  };
+};
+
+const generateMeetingAnalysis = async (rawNotes: string, modelName = DEFAULT_GEMINI_MODEL) => {
+  const model = getAI().getGenerativeModel({
+    model: modelName,
+    generationConfig: { responseMimeType: 'application/json' },
+  });
+  const result = await model.generateContent(buildMeetingAnalysisPrompt(rawNotes));
+  const response = await result.response;
+  return normalizeMeetingAnalysis(parseJsonResponse(response.text(), {}));
+};
+
+app.post('/api/ai/meeting-analysis-demo', async (req, res) => {
+  const { rawNotes, meetingId } = req.body;
+  if (!rawNotes || String(rawNotes).trim().length < 20) return res.status(400).json({ error: 'Meeting notes must be at least 20 characters.' });
+  try {
+    const analysis = await generateMeetingAnalysis(rawNotes);
+    res.json({
+      id: `demo-meeting-analysis-${Date.now()}`,
+      meetingId: meetingId || null,
+      rawNotes,
+      ...analysis,
+      createdBy: 'demo-gemini',
+      createdAt: new Date().toISOString(),
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: `Gemini meeting analysis failed: ${e.message}` });
+  }
+});
+
+app.post('/api/ai/meeting-analysis', requireAuth, requireAdmin, async (req, res) => {
+  const { rawNotes, meetingId } = req.body;
+  if (!rawNotes || String(rawNotes).trim().length < 20) return res.status(400).json({ error: 'Meeting notes must be at least 20 characters.' });
+  const p = getPrisma();
+  try {
+    const user = (req as any).user || (req as any).session?.user;
+    const coopId = await getCoopId(req, p);
+    const generated = await generateMeetingAnalysis(rawNotes, user?.geminiModel || DEFAULT_GEMINI_MODEL);
     const analysis = await p.meetingAnalysis.create({
       data: {
         cooperativeId: coopId,
         meetingId: meetingId || null,
         rawNotes,
-        professionalSummary: parsed.professionalSummary || 'Meeting summary could not be generated.',
-        decisions,
-        motionsMentioned,
-        actionItems,
-        risksOrFollowUps,
+        professionalSummary: generated.professionalSummary,
+        decisions: generated.decisions,
+        motionsMentioned: generated.motionsMentioned,
+        actionItems: generated.actionItems,
+        risksOrFollowUps: generated.risksOrFollowUps,
         createdBy: user?.email || 'unknown',
       },
     });
-    const notifications = mapMeetingActionsToNotifications({ cooperativeId: coopId, meetingId, actions: actionItems });
+    const notifications = mapMeetingActionsToNotifications({ cooperativeId: coopId, meetingId, actions: generated.actionItems });
     for (const notification of notifications) {
       await createSystemNotification(p, {
         cooperativeId: coopId,
@@ -1756,7 +1789,7 @@ ${rawNotes}`);
         actionUrl: notification.actionUrl,
       }).catch(error => console.error('Failed to notify action item:', error));
     }
-    res.json({ ...analysis, topicBriefings, confidenceNotes });
+    res.json({ ...analysis, topicBriefings: generated.topicBriefings, confidenceNotes: generated.confidenceNotes });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
