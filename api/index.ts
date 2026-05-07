@@ -1831,12 +1831,16 @@ app.post('/api/oracle/query-demo', async (req, res) => {
       const prompt = `You are the Co-op Oracle for a BC housing co-op DEMO environment. Answer in ${normalizedLanguage}. 
 You have access to tools that query the demo database. Use them to provide accurate answers.
 
-Database Overview:
-- Unit: number, type, floor, status
-- MaintenanceRequest: title, status, priority, category, unit (with number/floor)
-- 'open' requests = status 'Pending' or 'In Progress'
+Database coverage:
+- Use get_database_schema when you need to see the complete tool and model map.
+- You can retrieve co-op profile, buildings, units, tenants, maintenance, scheduled maintenance, notifications, announcements, documents, document chunks, document ingestion status, document access logs, events, committees, meeting minutes, meeting analyses, Oracle query history, and dashboard preferences.
+- All tools enforce cooperative scoping and user permissions. If a tool returns an access error, explain that the information is not available to this user.
+- 'open' maintenance requests = status 'Pending' or 'In Progress'.
 
-Always try to answer in a single tool call if possible (e.g. use filters like 'floor' or 'status' in 'get_maintenance_requests').
+Reasoning:
+- Use tools before answering factual questions about co-op records, policies, members, units, meetings, or maintenance.
+- Chain tools when needed, for example committee -> chair/member -> tenant -> unit.
+- Prefer specific filtered calls over broad calls.
 Role: MEMBER (Demo Mode).
 Page context: ${pageContext || 'none'}.
 
@@ -1958,13 +1962,16 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
 You have access to tools that query the live database. Use them to provide accurate answers.
 If unsure about available data, use 'get_database_schema'.
 
-Database Overview:
-- Unit: number, type, floor, status
-- MaintenanceRequest: title, status, priority, category, unit (with number/floor)
-- Tenant: firstName, lastName, email, role, unit
-- CoopEvent, Announcement, Committee, Building
+Database coverage:
+- Use get_database_schema when you need to see the complete tool and model map.
+- You can retrieve co-op profile, buildings, units, tenants, tenant history, maintenance, scheduled maintenance, notifications, announcements, documents, document versions, document chunks, document ingestion status, document access logs, events, committees, meeting minutes, meeting analyses, Oracle query history, and dashboard preferences.
+- All tools enforce cooperative scoping and user permissions. If a tool returns an access error, explain that the information is not available to this user.
+- 'open' maintenance requests = status 'Pending' or 'In Progress'.
 
-Always try to answer in a single tool call if possible (e.g. use filters like 'floor' in 'get_maintenance_requests').
+Reasoning:
+- Use tools before answering factual questions about co-op records, policies, members, units, meetings, or maintenance.
+- Chain tools when needed, for example committee -> chair/member -> tenant -> unit.
+- Prefer specific filtered calls over broad calls.
 Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
 Page context: ${pageContext || 'none'}.
 

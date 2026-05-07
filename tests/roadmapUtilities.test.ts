@@ -11,6 +11,11 @@ import {
   normalizeOracleLanguage,
 } from '../utils/oracle.ts';
 import {
+  canUsePrivilegedOracleTools,
+  oracleTools,
+  oracleToolNames,
+} from '../utils/oracleTools.ts';
+import {
   createMaintenanceTriage,
   shouldFlagTriageForReview,
 } from '../utils/maintenanceAI.ts';
@@ -72,6 +77,85 @@ test('demo oracle returns useful local answers without server auth', () => {
   assert.equal(response.suggestedAction?.type, 'start-maintenance-request');
   assert.match(response.answer, /maintenance request/i);
   assert.equal(response.citations[0].title, 'Demo Co-op Policy Guide');
+});
+
+test('oracle tool registry covers the co-op database models', () => {
+  const requiredTools = [
+    'get_cooperative_profile',
+    'get_buildings',
+    'get_units',
+    'get_tenants',
+    'get_tenant_history',
+    'get_maintenance_requests',
+    'get_scheduled_maintenance',
+    'get_notifications',
+    'get_announcements',
+    'get_documents',
+    'get_document_versions',
+    'get_document_ingestion_jobs',
+    'get_document_access_logs',
+    'get_document_chunks',
+    'get_events',
+    'get_committees',
+    'get_meeting_minutes',
+    'get_meeting_analyses',
+    'get_policy_query_history',
+    'get_dashboard_preferences',
+    'get_database_schema',
+  ];
+
+  for (const toolName of requiredTools) {
+    assert.equal(oracleToolNames.includes(toolName), true, `${toolName} should be exposed to Gemini`);
+  }
+});
+
+test('oracle privileged tools are limited to board and admin roles', () => {
+  assert.equal(canUsePrivilegedOracleTools({ isAdmin: true, role: 'MEMBER' }), true);
+  assert.equal(canUsePrivilegedOracleTools({ isAdmin: false, role: 'ADMIN' }), true);
+  assert.equal(canUsePrivilegedOracleTools({ isAdmin: false, role: 'BOARD' }), true);
+  assert.equal(canUsePrivilegedOracleTools({ isAdmin: false, role: 'MEMBER' }), false);
+});
+
+test('oracle record searches preserve member scope while applying text filters', async () => {
+  let maintenanceWhere: any;
+  let documentWhere: any;
+  const fakePrisma = {
+    tenant: {
+      findUnique: async () => ({ unitId: 'u1' }),
+    },
+    maintenanceRequest: {
+      findMany: async (args: any) => {
+        maintenanceWhere = args.where;
+        return [];
+      },
+    },
+    document: {
+      findMany: async (args: any) => {
+        documentWhere = args.where;
+        return [];
+      },
+    },
+  };
+  const context = {
+    prisma: fakePrisma as any,
+    cooperativeId: 'coop-1',
+    userId: 't1',
+    userEmail: 'member@example.com',
+    role: 'MEMBER',
+    isAdmin: false,
+  };
+
+  await oracleTools.get_maintenance_requests(context, { query: 'leak' });
+  await oracleTools.get_documents(context, { query: 'pet' });
+
+  assert.equal(maintenanceWhere.cooperativeId, 'coop-1');
+  assert.equal(Array.isArray(maintenanceWhere.AND), true);
+  assert.equal(maintenanceWhere.AND.length, 2);
+  assert.deepEqual(maintenanceWhere.AND[0].OR[0], { requestedBy: 'member@example.com' });
+  assert.equal(documentWhere.cooperativeId, 'coop-1');
+  assert.equal(Array.isArray(documentWhere.AND), true);
+  assert.equal(documentWhere.AND.length, 2);
+  assert.deepEqual(documentWhere.AND[0].OR.map((item: any) => item.visibility), ['PUBLIC', 'MEMBERS']);
 });
 
 test('maintenance triage stores advisory AI metadata and flags risky suggestions for review', () => {
