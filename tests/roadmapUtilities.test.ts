@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { MaintenancePriority } from '../types.ts';
 import {
@@ -156,6 +157,16 @@ test('oracle record searches preserve member scope while applying text filters',
   assert.equal(Array.isArray(documentWhere.AND), true);
   assert.equal(documentWhere.AND.length, 2);
   assert.deepEqual(documentWhere.AND[0].OR.map((item: any) => item.visibility), ['PUBLIC', 'MEMBERS']);
+});
+
+test('oracle tool calling does not request json response mime type', () => {
+  const apiSource = readFileSync(new URL('../api/index.ts', import.meta.url), 'utf8');
+  const toolCallingModels = apiSource.match(/getGenerativeModel\(\{\s*model: modelName,\s*tools: \[\{ functionDeclarations: oracleToolDeclarations as any \}\][\s\S]*?\}\);/g) || [];
+
+  assert.equal(toolCallingModels.length >= 2, true);
+  for (const modelConfig of toolCallingModels) {
+    assert.equal(modelConfig.includes('responseMimeType'), false);
+  }
 });
 
 test('maintenance triage stores advisory AI metadata and flags risky suggestions for review', () => {

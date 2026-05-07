@@ -1822,8 +1822,7 @@ app.post('/api/oracle/query-demo', async (req, res) => {
     const oracleResponse = await withAiFallback(async (modelName) => {
       const model = genAI.getGenerativeModel({
         model: modelName,
-        tools: [{ functionDeclarations: oracleToolDeclarations as any }],
-        generationConfig: { responseMimeType: 'application/json' }
+        tools: [{ functionDeclarations: oracleToolDeclarations as any }]
       });
 
       const chat = model.startChat();
@@ -1952,8 +1951,7 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
       // Initialize model with tools
       const model = genAI.getGenerativeModel({
         model: modelName,
-        tools: [{ functionDeclarations: oracleToolDeclarations as any }],
-        generationConfig: { responseMimeType: 'application/json' }
+        tools: [{ functionDeclarations: oracleToolDeclarations as any }]
       });
 
       const chat = model.startChat();
