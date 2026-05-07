@@ -30,8 +30,8 @@ const upload = multer({
 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
-const GEMINI_FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+const DEFAULT_GEMINI_MODEL = 'gemini-3.1-flash-lite';
+const GEMINI_FALLBACK_MODELS = ['gemini-3.1-flash', 'gemini-3.1-pro-preview', 'gemini-2.5-flash', 'gemini-2.5-pro'];
 
 /**
  * Executes a Gemini operation with automatic model fallback on 503/429 errors.
