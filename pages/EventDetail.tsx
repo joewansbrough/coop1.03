@@ -560,7 +560,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       </nav>
 
       {activeTab === 'minutes' ? (
-        <div className="animate-in fade-in slide-in-from-top-2">
+        <div className="animate-in fade-in slide-in-from-top-2" data-demo-target="meeting-records">
           {minutesPanelMode === 'form' ? (
             <MinutesBuilder
               meetingId={event.id}

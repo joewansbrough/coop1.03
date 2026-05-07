@@ -590,7 +590,7 @@ const ResourceLibrary: React.FC<{
   };
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500" data-demo-target="governance-archive">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="space-y-2 lg:space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

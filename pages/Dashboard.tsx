@@ -731,7 +731,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-12 animate-in fade-in duration-500">
+    <div className="mx-auto max-w-7xl space-y-6 pb-12 animate-in fade-in duration-500" data-demo-target="dashboard-mission-control">
       <div className="relative overflow-hidden rounded-[20px] border border-white/5 bg-slate-900 p-5 pr-20 text-white shadow-2xl shadow-teal-accent/10 dark:bg-slate-950 sm:p-6 sm:pr-24 lg:p-10 lg:pr-28">
         <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 -translate-y-20 translate-x-20 rounded-full bg-teal-500/10 blur-[48px]"></div>
         <div className="absolute right-4 top-4 z-20 flex gap-2 sm:right-6 sm:top-6 lg:right-8 lg:top-8">

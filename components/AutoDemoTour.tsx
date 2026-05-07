@@ -1,0 +1,213 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowLeft, ArrowRight, MousePointer2, Pause, Play, X } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  AUTO_DEMO_STOPS,
+  getAutoDemoStop,
+  getNextAutoDemoIndex,
+  getPreviousAutoDemoIndex,
+} from '../utils/autoDemo';
+
+interface AutoDemoTourProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onRoleSwitch?: () => void;
+  isAdmin?: boolean;
+}
+
+type TargetRect = {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+};
+
+const emptyRect: TargetRect = {
+  top: 120,
+  left: 120,
+  width: 280,
+  height: 160,
+};
+
+const getCardPlacement = (rect: TargetRect) => {
+  const cardWidth = 360;
+  const margin = 20;
+  const placeRight = rect.left + rect.width + cardWidth + margin < window.innerWidth;
+  const placeLeft = rect.left - cardWidth - margin > margin;
+  const left = placeRight
+    ? rect.left + rect.width + margin
+    : placeLeft
+      ? rect.left - cardWidth - margin
+      : Math.max(margin, Math.min(window.innerWidth - cardWidth - margin, rect.left));
+  const top = Math.max(margin, Math.min(window.innerHeight - 330, rect.top));
+  return { left, top };
+};
+
+const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwitch, isAdmin = false }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [stepIndex, setStepIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [targetRect, setTargetRect] = useState<TargetRect>(emptyRect);
+  const [targetFound, setTargetFound] = useState(false);
+  const stop = getAutoDemoStop(stepIndex);
+
+  useEffect(() => {
+    if (!isOpen || !stop || isPaused) return;
+    if (`${location.pathname}${location.search}` !== stop.route) {
+      navigate(stop.route);
+    }
+  }, [isOpen, isPaused, location.pathname, location.search, navigate, stop]);
+
+  useEffect(() => {
+    if (!isOpen || !stop || isPaused) return;
+
+    let frame = 0;
+    const measure = () => {
+      const target = document.querySelector<HTMLElement>(`[data-demo-target="${stop.target}"]`);
+      if (!target) {
+        setTargetFound(false);
+        setTargetRect(emptyRect);
+        return;
+      }
+
+      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      frame = window.setTimeout(() => {
+        const rect = target.getBoundingClientRect();
+        setTargetFound(rect.width > 0 && rect.height > 0);
+        setTargetRect({
+          top: rect.top,
+          left: rect.left,
+          width: rect.width,
+          height: rect.height,
+        });
+      }, 280);
+    };
+
+    measure();
+    const onResize = () => measure();
+    const onScroll = () => measure();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onScroll, true);
+    return () => {
+      window.clearTimeout(frame);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onScroll, true);
+    };
+  }, [isOpen, isPaused, location.pathname, location.search, stop]);
+
+  const cardPlacement = useMemo(() => {
+    if (typeof window === 'undefined') return { left: 24, top: 24 };
+    return getCardPlacement(targetRect);
+  }, [targetRect]);
+
+  if (!isOpen || !stop) return null;
+
+  const isLastStep = stepIndex === AUTO_DEMO_STOPS.length - 1;
+  const progress = Math.round(((stepIndex + 1) / AUTO_DEMO_STOPS.length) * 100);
+  const cursorLeft = targetRect.left + Math.min(targetRect.width - 18, Math.max(18, targetRect.width * 0.72));
+  const cursorTop = targetRect.top + Math.min(targetRect.height - 18, Math.max(18, targetRect.height * 0.42));
+
+  const goNext = () => {
+    if (isLastStep) {
+      onClose();
+      return;
+    }
+    setStepIndex(getNextAutoDemoIndex(stepIndex));
+  };
+
+  const performAction = () => {
+    if (stop.action === 'switch-role' && isAdmin) {
+      onRoleSwitch?.();
+    }
+    goNext();
+  };
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[260]">
+      <div
+        className="absolute rounded-[28px] border-2 border-teal-300/90 shadow-[0_0_0_9999px_rgba(15,23,42,0.55),0_0_28px_rgba(20,184,166,0.55)] transition-all duration-500"
+        style={{
+          top: targetRect.top - 10,
+          left: targetRect.left - 10,
+          width: targetRect.width + 20,
+          height: targetRect.height + 20,
+        }}
+      />
+
+      <div
+        className="absolute text-teal-300 drop-shadow-[0_8px_18px_rgba(15,23,42,0.45)] transition-all duration-500"
+        style={{ left: cursorLeft, top: cursorTop }}
+        aria-hidden="true"
+      >
+        <MousePointer2 className="h-9 w-9 fill-white text-teal-500" />
+      </div>
+
+      <aside
+        className="pointer-events-auto absolute w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl dark:bg-slate-900"
+        style={{ left: cardPlacement.left, top: cardPlacement.top }}
+        aria-live="polite"
+      >
+        <div className="border-b border-slate-100 bg-slate-950 p-4 text-white dark:border-white/5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-teal-300">Automated Demo</p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white transition-colors hover:bg-white/20"
+              aria-label="Exit automated demo"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <h3 className="text-lg font-black leading-tight tracking-tight">{stop.title}</h3>
+          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+
+        <div className="space-y-4 p-4">
+          {!targetFound && (
+            <p className="rounded-2xl bg-amber-50 p-3 text-[10px] font-black uppercase tracking-widest text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+              Finding this area on the current screen. You can continue if the page is still loading.
+            </p>
+          )}
+          <p className="text-sm font-semibold leading-relaxed text-slate-600 dark:text-slate-300">{stop.body}</p>
+          <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
+            <p className="text-[9px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Selling point</p>
+            <p className="mt-1 text-xs font-bold leading-relaxed text-teal-900 dark:text-teal-100">{stop.sellingPoint}</p>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => setStepIndex(getPreviousAutoDemoIndex(stepIndex))}
+              disabled={stepIndex === 0}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 disabled:opacity-40 dark:bg-slate-800 dark:text-slate-300"
+              aria-label="Previous demo stop"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsPaused(current => !current)}
+              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 text-[10px] font-black uppercase tracking-widest text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+            >
+              {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+              {isPaused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              type="button"
+              onClick={stop.action ? performAction : goNext}
+              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-teal-700"
+            >
+              {stop.action === 'switch-role' && isAdmin ? 'Switch View' : isLastStep ? 'Finish' : 'Next'}
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+};
+
+export default AutoDemoTour;

@@ -6,6 +6,7 @@ import ProfileModal from './ProfileModal';
 import HelpModal from './HelpModal';
 import OnboardingTour from './OnboardingTour';
 import DemoTutorialPanel from './DemoTutorialPanel';
+import AutoDemoTour from './AutoDemoTour';
 import OracleAssistant from './OracleAssistant';
 import { AnimatePresence } from 'motion/react';
 import { useMarkNotificationRead, useNotifications } from '../hooks/useCoopData';
@@ -16,6 +17,7 @@ import {
   type DemoTutorialState,
   type DemoTutorialEvent,
 } from '../utils/demoTutorial';
+import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -49,6 +51,9 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [tutorialState, setTutorialState] = useState<DemoTutorialState | null>(() => readTutorialState());
+  const [isAutoDemoOpen, setIsAutoDemoOpen] = useState(() =>
+    typeof window !== 'undefined' && localStorage.getItem(AUTO_DEMO_STORAGE_KEY) === 'true'
+  );
   const isDemo = typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -119,7 +124,10 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   }, [isDemo, location.pathname, tutorialState]);
 
   useEffect(() => {
-    const handleStorage = () => setTutorialState(readTutorialState());
+    const handleStorage = () => {
+      setTutorialState(readTutorialState());
+      setIsAutoDemoOpen(localStorage.getItem(AUTO_DEMO_STORAGE_KEY) === 'true');
+    };
     const handleTutorialEvent = (event: Event) => {
       if (!isDemo) return;
       const customEvent = event as CustomEvent<DemoTutorialEvent>;
@@ -137,6 +145,11 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       window.removeEventListener('storage', handleStorage);
     };
   }, [isDemo]);
+
+  const closeAutoDemo = () => {
+    localStorage.removeItem(AUTO_DEMO_STORAGE_KEY);
+    setIsAutoDemoOpen(false);
+  };
 
   const toggleDarkMode = () => {
     const newMode = !isDarkMode;
@@ -242,6 +255,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
         {isActualAdmin ? (
           <button 
             onClick={onToggleAdminView} 
+            data-demo-target="role-switcher"
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${
               isAdmin 
                 ? 'bg-amber-500 text-white hover:bg-amber-600' 
@@ -457,6 +471,14 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
           <DemoTutorialPanel
             state={tutorialState}
             onStateChange={setTutorialState}
+          />
+        )}
+        {isDemo && isAutoDemoOpen && (
+          <AutoDemoTour
+            isOpen={isAutoDemoOpen}
+            onClose={closeAutoDemo}
+            onRoleSwitch={onToggleAdminView}
+            isAdmin={isAdmin}
           />
         )}
 

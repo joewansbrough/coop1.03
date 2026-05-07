@@ -1,8 +1,9 @@
 import React from 'react';
-import { ArrowRight, Presentation, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowRight, MousePointer2, Presentation, ShieldCheck, UserRound } from 'lucide-react';
 import {
   createInitialTutorialState,
   DEMO_TUTORIAL_ROLE_VIEW_KEY,
+  DEMO_TUTORIAL_STORAGE_KEY,
   DEMO_TUTORIAL_TRACKS,
   getVisibleTutorialTracks,
   saveTutorialState,
@@ -10,6 +11,7 @@ import {
   type DemoTutorialTrackId,
 } from '../utils/demoTutorial';
 import { initializeDemoStorage } from '../utils/demoStorage';
+import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
 
 interface DemoTrackPickerProps {
   onStart: () => void;
@@ -26,6 +28,7 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
   const startTrack = (trackId: DemoTutorialTrackId) => {
     const track = DEMO_TUTORIAL_TRACKS.find(item => item.id === trackId);
     localStorage.setItem('demo_mode', 'true');
+    localStorage.removeItem(AUTO_DEMO_STORAGE_KEY);
     initializeDemoStorage();
     saveTutorialState(createInitialTutorialState(trackId));
     localStorage.setItem(DEMO_TUTORIAL_ROLE_VIEW_KEY, track?.startAsResident ? 'true' : 'false');
@@ -35,6 +38,17 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
 
   const skipTour = () => {
     skipDemoTutorial();
+    localStorage.removeItem(AUTO_DEMO_STORAGE_KEY);
+    initializeDemoStorage();
+    window.location.hash = '/';
+    onStart();
+  };
+
+  const startAutoDemo = () => {
+    localStorage.setItem('demo_mode', 'true');
+    localStorage.setItem(AUTO_DEMO_STORAGE_KEY, 'true');
+    localStorage.removeItem(DEMO_TUTORIAL_STORAGE_KEY);
+    localStorage.setItem(DEMO_TUTORIAL_ROLE_VIEW_KEY, 'false');
     initializeDemoStorage();
     window.location.hash = '/';
     onStart();
@@ -80,6 +94,23 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
               </div>
             </button>
           ))}
+          <button
+            type="button"
+            onClick={startAutoDemo}
+            className="text-left p-4 sm:p-5 rounded-2xl border border-teal-200 dark:border-teal-900/40 bg-teal-50 dark:bg-teal-950/20 hover:border-teal-500 hover:bg-white dark:hover:bg-slate-900 transition-all group active:scale-[0.98] flex items-center sm:items-start gap-4 sm:gap-0 sm:flex-col sm:min-h-[220px]"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-slate-950 text-teal-300 flex items-center justify-center sm:mb-5 group-hover:scale-105 transition-transform shrink-0">
+              <MousePointer2 className="w-6 h-6" />
+            </div>
+            <div className="min-w-0 flex-1 sm:flex sm:flex-col sm:min-h-[144px]">
+              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Automated Spotlight Demo</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed mt-1.5 sm:mt-2">A guided sales story that moves the cursor, highlights product value, and waits at each stop.</p>
+              <div className="mt-4 sm:mt-auto sm:pt-6 flex min-w-0 items-center justify-between gap-3 text-teal-600 dark:text-teal-400">
+                <span className="min-w-0 break-words text-[10px] font-black uppercase leading-snug">7 spotlight stops</span>
+                <ArrowRight className="w-4 h-4 shrink-0 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </button>
           <button
             type="button"
             onClick={skipTour}
