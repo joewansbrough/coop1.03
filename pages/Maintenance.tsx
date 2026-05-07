@@ -4,7 +4,7 @@ import { geminiService } from '../services/geminiService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
-import { useCreateMaintenance, useUpdateMaintenance } from '../hooks/useCoopData';
+import { isDemoMode, useCreateMaintenance, useUpdateMaintenance } from '../hooks/useCoopData';
 import { recordTutorialEvent } from '../utils/demoTutorial';
 
 interface MaintenanceProps {
@@ -33,6 +33,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [aiTriage, setAiTriage] = useState<any>(null);
   const [residentTip, setResidentTip] = useState('');
   const [visualDescription, setVisualDescription] = useState('');
+  const [attachments, setAttachments] = useState<any[]>([]);
   const [imageAnalysisLoading, setImageAnalysisLoading] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -97,6 +98,13 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     }
   };
 
+  const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read image file.'));
+    reader.readAsDataURL(file);
+  });
+
   const handleImageUpload = async (file?: File) => {
     if (!file) return;
     setImageAnalysisLoading(true);
@@ -104,11 +112,23 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       const result = await geminiService.describeMaintenanceImage(file, description);
       const nextVisualDescription = result.visualDescription || '';
       setVisualDescription(nextVisualDescription);
+      let nextAttachment = result.attachment;
+      if (isDemoMode() && nextAttachment && !nextAttachment.url) {
+        nextAttachment = {
+          ...nextAttachment,
+          url: await fileToDataUrl(file),
+          storageUrl: '',
+          storageKey: '',
+        };
+      }
+      if (nextAttachment?.url) {
+        setAttachments(prev => [...prev, nextAttachment]);
+      }
       if (result.likelyCategory) setCategory([result.likelyCategory as MaintenanceCategory]);
       if (description.trim().length >= 10) {
         await handleTriage(description, nextVisualDescription);
       }
-      showAlert('Image description generated. Review it before submitting.', 'success');
+      showAlert(nextAttachment?.url ? 'Image saved and analyzed. Review it before submitting.' : 'Image analyzed, but no stored attachment was returned.', nextAttachment?.url ? 'success' : 'info');
     } catch (err: any) {
       showAlert(err.message || 'Failed to analyze image.', 'error');
     } finally {
@@ -142,7 +162,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       updatedAt: new Date().toISOString(),
       notes: [],
       expenses: [],
-      attachments: [],
+      attachments,
       aiTriage,
       visualDescription,
       residentTip,
@@ -159,6 +179,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
         setAiTriage(null);
         setResidentTip('');
         setVisualDescription('');
+        setAttachments([]);
         if (isAdmin) setUnitId('');
         recordTutorialEvent('maintenance_submitted');
         showAlert('Maintenance request submitted successfully. The maintenance committee will review it shortly.', 'success');
@@ -335,6 +356,22 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                     </button>
                   </div>
                   <p className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">{visualDescription}</p>
+                </div>
+              )}
+              {attachments.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {attachments.map((attachment) => (
+                    <a
+                      key={attachment.id || attachment.url}
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-xl border border-teal-100 bg-white px-3 py-2 text-[10px] font-black uppercase text-teal-700 dark:border-teal-900/40 dark:bg-slate-900 dark:text-teal-300"
+                    >
+                      <i className="fa-solid fa-image"></i>
+                      {attachment.fileName || 'Maintenance photo'}
+                    </a>
+                  ))}
                 </div>
               )}
             </div>

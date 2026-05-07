@@ -69,6 +69,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const isLocked = request.status === RequestStatus.COMPLETED || request.status === RequestStatus.CANCELLED;
   const canModifyRequest = isAdmin || isCurrentTenantForMaintenanceRequest(request, unit, tenants, user);
   const canExportPdf = canExportMaintenanceRequest(request, unit, tenants, user, isAdmin);
+  const attachments = Array.isArray(request.attachments) ? request.attachments.filter((item: any) => item?.url || item?.storageUrl) : [];
   const normalizeRequest = (data: MaintenanceRequest) => ({
     ...data,
     category: (Array.isArray(data.category) ? data.category : (data.category ? String(data.category).split(', ') : [])) as MaintenanceCategory[],
@@ -378,6 +379,42 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
               )}
             </div>
           </section>
+
+          {attachments.length > 0 && (
+            <section className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
+              <div className="mb-6 flex items-center justify-between gap-3">
+                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Photo Documentation</h3>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{attachments.length} file{attachments.length === 1 ? '' : 's'}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {attachments.map((attachment: any, index: number) => {
+                  const href = attachment.url || attachment.storageUrl;
+                  const isImage = String(attachment.contentType || '').startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(String(attachment.fileName || href));
+                  return (
+                    <a
+                      key={attachment.id || href || index}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 transition-all hover:border-brand-400 dark:border-white/5 dark:bg-slate-950/30"
+                    >
+                      {isImage && (
+                        <div className="aspect-video bg-slate-100 dark:bg-slate-800">
+                          <img src={href} alt={attachment.visualDescription || attachment.fileName || 'Maintenance request attachment'} className="h-full w-full object-cover" />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 group-hover:underline">{attachment.fileName || `Attachment ${index + 1}`}</p>
+                        {attachment.visualDescription && (
+                          <p className="mt-2 line-clamp-3 text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">{attachment.visualDescription}</p>
+                        )}
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50">
