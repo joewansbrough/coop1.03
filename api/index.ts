@@ -2072,12 +2072,6 @@ Return JSON:
 }
 
 Member Question: ${question}`;
-  "confidence": 0.95,
-  "intent": "maintenance" | "governance" | "policy" | "general",
-  "suggestedAction": { "type": "...", "label": "...", "href": "..." } (optional)
-}
-
-Member Question: ${question}`;
 
       let result = await chat.sendMessage(prompt);
       let response = result.response;
