@@ -1,12 +1,12 @@
-# Graph Report - C:\Users\Joe\Desktop\Coop103\coop1.03  (2026-05-06)
+# Graph Report - C:\Users\Joe\Desktop\Coop103\coop1.03  (2026-05-07)
 
 ## Corpus Check
-- 98 files · ~122,322 words
+- 104 files · ~142,806 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 445 nodes · 484 edges · 88 communities detected
-- Extraction: 88% EXTRACTED · 12% INFERRED · 0% AMBIGUOUS · INFERRED: 56 edges (avg confidence: 0.82)
+- 479 nodes · 550 edges · 90 communities detected
+- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 63 edges (avg confidence: 0.82)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -98,30 +98,32 @@
 - [[_COMMUNITY_Community 85|Community 85]]
 - [[_COMMUNITY_Community 86|Community 86]]
 - [[_COMMUNITY_Community 87|Community 87]]
+- [[_COMMUNITY_Community 88|Community 88]]
+- [[_COMMUNITY_Community 89|Community 89]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `normalizeDashboardPreference()` - 17 edges
-2. `isDemoMode()` - 7 edges
-3. `persistUpdate()` - 7 edges
-4. `showAlert()` - 6 edges
-5. `showAlert()` - 6 edges
-6. `showAlert()` - 6 edges
-7. `showNotification()` - 6 edges
-8. `getDocumentLibraryOriginalUrl()` - 6 edges
-9. `createDefaultDashboardLayout()` - 6 edges
-10. `Personal Information Protection Act (PIPA)` - 6 edges
+2. `persistUpdate()` - 8 edges
+3. `isDemoMode()` - 8 edges
+4. `isDemoMode()` - 7 edges
+5. `createProfessionalProjectAnalysis()` - 7 edges
+6. `fetchDashboardPreference()` - 6 edges
+7. `showAlert()` - 6 edges
+8. `handleAttend()` - 6 edges
+9. `showAlert()` - 6 edges
+10. `showAlert()` - 6 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `updatePreference()` --calls--> `normalizeDashboardPreference()`  [INFERRED]
   C:\Users\Joe\Desktop\Coop103\coop1.03\pages\Dashboard.tsx → C:\Users\Joe\Desktop\Coop103\coop1.03\utils\dashboardPreferences.ts
 - `DemoTutorialPanel()` --calls--> `getTutorialTrack()`  [INFERRED]
   C:\Users\Joe\Desktop\Coop103\coop1.03\components\DemoTutorialPanel.tsx → C:\Users\Joe\Desktop\Coop103\coop1.03\utils\demoTutorial.ts
-- `handleAttend()` --calls--> `isDemoMode()`  [INFERRED]
-  C:\Users\Joe\Desktop\Coop103\coop1.03\pages\EventDetail.tsx → C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts
-- `persistUpdate()` --calls--> `isDemoMode()`  [INFERRED]
-  C:\Users\Joe\Desktop\Coop103\coop1.03\pages\MaintenanceDetail.tsx → C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts
-- `handleSimulatedUpload()` --calls--> `isDemoMode()`  [INFERRED]
-  C:\Users\Joe\Desktop\Coop103\coop1.03\pages\ResourceLibrary.tsx → C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts
+- `isDemoMode()` --calls--> `handleAttend()`  [INFERRED]
+  C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts → C:\Users\Joe\Desktop\Coop103\coop1.03\pages\EventDetail.tsx
+- `isDemoMode()` --calls--> `persistUpdate()`  [INFERRED]
+  C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts → C:\Users\Joe\Desktop\Coop103\coop1.03\pages\MaintenanceDetail.tsx
+- `isDemoMode()` --calls--> `handleSimulatedUpload()`  [INFERRED]
+  C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts → C:\Users\Joe\Desktop\Coop103\coop1.03\pages\ResourceLibrary.tsx
 
 ## Hyperedges (group relationships)
 - **PIPA Compliance Framework** — 1290_pipa_overview_of_contents_pipa, 1310_ten_principles_of_personal_information_protection_accountability, 1510_pipa_record_keeping_tips_data_retention, 1570_a_guide_to_b_privacy_officer [INFERRED 0.95]
@@ -136,124 +138,124 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.06
-Nodes (8): createMaintenanceTriage(), normalizeCategories(), normalizePriority(), createNotification(), nowIso(), createOracleFallbackResponse(), detectOracleIntent(), normalizeOracleLanguage()
-
-### Community 1 - "Community 1"
 Cohesion: 0.1
 Nodes (20): getDashboardDocumentLink(), getDocumentFileUrl(), getDocumentLibraryOriginalUrl(), getMinutesEventId(), isBlobBackedDocument(), isMinutesDocument(), createPicker(), dataUrlToBlobUrl() (+12 more)
 
-### Community 2 - "Community 2"
+### Community 1 - "Community 1"
 Cohesion: 0.09
 Nodes (16): clearDemoStorageCollections(), initializeDemoStorage(), skipTour(), startTrack(), createInitialTutorialState(), getNextIncompleteStep(), getTutorialTrack(), readTutorialState() (+8 more)
+
+### Community 2 - "Community 2"
+Cohesion: 0.08
+Nodes (8): buildMeetingAnalysisPrompt(), generateMeetingAnalysis(), getAI(), getMeetingTypeGuidance(), normalizeMeetingAnalysis(), parseJsonResponse(), refreshModelRegistry(), withAiFallback()
 
 ### Community 3 - "Community 3"
 Cohesion: 0.15
 Nodes (19): addDashboardTile(), createDefaultDashboardLayout(), getAvailableDashboardTiles(), getDefaultDashboardTileSize(), hideDashboardTile(), isDashboardTileId(), isDashboardTileSize(), loadDemoDashboardPreference() (+11 more)
 
 ### Community 4 - "Community 4"
+Cohesion: 0.15
+Nodes (14): createDemoMeetingAnalysis(), createProfessionalProjectAnalysis(), findLine(), humanizeTopic(), splitSentences(), stripPrefix(), toLower(), toSentence() (+6 more)
+
+### Community 5 - "Community 5"
+Cohesion: 0.16
+Nodes (9): getTenantCommitteeAssignments(), getTenantDisplayName(), normalizeName(), canExportMaintenanceRequest(), isCurrentTenantForMaintenanceRequest(), buildMeetingAnalysisFormPatch(), listToHtml(), paragraphsToHtml() (+1 more)
+
+### Community 6 - "Community 6"
+Cohesion: 0.17
+Nodes (11): recordTutorialEvent(), isDemoMode(), fileToDataUrl(), handleImageUpload(), handleSubmit(), handleTriage(), showAlert(), updateRequestStatus() (+3 more)
+
+### Community 7 - "Community 7"
 Cohesion: 0.12
 Nodes (0): 
 
-### Community 5 - "Community 5"
+### Community 8 - "Community 8"
 Cohesion: 0.19
 Nodes (5): addUserAttendance(), createAttendanceRequestInit(), splitName(), handleAttend(), showAlert()
 
-### Community 6 - "Community 6"
+### Community 9 - "Community 9"
 Cohesion: 0.18
 Nodes (2): formatEventDateOnly(), parseEventDate()
 
-### Community 7 - "Community 7"
+### Community 10 - "Community 10"
 Cohesion: 0.29
 Nodes (8): getDateOnly(), handleAddCommittee(), handleAssignMember(), handleScheduleMeeting(), handleSendMessage(), openCommitteeDocument(), parseDateOnly(), showAlert()
 
-### Community 8 - "Community 8"
+### Community 11 - "Community 11"
 Cohesion: 0.38
 Nodes (10): addNote(), confirmStatusChange(), handleExportPdf(), handlePriorityChange(), handleReopen(), handleStatusChange(), normalizeRequest(), persistUpdate() (+2 more)
 
-### Community 9 - "Community 9"
-Cohesion: 0.27
-Nodes (5): getTenantCommitteeAssignments(), getTenantDisplayName(), normalizeName(), canExportMaintenanceRequest(), isCurrentTenantForMaintenanceRequest()
-
-### Community 10 - "Community 10"
+### Community 12 - "Community 12"
 Cohesion: 0.22
 Nodes (0): 
 
-### Community 11 - "Community 11"
+### Community 13 - "Community 13"
 Cohesion: 0.28
 Nodes (4): asDate(), getCalendarDays(), getDateKey(), updatePreference()
 
-### Community 12 - "Community 12"
-Cohesion: 0.28
-Nodes (5): recordTutorialEvent(), handleImageUpload(), handleSubmit(), showAlert(), updateRequestStatus()
-
-### Community 13 - "Community 13"
+### Community 14 - "Community 14"
 Cohesion: 0.39
 Nodes (7): createPicker(), handleMoveIn(), handleMoveOut(), handleOpenPicker(), handleSeedPreventative(), handleTransfer(), showNotification()
 
-### Community 14 - "Community 14"
+### Community 15 - "Community 15"
 Cohesion: 0.25
 Nodes (8): Cooperative Association Act, Model Rules 2.0, Acknowledgement of Receipt of Rules and Occupancy Agreement, Board of Directors, Board President and Vice President, Board Treasurer, Ethical Conduct Declaration, Democratic Member Control
 
-### Community 15 - "Community 15"
+### Community 16 - "Community 16"
 Cohesion: 0.43
 Nodes (4): archiveMinutesPdf(), decodePdfDataUrl(), getBlobToken(), toSafePathPart()
 
-### Community 16 - "Community 16"
+### Community 17 - "Community 17"
 Cohesion: 0.29
 Nodes (7): Personal Information Protection Act (PIPA), Accountability Principle, Consent Principle, Confidentiality Agreement Sample, Privacy Officer Role, Staff Confidentiality Agreement, Member Selection Process
 
-### Community 17 - "Community 17"
+### Community 18 - "Community 18"
 Cohesion: 0.29
 Nodes (7): Rules of Order, Annual General Meeting (AGM), Cooperative Association Act (BC), Ordinary Resolution, Special Resolution, Semi-Annual General Meeting (SAGM), Special General Meeting (SGM)
 
-### Community 18 - "Community 18"
+### Community 19 - "Community 19"
 Cohesion: 0.47
 Nodes (3): isFolderWithinRoot(), driveClient(), getAuthClient()
 
-### Community 19 - "Community 19"
-Cohesion: 0.33
-Nodes (0): 
-
 ### Community 20 - "Community 20"
 Cohesion: 0.33
-Nodes (6): Checklist: Appeal of Membership Termination, Agenda: Appeal of Membership Termination, Notice: Termination Appeal (Breach of Material Condition), Notice: Termination Appeal (Conduct Detrimental), Entity: CHF BC, Entity: Personal Information Protection Act (PIPA)
+Nodes (0): 
 
 ### Community 21 - "Community 21"
 Cohesion: 0.33
-Nodes (6): Overview: Information Meeting, Invitation: Information Meeting, Overview: Town Hall Meeting, Agenda: Board of Directors Meeting, Checklist: First Board Meeting After AGM, Concept: Asset Management Plan
+Nodes (6): Checklist: Appeal of Membership Termination, Agenda: Appeal of Membership Termination, Notice: Termination Appeal (Breach of Material Condition), Notice: Termination Appeal (Conduct Detrimental), Entity: CHF BC, Entity: Personal Information Protection Act (PIPA)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.4
-Nodes (0): 
+Cohesion: 0.33
+Nodes (6): Overview: Information Meeting, Invitation: Information Meeting, Overview: Town Hall Meeting, Agenda: Board of Directors Meeting, Checklist: First Board Meeting After AGM, Concept: Asset Management Plan
 
 ### Community 23 - "Community 23"
 Cohesion: 0.5
 Nodes (2): handleComplete(), handleNext()
 
 ### Community 24 - "Community 24"
-Cohesion: 0.4
-Nodes (0): 
-
-### Community 25 - "Community 25"
-Cohesion: 0.5
-Nodes (2): getContentTimestamp(), getTimestamp()
-
-### Community 26 - "Community 26"
 Cohesion: 0.5
 Nodes (3): moveDashboardTile(), handleDragEnd(), moveBy()
 
+### Community 25 - "Community 25"
+Cohesion: 0.4
+Nodes (0): 
+
+### Community 26 - "Community 26"
+Cohesion: 0.4
+Nodes (0): 
+
 ### Community 27 - "Community 27"
-Cohesion: 0.67
-Nodes (2): handleAttend(), showAlert()
+Cohesion: 0.5
+Nodes (2): getContentTimestamp(), getTimestamp()
 
 ### Community 28 - "Community 28"
 Cohesion: 0.5
 Nodes (0): 
 
 ### Community 29 - "Community 29"
-Cohesion: 0.5
-Nodes (0): 
+Cohesion: 0.67
+Nodes (2): handleAttend(), showAlert()
 
 ### Community 30 - "Community 30"
 Cohesion: 0.5
@@ -265,75 +267,75 @@ Nodes (0):
 
 ### Community 32 - "Community 32"
 Cohesion: 0.5
-Nodes (4): Election Preparation Workflow, Nominations Committee Job Description, Candidate's Declaration and Eligibility, Arrears Report and Disqualification
+Nodes (0): 
 
 ### Community 33 - "Community 33"
-Cohesion: 0.67
+Cohesion: 0.5
 Nodes (0): 
 
 ### Community 34 - "Community 34"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (2): applyMinutesEventDetails(), getMinutesEventDetails()
 
 ### Community 35 - "Community 35"
-Cohesion: 1.0
-Nodes (2): calculateAverageDaysOpen(), Reports()
+Cohesion: 0.5
+Nodes (4): Election Preparation Workflow, Nominations Committee Job Description, Candidate's Declaration and Eligibility, Arrears Report and Disqualification
 
 ### Community 36 - "Community 36"
 Cohesion: 0.67
 Nodes (0): 
 
 ### Community 37 - "Community 37"
-Cohesion: 1.0
-Nodes (2): handleAddApplication(), showAlert()
-
-### Community 38 - "Community 38"
 Cohesion: 0.67
 Nodes (0): 
+
+### Community 38 - "Community 38"
+Cohesion: 1.0
+Nodes (2): calculateAverageDaysOpen(), Reports()
 
 ### Community 39 - "Community 39"
 Cohesion: 0.67
 Nodes (0): 
 
 ### Community 40 - "Community 40"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): handleAddApplication(), showAlert()
 
 ### Community 41 - "Community 41"
 Cohesion: 0.67
-Nodes (3): Co-op Marketing Strategies, Membership Application Form, Interviewer's Guide
+Nodes (0): 
 
 ### Community 42 - "Community 42"
 Cohesion: 0.67
-Nodes (3): Meeting Minutes, Board of Directors, Fiduciary Duty
+Nodes (0): 
 
 ### Community 43 - "Community 43"
 Cohesion: 0.67
-Nodes (3): Checklist: Removal of Director, Notice: Removal of Director Meeting, Agenda: Removal of Director Meeting
+Nodes (0): 
 
 ### Community 44 - "Community 44"
 Cohesion: 0.67
-Nodes (3): Flowchart: Member Placed in Care Procedure, Flowchart: Member Death Procedure, Guidelines: Community Care Committee
+Nodes (3): Co-op Marketing Strategies, Membership Application Form, Interviewer's Guide
 
 ### Community 45 - "Community 45"
 Cohesion: 0.67
-Nodes (3): Policy: Parking, Rationale: Parking Policy Discussion Notes, Invitation: Town Hall Meeting (Parking Policy)
+Nodes (3): Meeting Minutes, Board of Directors, Fiduciary Duty
 
 ### Community 46 - "Community 46"
 Cohesion: 0.67
-Nodes (3): Pet Policy Sample, Pet Policy Rationale, Good Policies Guidelines
+Nodes (3): Checklist: Removal of Director, Notice: Removal of Director Meeting, Agenda: Removal of Director Meeting
 
 ### Community 47 - "Community 47"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (3): Flowchart: Member Placed in Care Procedure, Flowchart: Member Death Procedure, Guidelines: Community Care Committee
 
 ### Community 48 - "Community 48"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (3): Policy: Parking, Rationale: Parking Policy Discussion Notes, Invitation: Town Hall Meeting (Parking Policy)
 
 ### Community 49 - "Community 49"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (3): Pet Policy Sample, Pet Policy Rationale, Good Policies Guidelines
 
 ### Community 50 - "Community 50"
 Cohesion: 1.0
@@ -385,27 +387,27 @@ Nodes (0):
 
 ### Community 62 - "Community 62"
 Cohesion: 1.0
-Nodes (2): Seven Myths of Participation, Real Member Involvement
+Nodes (0): 
 
 ### Community 63 - "Community 63"
 Cohesion: 1.0
-Nodes (2): Sustainability Policy Principles, Sustainability Sample Actions
+Nodes (0): 
 
 ### Community 64 - "Community 64"
 Cohesion: 1.0
-Nodes (2): Record of Ballot - Removal of Director, Record of Ballot - Appeal of Termination
+Nodes (0): 
 
 ### Community 65 - "Community 65"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (2): Seven Myths of Participation, Real Member Involvement
 
 ### Community 66 - "Community 66"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (2): Sustainability Policy Principles, Sustainability Sample Actions
 
 ### Community 67 - "Community 67"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (2): Record of Ballot - Removal of Director, Record of Ballot - Appeal of Termination
 
 ### Community 68 - "Community 68"
 Cohesion: 1.0
@@ -449,144 +451,150 @@ Nodes (0):
 
 ### Community 78 - "Community 78"
 Cohesion: 1.0
-Nodes (1): PIPA Audit Program
+Nodes (0): 
 
 ### Community 79 - "Community 79"
 Cohesion: 1.0
-Nodes (1): PIPA Record Keeping Tips
+Nodes (0): 
 
 ### Community 80 - "Community 80"
 Cohesion: 1.0
-Nodes (1): Office of the Information and Privacy Commissioner (OIPC)
+Nodes (1): PIPA Audit Program
 
 ### Community 81 - "Community 81"
 Cohesion: 1.0
-Nodes (1): Meeting Chair
+Nodes (1): PIPA Record Keeping Tips
 
 ### Community 82 - "Community 82"
 Cohesion: 1.0
-Nodes (1): CHF BC Delegate
+Nodes (1): Office of the Information and Privacy Commissioner (OIPC)
 
 ### Community 83 - "Community 83"
 Cohesion: 1.0
-Nodes (1): Member Manual
+Nodes (1): Meeting Chair
 
 ### Community 84 - "Community 84"
 Cohesion: 1.0
-Nodes (1): Quorum
+Nodes (1): CHF BC Delegate
 
 ### Community 85 - "Community 85"
 Cohesion: 1.0
-Nodes (1): Member Complaint Form
+Nodes (1): Member Manual
 
 ### Community 86 - "Community 86"
 Cohesion: 1.0
-Nodes (1): Video Surveillance Discussion Notes
+Nodes (1): Quorum
 
 ### Community 87 - "Community 87"
+Cohesion: 1.0
+Nodes (1): Member Complaint Form
+
+### Community 88 - "Community 88"
+Cohesion: 1.0
+Nodes (1): Video Surveillance Discussion Notes
+
+### Community 89 - "Community 89"
 Cohesion: 1.0
 Nodes (1): Register of Directors
 
 ## Knowledge Gaps
 - **53 isolated node(s):** `Cooperative Association Act`, `Acknowledgement of Receipt of Rules and Occupancy Agreement`, `Accountability Principle`, `Consent Principle`, `PIPA Audit Program` (+48 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 47`** (2 nodes): `createQueryArraySetter()`, `App.tsx`
+- **Thin community `Community 50`** (2 nodes): `createQueryArraySetter()`, `App.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 48`** (2 nodes): `patch_api_coop.py`, `patch_api_file()`
+- **Thin community `Community 51`** (2 nodes): `patch_api_coop.py`, `patch_api_file()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 49`** (2 nodes): `patch_api_tenant.py`, `patch_api_file()`
+- **Thin community `Community 52`** (2 nodes): `patch_api_tenant.py`, `patch_api_file()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 50`** (2 nodes): `patch_server_coop.py`, `patch_server_file()`
+- **Thin community `Community 53`** (2 nodes): `patch_server_coop.py`, `patch_server_file()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 51`** (2 nodes): `HelpModal.tsx`, `goTo()`
+- **Thin community `Community 54`** (2 nodes): `HelpModal.tsx`, `goTo()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 52`** (2 nodes): `OracleAssistant.tsx`, `ask()`
+- **Thin community `Community 55`** (2 nodes): `OracleAssistant.tsx`, `ask()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 53`** (2 nodes): `ScrollToTop.tsx`, `ScrollToTop()`
+- **Thin community `Community 56`** (2 nodes): `ScrollToTop.tsx`, `ScrollToTop()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 54`** (2 nodes): `AnnouncementDetail()`, `AnnouncementDetail.tsx`
+- **Thin community `Community 57`** (2 nodes): `AnnouncementDetail()`, `AnnouncementDetail.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 55`** (2 nodes): `Communications.tsx`, `handleCreateAnnouncement()`
+- **Thin community `Community 58`** (2 nodes): `Communications.tsx`, `handleCreateAnnouncement()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 56`** (2 nodes): `Login.tsx`, `handleGoogleLogin()`
+- **Thin community `Community 59`** (2 nodes): `Login.tsx`, `handleGoogleLogin()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 57`** (2 nodes): `PolicyAssistant.tsx`, `PolicyAssistant()`
+- **Thin community `Community 60`** (2 nodes): `PolicyAssistant.tsx`, `PolicyAssistant()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 58`** (2 nodes): `seed.ts`, `main()`
+- **Thin community `Community 61`** (2 nodes): `seed.ts`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 59`** (2 nodes): `fix_db.mjs`, `main()`
+- **Thin community `Community 62`** (2 nodes): `fix_db.mjs`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 60`** (2 nodes): `fix_db_prisma.mjs`, `main()`
+- **Thin community `Community 63`** (2 nodes): `fix_db_prisma.mjs`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 61`** (2 nodes): `test_assistant_api.ts`, `testAssistant()`
+- **Thin community `Community 64`** (2 nodes): `test_assistant_api.ts`, `testAssistant()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 62`** (2 nodes): `Seven Myths of Participation`, `Real Member Involvement`
+- **Thin community `Community 65`** (2 nodes): `Seven Myths of Participation`, `Real Member Involvement`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (2 nodes): `Sustainability Policy Principles`, `Sustainability Sample Actions`
+- **Thin community `Community 66`** (2 nodes): `Sustainability Policy Principles`, `Sustainability Sample Actions`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 64`** (2 nodes): `Record of Ballot - Removal of Director`, `Record of Ballot - Appeal of Termination`
+- **Thin community `Community 67`** (2 nodes): `Record of Ballot - Removal of Director`, `Record of Ballot - Appeal of Termination`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 65`** (1 nodes): `compare_patch.py`
+- **Thin community `Community 68`** (1 nodes): `compare_patch.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 66`** (1 nodes): `index.tsx`
+- **Thin community `Community 69`** (1 nodes): `index.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 67`** (1 nodes): `patch_seed.py`
+- **Thin community `Community 70`** (1 nodes): `patch_seed.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 68`** (1 nodes): `prisma.config.ts`
+- **Thin community `Community 71`** (1 nodes): `prisma.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 69`** (1 nodes): `vite.config.ts`
+- **Thin community `Community 72`** (1 nodes): `vite.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 70`** (1 nodes): `AppAlert.tsx`
+- **Thin community `Community 73`** (1 nodes): `AppAlert.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 71`** (1 nodes): `FilterBar.tsx`
+- **Thin community `Community 74`** (1 nodes): `FilterBar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 72`** (1 nodes): `ProfileModal.tsx`
+- **Thin community `Community 75`** (1 nodes): `ProfileModal.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 73`** (1 nodes): `RichTextEditor.tsx`
+- **Thin community `Community 76`** (1 nodes): `RichTextEditor.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 74`** (1 nodes): `StatCard.tsx`
+- **Thin community `Community 77`** (1 nodes): `StatCard.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 75`** (1 nodes): `DashboardTileCatalog.tsx`
+- **Thin community `Community 78`** (1 nodes): `DashboardTileCatalog.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 76`** (1 nodes): `Notifications.tsx`
+- **Thin community `Community 79`** (1 nodes): `Notifications.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 77`** (1 nodes): `geminiService.ts`
+- **Thin community `Community 80`** (1 nodes): `PIPA Audit Program`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 78`** (1 nodes): `PIPA Audit Program`
+- **Thin community `Community 81`** (1 nodes): `PIPA Record Keeping Tips`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (1 nodes): `PIPA Record Keeping Tips`
+- **Thin community `Community 82`** (1 nodes): `Office of the Information and Privacy Commissioner (OIPC)`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 80`** (1 nodes): `Office of the Information and Privacy Commissioner (OIPC)`
+- **Thin community `Community 83`** (1 nodes): `Meeting Chair`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 81`** (1 nodes): `Meeting Chair`
+- **Thin community `Community 84`** (1 nodes): `CHF BC Delegate`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (1 nodes): `CHF BC Delegate`
+- **Thin community `Community 85`** (1 nodes): `Member Manual`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 83`** (1 nodes): `Member Manual`
+- **Thin community `Community 86`** (1 nodes): `Quorum`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 84`** (1 nodes): `Quorum`
+- **Thin community `Community 87`** (1 nodes): `Member Complaint Form`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (1 nodes): `Member Complaint Form`
+- **Thin community `Community 88`** (1 nodes): `Video Surveillance Discussion Notes`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 86`** (1 nodes): `Video Surveillance Discussion Notes`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 87`** (1 nodes): `Register of Directors`
+- **Thin community `Community 89`** (1 nodes): `Register of Directors`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `isDemoMode()` connect `Community 3` to `Community 8`, `Community 1`, `Community 4`, `Community 5`?**
-  _High betweenness centrality (0.172) - this node is a cross-community bridge._
-- **Why does `handleViewDoc()` connect `Community 1` to `Community 12`?**
-  _High betweenness centrality (0.080) - this node is a cross-community bridge._
-- **Why does `recordTutorialEvent()` connect `Community 12` to `Community 1`, `Community 2`?**
-  _High betweenness centrality (0.079) - this node is a cross-community bridge._
+- **Why does `isDemoMode()` connect `Community 6` to `Community 8`, `Community 11`, `Community 3`, `Community 0`?**
+  _High betweenness centrality (0.124) - this node is a cross-community bridge._
+- **Why does `recordTutorialEvent()` connect `Community 6` to `Community 0`, `Community 1`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `isDemoMode()` connect `Community 3` to `Community 8`, `Community 0`, `Community 11`, `Community 7`?**
+  _High betweenness centrality (0.058) - this node is a cross-community bridge._
 - **Are the 6 inferred relationships involving `normalizeDashboardPreference()` (e.g. with `fetchDashboardPreference()` and `saveDashboardPreference()`) actually correct?**
   _`normalizeDashboardPreference()` has 6 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 2 inferred relationships involving `persistUpdate()` (e.g. with `isDemoMode()` and `isDemoMode()`) actually correct?**
+  _`persistUpdate()` has 2 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 7 inferred relationships involving `isDemoMode()` (e.g. with `fetchDashboardPreference()` and `saveDashboardPreference()`) actually correct?**
+  _`isDemoMode()` has 7 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 6 inferred relationships involving `isDemoMode()` (e.g. with `fetchDashboardPreference()` and `saveDashboardPreference()`) actually correct?**
   _`isDemoMode()` has 6 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `Cooperative Association Act`, `Acknowledgement of Receipt of Rules and Occupancy Agreement`, `Accountability Principle` to the rest of the system?**
-  _53 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.06 - nodes in this community are weakly interconnected._

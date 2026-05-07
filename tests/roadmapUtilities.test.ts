@@ -260,6 +260,14 @@ test('oracle prompt tells gemini to answer from partial usable records', () => {
   assert.match(apiSource, /Only mention a failed lookup when no usable records/);
 });
 
+test('oracle routes have bounded tool loops and local fallback answers', () => {
+  const apiSource = readFileSync(new URL('../api/index.ts', import.meta.url), 'utf8');
+
+  assert.match(apiSource, /const MAX_CALLS = 3/);
+  assert.match(apiSource, /createOracleAnswerFromToolResults/);
+  assert.match(apiSource, /responseText \|\| fallbackAnswer/);
+});
+
 test('oracle database search can use committees and announcements as context', async () => {
   const fakePrisma = {
     building: { findMany: async () => [] },

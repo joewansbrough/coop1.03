@@ -1586,6 +1586,49 @@ const parseJsonResponse = (text: string, fallback: any = {}) => {
   }
 };
 
+const asArray = (value: any) => Array.isArray(value) ? value : [];
+
+const createOracleAnswerFromToolResults = (question: string, toolResponses: any[], fallbackAnswer: string) => {
+  const normalizedQuestion = String(question || '').toLowerCase();
+  const results = toolResponses
+    .map(item => item?.functionResponse?.response?.result)
+    .filter(Boolean);
+  const committees = results.flatMap(result => asArray(result.committees || result));
+  const announcements = results.flatMap(result => [
+    ...asArray(result.announcements),
+    ...asArray(result.documentAnnouncements),
+    ...(Array.isArray(result) ? result.filter((item: any) => item?.title && item?.content) : []),
+  ]);
+  const documents = results.flatMap(result => [
+    ...asArray(result.documents),
+    ...(Array.isArray(result) ? result.filter((item: any) => item?.documentTitle || item?.title) : []),
+  ]);
+
+  if (normalizedQuestion.includes('committee') && normalizedQuestion.includes('chair')) {
+    const target = committees.find((committee: any) => {
+      const name = String(committee?.name || '').toLowerCase();
+      return normalizedQuestion.split(/\s+/).some(word => word.length > 3 && name.includes(word));
+    }) || committees.find((committee: any) => committee?.chair);
+    if (target?.name && target?.chair) {
+      return `${target.chair} is listed as the chair of the ${target.name}.`;
+    }
+  }
+
+  const policyMatches = [...announcements, ...documents].filter((item: any) => {
+    const searchable = `${item?.title || item?.documentTitle || ''} ${item?.content || item?.text || ''}`.toLowerCase();
+    return normalizedQuestion.split(/\s+/).some(word => word.length > 3 && searchable.includes(word));
+  });
+  const bestPolicyMatch = policyMatches[0];
+  if (bestPolicyMatch) {
+    const title = bestPolicyMatch.title || bestPolicyMatch.documentTitle || 'A matching co-op record';
+    const content = String(bestPolicyMatch.content || bestPolicyMatch.text || '').trim();
+    const sentence = content.split(/(?<=[.!?])\s+/)[0] || content.slice(0, 180);
+    return sentence ? `${title}: ${sentence}` : `${title} appears to be the most relevant co-op record.`;
+  }
+
+  return fallbackAnswer;
+};
+
 app.post('/api/ai/triage', requireAuth, async (req, res) => {
   try {
     const { description, visualDescription } = req.body;
@@ -1874,7 +1917,8 @@ Member Question: ${question}`;
       let response = result.response;
       
       let callCount = 0;
-      const MAX_CALLS = 5;
+      const MAX_CALLS = 3;
+      const allToolResponses: any[] = [];
 
       while (response.functionCalls()?.length && callCount < MAX_CALLS) {
         callCount++;
@@ -1906,6 +1950,7 @@ Member Question: ${question}`;
         }
 
         if (toolResponses.length > 0) {
+          allToolResponses.push(...toolResponses);
           result = await chat.sendMessage(toolResponses);
           response = result.response;
         } else {
@@ -1913,9 +1958,15 @@ Member Question: ${question}`;
         }
       }
 
-      const parsed = parseJsonResponse(response.text(), { answer: response.text(), confidence: 0.85 });
+      const responseText = response.text();
+      const fallbackAnswer = createOracleAnswerFromToolResults(
+        question,
+        allToolResponses,
+        'I found some co-op records, but Gemini did not return a finished answer. Please try a more specific question.',
+      );
+      const parsed = parseJsonResponse(responseText, { answer: responseText || fallbackAnswer, confidence: responseText ? 0.85 : 0.65 });
       return {
-        answer: parsed.answer || response.text(),
+        answer: parsed.answer || responseText || fallbackAnswer,
         citations: [],
         language: normalizedLanguage,
         confidence: parsed.confidence || 0.85,
@@ -2009,7 +2060,8 @@ Member Question: ${question}`;
       
       // Loop to handle tool calls
       let callCount = 0;
-      const MAX_CALLS = 5;
+      const MAX_CALLS = 3;
+      const allToolResponses: any[] = [];
 
       while (response.functionCalls()?.length && callCount < MAX_CALLS) {
         callCount++;
@@ -2051,6 +2103,7 @@ Member Question: ${question}`;
         }
 
         if (toolResponses.length > 0) {
+          allToolResponses.push(...toolResponses);
           result = await chat.sendMessage(toolResponses);
           response = result.response;
         } else {
@@ -2061,8 +2114,13 @@ Member Question: ${question}`;
       // Safety check for empty text (e.g. if loop hit limit and model didn't provide final text)
       const responseText = response.text();
       if (!responseText) {
+        const fallbackAnswer = createOracleAnswerFromToolResults(
+          question,
+          allToolResponses,
+          'I gathered some data but was unable to formulate a complete answer in time. Please try a more specific question.',
+        );
         return {
-          answer: "I gathered some data but was unable to formulate a complete answer in time. Please try a more specific question.",
+          answer: fallbackAnswer,
           confidence: 0.5,
           intent: "general"
         };
