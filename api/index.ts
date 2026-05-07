@@ -30,13 +30,26 @@ const upload = multer({
 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
-const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 const STABLE_GEMINI_FALLBACK_MODELS = [
   DEFAULT_GEMINI_MODEL,
-  'gemini-2.5-flash',
-  'gemini-2.5-pro',
+  'gemini-3.1-flash',
   'gemini-2.0-flash',
+  'gemini-1.5-flash',
 ];
+
+const AI_TIMEOUT_MS = 5000; // 5 seconds target
+
+/**
+ * Helper to run a promise with a timeout
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label = 'Operation'): Promise<T> {
+  let timeoutId: any;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+}
 
 // Dynamic model registry
 let activeModels: string[] = [...STABLE_GEMINI_FALLBACK_MODELS]; // Hard fallback
