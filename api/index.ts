@@ -1848,7 +1848,8 @@ Reasoning:
 - For policy questions, use search_coop_knowledge first; it searches document text and announcements together.
 - Chain tools when needed, for example committee -> chair/member -> tenant -> unit.
 - Prefer specific filtered calls over broad calls.
-- If a tool returns an error, briefly name which lookup failed and include the practical next step.
+- If a tool returns usable records plus errors, answer from the usable records and do not say the tool failed.
+- Only mention a failed lookup when no usable records were returned for the member's question.
 Role: ${demoRole} (Demo Mode, isAdmin: ${isDemoAdmin}).
 Page context: ${pageContext || 'none'}.
 
@@ -1981,7 +1982,8 @@ Reasoning:
 - For policy questions, use search_coop_knowledge first; it searches document text and announcements together.
 - Chain tools when needed, for example committee -> chair/member -> tenant -> unit.
 - Prefer specific filtered calls over broad calls.
-- If a tool returns an error, briefly name which lookup failed and include the practical next step.
+- If a tool returns usable records plus errors, answer from the usable records and do not say the tool failed.
+- Only mention a failed lookup when no usable records were returned for the member's question.
 Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
 Page context: ${pageContext || 'none'}.
 

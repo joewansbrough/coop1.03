@@ -439,13 +439,17 @@ export const oracleTools = {
       settledValue('announcements', oracleTools.get_announcements(context, { query, limit })),
     ]);
 
+    const documents = Array.isArray(documentsResult.value) ? documentsResult.value : [];
+    const announcements = Array.isArray(announcementsResult.value) ? announcementsResult.value : [];
+    const errors = [documentsResult, announcementsResult]
+      .filter(result => result.error)
+      .map(result => ({ source: result.label, error: result.error }));
+
     return {
       query,
-      documents: Array.isArray(documentsResult.value) ? documentsResult.value : [],
-      announcements: Array.isArray(announcementsResult.value) ? announcementsResult.value : [],
-      errors: [documentsResult, announcementsResult]
-        .filter(result => result.error)
-        .map(result => ({ source: result.label, error: result.error })),
+      documents,
+      announcements,
+      errors: documents.length || announcements.length ? [] : errors,
     };
   },
 
@@ -471,6 +475,26 @@ export const oracleTools = {
     const valueFor = (label: string) => byLabel[label]?.value || [];
     const knowledge = valueFor('knowledge') as any;
 
+    const errors = results
+      .filter(result => result.error)
+      .map(result => ({ source: result.label, error: result.error }));
+    const searchableGroups = [
+      valueFor('buildings'),
+      valueFor('units'),
+      valueFor('tenants'),
+      valueFor('maintenanceRequests'),
+      valueFor('scheduledMaintenance'),
+      valueFor('notifications'),
+      valueFor('announcements'),
+      knowledge.documents || [],
+      knowledge.announcements || [],
+      valueFor('events'),
+      valueFor('committees'),
+      valueFor('meetingMinutes'),
+      valueFor('meetingAnalyses'),
+    ];
+    const hasUsableRecords = searchableGroups.some(group => Array.isArray(group) && group.length > 0);
+
     return {
       query,
       access: privileged ? 'privileged' : 'member-scoped',
@@ -487,9 +511,7 @@ export const oracleTools = {
       committees: valueFor('committees'),
       meetingMinutes: valueFor('meetingMinutes'),
       meetingAnalyses: valueFor('meetingAnalyses'),
-      errors: results
-        .filter(result => result.error)
-        .map(result => ({ source: result.label, error: result.error })),
+      errors: hasUsableRecords ? [] : errors,
     };
   },
 

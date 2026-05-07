@@ -253,6 +253,13 @@ test('oracle knowledge search returns announcements even if document search fail
   assert.equal(result.errors.length, 0);
 });
 
+test('oracle prompt tells gemini to answer from partial usable records', () => {
+  const apiSource = readFileSync(new URL('../api/index.ts', import.meta.url), 'utf8');
+
+  assert.match(apiSource, /answer from the usable records/);
+  assert.match(apiSource, /Only mention a failed lookup when no usable records/);
+});
+
 test('oracle database search can use committees and announcements as context', async () => {
   const fakePrisma = {
     building: { findMany: async () => [] },
