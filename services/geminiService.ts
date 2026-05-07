@@ -1,30 +1,26 @@
 // All Gemini calls go through the backend API to keep the API key server-side
 
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
-import { createDemoOracleResponse, createOracleFallbackResponse } from '../utils/oracle.js';
 
 const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
 
 export const geminiService = {
   async triageMaintenanceRequest(description: string, visualDescription?: string) {
-    try {
-      const res = await fetch('/api/ai/triage', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description, visualDescription }),
-      });
-      if (!res.ok) return createMaintenanceTriage({});
-      return await res.json();
-    } catch {
-      return createMaintenanceTriage({});
-    }
+    const res = await fetch(isDemoMode() ? '/api/ai/triage-demo' : '/api/ai/triage', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description, visualDescription }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to triage maintenance request with Gemini');
+    return createMaintenanceTriage(data);
   },
 
   async describeMaintenanceImage(file: File) {
     const formData = new FormData();
     formData.append('image', file);
-    const res = await fetch('/api/ai/maintenance-image-description', {
+    const res = await fetch(isDemoMode() ? '/api/ai/maintenance-image-description-demo' : '/api/ai/maintenance-image-description', {
       method: 'POST',
       credentials: 'include',
       body: formData,
@@ -52,23 +48,15 @@ export const geminiService = {
   },
 
   async askOracle(question: string, language: string, pageContext?: string) {
-    if (isDemoMode()) return createDemoOracleResponse(question, language);
-
-    try {
-      const res = await fetch('/api/oracle/query', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, language, pageContext }),
-      });
-      const data = await res.json();
-      if (res.status === 401 && isDemoMode()) return createDemoOracleResponse(question, language);
-      if (!res.ok && data.answer) return data;
-      if (!res.ok) throw new Error(data.error || 'Failed to query Oracle');
-      return data;
-    } catch {
-      return createOracleFallbackResponse(question, language);
-    }
+    const res = await fetch(isDemoMode() ? '/api/oracle/query-demo' : '/api/oracle/query', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, language, pageContext }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to query Oracle with Gemini');
+    return data;
   },
 
   async analyzeMeetingNotes(rawNotes: string, meetingId?: string, meetingType?: string) {
@@ -98,17 +86,14 @@ export const geminiService = {
   },
 
   async summarizeAndTag(content: string) {
-    try {
-      const res = await fetch('/api/ai/summarize', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      });
-      if (!res.ok) return { summary: '', tags: [] };
-      return await res.json();
-    } catch {
-      return { summary: '', tags: [] };
-    }
+    const res = await fetch(isDemoMode() ? '/api/ai/summarize-demo' : '/api/ai/summarize', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to summarize document with Gemini');
+    return data;
   },
 };

@@ -16,7 +16,7 @@ import {
 } from '../services/dashboardPreferenceStore.js';
 import { type DashboardRole } from '../utils/dashboardPreferences.js';
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
-import { createOracleFallbackResponse, detectOracleIntent, normalizeOracleLanguage } from '../utils/oracle.js';
+import { detectOracleIntent, normalizeOracleLanguage } from '../utils/oracle.js';
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 
 
@@ -1505,7 +1505,40 @@ app.post('/api/ai/triage', requireAuth, async (req, res) => {
     const response = await result.response;
     res.json(createMaintenanceTriage(parseJsonResponse(response.text(), {})));
   } catch (e: any) {
-    res.status(500).json({ ...createMaintenanceTriage({}), error: e.message });
+    res.status(500).json({ error: `Gemini maintenance triage failed: ${e.message}` });
+  }
+});
+
+app.post('/api/ai/triage-demo', async (req, res) => {
+  try {
+    const { description, visualDescription } = req.body;
+    if (!description || String(description).trim().length < 10) {
+      return res.status(400).json({ error: 'A detailed description is required.' });
+    }
+    const model = getAI().getGenerativeModel({
+      model: DEFAULT_GEMINI_MODEL,
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            priority: { type: SchemaType.STRING },
+            urgency: { type: SchemaType.STRING },
+            category: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+            residentTip: { type: SchemaType.STRING },
+            confidence: { type: SchemaType.NUMBER },
+            safetyWarning: { type: SchemaType.STRING },
+            reasoning: { type: SchemaType.STRING },
+          },
+          required: ['priority', 'urgency', 'category', 'residentTip', 'confidence']
+        }
+      }
+    });
+    const result = await model.generateContent(`Evaluate this BC housing co-op maintenance request. Return JSON only. Categories must be from Plumbing, Electrical, Structural, Appliance, HVAC, Exterior, Safety, Other. Priority and urgency must be Low, Medium, High, or Emergency. Provide a short residentTip that is helpful but does not diagnose beyond the evidence. Description: "${description}"${visualDescription ? `\nPhoto description: "${visualDescription}"` : ''}`);
+    const response = await result.response;
+    res.json(createMaintenanceTriage(parseJsonResponse(response.text(), {})));
+  } catch (e: any) {
+    res.status(500).json({ error: `Gemini maintenance triage failed: ${e.message}` });
   }
 });
 
@@ -1551,6 +1584,38 @@ app.post('/api/ai/maintenance-image-description', requireAuth, upload.single('im
   }
 });
 
+app.post('/api/ai/maintenance-image-description-demo', upload.single('image'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'An image upload is required.' });
+    const model = getAI().getGenerativeModel({
+      model: DEFAULT_GEMINI_MODEL,
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const result = await model.generateContent([
+      {
+        text: 'Describe this maintenance photo for a visually impaired resident. Return JSON with visualDescription, observedDamage, likelyCategory, safetyConcerns, confidence. Do not identify people or private documents.',
+      },
+      {
+        inlineData: {
+          data: file.buffer.toString('base64'),
+          mimeType: file.mimetype,
+        },
+      },
+    ]);
+    const response = await result.response;
+    res.json(parseJsonResponse(response.text(), {
+      visualDescription: '',
+      observedDamage: '',
+      likelyCategory: 'Other',
+      safetyConcerns: '',
+      confidence: 0,
+    }));
+  } catch (e: any) {
+    res.status(500).json({ error: `Gemini maintenance image analysis failed: ${e.message}` });
+  }
+});
+
 app.post('/api/ai/policy', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
@@ -1568,6 +1633,37 @@ app.post('/api/ai/policy', requireAuth, async (req, res) => {
       answer: 'Unable to answer at this time. Please contact the board.',
       error: e.message
     });
+  }
+});
+
+app.post('/api/oracle/query-demo', async (req, res) => {
+  const { question, language, pageContext } = req.body;
+  if (!question || String(question).trim().length < 2) return res.status(400).json({ error: 'Question is required.' });
+  const normalizedLanguage = normalizeOracleLanguage(language);
+  const intent = detectOracleIntent(question);
+  try {
+    const model = getAI().getGenerativeModel({
+      model: DEFAULT_GEMINI_MODEL,
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const demoContext = [
+      '[Demo Co-op Policy Guide] Hallways and exits should be kept clear for accessibility, fire safety, and emergency access.',
+      '[Demo Co-op Policy Guide] Maintenance concerns should be submitted as formal maintenance requests so the co-op can track priority, location, and follow-up.',
+      '[Demo Co-op Policy Guide] Members may usually join committees by contacting the chair or board and attending committee meetings.',
+      '[Demo Co-op Policy Guide] Guest stays and pet rules should be verified against the current occupancy agreement and board policies.',
+    ].join('\n\n');
+    const result = await model.generateContent(`You are the Co-op Oracle for a BC housing co-op demo environment. Answer in ${normalizedLanguage}. Use the provided demo co-op policy context first and cite document titles. If context is insufficient, say so and suggest checking with the board. Return JSON with answer, confidence. Intent: ${intent.intent}. Page context: ${pageContext || 'none'}.\n\nDocuments:\n${demoContext}\n\nQuestion: ${question}`);
+    const response = await result.response;
+    const parsed = parseJsonResponse(response.text(), {});
+    res.json({
+      answer: parsed.answer || response.text() || '',
+      citations: [{ title: 'Demo Co-op Policy Guide' }],
+      language: normalizedLanguage,
+      confidence: Number(parsed.confidence ?? 0.65),
+      ...intent,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: `Gemini Oracle query failed: ${e.message}` });
   }
 });
 
@@ -1627,7 +1723,6 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
     });
     res.json(oracleResponse);
   } catch (e: any) {
-    const fallback = createOracleFallbackResponse(question, normalizedLanguage);
     if (coopId) {
       await p.policyAssistantQuery.create({
         data: {
@@ -1635,16 +1730,16 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
           userId: user?.email || 'unknown',
           question,
           retrievedChunks: [],
-          answer: fallback.answer,
+          answer: '',
           citations: [],
-          language: fallback.language,
-          intent: fallback.intent,
-          suggestedAction: fallback.suggestedAction ? JSON.parse(JSON.stringify(fallback.suggestedAction)) : undefined,
+          language: normalizedLanguage,
+          intent: intent.intent,
+          suggestedAction: intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined,
           latencyMs: Date.now() - startedAt,
         },
       }).catch(() => undefined);
     }
-    res.status(500).json({ ...fallback, error: e.message });
+    res.status(500).json({ error: `Gemini Oracle query failed: ${e.message}` });
   }
 });
 
@@ -1824,6 +1919,21 @@ app.post('/api/ai/summarize', requireAuth, async (req, res) => {
     res.json(JSON.parse(response.text() || '{"summary": "", "tags": []}'));
   } catch (e: any) {
     res.status(500).json({ summary: '', tags: [], error: e.message });
+  }
+});
+
+app.post('/api/ai/summarize-demo', async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content || String(content).trim().length < 20) {
+      return res.status(400).json({ error: 'Document content is required.' });
+    }
+    const model = getAI().getGenerativeModel({ model: DEFAULT_GEMINI_MODEL });
+    const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm"). Return JSON only with summary and tags.\n\nContent: ${String(content).substring(0, 5000)}`);
+    const response = await result.response;
+    res.json(parseJsonResponse(response.text(), { summary: '', tags: [] }));
+  } catch (e: any) {
+    res.status(500).json({ error: `Gemini document summary failed: ${e.message}` });
   }
 });
 

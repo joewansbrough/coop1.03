@@ -91,6 +91,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       if (result.residentTip) setResidentTip(result.residentTip);
     } catch (err) {
       console.error(err);
+      showAlert('Gemini could not triage this request. You can still submit it manually.', 'error');
     } finally {
       setLoading(false);
     }

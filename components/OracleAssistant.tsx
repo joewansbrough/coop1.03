@@ -32,9 +32,17 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: question }]);
     setIsLoading(true);
-    const response = await geminiService.askOracle(question, language, typeof window !== 'undefined' ? window.location.hash : '');
-    setMessages(prev => [...prev, { role: 'assistant', content: response.answer, response }]);
-    setIsLoading(false);
+    try {
+      const response = await geminiService.askOracle(question, language, typeof window !== 'undefined' ? window.location.hash : '');
+      setMessages(prev => [...prev, { role: 'assistant', content: response.answer, response }]);
+    } catch (error: any) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: error.message || 'The Oracle could not reach Gemini. Please try again.',
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const panel = (
