@@ -559,6 +559,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
           {minutesPanelMode === 'form' ? (
             <MinutesBuilder
               meetingId={event.id}
+              event={event}
               initialData={meetingMinutes}
               documents={documents}
               setDocuments={setDocuments}
