@@ -38,7 +38,8 @@ const STABLE_GEMINI_FALLBACK_MODELS = [
   'gemini-1.5-flash',
 ];
 
-const AI_TIMEOUT_MS = 5000; // 5 seconds target
+const AI_INITIAL_TIMEOUT_MS = 4000; // First call should be fast
+const AI_TOOL_TIMEOUT_MS = 3500;    // Tool calls give more room but still capped
 
 /**
  * Helper to run a promise with a timeout
@@ -144,7 +145,8 @@ async function withAiFallback<T>(
         err.message?.includes('503') || 
         err.message?.includes('429') || 
         err.message?.includes('high demand') ||
-        err.message?.includes('overloaded');
+        err.message?.includes('overloaded') ||
+        err.message?.includes('timed out');
       
       if ((isTransient || isModelUnavailable) && modelName !== modelsToTry[modelsToTry.length - 1]) {
         console.warn(`[AI Fallback] Model ${modelName} failed (${err.message}). Trying next model...`);
@@ -1962,7 +1964,7 @@ Return JSON:
 
 Member Question: ${question}`;
 
-      let result = await chat.sendMessage(prompt);
+      let result = await withTimeout(chat.sendMessage(prompt), AI_INITIAL_TIMEOUT_MS, 'Demo Initial sendMessage');
       let response = result.response;
       
       let callCount = 0;
@@ -2006,7 +2008,7 @@ Member Question: ${question}`;
 
         if (toolResponses.length > 0) {
           allToolResponses.push(...toolResponses);
-          result = await withTimeout(chat.sendMessage(toolResponses), AI_TIMEOUT_MS, `Demo ToolResponse turn ${callCount}`);
+          result = await withTimeout(chat.sendMessage(toolResponses), AI_TOOL_TIMEOUT_MS, `Demo ToolResponse turn ${callCount}`);
           response = result.response;
         } else {
           break;
@@ -2119,7 +2121,7 @@ Return JSON:
 
 Member Question: ${question}`;
 
-      let result = await withTimeout(chat.sendMessage(prompt), AI_TIMEOUT_MS, 'Initial sendMessage');
+      let result = await withTimeout(chat.sendMessage(prompt), AI_INITIAL_TIMEOUT_MS, 'Initial sendMessage');
       let response = result.response;
       
       // Loop to handle tool calls - optimized for parallel execution
@@ -2168,7 +2170,7 @@ Member Question: ${question}`;
 
         if (toolResponses.length > 0) {
           allToolResponses.push(...toolResponses);
-          result = await withTimeout(chat.sendMessage(toolResponses), AI_TIMEOUT_MS, `ToolResponse turn ${callCount}`);
+          result = await withTimeout(chat.sendMessage(toolResponses), AI_TOOL_TIMEOUT_MS, `ToolResponse turn ${callCount}`);
           response = result.response;
         } else {
           break;
