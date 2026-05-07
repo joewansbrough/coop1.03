@@ -96,6 +96,8 @@ test('oracle tool registry covers the co-op database models', () => {
     'get_document_ingestion_jobs',
     'get_document_access_logs',
     'get_document_chunks',
+    'search_coop_knowledge',
+    'search_coop_database',
     'get_events',
     'get_committees',
     'get_meeting_minutes',
@@ -181,6 +183,87 @@ test('demo oracle uses the effective demo user role instead of hardcoded member 
   assert.doesNotMatch(demoRoute, /userEmail:\s*'demo@example\.com'/);
   assert.doesNotMatch(demoRoute, /role:\s*'MEMBER'/);
   assert.doesNotMatch(demoRoute, /isAdmin:\s*false/);
+});
+
+test('oracle route passes empty args for no-argument tool calls', () => {
+  const apiSource = readFileSync(new URL('../api/index.ts', import.meta.url), 'utf8');
+  const toolCalls = apiSource.match(/toolHandler as any\)\(toolContext, call\.args \|\| \{\}\)/g) || [];
+
+  assert.equal(toolCalls.length >= 2, true);
+});
+
+test('oracle knowledge search includes announcements for policy questions', async () => {
+  const calls: any[] = [];
+  const fakePrisma = {
+    documentChunk: {
+      findMany: async () => [],
+    },
+    document: {
+      findMany: async () => [],
+    },
+    announcement: {
+      findMany: async (args: any) => {
+        calls.push(args);
+        return [{ title: 'New Pet Policy Adopted', content: 'The new rules regarding pet size and registration are now in effect.' }];
+      },
+    },
+  };
+
+  const result = await oracleTools.search_coop_knowledge({
+    prisma: fakePrisma as any,
+    cooperativeId: 'coop-1',
+    userId: 't1',
+    userEmail: 'member@example.com',
+    role: 'MEMBER',
+    isAdmin: false,
+  }, { query: 'pet policy' });
+
+  assert.equal(result.announcements[0].title, 'New Pet Policy Adopted');
+  assert.equal(calls[0].where.cooperativeId, 'coop-1');
+});
+
+test('oracle database search can use committees and announcements as context', async () => {
+  const fakePrisma = {
+    building: { findMany: async () => [] },
+    unit: { findMany: async () => [] },
+    tenant: {
+      findUnique: async () => ({ unitId: 'u1' }),
+      findMany: async () => [],
+    },
+    maintenanceRequest: { findMany: async () => [] },
+    scheduledMaintenance: { findMany: async () => [] },
+    notification: { findMany: async () => [] },
+    announcement: {
+      findMany: async () => [{ title: 'New Pet Policy Adopted', content: 'Pet registration rules are now in effect.' }],
+    },
+    documentChunk: { findMany: async () => [] },
+    document: { findMany: async () => [] },
+    coopEvent: { findMany: async () => [] },
+    committee: {
+      findMany: async () => [{
+        id: 'c5',
+        name: 'Social Committee',
+        description: 'Organizes community events.',
+        chair: 'Wei Liu',
+        members: [],
+        events: [],
+      }],
+    },
+    meetingMinutes: { findMany: async () => [] },
+    meetingAnalysis: { findMany: async () => [] },
+  };
+
+  const result = await oracleTools.search_coop_database({
+    prisma: fakePrisma as any,
+    cooperativeId: 'coop-1',
+    userId: 't1',
+    userEmail: 'admin@example.com',
+    role: 'ADMIN',
+    isAdmin: true,
+  }, { query: 'social committee pet policy' });
+
+  assert.equal(result.committees[0].chair, 'Wei Liu');
+  assert.equal(result.announcements[0].title, 'New Pet Policy Adopted');
 });
 
 test('maintenance triage stores advisory AI metadata and flags risky suggestions for review', () => {

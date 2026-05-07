@@ -421,6 +421,70 @@ export const oracleTools = {
     return oracleTools.get_documents(context, { query: params.query, limit: params.limit || 5 });
   },
 
+  search_coop_knowledge: async (context: ToolContext, params: { query: string; limit?: number }) => {
+    const limit = limitFor(params.limit || 8);
+    const [documents, announcements] = await Promise.all([
+      oracleTools.search_documents(context, { query: params.query, limit }),
+      oracleTools.get_announcements(context, { query: params.query, limit }),
+    ]);
+
+    return {
+      query: params.query,
+      documents: Array.isArray(documents) ? documents : [],
+      announcements: Array.isArray(announcements) ? announcements : [],
+    };
+  },
+
+  search_coop_database: async (context: ToolContext, params: { query: string; limit?: number }) => {
+    const limit = Math.min(limitFor(params.limit || 5), 10);
+    const privileged = canUsePrivilegedOracleTools(context);
+    const [
+      buildings,
+      units,
+      tenants,
+      maintenanceRequests,
+      scheduledMaintenance,
+      notifications,
+      announcements,
+      knowledge,
+      events,
+      committees,
+      meetingMinutes,
+      meetingAnalyses,
+    ] = await Promise.all([
+      oracleTools.get_buildings(context, { query: params.query, limit }),
+      oracleTools.get_units(context, { query: params.query, limit }),
+      oracleTools.get_tenants(context, { query: params.query, limit }),
+      oracleTools.get_maintenance_requests(context, { query: params.query, limit }),
+      oracleTools.get_scheduled_maintenance(context, { limit }),
+      oracleTools.get_notifications(context, { type: params.query, limit }),
+      oracleTools.get_announcements(context, { query: params.query, limit }),
+      oracleTools.search_coop_knowledge(context, { query: params.query, limit }),
+      oracleTools.get_events(context, { query: params.query, limit }),
+      oracleTools.get_committees(context, { query: params.query, limit }),
+      privileged ? oracleTools.get_meeting_minutes(context, { limit }) : Promise.resolve([]),
+      privileged ? oracleTools.get_meeting_analyses(context, { limit }) : Promise.resolve([]),
+    ]);
+
+    return {
+      query: params.query,
+      access: privileged ? 'privileged' : 'member-scoped',
+      buildings,
+      units,
+      tenants,
+      maintenanceRequests,
+      scheduledMaintenance,
+      notifications,
+      announcements,
+      documents: knowledge.documents,
+      documentAnnouncements: knowledge.announcements,
+      events,
+      committees,
+      meetingMinutes,
+      meetingAnalyses,
+    };
+  },
+
   get_events: async (context: ToolContext, params: { query?: string; category?: string; committeeId?: string; upcomingOnly?: boolean; limit?: number }) => {
     const query = textFilter(params.query);
     return (context.prisma as any).coopEvent.findMany({
@@ -652,6 +716,14 @@ export const oracleToolDeclarations: ToolDeclaration[] = [
   }),
   declaration('search_documents', 'Search co-op documents and policy chunks by keyword.', {
     query: stringProp('Keyword or phrase to search for.'),
+    limit: commonFilters.limit,
+  }, ['query']),
+  declaration('search_coop_knowledge', 'Search policy-relevant co-op knowledge across document chunks, document records, and announcements.', {
+    query: stringProp('Keyword or phrase to search for.'),
+    limit: commonFilters.limit,
+  }, ['query']),
+  declaration('search_coop_database', 'Search the entire permission-accessible co-op database across records, documents, announcements, committees, events, maintenance, units, members, and meeting data.', {
+    query: stringProp('Keyword or phrase to search across the co-op database.'),
     limit: commonFilters.limit,
   }, ['query']),
   declaration('get_events', 'Get co-op events and meetings.', {

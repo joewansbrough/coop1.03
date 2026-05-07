@@ -1844,8 +1844,11 @@ Database coverage:
 
 Reasoning:
 - Use tools before answering factual questions about co-op records, policies, members, units, meetings, or maintenance.
+- For broad factual questions, use search_coop_database first so the whole permission-accessible database can inform the answer.
+- For policy questions, use search_coop_knowledge first; it searches document text and announcements together.
 - Chain tools when needed, for example committee -> chair/member -> tenant -> unit.
 - Prefer specific filtered calls over broad calls.
+- If a tool returns an error, briefly name which lookup failed and include the practical next step.
 Role: ${demoRole} (Demo Mode, isAdmin: ${isDemoAdmin}).
 Page context: ${pageContext || 'none'}.
 
@@ -1883,7 +1886,7 @@ Member Question: ${question}`;
           
           if (toolHandler) {
             try {
-              const toolResult = await (toolHandler as any)(toolContext, call.args);
+              const toolResult = await (toolHandler as any)(toolContext, call.args || {});
               toolResponses.push({
                 functionResponse: {
                   name: toolName,
@@ -1894,7 +1897,7 @@ Member Question: ${question}`;
               toolResponses.push({
                 functionResponse: {
                   name: toolName,
-                  response: { error: err.message }
+                  response: { error: err.message, toolName }
                 }
               });
             }
@@ -1974,8 +1977,11 @@ Database coverage:
 
 Reasoning:
 - Use tools before answering factual questions about co-op records, policies, members, units, meetings, or maintenance.
+- For broad factual questions, use search_coop_database first so the whole permission-accessible database can inform the answer.
+- For policy questions, use search_coop_knowledge first; it searches document text and announcements together.
 - Chain tools when needed, for example committee -> chair/member -> tenant -> unit.
 - Prefer specific filtered calls over broad calls.
+- If a tool returns an error, briefly name which lookup failed and include the practical next step.
 Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
 Page context: ${pageContext || 'none'}.
 
@@ -2015,7 +2021,7 @@ Member Question: ${question}`;
           if (toolHandler) {
             console.log(`[Oracle] Executing tool: ${toolName}`, call.args);
             try {
-              const toolResult = await (toolHandler as any)(toolContext, call.args);
+              const toolResult = await (toolHandler as any)(toolContext, call.args || {});
               toolResponses.push({
                 functionResponse: {
                   name: toolName,
@@ -2027,7 +2033,7 @@ Member Question: ${question}`;
               toolResponses.push({
                 functionResponse: {
                   name: toolName,
-                  response: { error: err.message }
+                  response: { error: err.message, toolName }
                 }
               });
             }
