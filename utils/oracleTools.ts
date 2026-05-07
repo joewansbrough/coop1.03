@@ -111,15 +111,23 @@ export const oracleTools = {
     
     const committees = await prisma.committee.findMany({
       where: { cooperativeId },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        chair: true,
+      include: {
+        members: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        }
       }
     });
     
-    return committees;
+    return committees.map(c => ({
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      chair: c.chair,
+      members: c.members.map(m => `${m.firstName} ${m.lastName}`)
+    }));
   },
 
   search_documents: async (context: ToolContext, params: { query: string }) => {

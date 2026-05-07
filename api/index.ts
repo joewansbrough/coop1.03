@@ -1678,33 +1678,98 @@ app.post('/api/ai/policy', requireAuth, async (req, res) => {
 });
 
 app.post('/api/oracle/query-demo', async (req, res) => {
+  const startedAt = Date.now();
   const { question, language, pageContext } = req.body;
   if (!question || String(question).trim().length < 2) return res.status(400).json({ error: 'Question is required.' });
   const normalizedLanguage = normalizeOracleLanguage(language);
   const intent = detectOracleIntent(question);
+  const p = getPrisma();
+
   try {
-    const model = getAI().getGenerativeModel({
+    // In demo mode, we use the first cooperative we find
+    const firstCoop = await p.cooperative.findFirst();
+    const coopId = firstCoop?.id || 'demo-coop-id';
+
+    // Demo Tool Context
+    const toolContext: ToolContext = {
+      prisma: p,
+      cooperativeId: coopId,
+      userId: 'demo-user-id',
+      userEmail: 'demo@example.com',
+      role: 'MEMBER',
+      isAdmin: false
+    };
+
+    const genAI = getAI();
+    const model = genAI.getGenerativeModel({
       model: DEFAULT_GEMINI_MODEL,
-      generationConfig: { responseMimeType: 'application/json' },
+      tools: [{ functionDeclarations: oracleToolDeclarations as any }]
     });
-    const demoContext = [
-      '[Demo Co-op Policy Guide] Hallways and exits should be kept clear for accessibility, fire safety, and emergency access.',
-      '[Demo Co-op Policy Guide] Maintenance concerns should be submitted as formal maintenance requests so the co-op can track priority, location, and follow-up.',
-      '[Demo Co-op Policy Guide] Members may usually join committees by contacting the chair or board and attending committee meetings.',
-      '[Demo Co-op Policy Guide] Guest stays and pet rules should be verified against the current occupancy agreement and board policies.',
-    ].join('\n\n');
-    const result = await model.generateContent(`You are the Co-op Oracle for a BC housing co-op demo environment. Answer in ${normalizedLanguage}. Use the provided demo co-op policy context first and cite document titles. If context is insufficient, say so and suggest checking with the board. Return JSON with answer, confidence. Intent: ${intent.intent}. Page context: ${pageContext || 'none'}.\n\nDocuments:\n${demoContext}\n\nQuestion: ${question}`);
-    const response = await result.response;
-    const parsed = parseJsonResponse(response.text(), {});
+
+    const chat = model.startChat();
+    
+    const prompt = `You are the Co-op Oracle for a BC housing co-op DEMO environment. Answer in ${normalizedLanguage}. 
+You have access to tools that can query the co-op database (maintenance, events, announcements, committees, documents, unit info).
+Always use these tools to answer accurately based on real data in the demo database.
+Role: MEMBER (Demo Mode).
+Page context: ${pageContext || 'none'}.
+
+Member Question: ${question}`;
+
+    let result = await chat.sendMessage(prompt);
+    let response = result.response;
+    
+    let callCount = 0;
+    const MAX_CALLS = 5;
+
+    while (response.functionCalls()?.length && callCount < MAX_CALLS) {
+      callCount++;
+      const toolCalls = response.functionCalls() || [];
+      const toolResponses = [];
+
+      for (const call of toolCalls) {
+        const toolName = call.name as keyof typeof oracleTools;
+        const toolHandler = oracleTools[toolName];
+        
+        if (toolHandler) {
+          try {
+            const toolResult = await (toolHandler as any)(toolContext, call.args);
+            toolResponses.push({
+              functionResponse: {
+                name: toolName,
+                response: { result: toolResult }
+              }
+            });
+          } catch (err: any) {
+            toolResponses.push({
+              functionResponse: {
+                name: toolName,
+                response: { error: err.message }
+              }
+            });
+          }
+        }
+      }
+
+      if (toolResponses.length > 0) {
+        result = await chat.sendMessage(toolResponses);
+        response = result.response;
+      } else {
+        break;
+      }
+    }
+
+    const answer = response.text();
     res.json({
-      answer: parsed.answer || response.text() || '',
-      citations: [{ title: 'Demo Co-op Policy Guide' }],
+      answer,
+      citations: [],
       language: normalizedLanguage,
-      confidence: Number(parsed.confidence ?? 0.65),
+      confidence: 0.85,
       ...intent,
     });
   } catch (e: any) {
-    res.status(500).json({ error: `Gemini Oracle query failed: ${e.message}` });
+    console.error(`[Oracle Demo Query Failure]: ${e.message}`, e);
+    res.status(500).json({ error: `Gemini Oracle demo query failed: ${e.message}` });
   }
 });
 
