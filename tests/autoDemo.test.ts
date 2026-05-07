@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   AUTO_DEMO_STOPS,
+  AUTO_DEMO_TIMING,
   getAutoDemoStop,
   getNextAutoDemoIndex,
   getPreviousAutoDemoIndex,
@@ -47,4 +48,10 @@ test('progress helpers clamp at tour boundaries', () => {
   assert.equal(getNextAutoDemoIndex(AUTO_DEMO_STOPS.length - 1), AUTO_DEMO_STOPS.length - 1);
   assert.equal(getPreviousAutoDemoIndex(1), 0);
   assert.equal(getPreviousAutoDemoIndex(0), 0);
+});
+
+test('uses a staged cursor reveal before opening the narration panel', () => {
+  assert.ok(AUTO_DEMO_TIMING.cursorTravelMs >= 1000);
+  assert.ok(AUTO_DEMO_TIMING.arrivalHoldMs >= 500);
+  assert.ok(AUTO_DEMO_TIMING.panelDelayMs >= AUTO_DEMO_TIMING.cursorTravelMs + AUTO_DEMO_TIMING.arrivalHoldMs);
 });

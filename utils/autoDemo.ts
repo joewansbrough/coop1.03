@@ -1,5 +1,12 @@
 export const AUTO_DEMO_STORAGE_KEY = 'auto_demo_active';
 
+export const AUTO_DEMO_TIMING = {
+  measureDelayMs: 450,
+  cursorTravelMs: 1200,
+  arrivalHoldMs: 650,
+  panelDelayMs: 1850,
+} as const;
+
 export type AutoDemoAction = 'next' | 'switch-role';
 
 export interface AutoDemoStop {

@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, MousePointer2, Pause, Play, X } from 'lucide-rea
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AUTO_DEMO_STOPS,
+  AUTO_DEMO_TIMING,
   getAutoDemoStop,
   getNextAutoDemoIndex,
   getPreviousAutoDemoIndex,
@@ -50,6 +51,8 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const [isPaused, setIsPaused] = useState(false);
   const [targetRect, setTargetRect] = useState<TargetRect>(emptyRect);
   const [targetFound, setTargetFound] = useState(false);
+  const [isPanelVisible, setIsPanelVisible] = useState(false);
+  const [hasCursorArrived, setHasCursorArrived] = useState(false);
   const stop = getAutoDemoStop(stepIndex);
 
   useEffect(() => {
@@ -81,7 +84,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           width: rect.width,
           height: rect.height,
         });
-      }, 280);
+      }, AUTO_DEMO_TIMING.measureDelayMs);
     };
 
     measure();
@@ -95,6 +98,24 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       window.removeEventListener('scroll', onScroll, true);
     };
   }, [isOpen, isPaused, location.pathname, location.search, stop]);
+
+  useEffect(() => {
+    if (!isOpen || !stop || isPaused) return;
+    setIsPanelVisible(false);
+    setHasCursorArrived(false);
+
+    const arrivalTimer = window.setTimeout(() => {
+      setHasCursorArrived(true);
+    }, AUTO_DEMO_TIMING.cursorTravelMs);
+    const panelTimer = window.setTimeout(() => {
+      setIsPanelVisible(true);
+    }, AUTO_DEMO_TIMING.panelDelayMs);
+
+    return () => {
+      window.clearTimeout(arrivalTimer);
+      window.clearTimeout(panelTimer);
+    };
+  }, [isOpen, isPaused, location.pathname, location.search, stepIndex, stop]);
 
   const cardPlacement = useMemo(() => {
     if (typeof window === 'undefined') return { left: 24, top: 24 };
@@ -125,28 +146,56 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[260]">
+      <style>{`
+        @keyframes auto-demo-arrival-ring {
+          0% { transform: scale(0.82); opacity: 0; }
+          22% { opacity: 0.92; }
+          100% { transform: scale(1.8); opacity: 0; }
+        }
+        @keyframes auto-demo-cursor-pop {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.16); }
+        }
+      `}</style>
       <div
-        className="absolute rounded-[28px] border-2 border-teal-300/90 shadow-[0_0_0_9999px_rgba(15,23,42,0.55),0_0_28px_rgba(20,184,166,0.55)] transition-all duration-500"
+        className={`absolute rounded-[28px] border-2 shadow-[0_0_0_9999px_rgba(15,23,42,0.55),0_0_28px_rgba(20,184,166,0.55)] transition-all ease-out ${hasCursorArrived ? 'border-teal-200/95' : 'border-teal-300/70'}`}
         style={{
           top: targetRect.top - 10,
           left: targetRect.left - 10,
           width: targetRect.width + 20,
           height: targetRect.height + 20,
+          transitionDuration: `${AUTO_DEMO_TIMING.cursorTravelMs}ms`,
         }}
       />
 
       <div
-        className="absolute text-teal-300 drop-shadow-[0_8px_18px_rgba(15,23,42,0.45)] transition-all duration-500"
-        style={{ left: cursorLeft, top: cursorTop }}
+        className="absolute text-teal-300 drop-shadow-[0_8px_18px_rgba(15,23,42,0.45)] transition-all ease-out"
+        style={{
+          left: cursorLeft,
+          top: cursorTop,
+          transitionDuration: `${AUTO_DEMO_TIMING.cursorTravelMs}ms`,
+          animation: hasCursorArrived ? 'auto-demo-cursor-pop 650ms ease-out' : undefined,
+        }}
         aria-hidden="true"
       >
+        {hasCursorArrived && (
+          <span
+            className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-teal-200"
+            style={{ animation: 'auto-demo-arrival-ring 900ms ease-out 2' }}
+          />
+        )}
         <MousePointer2 className="h-9 w-9 fill-white text-teal-500" />
       </div>
 
       <aside
-        className="pointer-events-auto absolute w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl dark:bg-slate-900"
-        style={{ left: cardPlacement.left, top: cardPlacement.top }}
+        className={`pointer-events-auto absolute w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl transition-all duration-500 dark:bg-slate-900 ${isPanelVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
+        style={{
+          left: cardPlacement.left,
+          top: cardPlacement.top,
+          pointerEvents: isPanelVisible ? 'auto' : 'none',
+        }}
         aria-live="polite"
+        aria-hidden={!isPanelVisible}
       >
         <div className="border-b border-slate-100 bg-slate-950 p-4 text-white dark:border-white/5">
           <div className="mb-3 flex items-center justify-between gap-3">
