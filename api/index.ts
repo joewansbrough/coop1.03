@@ -41,40 +41,60 @@ const STABLE_GEMINI_FALLBACK_MODELS = [
 // Dynamic model registry
 let activeModels: string[] = [...STABLE_GEMINI_FALLBACK_MODELS]; // Hard fallback
 let lastModelUpdate = 0;
+let modelRegistrySource: 'api' | 'fallback' = 'fallback';
+
+const normalizeGeminiModelName = (name: string) => name.replace(/^models\//, '');
+
+const rankGeminiModel = (model: string) => {
+  const name = model.toLowerCase();
+  let score = 0;
+  if (name.includes('gemini')) score += 10;
+  if (name.includes('flash-lite')) score += 70;
+  else if (name.includes('flash')) score += 60;
+  else if (name.includes('pro')) score += 45;
+  if (name.includes('preview') || name.includes('experimental')) score -= 10;
+  if (name.includes('latest')) score += 5;
+  return score;
+};
 
 /**
  * Programmatically discovers and prioritizes the best available Gemini models.
  */
 async function refreshModelRegistry() {
   try {
-    const genAI = getAI();
-    // listModels might not be available on all versions of the SDK or with all keys,
-    // so we wrap it and provide a robust sorted list based on known patterns.
-    const response = await (genAI as any).listModels?.() || { models: [] };
-    const available = response.models || [];
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) throw new Error('Gemini API_KEY is missing.');
+    const response = await axios.get('https://generativelanguage.googleapis.com/v1beta/models', {
+      headers: { 'x-goog-api-key': apiKey },
+      params: { pageSize: 1000 },
+      timeout: 5000,
+    });
+    const available = response.data?.models || [];
     
     if (available.length > 0) {
-      // Filter for generative models and sort by version (descending) and tier
       const validModels = available
-        .filter((m: any) => m.supportedGenerationMethods.includes('generateContent'))
-        .map((m: any) => m.name.replace('models/', ''))
-        .sort((a: string, b: string) => b.localeCompare(a)); // Higher versions usually come first alphabetically
+        .filter((m: any) => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+        .map((m: any) => normalizeGeminiModelName(String(m.name || '')))
+        .filter(Boolean)
+        .sort((a: string, b: string) => rankGeminiModel(b) - rankGeminiModel(a) || b.localeCompare(a));
       
-      // Prioritize "flash" for speed, then "pro"
-      const flashModels = validModels.filter((m: string) => m.includes('flash'));
-      const proModels = validModels.filter((m: string) => m.includes('pro'));
-      const others = validModels.filter((m: string) => !m.includes('flash') && !m.includes('pro'));
-      
-      activeModels = [...flashModels, ...proModels, ...others];
+      activeModels = Array.from(new Set([
+        ...validModels,
+        ...STABLE_GEMINI_FALLBACK_MODELS,
+      ]));
+      modelRegistrySource = 'api';
       console.log('[AI Registry] Discovered models:', activeModels);
     } else {
-      // If listModels fails or returns empty, use a curated 2026-forward list
       activeModels = [...STABLE_GEMINI_FALLBACK_MODELS];
+      modelRegistrySource = 'fallback';
       console.log('[AI Registry] Using curated fallback list:', activeModels);
     }
     lastModelUpdate = Date.now();
   } catch (err) {
     console.error('[AI Registry] Discovery failed, using current list:', err);
+    activeModels = activeModels.length ? activeModels : [...STABLE_GEMINI_FALLBACK_MODELS];
+    modelRegistrySource = 'fallback';
+    lastModelUpdate = Date.now();
   }
 }
 
@@ -87,18 +107,13 @@ async function withAiFallback<T>(
   operation: (modelName: string) => Promise<T>,
   preferredModel?: string
 ): Promise<T> {
-  // Refresh every 24h, but don't block the very first request if we have fallbacks
+  // Check available models up front on first use, then refresh daily.
   if (Date.now() - lastModelUpdate > 24 * 60 * 60 * 1000) {
-    if (lastModelUpdate === 0) {
-      // First boot: trigger refresh but don't wait for it if it's slow
-      refreshModelRegistry().catch(console.error);
-    } else {
-      await refreshModelRegistry();
-    }
+    await refreshModelRegistry();
   }
 
   const modelsToTry = Array.from(new Set([
-    ...(preferredModel ? [preferredModel] : []),
+    ...(preferredModel && (modelRegistrySource === 'fallback' || activeModels.includes(preferredModel)) ? [preferredModel] : []),
     ...activeModels,
     ...STABLE_GEMINI_FALLBACK_MODELS,
   ]));
@@ -1825,6 +1840,13 @@ Always try to answer in a single tool call if possible (e.g. use filters like 'f
 Role: MEMBER (Demo Mode).
 Page context: ${pageContext || 'none'}.
 
+Answer style:
+- Use plain, resident-friendly language by default.
+- Be concise: usually 2-4 short sentences.
+- Use bullets only when they make the answer easier to scan.
+- Avoid legal jargon and long policy explanations unless the member asks for detail.
+- If the question is urgent, safety-related, or legal, say what to do next and advise checking with the board or emergency services as appropriate.
+
 Return JSON:
 {
   "answer": "...",
@@ -1945,6 +1967,13 @@ Database Overview:
 Always try to answer in a single tool call if possible (e.g. use filters like 'floor' in 'get_maintenance_requests').
 Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
 Page context: ${pageContext || 'none'}.
+
+Answer style:
+- Use plain, resident-friendly language by default.
+- Be concise: usually 2-4 short sentences.
+- Use bullets only when they make the answer easier to scan.
+- Avoid legal jargon and long policy explanations unless the member asks for detail.
+- If the question is urgent, safety-related, or legal, say what to do next and advise checking with the board or emergency services as appropriate.
 
 Return JSON:
 {
