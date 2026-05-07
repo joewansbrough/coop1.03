@@ -1791,7 +1791,8 @@ app.post('/api/oracle/query-demo', async (req, res) => {
     const oracleResponse = await withAiFallback(async (modelName) => {
       const model = genAI.getGenerativeModel({
         model: modelName,
-        tools: [{ functionDeclarations: oracleToolDeclarations as any }]
+        tools: [{ functionDeclarations: oracleToolDeclarations as any }],
+        generationConfig: { responseMimeType: 'application/json' }
       });
 
       const chat = model.startChat();
@@ -1801,6 +1802,18 @@ You have access to tools that can query the co-op database (maintenance, events,
 Always use these tools to answer accurately based on real data in the demo database.
 Role: MEMBER (Demo Mode).
 Page context: ${pageContext || 'none'}.
+
+Return JSON in this format:
+{
+  "answer": "Your detailed answer based on demo data",
+  "confidence": 0.9,
+  "intent": "maintenance" | "governance" | "policy" | "general",
+  "suggestedAction": {
+    "type": "start-maintenance-request" | "view-event" | "contact-board",
+    "label": "Button Label",
+    "href": "/target-page"
+  } (optional)
+}
 
 Member Question: ${question}`;
 
@@ -1847,12 +1860,14 @@ Member Question: ${question}`;
         }
       }
 
+      const parsed = parseJsonResponse(response.text(), { answer: response.text(), confidence: 0.85 });
       return {
-        answer: response.text(),
+        answer: parsed.answer || response.text(),
         citations: [],
         language: normalizedLanguage,
-        confidence: 0.85,
-        ...intent,
+        confidence: parsed.confidence || 0.85,
+        intent: parsed.intent || intent.intent,
+        suggestedAction: parsed.suggestedAction || (intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined),
       };
     });
 
@@ -1893,7 +1908,8 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
       // Initialize model with tools
       const model = genAI.getGenerativeModel({
         model: modelName,
-        tools: [{ functionDeclarations: oracleToolDeclarations as any }]
+        tools: [{ functionDeclarations: oracleToolDeclarations as any }],
+        generationConfig: { responseMimeType: 'application/json' }
       });
 
       const chat = model.startChat();
@@ -1904,6 +1920,21 @@ Always use these tools to answer member questions accurately based on real data 
 If the member asks about their own unit, maintenance requests, or info, the tools will automatically scope to their data.
 Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
 Page context: ${pageContext || 'none'}.
+
+Return JSON in this format:
+{
+  "answer": "Your detailed answer to the member",
+  "confidence": 0.95,
+  "intent": "maintenance" | "governance" | "policy" | "general",
+  "suggestedAction": {
+    "type": "start-maintenance-request" | "view-event" | "contact-board",
+    "label": "Button Label",
+    "href": "/target-page"
+  } (optional)
+}
+
+Only suggest "start-maintenance-request" if the member is reporting a specific new problem that needs fixing.
+If they are just asking for information (like committee chairs), do not suggest a maintenance request.
 
 Member Question: ${question}`;
 
@@ -1961,13 +1992,14 @@ Member Question: ${question}`;
         }
       }
 
-      const answer = response.text();
+      const parsed = parseJsonResponse(response.text(), { answer: response.text(), confidence: 0.9 });
       return {
-        answer,
+        answer: parsed.answer || response.text(),
         citations: [], 
         language: normalizedLanguage,
-        confidence: 0.92,
-        ...intent,
+        confidence: parsed.confidence || 0.9,
+        intent: parsed.intent || intent.intent,
+        suggestedAction: parsed.suggestedAction || (intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined),
       };
     }, primaryModel);
 

@@ -15,10 +15,11 @@ export const normalizeOracleLanguage = (language?: string | null): OracleLanguag
   return normalized || 'English';
 };
 
-const maintenanceTerms = /\b(leak|leaking|sink|toilet|pipe|plumb|broken|repair|maintenance|mold|electrical|heat|hot water|damage|flood|drain)\b/i;
+const maintenanceTerms = /\b(leak|sink|toilet|mold|electrical|heat|hot water|damage|flood|drain)\b/i;
 
 export const detectOracleIntent = (question: string): Pick<OracleResponse, 'intent' | 'suggestedAction'> => {
-  if (maintenanceTerms.test(question)) {
+  // Check for specific actionable maintenance issues (leaks, etc.) rather than just the word "maintenance"
+  if (maintenanceTerms.test(question) && !/\b(committee|chair|meeting|policy|who is)\b/i.test(question)) {
     const suggestedAction: OracleSuggestedAction = {
       type: 'start-maintenance-request',
       label: 'Start maintenance request',
