@@ -652,7 +652,7 @@ const handleSave = async () => {
     }
     setIsAnalyzingNotes(true);
     try {
-      const analysis = await geminiService.analyzeMeetingNotes(rawAnalysisNotes, meetingId);
+      const analysis = await geminiService.analyzeMeetingNotes(rawAnalysisNotes, meetingId, meetingType);
       setMeetingAnalysis(analysis);
 
       const listToHtml = (items: string[] = []) =>
@@ -669,14 +669,24 @@ const handleSave = async () => {
         : '';
       const shouldUseTopicMinutes = topicBriefingsHtml && !analysis.professionalSummary;
 
-      setFormData(prev => ({
-        ...prev,
-        ...(analysis.professionalSummary ? { boardReport: analysis.professionalSummary } : {}),
-        ...(shouldUseTopicMinutes ? { committeeReports: topicBriefingsHtml } : {}),
-        ...(decisionsHtml ? { keyDecisions: decisionsHtml } : {}),
-        ...(meetingType === 'special' && analysis.professionalSummary ? { newBusiness: analysis.professionalSummary } : {}),
-        ...(risksHtml || confidenceHtml ? { nextSteps: `${risksHtml}${confidenceHtml}` } : {}),
-      }));
+      setFormData(prev => {
+        const summaryPatch =
+          meetingType === 'quick'
+            ? { keyDecisions: decisionsHtml || analysis.professionalSummary || prev.keyDecisions }
+            : meetingType === 'special'
+              ? { newBusiness: analysis.professionalSummary || prev.newBusiness }
+              : meetingType === 'agm'
+                ? { managementReport: analysis.professionalSummary || prev.managementReport }
+                : { boardReport: analysis.professionalSummary || prev.boardReport };
+
+        return {
+          ...prev,
+          ...summaryPatch,
+          ...(shouldUseTopicMinutes && meetingType === 'regular' ? { committeeReports: topicBriefingsHtml } : {}),
+          ...(decisionsHtml && meetingType !== 'quick' ? { keyDecisions: decisionsHtml } : {}),
+          ...(risksHtml || confidenceHtml ? { nextSteps: `${risksHtml}${confidenceHtml}` } : {}),
+        };
+      });
 
       if (Array.isArray(analysis.motionsMentioned) && analysis.motionsMentioned.length > 0) {
         setMotions(analysis.motionsMentioned.map((motion: string, index: number) => ({

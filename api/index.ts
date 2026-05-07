@@ -1648,7 +1648,23 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
   }
 });
 
-const buildMeetingAnalysisPrompt = (rawNotes: string) => `You are an experienced secretary for a BC housing co-operative board or committee.
+const getMeetingTypeGuidance = (meetingType?: string) => {
+  switch (meetingType) {
+    case 'quick':
+      return 'Meeting type: Quick Meeting. Prioritize a short Decisions Made section, concise next steps, and action items. Avoid board-report style narrative.';
+    case 'agm':
+      return 'Meeting type: Annual General Meeting. Organize output around AGM business such as reports, nominations/elections, motions, decisions, and statutory follow-up. Do not invent election results or auditor details.';
+    case 'special':
+      return 'Meeting type: Special Meeting. Focus on the stated special business, any motion or resolution, decision status, and required follow-up. Avoid unrelated regular meeting sections.';
+    case 'regular':
+    default:
+      return 'Meeting type: Regular Board Meeting. Organize output for board minutes, including board/committee report narrative, motions, decisions, follow-up, and action items.';
+  }
+};
+
+const buildMeetingAnalysisPrompt = (rawNotes: string, meetingType?: string) => `You are an experienced secretary for a BC housing co-operative board or committee.
+
+${getMeetingTypeGuidance(meetingType)}
 
 Transform rough, incomplete meeting notes into polished meeting minutes. Do not merely restate or lightly paraphrase the notes. Convert terse bullets into clear, professional minutes language while preserving only the facts that are actually present. Do not invent votes, approvals, names, dollar amounts, deadlines, or legal conclusions. If something is implied but uncertain, flag it in confidenceNotes.
 
@@ -1725,21 +1741,21 @@ const normalizeMeetingAnalysis = (parsed: any) => {
   };
 };
 
-const generateMeetingAnalysis = async (rawNotes: string, modelName = DEFAULT_GEMINI_MODEL) => {
+const generateMeetingAnalysis = async (rawNotes: string, meetingType?: string, modelName = DEFAULT_GEMINI_MODEL) => {
   const model = getAI().getGenerativeModel({
     model: modelName,
     generationConfig: { responseMimeType: 'application/json' },
   });
-  const result = await model.generateContent(buildMeetingAnalysisPrompt(rawNotes));
+  const result = await model.generateContent(buildMeetingAnalysisPrompt(rawNotes, meetingType));
   const response = await result.response;
   return normalizeMeetingAnalysis(parseJsonResponse(response.text(), {}));
 };
 
 app.post('/api/ai/meeting-analysis-demo', async (req, res) => {
-  const { rawNotes, meetingId } = req.body;
+  const { rawNotes, meetingId, meetingType } = req.body;
   if (!rawNotes || String(rawNotes).trim().length < 20) return res.status(400).json({ error: 'Meeting notes must be at least 20 characters.' });
   try {
-    const analysis = await generateMeetingAnalysis(rawNotes);
+    const analysis = await generateMeetingAnalysis(rawNotes, meetingType);
     res.json({
       id: `demo-meeting-analysis-${Date.now()}`,
       meetingId: meetingId || null,
@@ -1754,13 +1770,13 @@ app.post('/api/ai/meeting-analysis-demo', async (req, res) => {
 });
 
 app.post('/api/ai/meeting-analysis', requireAuth, requireAdmin, async (req, res) => {
-  const { rawNotes, meetingId } = req.body;
+  const { rawNotes, meetingId, meetingType } = req.body;
   if (!rawNotes || String(rawNotes).trim().length < 20) return res.status(400).json({ error: 'Meeting notes must be at least 20 characters.' });
   const p = getPrisma();
   try {
     const user = (req as any).user || (req as any).session?.user;
     const coopId = await getCoopId(req, p);
-    const generated = await generateMeetingAnalysis(rawNotes, user?.geminiModel || DEFAULT_GEMINI_MODEL);
+    const generated = await generateMeetingAnalysis(rawNotes, meetingType, user?.geminiModel || DEFAULT_GEMINI_MODEL);
     const analysis = await p.meetingAnalysis.create({
       data: {
         cooperativeId: coopId,

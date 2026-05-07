@@ -71,13 +71,13 @@ export const geminiService = {
     }
   },
 
-  async analyzeMeetingNotes(rawNotes: string, meetingId?: string) {
+  async analyzeMeetingNotes(rawNotes: string, meetingId?: string, meetingType?: string) {
     if (isDemoMode()) {
       const res = await fetch('/api/ai/meeting-analysis-demo', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rawNotes, meetingId }),
+        body: JSON.stringify({ rawNotes, meetingId, meetingType }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to analyze meeting notes with Gemini');
@@ -88,7 +88,7 @@ export const geminiService = {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rawNotes, meetingId }),
+      body: JSON.stringify({ rawNotes, meetingId, meetingType }),
     });
     const data = await res.json();
     if (res.status === 401) throw new Error('Please sign in again before using AI meeting analysis.');
