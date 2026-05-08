@@ -86,6 +86,7 @@ test('every stop has route target and onboarding copy', () => {
     assert.ok(stop.body.length >= 80);
     assert.ok(stop.keyCapability.length >= 40);
     assert.doesNotMatch(`${stop.title} ${stop.body} ${stop.keyCapability}`, /customer|selling point|investor|product/i);
+    assert.doesNotMatch(`${stop.title} ${stop.body} ${stop.keyCapability}`, /\bdemo\b|new users|users can|users see|so users|the tour|the wizard/i);
   }
 });
 
