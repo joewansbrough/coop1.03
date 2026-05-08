@@ -86,6 +86,12 @@ const isUsableTargetRect = (rect: DOMRect) =>
   rect.left < window.innerWidth &&
   rect.top < window.innerHeight;
 
+const closeMobileNavigation = () => {
+  if (isCompactNavigation()) {
+    window.dispatchEvent(new CustomEvent('auto-demo-close-sidebar'));
+  }
+};
+
 const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwitch, isAdmin = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -243,6 +249,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     setIsClicking(true);
     window.setTimeout(() => {
       navigate(route);
+      closeMobileNavigation();
       snapPageToTop();
       setStepIndex(getNextAutoDemoIndex(stepIndex));
       setIsClicking(false);
@@ -303,6 +310,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
         const nextIndex = clickedStop?.routeAfterClick ? getNextAutoDemoIndex(clickedSection.startIndex) : clickedSection.startIndex;
         if (linkRoute) {
           navigate(linkRoute);
+          closeMobileNavigation();
           window.setTimeout(snapPageToTop, 80);
         }
         setStepIndex(nextIndex);

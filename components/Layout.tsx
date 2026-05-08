@@ -148,8 +148,13 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
 
   useEffect(() => {
     const openSidebarForAutoDemo = () => setIsSidebarOpen(true);
+    const closeSidebarForAutoDemo = () => setIsSidebarOpen(false);
     window.addEventListener('auto-demo-open-sidebar', openSidebarForAutoDemo);
-    return () => window.removeEventListener('auto-demo-open-sidebar', openSidebarForAutoDemo);
+    window.addEventListener('auto-demo-close-sidebar', closeSidebarForAutoDemo);
+    return () => {
+      window.removeEventListener('auto-demo-open-sidebar', openSidebarForAutoDemo);
+      window.removeEventListener('auto-demo-close-sidebar', closeSidebarForAutoDemo);
+    };
   }, []);
 
   const closeAutoDemo = () => {
