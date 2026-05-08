@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowRight, MousePointer2, Presentation, ShieldCheck, UserRound } from 'lucide-react';
 import {
   createInitialTutorialState,
@@ -12,6 +12,11 @@ import {
 } from '../utils/demoTutorial';
 import { initializeDemoStorage } from '../utils/demoStorage';
 import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
+import {
+  preloadAutoDemoSpeech,
+  subscribeAutoDemoSpeech,
+  type AutoDemoSpeechSnapshot,
+} from '../utils/autoDemoSpeech';
 
 interface DemoTrackPickerProps {
   onStart: () => void;
@@ -25,6 +30,14 @@ const trackIcons: Record<DemoTutorialTrackId, React.ReactNode> = {
 };
 
 const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) => {
+  const [isPreparingAutoDemo, setIsPreparingAutoDemo] = useState(false);
+  const [speechSnapshot, setSpeechSnapshot] = useState<AutoDemoSpeechSnapshot | null>(null);
+
+  useEffect(() => {
+    if (!isPreparingAutoDemo) return undefined;
+    return subscribeAutoDemoSpeech(setSpeechSnapshot);
+  }, [isPreparingAutoDemo]);
+
   const startTrack = (trackId: DemoTutorialTrackId) => {
     const track = DEMO_TUTORIAL_TRACKS.find(item => item.id === trackId);
     localStorage.setItem('demo_mode', 'true');
@@ -44,15 +57,57 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
     onStart();
   };
 
-  const startAutoDemo = () => {
+  const startAutoDemo = async () => {
+    setIsPreparingAutoDemo(true);
     localStorage.setItem('demo_mode', 'true');
     localStorage.setItem(AUTO_DEMO_STORAGE_KEY, 'true');
     localStorage.removeItem(DEMO_TUTORIAL_STORAGE_KEY);
     localStorage.setItem(DEMO_TUTORIAL_ROLE_VIEW_KEY, 'false');
     initializeDemoStorage();
+    await preloadAutoDemoSpeech();
     window.location.hash = '/';
     onStart();
   };
+
+  if (isPreparingAutoDemo) {
+    const total = speechSnapshot?.total || 1;
+    const completed = speechSnapshot?.completed || 0;
+    const progress = Math.min(100, Math.round((completed / total) * 100));
+
+    return (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950 text-white">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(20,184,166,0.26),transparent_32%),radial-gradient(circle_at_70%_80%,rgba(45,212,191,0.18),transparent_30%)]" />
+        <div className="relative mx-5 w-full max-w-md text-center">
+          <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-white/10 text-teal-200 shadow-2xl shadow-teal-950/30">
+            <MousePointer2 className="h-9 w-9 animate-pulse" />
+          </div>
+          <p className="mb-3 text-[10px] font-black uppercase tracking-[0.26em] text-teal-300">Automated Demo</p>
+          <h2 className="text-3xl font-black tracking-tight">Preparing Demonstration Session</h2>
+          <div className="mt-8 overflow-hidden rounded-full bg-white/10">
+            <div className="h-2 rounded-full bg-teal-400 transition-all duration-500" style={{ width: `${progress}%` }} />
+          </div>
+          <p className="mt-4 text-xs font-bold uppercase tracking-widest text-slate-300">
+            {completed} of {total} ready
+          </p>
+          <div className="mx-auto mt-8 flex w-28 justify-between">
+            {[0, 1, 2].map(index => (
+              <span
+                key={index}
+                className="h-3 w-3 rounded-full bg-teal-300"
+                style={{ animation: `auto-demo-loading-dot 900ms ease-in-out ${index * 140}ms infinite alternate` }}
+              />
+            ))}
+          </div>
+          <style>{`
+            @keyframes auto-demo-loading-dot {
+              from { opacity: 0.35; transform: translateY(0); }
+              to { opacity: 1; transform: translateY(-10px); }
+            }
+          `}</style>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[300] bg-slate-950/80 backdrop-blur-md flex sm:items-center sm:justify-center sm:p-4">

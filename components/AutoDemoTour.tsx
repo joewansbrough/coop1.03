@@ -13,6 +13,7 @@ import {
   getNextAutoDemoIndex,
   getPreviousAutoDemoIndex,
 } from '../utils/autoDemo';
+import { getAutoDemoSpeechText, getAutoDemoSpeechUrl } from '../utils/autoDemoSpeech';
 
 interface AutoDemoTourProps {
   isOpen: boolean;
@@ -315,12 +316,11 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     setSpeechState('loading');
     setSpeechError('');
     try {
-      const narration = `${stop.body}\n\nKey capability: ${stop.keyCapability}`;
-      const blob = await geminiService.synthesizeDemoTourSpeech(narration);
-      const url = URL.createObjectURL(blob);
+      const cachedUrl = getAutoDemoSpeechUrl(stop.id);
+      const url = cachedUrl || URL.createObjectURL(await geminiService.synthesizeDemoTourSpeech(getAutoDemoSpeechText(stop)));
       const audio = new Audio(url);
       audioRef.current = audio;
-      audioUrlRef.current = url;
+      audioUrlRef.current = cachedUrl ? null : url;
       audio.onended = stopSpeech;
       audio.onerror = () => {
         setSpeechError('Narration audio could not be played.');

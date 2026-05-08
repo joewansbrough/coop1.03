@@ -2440,7 +2440,7 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
       {
         contents: [{
           parts: [{
-            text: `Read this guided product tour narration in a warm, clear, welcoming voice at a calm pace:\n\n${text}`,
+            text: `Read this guided tour narration in a warm, clear, welcoming voice at a calm pace:\n\n${text}`,
           }],
         }],
         generationConfig: {
