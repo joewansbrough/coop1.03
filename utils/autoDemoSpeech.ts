@@ -14,7 +14,7 @@ export interface AutoDemoSpeechSnapshot {
 
 type Listener = (snapshot: AutoDemoSpeechSnapshot) => void;
 
-const CONCURRENT_PRELOADS = 3;
+const CONCURRENT_PRELOADS = 2;
 const listeners = new Set<Listener>();
 const audioUrlByStopId = new Map<string, string>();
 let preloadPromise: Promise<AutoDemoSpeechSnapshot> | null = null;
@@ -59,7 +59,7 @@ const loadStopSpeech = async (stop: AutoDemoStop, options: { onDone: () => void;
   for (let i = 0; i <= retries; i++) {
     try {
       // Add jitter to avoid hitting the backend in perfect sync
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 300));
+      await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
       
       const blob = await geminiService.synthesizeDemoTourSpeech(getAutoDemoSpeechText(stop));
       audioUrlByStopId.set(stop.id, URL.createObjectURL(blob));
@@ -71,7 +71,7 @@ const loadStopSpeech = async (stop: AutoDemoStop, options: { onDone: () => void;
         options.onError();
       } else {
         // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i + 1) * 1000));
       }
     }
   }

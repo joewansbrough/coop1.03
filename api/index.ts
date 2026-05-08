@@ -2426,6 +2426,8 @@ app.post('/api/ai/summarize', requireAuth, async (req, res) => {
   }
 });
 
+const FALLBACK_GEMINI_TTS_MODEL = 'gemini-2.5-flash-tts-preview-001';
+
 app.post('/api/ai/demo-tour-tts', async (req, res) => {
   try {
     const apiKey = process.env.API_KEY;
@@ -2435,32 +2437,47 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
     if (text.length < 8) return res.status(400).json({ error: 'Narration text is required.' });
     if (text.length > 1600) return res.status(400).json({ error: 'Narration text is too long.' });
 
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_GEMINI_TTS_MODEL}:generateContent`,
-      {
-        contents: [{
-          parts: [{
-            text: `Read this guided tour narration in a warm, clear, welcoming voice at a calm pace:\n\n${text}`,
+    const generateSpeech = async (modelName: string) => {
+      return axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
+        {
+          contents: [{
+            parts: [{
+              text: `Read this guided tour narration in a warm, clear, welcoming voice at a calm pace:\n\n${text}`,
+            }],
           }],
-        }],
-        generationConfig: {
-          responseModalities: ['AUDIO'],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Kore' },
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Kore' },
+              },
             },
           },
+          model: modelName,
         },
-        model: DEFAULT_GEMINI_TTS_MODEL,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
+          timeout: 20000,
         },
-        timeout: 20000,
-      },
-    );
+      );
+    };
+
+    let response;
+    try {
+      response = await generateSpeech(DEFAULT_GEMINI_TTS_MODEL);
+    } catch (e: any) {
+      const isRateLimit = e.response?.status === 429;
+      if (isRateLimit) {
+        console.log(`TTS primary model ${DEFAULT_GEMINI_TTS_MODEL} rate limited, trying fallback ${FALLBACK_GEMINI_TTS_MODEL}...`);
+        response = await generateSpeech(FALLBACK_GEMINI_TTS_MODEL);
+      } else {
+        throw e;
+      }
+    }
 
     const inlineData = response.data?.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData || part.inline_data);
     const audioBase64 = inlineData?.inlineData?.data || inlineData?.inline_data?.data;
