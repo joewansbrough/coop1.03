@@ -487,7 +487,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             {children}
           </div>
         </section>
-        <OracleAssistant />
+        {!isAutoDemoOpen && <OracleAssistant />}
       </main>
     </div>
   );
