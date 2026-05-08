@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, ChevronDown, ListChecks, Menu, MousePointer2, Pause, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronDown, ListChecks, Menu, MousePointer2, Pause, Volume2, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { geminiService } from '../services/geminiService';
 import {
@@ -507,7 +507,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
               aria-label={speechState === 'playing' ? 'Pause narration' : 'Read this card aloud'}
               title={speechState === 'playing' ? 'Pause narration' : 'Read aloud'}
             >
-              {speechState === 'playing' ? <Pause className="h-4 w-4 text-slate-700 dark:text-slate-200" /> : speechState === 'loading' ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" /> : <span aria-hidden="true">🗣️</span>}
+              {speechState === 'playing' ? <Pause className="h-4 w-4 text-slate-700 dark:text-slate-200" /> : speechState === 'loading' ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" /> : <Volume2 className="h-4 w-4 text-slate-700 dark:text-slate-200" />}
             </button>
             <p className="min-w-0 text-sm font-semibold leading-relaxed text-slate-600 dark:text-slate-300">{stop.body}</p>
           </div>

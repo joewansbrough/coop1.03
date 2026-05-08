@@ -50,28 +50,46 @@ export const setAutoDemoSpeechUrlForTest = (stopId: string, url: string) => {
   audioUrlByStopId.set(stopId, url);
 };
 
-const loadStopSpeech = async (stop: AutoDemoStop) => {
+const loadStopSpeech = async (stop: AutoDemoStop, options: { onDone: () => void; onError: () => void }, retries = 2) => {
   if (audioUrlByStopId.has(stop.id)) {
-    publish({ completed: snapshot.completed + 1, currentTitle: stop.title });
+    options.onDone();
     return;
   }
 
-  publish({ currentTitle: stop.title });
-  const blob = await geminiService.synthesizeDemoTourSpeech(getAutoDemoSpeechText(stop));
-  audioUrlByStopId.set(stop.id, URL.createObjectURL(blob));
-  publish({ completed: snapshot.completed + 1 });
+  for (let i = 0; i <= retries; i++) {
+    try {
+      // Add jitter to avoid hitting the backend in perfect sync
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 300));
+      
+      const blob = await geminiService.synthesizeDemoTourSpeech(getAutoDemoSpeechText(stop));
+      audioUrlByStopId.set(stop.id, URL.createObjectURL(blob));
+      options.onDone();
+      return;
+    } catch (err) {
+      if (i === retries) {
+        console.error(`Failed to preload TTS for stop ${stop.id} after ${retries + 1} attempts:`, err);
+        options.onError();
+      } else {
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+      }
+    }
+  }
 };
 
 export const preloadAutoDemoSpeech = () => {
   if (preloadPromise) return preloadPromise;
 
   const stops = AUTO_DEMO_STOPS;
+  let completed = 0;
+  let failed = 0;
+
   publish({
     status: 'loading',
     total: stops.length,
     completed: 0,
     failed: 0,
-    currentTitle: 'Welcome to your guided tour',
+    currentTitle: 'Preparing narration...',
     error: undefined,
   });
 
@@ -81,9 +99,11 @@ export const preloadAutoDemoSpeech = () => {
 
     const pump = () => {
       if (nextIndex >= stops.length && active === 0) {
-        const status = snapshot.failed === snapshot.total ? 'error' : 'ready';
+        const status = failed === stops.length ? 'error' : 'ready';
         publish({
           status,
+          completed,
+          failed,
           currentTitle: status === 'ready' ? 'Narration ready' : 'Narration unavailable',
           error: status === 'error' ? 'Narration could not be prepared.' : undefined,
         });
@@ -95,18 +115,24 @@ export const preloadAutoDemoSpeech = () => {
         const stop = stops[nextIndex];
         nextIndex += 1;
         active += 1;
-        loadStopSpeech(stop)
-          .catch(() => {
-            publish({
-              completed: snapshot.completed + 1,
-              failed: snapshot.failed + 1,
-              currentTitle: stop.title,
-            });
-          })
-          .finally(() => {
-            active -= 1;
-            pump();
-          });
+
+        // Update current title to show progress
+        publish({ currentTitle: stop.title, completed, failed });
+
+        loadStopSpeech(stop, {
+          onDone: () => {
+            completed += 1;
+          },
+          onError: () => {
+            completed += 1;
+            failed += 1;
+          }
+        }).finally(() => {
+          active -= 1;
+          // After each task, update snapshot with the latest local counts
+          publish({ completed, failed });
+          pump();
+        });
       }
     };
 
