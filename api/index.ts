@@ -1,11 +1,12 @@
 import express from 'express';
+import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import axios from 'axios';
 import cookieSession from 'cookie-session';
 import multer from 'multer';
-import { get, put } from '@vercel/blob';
+import { get, put, list } from '@vercel/blob';
 import { Readable } from 'node:stream';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import driveRoutes from './drive.js';
@@ -2437,6 +2438,25 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
     if (text.length < 8) return res.status(400).json({ error: 'Narration text is required.' });
     if (text.length > 1600) return res.status(400).json({ error: 'Narration text is too long.' });
 
+    // 1. Check persistent cache (Vercel Blob)
+    const textHash = crypto.createHash('sha256').update(text).digest('hex');
+    const cachePath = `tts-cache/${textHash}.wav`;
+    const token = getBlobToken();
+
+    if (token) {
+      try {
+        const { blobs } = await list({ prefix: cachePath, token, limit: 1 });
+        const existing = blobs.find(b => b.pathname === cachePath);
+        if (existing) {
+          console.log(`[TTS Cache] Hit: ${cachePath}`);
+          return res.redirect(existing.url);
+        }
+      } catch (cacheErr) {
+        console.warn('[TTS Cache] Error checking cache:', cacheErr);
+      }
+    }
+
+    // 2. Cache miss: Generate narration
     const generateSpeech = async (modelName: string) => {
       return axios.post(
         `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
@@ -2484,8 +2504,23 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
     if (!audioBase64) throw new Error('Gemini did not return audio data.');
 
     const wav = pcm16ToWavBuffer(Buffer.from(audioBase64, 'base64'), 24000, 1);
+
+    // 3. Save to persistent cache asynchronously
+    if (token) {
+      put(cachePath, wav, {
+        access: 'public',
+        contentType: 'audio/wav',
+        token,
+        addRandomSuffix: false,
+      }).then(blob => {
+        console.log(`[TTS Cache] Saved: ${blob.url}`);
+      }).catch(err => {
+        console.error('[TTS Cache] Failed to save:', err);
+      });
+    }
+
     res.setHeader('Content-Type', 'audio/wav');
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.send(wav);
   } catch (e: any) {
     const message = e.response?.data?.error?.message || e.message || 'Unknown Gemini TTS error';
