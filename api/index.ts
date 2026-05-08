@@ -19,6 +19,7 @@ import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
 import { detectOracleIntent, normalizeOracleLanguage } from '../utils/oracle.js';
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
+import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 
 
 
@@ -31,6 +32,7 @@ const upload = multer({
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+const DEFAULT_GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
 const STABLE_GEMINI_FALLBACK_MODELS = [
   DEFAULT_GEMINI_MODEL,
   'gemini-3.1-flash',
@@ -2421,6 +2423,56 @@ app.post('/api/ai/summarize', requireAuth, async (req, res) => {
     res.json(JSON.parse(response.text() || '{"summary": "", "tags": []}'));
   } catch (e: any) {
     res.status(500).json({ summary: '', tags: [], error: e.message });
+  }
+});
+
+app.post('/api/ai/demo-tour-tts', async (req, res) => {
+  try {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) return res.status(503).json({ error: 'Gemini API key is not configured.' });
+
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+    if (text.length < 8) return res.status(400).json({ error: 'Narration text is required.' });
+    if (text.length > 1600) return res.status(400).json({ error: 'Narration text is too long.' });
+
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_GEMINI_TTS_MODEL}:generateContent`,
+      {
+        contents: [{
+          parts: [{
+            text: `Read this guided product tour narration in a warm, clear, welcoming voice at a calm pace:\n\n${text}`,
+          }],
+        }],
+        generationConfig: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Kore' },
+            },
+          },
+        },
+        model: DEFAULT_GEMINI_TTS_MODEL,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        timeout: 20000,
+      },
+    );
+
+    const inlineData = response.data?.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData || part.inline_data);
+    const audioBase64 = inlineData?.inlineData?.data || inlineData?.inline_data?.data;
+    if (!audioBase64) throw new Error('Gemini did not return audio data.');
+
+    const wav = pcm16ToWavBuffer(Buffer.from(audioBase64, 'base64'), 24000, 1);
+    res.setHeader('Content-Type', 'audio/wav');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(wav);
+  } catch (e: any) {
+    const message = e.response?.data?.error?.message || e.message || 'Unknown Gemini TTS error';
+    res.status(500).json({ error: `Gemini tour narration failed: ${message}` });
   }
 });
 

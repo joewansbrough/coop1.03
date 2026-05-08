@@ -111,4 +111,18 @@ export const geminiService = {
     if (!res.ok) throw new Error(data.error || 'Failed to summarize document with Gemini');
     return data;
   },
+
+  async synthesizeDemoTourSpeech(text: string) {
+    const res = await fetch('/api/ai/demo-tour-tts', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to generate guided tour narration');
+    }
+    return res.blob();
+  },
 };

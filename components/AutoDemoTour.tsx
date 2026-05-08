@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, ChevronDown, ListChecks, Menu, MousePointer2, X } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, ChevronDown, ListChecks, Menu, MousePointer2, Pause, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { geminiService } from '../services/geminiService';
 import {
   AUTO_DEMO_SECTIONS,
   AUTO_DEMO_STOPS,
@@ -105,6 +106,10 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const [isGuideCollapsed, setIsGuideCollapsed] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUsingMobileNavOpener, setIsUsingMobileNavOpener] = useState(false);
+  const [speechState, setSpeechState] = useState<'idle' | 'loading' | 'playing'>('idle');
+  const [speechError, setSpeechError] = useState('');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
   const stop = getAutoDemoStop(stepIndex);
   const isWelcomeStep = stop?.id === 'welcome';
   const activeSection = getAutoDemoSectionForIndex(stepIndex);
@@ -208,6 +213,23 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     };
   }, [isOpen, isWelcomeStep, location.pathname, location.search, stepIndex, stop]);
 
+  const stopSpeech = useCallback(() => {
+    audioRef.current?.pause();
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+    audioRef.current = null;
+    setSpeechState('idle');
+  }, []);
+
+  useEffect(() => stopSpeech, [stepIndex, stopSpeech]);
+
+  useEffect(() => () => stopSpeech(), [stopSpeech]);
+
   const isLastStep = stepIndex === AUTO_DEMO_STOPS.length - 1;
   const guidedStepCount = Math.max(1, AUTO_DEMO_STOPS.length - 1);
   const progress = isWelcomeStep
@@ -282,6 +304,35 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     }
     goNext();
   }, [clickThenNavigate, goNext, isAdmin, isUsingMobileNavOpener, onRoleSwitch, stop]);
+
+  const toggleSpeech = useCallback(async () => {
+    if (!stop || speechState === 'loading') return;
+    if (speechState === 'playing') {
+      stopSpeech();
+      return;
+    }
+
+    setSpeechState('loading');
+    setSpeechError('');
+    try {
+      const narration = `${stop.body}\n\nKey capability: ${stop.keyCapability}`;
+      const blob = await geminiService.synthesizeDemoTourSpeech(narration);
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audioUrlRef.current = url;
+      audio.onended = stopSpeech;
+      audio.onerror = () => {
+        setSpeechError('Narration audio could not be played.');
+        stopSpeech();
+      };
+      await audio.play();
+      setSpeechState('playing');
+    } catch (error: any) {
+      stopSpeech();
+      setSpeechError(error.message || 'Narration could not be generated.');
+    }
+  }, [speechState, stop, stopSpeech]);
 
   useEffect(() => {
     if (!isOpen || !stop) return;
@@ -447,11 +498,28 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
               Finding this area on the current screen. You can continue if the page is still loading.
             </p>
           )}
-          <p className="text-sm font-semibold leading-relaxed text-slate-600 dark:text-slate-300">{stop.body}</p>
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={toggleSpeech}
+              disabled={speechState === 'loading'}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm transition-colors hover:bg-slate-200 disabled:cursor-wait disabled:opacity-70 dark:bg-slate-800 dark:hover:bg-slate-700"
+              aria-label={speechState === 'playing' ? 'Pause narration' : 'Read this card aloud'}
+              title={speechState === 'playing' ? 'Pause narration' : 'Read aloud'}
+            >
+              {speechState === 'playing' ? <Pause className="h-4 w-4 text-slate-700 dark:text-slate-200" /> : speechState === 'loading' ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" /> : <span aria-hidden="true">🗣️</span>}
+            </button>
+            <p className="min-w-0 text-sm font-semibold leading-relaxed text-slate-600 dark:text-slate-300">{stop.body}</p>
+          </div>
           <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
             <p className="text-[9px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Key capability</p>
             <p className="mt-1 text-xs font-bold leading-relaxed text-teal-900 dark:text-teal-100">{stop.keyCapability}</p>
           </div>
+          {speechError && (
+            <p className="rounded-xl bg-rose-50 p-2 text-[10px] font-bold text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">
+              {speechError}
+            </p>
+          )}
           {!isWelcomeStep && isMenuOpen && (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2 dark:border-white/10 dark:bg-slate-950/50">
               <p className="px-2 pb-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Jump to a section</p>
