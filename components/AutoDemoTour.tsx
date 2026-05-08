@@ -73,6 +73,19 @@ const getRouteFromClickedLink = (node: HTMLElement | null) => {
   }
 };
 
+const isCompactNavigation = () =>
+  typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches;
+
+const isNavTarget = (target: string) => target.startsWith('nav-');
+
+const isUsableTargetRect = (rect: DOMRect) =>
+  rect.width > 0 &&
+  rect.height > 0 &&
+  rect.right > 0 &&
+  rect.bottom > 0 &&
+  rect.left < window.innerWidth &&
+  rect.top < window.innerHeight;
+
 const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwitch, isAdmin = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -85,6 +98,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const [isClicking, setIsClicking] = useState(false);
   const [isGuideCollapsed, setIsGuideCollapsed] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUsingMobileNavOpener, setIsUsingMobileNavOpener] = useState(false);
   const stop = getAutoDemoStop(stepIndex);
   const isWelcomeStep = stop?.id === 'welcome';
   const activeSection = getAutoDemoSectionForIndex(stepIndex);
@@ -107,7 +121,16 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
 
     let frame = 0;
     const measure = (shouldAdjustScroll = false) => {
-      const target = document.querySelector<HTMLElement>(`[data-demo-target="${stop.target}"]`);
+      const preferredTarget = document.querySelector<HTMLElement>(`[data-demo-target="${stop.target}"]`);
+      const preferredRect = preferredTarget?.getBoundingClientRect();
+      const shouldUseMobileOpener = isNavTarget(stop.target) &&
+        isCompactNavigation() &&
+        (!preferredRect || !isUsableTargetRect(preferredRect));
+      const target = shouldUseMobileOpener
+        ? document.querySelector<HTMLElement>('[data-demo-target="mobile-sidebar-toggle"]')
+        : preferredTarget;
+
+      setIsUsingMobileNavOpener(shouldUseMobileOpener);
       if (!target) {
         setTargetFound(false);
         frame = window.setTimeout(() => measure(shouldAdjustScroll), AUTO_DEMO_TIMING.measureDelayMs);
@@ -130,14 +153,14 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       }
       frame = window.setTimeout(() => {
         const rect = target.getBoundingClientRect();
-        setTargetFound(rect.width > 0 && rect.height > 0);
+        setTargetFound(isUsableTargetRect(rect));
         setTargetRect({
           top: rect.top,
           left: rect.left,
           width: rect.width,
           height: rect.height,
         });
-        if (rect.width <= 0 || rect.height <= 0) {
+        if (!isUsableTargetRect(rect)) {
           frame = window.setTimeout(() => measure(shouldAdjustScroll), AUTO_DEMO_TIMING.measureDelayMs);
         }
       }, AUTO_DEMO_TIMING.measureDelayMs);
@@ -228,6 +251,15 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
 
   const performAction = useCallback(() => {
     if (!stop) return;
+    if (isUsingMobileNavOpener && isNavTarget(stop.target)) {
+      setIsClicking(true);
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('auto-demo-open-sidebar'));
+        window.setTimeout(() => window.dispatchEvent(new Event('resize')), 320);
+        setIsClicking(false);
+      }, AUTO_DEMO_TIMING.clickPulseMs);
+      return;
+    }
     if (stop.action === 'switch-role' && isAdmin) {
       onRoleSwitch?.();
     }
@@ -242,7 +274,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       return;
     }
     goNext();
-  }, [clickThenNavigate, goNext, isAdmin, onRoleSwitch, stop]);
+  }, [clickThenNavigate, goNext, isAdmin, isUsingMobileNavOpener, onRoleSwitch, stop]);
 
   useEffect(() => {
     if (!isOpen || !stop) return;
@@ -251,7 +283,8 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       const node = event.target as HTMLElement | null;
       if (!node || node.closest('[data-auto-demo-panel="true"]')) return;
 
-      const activeTarget = isWelcomeStep ? null : document.querySelector<HTMLElement>(`[data-demo-target="${stop.target}"]`);
+      const activeTargetName = isUsingMobileNavOpener ? 'mobile-sidebar-toggle' : stop.target;
+      const activeTarget = isWelcomeStep ? null : document.querySelector<HTMLElement>(`[data-demo-target="${activeTargetName}"]`);
       const clickedActiveTarget = Boolean(activeTarget && activeTarget.contains(node));
       const clickedDemoTarget = node.closest<HTMLElement>('[data-demo-target]');
       const clickedSection = getAutoDemoSectionForTarget(clickedDemoTarget?.dataset.demoTarget);
@@ -280,7 +313,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
 
     document.addEventListener('click', interceptPageClick, true);
     return () => document.removeEventListener('click', interceptPageClick, true);
-  }, [isClicking, isOpen, isWelcomeStep, navigate, performAction, stop]);
+  }, [isClicking, isOpen, isUsingMobileNavOpener, isWelcomeStep, navigate, performAction, stop]);
 
   if (!isOpen || !stop) return null;
 

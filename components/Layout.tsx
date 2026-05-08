@@ -146,6 +146,12 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     };
   }, [isDemo]);
 
+  useEffect(() => {
+    const openSidebarForAutoDemo = () => setIsSidebarOpen(true);
+    window.addEventListener('auto-demo-open-sidebar', openSidebarForAutoDemo);
+    return () => window.removeEventListener('auto-demo-open-sidebar', openSidebarForAutoDemo);
+  }, []);
+
   const closeAutoDemo = () => {
     localStorage.removeItem(AUTO_DEMO_STORAGE_KEY);
     setIsAutoDemoOpen(false);
@@ -277,7 +283,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       <main className="flex-1 flex flex-col overflow-hidden w-full relative">
         <header className={`h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 lg:px-8 shrink-0 transition-colors duration-200 relative ${isProfileOpen ? 'z-[130]' : 'z-30'}`}>
           <div className="flex items-center gap-3 z-10">
-            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-brand-600 active:scale-95">
+            <button onClick={() => setIsSidebarOpen(true)} data-demo-target="mobile-sidebar-toggle" className="lg:hidden p-2 text-slate-500 hover:text-brand-600 active:scale-95">
               <i className="fa-solid fa-bars-staggered text-xl"></i>
             </button>
             <div className="hidden lg:flex flex-col">
