@@ -350,6 +350,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
         <button
           type="button"
           onClick={() => setIsGuideCollapsed(false)}
+          data-auto-demo-panel="true"
           className="pointer-events-auto fixed bottom-2 right-2 z-[270] flex h-14 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-white shadow-xl shadow-slate-900/20 active:scale-95 dark:bg-white dark:text-slate-950"
           aria-label="Open guided tour"
         >
