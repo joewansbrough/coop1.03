@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   AUTO_DEMO_STOPS,
   AUTO_DEMO_TIMING,
+  getAutoDemoPanelPlacement,
   getAutoDemoStop,
   getNextAutoDemoIndex,
   getPreviousAutoDemoIndex,
@@ -14,10 +15,16 @@ test('defines a guided sales story in the expected order', () => {
     AUTO_DEMO_STOPS.map(stop => stop.id),
     [
       'mission-control',
-      'maintenance-ai',
+      'open-maintenance',
+      'maintenance-queue',
+      'open-maintenance-detail',
+      'maintenance-detail',
       'unit-intelligence',
       'governance-archive',
-      'meeting-records',
+      'open-calendar',
+      'open-calendar-event',
+      'open-meeting-minutes',
+      'meeting-record-actions',
       'policy-assistant',
       'resident-view',
     ],
@@ -30,8 +37,26 @@ test('every stop has route target and customer-facing copy', () => {
     assert.match(stop.target, /^[a-z0-9-]+$/);
     assert.ok(stop.title.length >= 8);
     assert.ok(stop.body.length >= 80);
-    assert.ok(stop.sellingPoint.length >= 20);
+    assert.ok(stop.customerValue.length >= 40);
+    assert.doesNotMatch(`${stop.title} ${stop.body} ${stop.customerValue}`, /selling point|investor/i);
   }
+});
+
+test('defines explicit click-through navigation steps for maintenance and meeting minutes', () => {
+  const byId = new Map(AUTO_DEMO_STOPS.map(stop => [stop.id, stop]));
+
+  assert.equal(byId.get('open-maintenance')?.route, '/');
+  assert.equal(byId.get('open-maintenance')?.target, 'nav-maintenance');
+  assert.equal(byId.get('open-maintenance')?.routeAfterClick, '/maintenance');
+  assert.equal(byId.get('open-maintenance-detail')?.routeAfterClick, '/admin/maintenance/m1');
+
+  assert.equal(byId.get('open-calendar')?.target, 'nav-calendar');
+  assert.equal(byId.get('open-calendar')?.routeAfterClick, '/calendar');
+  assert.equal(byId.get('open-calendar-event')?.target, 'calendar-demo-event');
+  assert.equal(byId.get('open-calendar-event')?.routeAfterClick, '/calendar/e1');
+  assert.equal(byId.get('open-meeting-minutes')?.target, 'meeting-minutes-tab');
+  assert.equal(byId.get('open-meeting-minutes')?.routeAfterClick, '/calendar/e1?tab=minutes');
+  assert.equal(byId.get('meeting-record-actions')?.target, 'meeting-record-actions');
 });
 
 test('looks up stops only for valid indices', () => {
@@ -54,4 +79,18 @@ test('uses a staged cursor reveal before opening the narration panel', () => {
   assert.ok(AUTO_DEMO_TIMING.cursorTravelMs >= 1000);
   assert.ok(AUTO_DEMO_TIMING.arrivalHoldMs >= 500);
   assert.ok(AUTO_DEMO_TIMING.panelDelayMs >= AUTO_DEMO_TIMING.cursorTravelMs + AUTO_DEMO_TIMING.arrivalHoldMs);
+  assert.ok(AUTO_DEMO_TIMING.clickPulseMs >= 500);
+});
+
+test('keeps the narration panel inside small viewport bounds', () => {
+  const placement = getAutoDemoPanelPlacement({
+    rect: { top: 620, left: 930, width: 180, height: 90 },
+    viewportWidth: 1024,
+    viewportHeight: 700,
+  });
+
+  assert.ok(placement.left >= 16);
+  assert.ok(placement.top >= 16);
+  assert.ok(placement.left + placement.width <= 1024 - 16);
+  assert.ok(placement.top + placement.maxHeight <= 700 || placement.maxHeight <= 700 - 32);
 });

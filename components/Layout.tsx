@@ -230,6 +230,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               <Link
                 to={item.path}
                 onClick={() => setIsSidebarOpen(false)}
+                data-demo-target={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-[20px] transition-all group active:scale-95 ${
                   location.pathname === item.path 
                     ? 'bg-teal-accent text-white' 

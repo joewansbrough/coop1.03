@@ -237,7 +237,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const availableCategories: MaintenanceCategory[] = ['Plumbing', 'Electrical', 'Structural', 'Appliance', 'HVAC', 'Exterior', 'Safety', 'Other'];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-500">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-500" data-demo-target="maintenance-detail-record">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex items-center justify-between gap-4 text-slate-500 text-sm mb-2">
         <Link to="/maintenance" className="hover:text-brand-600 transition-colors flex items-center gap-1 font-bold">

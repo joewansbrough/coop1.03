@@ -551,6 +551,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
         ].map(tab => (
           <button
             key={tab.id}
+            data-demo-target={tab.id === 'minutes' ? 'meeting-minutes-tab' : undefined}
             onClick={() => setActiveTab(tab.id as any)}
             className={`px-6 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id ? 'border-brand-600 text-brand-600 dark:text-brand-400 dark:border-brand-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
           >
@@ -588,14 +589,23 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
               data={meetingMinutes}
               event={event}
               action={isAdmin ? (
-                <button
-                  type="button"
-                  onClick={() => setIsEditingMinutes(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-brand-600 transition-all"
-                >
-                  <i className="fa-solid fa-pen-to-square"></i>
-                  Edit
-                </button>
+                <div className="flex flex-wrap justify-end gap-2" data-demo-target="meeting-record-actions">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingMinutes(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-brand-600 transition-all"
+                  >
+                    <i className="fa-solid fa-pen-to-square"></i>
+                    Edit Minutes
+                  </button>
+                  <Link
+                    to="/documents"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-slate-900 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all"
+                  >
+                    <i className="fa-solid fa-folder-open"></i>
+                    Documents
+                  </Link>
+                </div>
               ) : undefined}
             />
           ) : (

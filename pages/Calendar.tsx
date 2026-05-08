@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Committee, CoopEvent } from '../types';
 import AppAlert from '../components/AppAlert';
 import { useCreateEvent, useUpdateEvent, useDeleteEvent } from '../hooks/useCoopData';
+import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
 
 interface CalendarProps {
   isAdmin?: boolean;
@@ -14,11 +15,14 @@ interface CalendarProps {
   isEventsError?: boolean;
 }
 
+const isAutoDemoActive = () =>
+  typeof window !== 'undefined' && window.localStorage.getItem(AUTO_DEMO_STORAGE_KEY) === 'true';
+
 const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, events, setEvents, committees = [], isEventsLoading, isEventsError }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [viewDate, setViewDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [viewDate, setViewDate] = useState(() => isAutoDemoActive() ? new Date(2026, 3, 1) : new Date());
+  const [selectedDate, setSelectedDate] = useState(() => isAutoDemoActive() ? '2026-04-12' : new Date().toISOString().split('T')[0]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editEvent, setEditEvent] = useState<CoopEvent | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -255,7 +259,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
     .sort((a, b) => parseEventDate(a).getTime() - parseEventDate(b).getTime())[0];
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all" data-demo-target="calendar-page">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -416,6 +420,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                     {hasEvents.map(e => (
                       <div 
                         key={e.id} 
+                        data-demo-target={e.id === 'e1' ? 'calendar-demo-event' : undefined}
                         onClick={(ev) => { ev.stopPropagation(); navigate(`/calendar/${e.id}`); }}
                         className={`text-[8px] font-black p-1 rounded-md truncate border cursor-pointer hover:scale-105 transition-transform ${
                           e.category === 'Meeting' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800' :
@@ -437,6 +442,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
           {nextEvent && (
             <Link 
               to={`/calendar/${nextEvent.id}`}
+              data-demo-target="calendar-next-event"
               className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 hover:border-brand-500 transition-all group cursor-pointer relative overflow-hidden block active:scale-[0.98] shadow-sm hover:shadow-2xl hover:shadow-brand-500/10"
             >
               {/* Image Banner */}

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, MousePointer2, Pause, Play, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, MousePointer2, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AUTO_DEMO_STOPS,
   AUTO_DEMO_TIMING,
+  getAutoDemoPanelPlacement,
   getAutoDemoStop,
   getNextAutoDemoIndex,
   getPreviousAutoDemoIndex,
@@ -30,40 +31,41 @@ const emptyRect: TargetRect = {
   height: 160,
 };
 
-const getCardPlacement = (rect: TargetRect) => {
-  const cardWidth = 360;
-  const margin = 20;
-  const placeRight = rect.left + rect.width + cardWidth + margin < window.innerWidth;
-  const placeLeft = rect.left - cardWidth - margin > margin;
-  const left = placeRight
-    ? rect.left + rect.width + margin
-    : placeLeft
-      ? rect.left - cardWidth - margin
-      : Math.max(margin, Math.min(window.innerWidth - cardWidth - margin, rect.left));
-  const top = Math.max(margin, Math.min(window.innerHeight - 330, rect.top));
-  return { left, top };
+const getScrollContainer = () => document.querySelector<HTMLElement>('main section[class*="overflow-y-auto"]');
+
+const snapPageToTop = () => {
+  getScrollContainer()?.scrollTo({ top: 0, behavior: 'auto' });
+  window.scrollTo({ top: 0, behavior: 'auto' });
+};
+
+const previewDashboardScroll = () => {
+  const container = getScrollContainer();
+  if (!container) return;
+  container.scrollTo({ top: 520, behavior: 'smooth' });
+  window.setTimeout(() => container.scrollTo({ top: 0, behavior: 'smooth' }), 1300);
 };
 
 const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwitch, isAdmin = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [stepIndex, setStepIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [targetRect, setTargetRect] = useState<TargetRect>(emptyRect);
   const [targetFound, setTargetFound] = useState(false);
   const [isPanelVisible, setIsPanelVisible] = useState(false);
   const [hasCursorArrived, setHasCursorArrived] = useState(false);
+  const [isClicking, setIsClicking] = useState(false);
   const stop = getAutoDemoStop(stepIndex);
 
   useEffect(() => {
-    if (!isOpen || !stop || isPaused) return;
+    if (!isOpen || !stop) return;
     if (`${location.pathname}${location.search}` !== stop.route) {
       navigate(stop.route);
+      window.setTimeout(snapPageToTop, 80);
     }
-  }, [isOpen, isPaused, location.pathname, location.search, navigate, stop]);
+  }, [isOpen, location.pathname, location.search, navigate, stop]);
 
   useEffect(() => {
-    if (!isOpen || !stop || isPaused) return;
+    if (!isOpen || !stop) return;
 
     let frame = 0;
     const measure = () => {
@@ -71,10 +73,20 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       if (!target) {
         setTargetFound(false);
         setTargetRect(emptyRect);
+        frame = window.setTimeout(measure, AUTO_DEMO_TIMING.measureDelayMs);
         return;
       }
 
-      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      if (stop.scrollMode === 'top') {
+        snapPageToTop();
+      } else if (stop.scrollMode === 'target') {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      } else if (stop.scrollMode === 'dashboard-preview') {
+        snapPageToTop();
+        window.setTimeout(previewDashboardScroll, AUTO_DEMO_TIMING.panelDelayMs + 500);
+      } else {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      }
       frame = window.setTimeout(() => {
         const rect = target.getBoundingClientRect();
         setTargetFound(rect.width > 0 && rect.height > 0);
@@ -84,6 +96,9 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           width: rect.width,
           height: rect.height,
         });
+        if (rect.width <= 0 || rect.height <= 0) {
+          frame = window.setTimeout(measure, AUTO_DEMO_TIMING.measureDelayMs);
+        }
       }, AUTO_DEMO_TIMING.measureDelayMs);
     };
 
@@ -97,12 +112,13 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onScroll, true);
     };
-  }, [isOpen, isPaused, location.pathname, location.search, stop]);
+  }, [isOpen, location.pathname, location.search, stop]);
 
   useEffect(() => {
-    if (!isOpen || !stop || isPaused) return;
+    if (!isOpen || !stop) return;
     setIsPanelVisible(false);
     setHasCursorArrived(false);
+    setIsClicking(false);
 
     const arrivalTimer = window.setTimeout(() => {
       setHasCursorArrived(true);
@@ -115,11 +131,15 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       window.clearTimeout(arrivalTimer);
       window.clearTimeout(panelTimer);
     };
-  }, [isOpen, isPaused, location.pathname, location.search, stepIndex, stop]);
+  }, [isOpen, location.pathname, location.search, stepIndex, stop]);
 
   const cardPlacement = useMemo(() => {
-    if (typeof window === 'undefined') return { left: 24, top: 24 };
-    return getCardPlacement(targetRect);
+    if (typeof window === 'undefined') return { left: 24, top: 24, width: 360, maxHeight: 420 };
+    return getAutoDemoPanelPlacement({
+      rect: targetRect,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    });
   }, [targetRect]);
 
   if (!isOpen || !stop) return null;
@@ -137,9 +157,23 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     setStepIndex(getNextAutoDemoIndex(stepIndex));
   };
 
+  const clickThenNavigate = (route: string) => {
+    setIsClicking(true);
+    window.setTimeout(() => {
+      navigate(route);
+      snapPageToTop();
+      setStepIndex(getNextAutoDemoIndex(stepIndex));
+      setIsClicking(false);
+    }, AUTO_DEMO_TIMING.clickPulseMs);
+  };
+
   const performAction = () => {
     if (stop.action === 'switch-role' && isAdmin) {
       onRoleSwitch?.();
+    }
+    if (stop.routeAfterClick) {
+      clickThenNavigate(stop.routeAfterClick);
+      return;
     }
     goNext();
   };
@@ -155,6 +189,10 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
         @keyframes auto-demo-cursor-pop {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.16); }
+        }
+        @keyframes auto-demo-click-ring {
+          0% { transform: scale(0.55); opacity: 0.95; }
+          100% { transform: scale(2.15); opacity: 0; }
         }
       `}</style>
       <div
@@ -174,24 +212,26 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           left: cursorLeft,
           top: cursorTop,
           transitionDuration: `${AUTO_DEMO_TIMING.cursorTravelMs}ms`,
-          animation: hasCursorArrived ? 'auto-demo-cursor-pop 650ms ease-out' : undefined,
+          animation: hasCursorArrived || isClicking ? 'auto-demo-cursor-pop 650ms ease-out' : undefined,
         }}
         aria-hidden="true"
       >
-        {hasCursorArrived && (
+        {(hasCursorArrived || isClicking) && (
           <span
-            className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-teal-200"
-            style={{ animation: 'auto-demo-arrival-ring 900ms ease-out 2' }}
+            className={`absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${isClicking ? 'border-white bg-teal-300/20' : 'border-teal-200'}`}
+            style={{ animation: isClicking ? 'auto-demo-click-ring 650ms ease-out' : 'auto-demo-arrival-ring 900ms ease-out 2' }}
           />
         )}
         <MousePointer2 className="h-9 w-9 fill-white text-teal-500" />
       </div>
 
       <aside
-        className={`pointer-events-auto absolute w-[calc(100vw-2rem)] max-w-[360px] overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl transition-all duration-500 dark:bg-slate-900 ${isPanelVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
+        className={`pointer-events-auto absolute overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl transition-all duration-500 dark:bg-slate-900 ${isPanelVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
         style={{
           left: cardPlacement.left,
           top: cardPlacement.top,
+          width: cardPlacement.width,
+          maxHeight: cardPlacement.maxHeight,
           pointerEvents: isPanelVisible ? 'auto' : 'none',
         }}
         aria-live="polite"
@@ -215,7 +255,10 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           </div>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div
+          className="space-y-4 overflow-y-auto p-4"
+          style={{ maxHeight: Math.max(220, cardPlacement.maxHeight - 96) }}
+        >
           {!targetFound && (
             <p className="rounded-2xl bg-amber-50 p-3 text-[10px] font-black uppercase tracking-widest text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
               Finding this area on the current screen. You can continue if the page is still loading.
@@ -223,8 +266,8 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           )}
           <p className="text-sm font-semibold leading-relaxed text-slate-600 dark:text-slate-300">{stop.body}</p>
           <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
-            <p className="text-[9px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Selling point</p>
-            <p className="mt-1 text-xs font-bold leading-relaxed text-teal-900 dark:text-teal-100">{stop.sellingPoint}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Customer benefit</p>
+            <p className="mt-1 text-xs font-bold leading-relaxed text-teal-900 dark:text-teal-100">{stop.customerValue}</p>
           </div>
           <div className="flex items-center justify-between gap-2">
             <button
@@ -238,18 +281,11 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
             </button>
             <button
               type="button"
-              onClick={() => setIsPaused(current => !current)}
-              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 text-[10px] font-black uppercase tracking-widest text-slate-600 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+              onClick={stop.action || stop.routeAfterClick ? performAction : goNext}
+              disabled={isClicking}
+              className="flex h-10 min-w-28 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-teal-700 disabled:opacity-70"
             >
-              {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
-              {isPaused ? 'Resume' : 'Pause'}
-            </button>
-            <button
-              type="button"
-              onClick={stop.action ? performAction : goNext}
-              className="flex h-10 items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-teal-700"
-            >
-              {stop.action === 'switch-role' && isAdmin ? 'Switch View' : isLastStep ? 'Finish' : 'Next'}
+              {isClicking ? 'Clicking...' : stop.action === 'switch-role' && isAdmin ? 'Switch View' : stop.routeAfterClick ? 'Click' : isLastStep ? 'Finish' : 'Next'}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>

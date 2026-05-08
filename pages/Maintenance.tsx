@@ -439,7 +439,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                     {openRequests.length > 0 ? openRequests.map(req => (
-                      <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance/${req.id}`)}>
+                      <tr key={req.id} data-demo-target={req.id === 'm1' ? 'maintenance-first-request' : undefined} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance/${req.id}`)}>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
                             <span className="text-xs font-black text-brand-600 dark:text-brand-400 uppercase">Unit {units.find(u => u.id === req.unitId)?.number || 'N/A'}</span>
