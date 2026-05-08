@@ -20,8 +20,6 @@ test('defines a guided onboarding demo in the expected order', () => {
       'dashboard-customize',
       'dashboard-tile-catalog',
       'dashboard-next-meeting',
-      'event-detail-overview',
-      'event-attendance',
       'open-calendar',
       'calendar-space',
       'calendar-actions',
@@ -101,7 +99,7 @@ test('defines explicit click-through navigation steps for maintenance and meetin
   assert.equal(byId.get('open-unit-from-maintenance')?.routeAfterClick, '/admin/units/u1');
 
   assert.equal(byId.get('dashboard-customize')?.action, 'toggle-dashboard-customize');
-  assert.equal(byId.get('dashboard-next-meeting')?.routeAfterClick, '/calendar/e1');
+  assert.equal(byId.get('dashboard-next-meeting')?.routeAfterClick, undefined);
   assert.equal(byId.get('open-calendar')?.target, 'nav-calendar');
   assert.equal(byId.get('open-calendar')?.routeAfterClick, '/calendar');
   assert.equal(byId.get('open-calendar-event')?.target, 'calendar-demo-event');

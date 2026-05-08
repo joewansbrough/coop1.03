@@ -1,10 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, MousePointer2, X } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ArrowLeft, ArrowRight, ChevronDown, ListChecks, MousePointer2, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AUTO_DEMO_STOPS,
   AUTO_DEMO_TIMING,
-  getAutoDemoPanelPlacement,
   getAutoDemoStop,
   getNextAutoDemoIndex,
   getPreviousAutoDemoIndex,
@@ -67,9 +66,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const [hasCursorArrived, setHasCursorArrived] = useState(false);
   const [isGlowVisible, setIsGlowVisible] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
-  const [panelPosition, setPanelPosition] = useState<{ left: number; top: number } | null>(null);
-  const panelRef = useRef<HTMLElement | null>(null);
-  const dragFrameRef = useRef<number | null>(null);
+  const [isGuideCollapsed, setIsGuideCollapsed] = useState(false);
   const stop = getAutoDemoStop(stepIndex);
   const isWelcomeStep = stop?.id === 'welcome';
 
@@ -163,15 +160,6 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     };
   }, [isOpen, isWelcomeStep, location.pathname, location.search, stepIndex, stop]);
 
-  const cardPlacement = useMemo(() => {
-    if (typeof window === 'undefined') return { left: 24, top: 24, width: 360, maxHeight: 420 };
-    return getAutoDemoPanelPlacement({
-      rect: targetRect,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-    });
-  }, [targetRect]);
-
   const isLastStep = stepIndex === AUTO_DEMO_STOPS.length - 1;
   const progress = Math.round(((stepIndex + 1) / AUTO_DEMO_STOPS.length) * 100);
   const cursorLeft = targetRect.left + Math.min(targetRect.width - 18, Math.max(18, targetRect.width * 0.72));
@@ -182,15 +170,19 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     width: typeof window === 'undefined' ? 520 : Math.min(520, window.innerWidth - 32),
     maxHeight: typeof window === 'undefined' ? 520 : Math.max(320, window.innerHeight - 48),
   };
-  const activePlacement = isWelcomeStep ? welcomePlacement : cardPlacement;
-  const resolvedPanelPosition = isWelcomeStep
-    ? { left: welcomePlacement.left, top: welcomePlacement.top }
-    : panelPosition || { left: cardPlacement.left, top: cardPlacement.top };
-
+  const guidePlacement = {
+    left: typeof window === 'undefined' ? 24 : Math.max(8, window.innerWidth - Math.min(380, window.innerWidth - 16) - 8),
+    top: typeof window === 'undefined' ? 24 : Math.max(8, window.innerHeight - Math.min(520, window.innerHeight - 16) - 8),
+    width: typeof window === 'undefined' ? 380 : Math.min(380, window.innerWidth - 16),
+    maxHeight: typeof window === 'undefined' ? 520 : Math.min(520, window.innerHeight - 16),
+  };
   const goNext = useCallback(() => {
     if (isLastStep) {
       onClose();
       return;
+    }
+    if (stepIndex === 0) {
+      setIsGuideCollapsed(false);
     }
     setStepIndex(getNextAutoDemoIndex(stepIndex));
   }, [isLastStep, onClose, stepIndex]);
@@ -245,58 +237,11 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     return () => document.removeEventListener('click', interceptPageClick, true);
   }, [isClicking, isOpen, isWelcomeStep, performAction, stop]);
 
-  const beginPanelDrag = (event: React.PointerEvent<HTMLElement>) => {
-    event.preventDefault();
-    const panel = panelRef.current;
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const startLeft = resolvedPanelPosition.left;
-    const startTop = resolvedPanelPosition.top;
-    let nextPosition = { left: startLeft, top: startTop };
-    const previousTransition = panel?.style.transition || '';
-    if (panel) {
-      panel.style.transition = 'none';
-    }
-
-    const applyPanelPosition = () => {
-      dragFrameRef.current = null;
-      if (!panel) return;
-      panel.style.left = `${nextPosition.left}px`;
-      panel.style.top = `${nextPosition.top}px`;
-    };
-
-    const movePanel = (moveEvent: PointerEvent) => {
-      const maxLeft = Math.max(16, window.innerWidth - cardPlacement.width - 16);
-      const maxTop = Math.max(16, window.innerHeight - 120);
-      nextPosition = {
-        left: Math.max(16, Math.min(maxLeft, startLeft + moveEvent.clientX - startX)),
-        top: Math.max(16, Math.min(maxTop, startTop + moveEvent.clientY - startY)),
-      };
-      if (dragFrameRef.current === null) {
-        dragFrameRef.current = window.requestAnimationFrame(applyPanelPosition);
-      }
-    };
-
-    const stopDrag = () => {
-      if (dragFrameRef.current !== null) {
-        window.cancelAnimationFrame(dragFrameRef.current);
-        dragFrameRef.current = null;
-      }
-      if (panel) {
-        panel.style.left = `${nextPosition.left}px`;
-        panel.style.top = `${nextPosition.top}px`;
-        panel.style.transition = previousTransition;
-      }
-      setPanelPosition(nextPosition);
-      window.removeEventListener('pointermove', movePanel);
-      window.removeEventListener('pointerup', stopDrag);
-    };
-
-    window.addEventListener('pointermove', movePanel);
-    window.addEventListener('pointerup', stopDrag);
-  };
-
   if (!isOpen || !stop) return null;
+
+  const guideHeaderLabel = isWelcomeStep ? 'Guided Welcome' : 'Guided Tour';
+  const panelTitle = isWelcomeStep ? stop.title : `${stepIndex + 1}. ${stop.title}`;
+  const shouldShowPanel = isWelcomeStep || !isGuideCollapsed;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[260]">
@@ -356,14 +301,25 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
         <MousePointer2 className="h-9 w-9 fill-white text-teal-500" />
       </div>}
 
-      <aside
-        ref={panelRef}
-        className={`pointer-events-auto absolute overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl transition-all duration-500 dark:bg-slate-900 ${isWelcomeStep ? 'shadow-teal-950/20' : ''} ${isPanelVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
+      {!isWelcomeStep && isGuideCollapsed && (
+        <button
+          type="button"
+          onClick={() => setIsGuideCollapsed(false)}
+          className="pointer-events-auto fixed bottom-2 right-2 z-[270] flex h-14 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-white shadow-xl shadow-slate-900/20 active:scale-95 dark:bg-white dark:text-slate-950"
+          aria-label="Open guided tour"
+        >
+          <ListChecks className="h-5 w-5" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Tour</span>
+        </button>
+      )}
+
+      {shouldShowPanel && <aside
+        className={`pointer-events-auto absolute overflow-hidden border border-white/20 bg-white shadow-2xl transition-all duration-500 dark:bg-slate-900 ${isWelcomeStep ? 'rounded-3xl shadow-teal-950/20' : 'rounded-3xl sm:max-w-sm'} ${isPanelVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
         style={{
-          left: resolvedPanelPosition.left,
-          top: resolvedPanelPosition.top,
-          width: activePlacement.width,
-          maxHeight: activePlacement.maxHeight,
+          left: isWelcomeStep ? welcomePlacement.left : guidePlacement.left,
+          top: isWelcomeStep ? welcomePlacement.top : guidePlacement.top,
+          width: isWelcomeStep ? welcomePlacement.width : guidePlacement.width,
+          maxHeight: isWelcomeStep ? welcomePlacement.maxHeight : guidePlacement.maxHeight,
           pointerEvents: isPanelVisible ? 'auto' : 'none',
           animation: isWelcomeStep ? 'auto-demo-welcome-bounce 720ms cubic-bezier(0.16, 1, 0.3, 1)' : undefined,
         }}
@@ -372,30 +328,30 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
         data-auto-demo-panel="true"
       >
         <div
-          className={`${isWelcomeStep ? 'cursor-default text-center' : 'cursor-move'} select-none border-b border-slate-100 bg-slate-950 p-4 text-white dark:border-white/5`}
-          onPointerDown={isWelcomeStep ? undefined : beginPanelDrag}
+          className={`${isWelcomeStep ? 'cursor-default text-center bg-slate-950 text-white' : 'bg-slate-50 text-slate-900 dark:bg-slate-950/50 dark:text-white'} select-none border-b border-slate-100 p-4 dark:border-white/5`}
+          onPointerDown={undefined}
         >
           <div className={`relative mb-3 flex items-center justify-between gap-3 ${isWelcomeStep ? 'justify-center' : ''}`}>
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-teal-300">{isWelcomeStep ? 'Guided Welcome' : 'Automated Demo'}</p>
+            <p className={`text-[9px] font-black uppercase tracking-[0.24em] ${isWelcomeStep ? 'text-teal-300' : 'text-teal-600 dark:text-teal-400'}`}>{guideHeaderLabel}</p>
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => isWelcomeStep ? onClose() : setIsGuideCollapsed(true)}
               onPointerDown={(event) => event.stopPropagation()}
-              className={`flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white transition-colors hover:bg-white/20 ${isWelcomeStep ? 'absolute right-0 top-1/2 -translate-y-1/2' : ''}`}
-              aria-label="Exit automated demo"
+              className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors ${isWelcomeStep ? 'absolute right-0 top-1/2 -translate-y-1/2 bg-white/10 text-white hover:bg-white/20' : 'bg-white text-slate-500 hover:text-slate-900 dark:bg-white/10 dark:hover:text-white'}`}
+              aria-label={isWelcomeStep ? 'Exit guided tour' : 'Collapse guided tour'}
             >
-              <X className="h-4 w-4" />
+              {isWelcomeStep ? <X className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
           </div>
-          <h3 className={`${isWelcomeStep ? 'text-2xl sm:text-3xl' : 'text-lg'} font-black leading-tight tracking-tight`}>{stop.title}</h3>
-          <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${progress}%` }} />
+          <h3 className={`${isWelcomeStep ? 'text-2xl sm:text-3xl' : 'text-sm uppercase text-slate-900 dark:text-white'} font-black leading-tight tracking-tight`}>{panelTitle}</h3>
+          <div className={`mt-4 h-1.5 overflow-hidden rounded-full ${isWelcomeStep ? 'bg-white/10' : 'bg-slate-200 dark:bg-slate-800'}`}>
+            <div className="h-full rounded-full bg-teal-500 transition-all" style={{ width: `${progress}%` }} />
           </div>
         </div>
 
         <div
           className="space-y-4 overflow-y-auto p-4"
-          style={{ maxHeight: Math.max(220, activePlacement.maxHeight - 96) }}
+          style={{ maxHeight: Math.max(220, (isWelcomeStep ? welcomePlacement.maxHeight : guidePlacement.maxHeight) - 96) }}
         >
           {!targetFound && (
             <p className="rounded-2xl bg-amber-50 p-3 text-[10px] font-black uppercase tracking-widest text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
@@ -417,6 +373,15 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
+            {!isWelcomeStep && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-10 rounded-xl bg-slate-100 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-200 hover:text-rose-600 dark:bg-slate-800 dark:text-slate-300"
+              >
+                End
+              </button>
+            )}
             <button
               type="button"
               onClick={stop.action || stop.routeAfterClick ? performAction : goNext}
@@ -428,7 +393,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
             </button>
           </div>
         </div>
-      </aside>
+      </aside>}
     </div>
   );
 };
