@@ -379,8 +379,8 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           )}
           <p className="text-sm font-semibold leading-relaxed text-slate-600 dark:text-slate-300">{stop.body}</p>
           <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
-            <p className="text-[9px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Customer benefit</p>
-            <p className="mt-1 text-xs font-bold leading-relaxed text-teal-900 dark:text-teal-100">{stop.customerValue}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Key capability</p>
+            <p className="mt-1 text-xs font-bold leading-relaxed text-teal-900 dark:text-teal-100">{stop.keyCapability}</p>
           </div>
           <div className="flex items-center justify-between gap-2">
             <button

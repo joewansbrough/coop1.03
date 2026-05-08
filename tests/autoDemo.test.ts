@@ -10,7 +10,7 @@ import {
   isAutoDemoStopIndex,
 } from '../utils/autoDemo.ts';
 
-test('defines a guided customer demo in the expected order', () => {
+test('defines a guided onboarding demo in the expected order', () => {
   assert.deepEqual(
     AUTO_DEMO_STOPS.map(stop => stop.id),
     [
@@ -78,14 +78,14 @@ test('defines a guided customer demo in the expected order', () => {
   );
 });
 
-test('every stop has route target and customer-facing copy', () => {
+test('every stop has route target and onboarding copy', () => {
   for (const stop of AUTO_DEMO_STOPS) {
     assert.match(stop.route, /^\//);
     assert.match(stop.target, /^[a-z0-9-]+$/);
     assert.ok(stop.title.length >= 8);
     assert.ok(stop.body.length >= 80);
-    assert.ok(stop.customerValue.length >= 40);
-    assert.doesNotMatch(`${stop.title} ${stop.body} ${stop.customerValue}`, /selling point|investor/i);
+    assert.ok(stop.keyCapability.length >= 40);
+    assert.doesNotMatch(`${stop.title} ${stop.body} ${stop.keyCapability}`, /customer|selling point|investor|product/i);
   }
 });
 
