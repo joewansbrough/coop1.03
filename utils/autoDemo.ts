@@ -29,8 +29,8 @@ export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
     route: '/',
     target: 'dashboard-mission-control',
     title: 'Welcome to your guided tour',
-    body: 'You will follow connected work across the co-op: community spaces, meetings, records, maintenance, units, and resident self-service. You can drag this window out of the way while you explore.',
-    keyCapability: 'Use this tour to understand how the main work areas fit together before you start navigating on your own.',
+    body: 'Welcome in. This tour will walk you through the everyday places where your co-op keeps work moving: the dashboard, calendar, meeting records, documents, maintenance, units, and resident tools.',
+    keyCapability: 'Use this first pass to get comfortable with the system, then follow the highlighted actions as each step introduces the next area.',
     scrollMode: 'top',
   },
   {

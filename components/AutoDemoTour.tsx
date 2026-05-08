@@ -71,6 +71,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const panelRef = useRef<HTMLElement | null>(null);
   const dragFrameRef = useRef<number | null>(null);
   const stop = getAutoDemoStop(stepIndex);
+  const isWelcomeStep = stop?.id === 'welcome';
 
   useEffect(() => {
     if (!isOpen || !stop) return;
@@ -82,6 +83,11 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
 
   useEffect(() => {
     if (!isOpen || !stop) return;
+    if (isWelcomeStep) {
+      setTargetFound(true);
+      snapPageToTop();
+      return;
+    }
 
     let frame = 0;
     const measure = (shouldAdjustScroll = false) => {
@@ -131,31 +137,31 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onScroll, true);
     };
-  }, [isOpen, location.pathname, location.search, stop]);
+  }, [isOpen, isWelcomeStep, location.pathname, location.search, stop]);
 
   useEffect(() => {
     if (!isOpen || !stop) return;
-    setIsPanelVisible(false);
+    setIsPanelVisible(isWelcomeStep);
     setHasCursorArrived(false);
-    setIsGlowVisible(true);
+    setIsGlowVisible(!isWelcomeStep);
     setIsClicking(false);
 
     const arrivalTimer = window.setTimeout(() => {
       setHasCursorArrived(true);
-    }, AUTO_DEMO_TIMING.cursorTravelMs);
+    }, isWelcomeStep ? 0 : AUTO_DEMO_TIMING.cursorTravelMs);
     const panelTimer = window.setTimeout(() => {
       setIsPanelVisible(true);
-    }, AUTO_DEMO_TIMING.panelDelayMs);
+    }, isWelcomeStep ? 0 : AUTO_DEMO_TIMING.panelDelayMs);
     const glowTimer = window.setTimeout(() => {
       setIsGlowVisible(false);
-    }, AUTO_DEMO_TIMING.panelDelayMs + 900);
+    }, isWelcomeStep ? 0 : AUTO_DEMO_TIMING.panelDelayMs + 900);
 
     return () => {
       window.clearTimeout(arrivalTimer);
       window.clearTimeout(panelTimer);
       window.clearTimeout(glowTimer);
     };
-  }, [isOpen, location.pathname, location.search, stepIndex, stop]);
+  }, [isOpen, isWelcomeStep, location.pathname, location.search, stepIndex, stop]);
 
   const cardPlacement = useMemo(() => {
     if (typeof window === 'undefined') return { left: 24, top: 24, width: 360, maxHeight: 420 };
@@ -170,7 +176,16 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const progress = Math.round(((stepIndex + 1) / AUTO_DEMO_STOPS.length) * 100);
   const cursorLeft = targetRect.left + Math.min(targetRect.width - 18, Math.max(18, targetRect.width * 0.72));
   const cursorTop = targetRect.top + Math.min(targetRect.height - 18, Math.max(18, targetRect.height * 0.42));
-  const resolvedPanelPosition = panelPosition || { left: cardPlacement.left, top: cardPlacement.top };
+  const welcomePlacement = {
+    left: typeof window === 'undefined' ? 24 : Math.max(16, (window.innerWidth - Math.min(520, window.innerWidth - 32)) / 2),
+    top: typeof window === 'undefined' ? 24 : Math.max(24, Math.min(120, window.innerHeight * 0.16)),
+    width: typeof window === 'undefined' ? 520 : Math.min(520, window.innerWidth - 32),
+    maxHeight: typeof window === 'undefined' ? 520 : Math.max(320, window.innerHeight - 48),
+  };
+  const activePlacement = isWelcomeStep ? welcomePlacement : cardPlacement;
+  const resolvedPanelPosition = isWelcomeStep
+    ? { left: welcomePlacement.left, top: welcomePlacement.top }
+    : panelPosition || { left: cardPlacement.left, top: cardPlacement.top };
 
   const goNext = useCallback(() => {
     if (isLastStep) {
@@ -215,7 +230,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       const node = event.target as HTMLElement | null;
       if (!node || node.closest('[data-auto-demo-panel="true"]')) return;
 
-      const activeTarget = document.querySelector<HTMLElement>(`[data-demo-target="${stop.target}"]`);
+      const activeTarget = isWelcomeStep ? null : document.querySelector<HTMLElement>(`[data-demo-target="${stop.target}"]`);
       const clickedActiveTarget = Boolean(activeTarget && activeTarget.contains(node));
       event.preventDefault();
       event.stopPropagation();
@@ -228,7 +243,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
 
     document.addEventListener('click', interceptPageClick, true);
     return () => document.removeEventListener('click', interceptPageClick, true);
-  }, [isClicking, isOpen, performAction, stop]);
+  }, [isClicking, isOpen, isWelcomeStep, performAction, stop]);
 
   const beginPanelDrag = (event: React.PointerEvent<HTMLElement>) => {
     event.preventDefault();
@@ -299,7 +314,16 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           0% { transform: scale(0.55); opacity: 0.95; }
           100% { transform: scale(2.15); opacity: 0; }
         }
+        @keyframes auto-demo-welcome-bounce {
+          0% { opacity: 0; transform: translateY(24px) scale(0.96); }
+          56% { opacity: 1; transform: translateY(-7px) scale(1.015); }
+          76% { transform: translateY(3px) scale(0.997); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
       `}</style>
+      {isWelcomeStep && (
+        <div className="absolute inset-0 bg-slate-950/20 backdrop-blur-[3px]" aria-hidden="true" />
+      )}
       {isGlowVisible && (
         <div
           className={`absolute rounded-[28px] border-2 bg-teal-200/5 shadow-[0_0_0_1px_rgba(45,212,191,0.35),0_0_34px_rgba(20,184,166,0.58)] transition-all ease-out ${hasCursorArrived ? 'border-teal-200/95' : 'border-teal-300/70'}`}
@@ -313,7 +337,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
         />
       )}
 
-      <div
+      {!isWelcomeStep && <div
         className="absolute text-teal-300 drop-shadow-[0_8px_18px_rgba(15,23,42,0.45)] transition-all ease-out"
         style={{
           left: cursorLeft,
@@ -330,39 +354,40 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           />
         )}
         <MousePointer2 className="h-9 w-9 fill-white text-teal-500" />
-      </div>
+      </div>}
 
       <aside
         ref={panelRef}
-        className={`pointer-events-auto absolute overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl transition-all duration-500 dark:bg-slate-900 ${isPanelVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
+        className={`pointer-events-auto absolute overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl transition-all duration-500 dark:bg-slate-900 ${isWelcomeStep ? 'shadow-teal-950/20' : ''} ${isPanelVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
         style={{
           left: resolvedPanelPosition.left,
           top: resolvedPanelPosition.top,
-          width: cardPlacement.width,
-          maxHeight: cardPlacement.maxHeight,
+          width: activePlacement.width,
+          maxHeight: activePlacement.maxHeight,
           pointerEvents: isPanelVisible ? 'auto' : 'none',
+          animation: isWelcomeStep ? 'auto-demo-welcome-bounce 720ms cubic-bezier(0.16, 1, 0.3, 1)' : undefined,
         }}
         aria-live="polite"
         aria-hidden={!isPanelVisible}
         data-auto-demo-panel="true"
       >
         <div
-          className="cursor-move select-none border-b border-slate-100 bg-slate-950 p-4 text-white dark:border-white/5"
-          onPointerDown={beginPanelDrag}
+          className={`${isWelcomeStep ? 'cursor-default text-center' : 'cursor-move'} select-none border-b border-slate-100 bg-slate-950 p-4 text-white dark:border-white/5`}
+          onPointerDown={isWelcomeStep ? undefined : beginPanelDrag}
         >
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-teal-300">Automated Demo</p>
+          <div className={`relative mb-3 flex items-center justify-between gap-3 ${isWelcomeStep ? 'justify-center' : ''}`}>
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-teal-300">{isWelcomeStep ? 'Guided Welcome' : 'Automated Demo'}</p>
             <button
               type="button"
               onClick={onClose}
               onPointerDown={(event) => event.stopPropagation()}
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white transition-colors hover:bg-white/20"
+              className={`flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white transition-colors hover:bg-white/20 ${isWelcomeStep ? 'absolute right-0 top-1/2 -translate-y-1/2' : ''}`}
               aria-label="Exit automated demo"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
-          <h3 className="text-lg font-black leading-tight tracking-tight">{stop.title}</h3>
+          <h3 className={`${isWelcomeStep ? 'text-2xl sm:text-3xl' : 'text-lg'} font-black leading-tight tracking-tight`}>{stop.title}</h3>
           <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
             <div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${progress}%` }} />
           </div>
@@ -370,7 +395,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
 
         <div
           className="space-y-4 overflow-y-auto p-4"
-          style={{ maxHeight: Math.max(220, cardPlacement.maxHeight - 96) }}
+          style={{ maxHeight: Math.max(220, activePlacement.maxHeight - 96) }}
         >
           {!targetFound && (
             <p className="rounded-2xl bg-amber-50 p-3 text-[10px] font-black uppercase tracking-widest text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
