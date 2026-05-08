@@ -40,6 +40,7 @@ test('defines a guided sales story in the expected order', () => {
       'unit-maintenance-tab',
       'unit-schedule-tab',
       'unit-members-tab',
+      'unit-history-tab',
       'unit-documents-tab',
       'policy-assistant',
       'resident-view',
@@ -86,6 +87,7 @@ test('defines explicit click-through navigation steps for maintenance and meetin
   assert.equal(byId.get('unit-maintenance-tab')?.routeAfterClick, '/admin/units/u1?tab=maintenance');
   assert.equal(byId.get('unit-schedule-tab')?.routeAfterClick, '/admin/units/u1?tab=schedule');
   assert.equal(byId.get('unit-members-tab')?.routeAfterClick, '/admin/units/u1?tab=occupancy');
+  assert.equal(byId.get('unit-history-tab')?.routeAfterClick, '/admin/units/u1?tab=history');
   assert.equal(byId.get('unit-documents-tab')?.routeAfterClick, '/admin/units/u1?tab=documents');
 });
 

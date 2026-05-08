@@ -167,12 +167,10 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     { label: 'Dashboard', path: '/', icon: 'fa-chart-line' },
     { label: 'Calendar', path: '/calendar', icon: 'fa-calendar-days' },
     { label: 'Committees', path: '/committees', icon: 'fa-users-gear' },
+    { label: 'Communications', path: '/communications', icon: 'fa-comments' },
     { label: 'Maintenance', path: '/maintenance', icon: 'fa-tools' },
     { label: 'Documents', path: '/documents', icon: 'fa-file-lines' },
     { label: 'Policy Assistant', path: '/policy-assistant', icon: 'fa-robot' },
-    { label: 'Notifications', path: '/notifications', icon: 'fa-bell' },
-    { label: 'Communications', path: '/communications', icon: 'fa-comments' },
-    { label: 'Directory', path: '/directory', icon: 'fa-address-book' },
   ];
 
   const effectiveIsAdmin = isAdmin;
@@ -181,6 +179,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     navItems.push(
       { label: 'Units', path: '/admin/units', icon: 'fa-house-chimney', isAdmin: true },
       { label: 'Tenants', path: '/admin/tenants', icon: 'fa-users', isAdmin: true },
+      { label: 'Directory', path: '/directory', icon: 'fa-address-book', isAdmin: true },
       { label: 'Waitlist', path: '/admin/waitlist', icon: 'fa-list-check', isAdmin: true }
     );
   }

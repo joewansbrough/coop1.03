@@ -53,6 +53,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const [targetFound, setTargetFound] = useState(false);
   const [isPanelVisible, setIsPanelVisible] = useState(false);
   const [hasCursorArrived, setHasCursorArrived] = useState(false);
+  const [isGlowVisible, setIsGlowVisible] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   const [panelPosition, setPanelPosition] = useState<{ left: number; top: number } | null>(null);
   const stop = getAutoDemoStop(stepIndex);
@@ -69,24 +70,25 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     if (!isOpen || !stop) return;
 
     let frame = 0;
-    const measure = () => {
+    const measure = (shouldAdjustScroll = false) => {
       const target = document.querySelector<HTMLElement>(`[data-demo-target="${stop.target}"]`);
       if (!target) {
         setTargetFound(false);
-        setTargetRect(emptyRect);
-        frame = window.setTimeout(measure, AUTO_DEMO_TIMING.measureDelayMs);
+        frame = window.setTimeout(() => measure(shouldAdjustScroll), AUTO_DEMO_TIMING.measureDelayMs);
         return;
       }
 
-      if (stop.scrollMode === 'top') {
-        snapPageToTop();
-      } else if (stop.scrollMode === 'target') {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-      } else if (stop.scrollMode === 'dashboard-preview') {
-        snapPageToTop();
-        window.setTimeout(previewDashboardScroll, AUTO_DEMO_TIMING.panelDelayMs + 500);
-      } else {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      if (shouldAdjustScroll) {
+        if (stop.scrollMode === 'top') {
+          snapPageToTop();
+        } else if (stop.scrollMode === 'target') {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        } else if (stop.scrollMode === 'dashboard-preview') {
+          snapPageToTop();
+          window.setTimeout(previewDashboardScroll, AUTO_DEMO_TIMING.panelDelayMs + 500);
+        } else {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }
       }
       frame = window.setTimeout(() => {
         const rect = target.getBoundingClientRect();
@@ -98,14 +100,14 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           height: rect.height,
         });
         if (rect.width <= 0 || rect.height <= 0) {
-          frame = window.setTimeout(measure, AUTO_DEMO_TIMING.measureDelayMs);
+          frame = window.setTimeout(() => measure(shouldAdjustScroll), AUTO_DEMO_TIMING.measureDelayMs);
         }
       }, AUTO_DEMO_TIMING.measureDelayMs);
     };
 
-    measure();
-    const onResize = () => measure();
-    const onScroll = () => measure();
+    measure(true);
+    const onResize = () => measure(false);
+    const onScroll = () => measure(false);
     window.addEventListener('resize', onResize);
     window.addEventListener('scroll', onScroll, true);
     return () => {
@@ -119,6 +121,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     if (!isOpen || !stop) return;
     setIsPanelVisible(false);
     setHasCursorArrived(false);
+    setIsGlowVisible(true);
     setIsClicking(false);
 
     const arrivalTimer = window.setTimeout(() => {
@@ -127,10 +130,14 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     const panelTimer = window.setTimeout(() => {
       setIsPanelVisible(true);
     }, AUTO_DEMO_TIMING.panelDelayMs);
+    const glowTimer = window.setTimeout(() => {
+      setIsGlowVisible(false);
+    }, AUTO_DEMO_TIMING.panelDelayMs + 900);
 
     return () => {
       window.clearTimeout(arrivalTimer);
       window.clearTimeout(panelTimer);
+      window.clearTimeout(glowTimer);
     };
   }, [isOpen, location.pathname, location.search, stepIndex, stop]);
 
@@ -245,8 +252,9 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           100% { transform: scale(2.15); opacity: 0; }
         }
       `}</style>
-      <div
-        className={`absolute rounded-[28px] border-2 bg-teal-200/5 shadow-[0_0_0_1px_rgba(45,212,191,0.35),0_0_34px_rgba(20,184,166,0.58)] transition-all ease-out ${hasCursorArrived ? 'border-teal-200/95' : 'border-teal-300/70'}`}
+      {isGlowVisible && (
+        <div
+          className={`absolute rounded-[28px] border-2 bg-teal-200/5 shadow-[0_0_0_1px_rgba(45,212,191,0.35),0_0_34px_rgba(20,184,166,0.58)] transition-all ease-out ${hasCursorArrived ? 'border-teal-200/95' : 'border-teal-300/70'}`}
         style={{
           top: targetRect.top - 10,
           left: targetRect.left - 10,
@@ -254,7 +262,8 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           height: targetRect.height + 20,
           transitionDuration: `${AUTO_DEMO_TIMING.cursorTravelMs}ms`,
         }}
-      />
+        />
+      )}
 
       <div
         className="absolute text-teal-300 drop-shadow-[0_8px_18px_rgba(15,23,42,0.45)] transition-all ease-out"
