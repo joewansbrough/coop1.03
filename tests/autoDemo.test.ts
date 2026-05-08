@@ -14,17 +14,33 @@ test('defines a guided sales story in the expected order', () => {
   assert.deepEqual(
     AUTO_DEMO_STOPS.map(stop => stop.id),
     [
+      'welcome',
       'mission-control',
+      'open-calendar',
+      'calendar-space',
+      'open-calendar-event',
+      'open-meeting-minutes',
+      'meeting-record-actions',
+      'open-linked-documents',
+      'governance-archive',
+      'open-committees',
+      'committee-space',
+      'open-communications',
+      'communications-space',
       'open-maintenance',
       'maintenance-queue',
       'open-maintenance-detail',
       'maintenance-detail',
+      'maintenance-status',
+      'maintenance-update-log',
+      'maintenance-categories',
+      'maintenance-export',
+      'open-unit-from-maintenance',
       'unit-intelligence',
-      'governance-archive',
-      'open-calendar',
-      'open-calendar-event',
-      'open-meeting-minutes',
-      'meeting-record-actions',
+      'unit-maintenance-tab',
+      'unit-schedule-tab',
+      'unit-members-tab',
+      'unit-documents-tab',
       'policy-assistant',
       'resident-view',
     ],
@@ -49,6 +65,8 @@ test('defines explicit click-through navigation steps for maintenance and meetin
   assert.equal(byId.get('open-maintenance')?.target, 'nav-maintenance');
   assert.equal(byId.get('open-maintenance')?.routeAfterClick, '/maintenance');
   assert.equal(byId.get('open-maintenance-detail')?.routeAfterClick, '/admin/maintenance/m1');
+  assert.equal(byId.get('open-unit-from-maintenance')?.target, 'maintenance-unit-link');
+  assert.equal(byId.get('open-unit-from-maintenance')?.routeAfterClick, '/admin/units/u1');
 
   assert.equal(byId.get('open-calendar')?.target, 'nav-calendar');
   assert.equal(byId.get('open-calendar')?.routeAfterClick, '/calendar');
@@ -57,6 +75,18 @@ test('defines explicit click-through navigation steps for maintenance and meetin
   assert.equal(byId.get('open-meeting-minutes')?.target, 'meeting-minutes-tab');
   assert.equal(byId.get('open-meeting-minutes')?.routeAfterClick, '/calendar/e1?tab=minutes');
   assert.equal(byId.get('meeting-record-actions')?.target, 'meeting-record-actions');
+  assert.equal(byId.get('open-linked-documents')?.target, 'meeting-documents-link');
+  assert.equal(byId.get('open-linked-documents')?.routeAfterClick, '/documents');
+
+  assert.equal(byId.get('open-committees')?.target, 'nav-committees');
+  assert.equal(byId.get('open-committees')?.routeAfterClick, '/committees');
+  assert.equal(byId.get('open-communications')?.target, 'nav-communications');
+  assert.equal(byId.get('open-communications')?.routeAfterClick, '/communications');
+
+  assert.equal(byId.get('unit-maintenance-tab')?.routeAfterClick, '/admin/units/u1?tab=maintenance');
+  assert.equal(byId.get('unit-schedule-tab')?.routeAfterClick, '/admin/units/u1?tab=schedule');
+  assert.equal(byId.get('unit-members-tab')?.routeAfterClick, '/admin/units/u1?tab=occupancy');
+  assert.equal(byId.get('unit-documents-tab')?.routeAfterClick, '/admin/units/u1?tab=documents');
 });
 
 test('looks up stops only for valid indices', () => {
@@ -64,7 +94,7 @@ test('looks up stops only for valid indices', () => {
   assert.equal(isAutoDemoStopIndex(AUTO_DEMO_STOPS.length - 1), true);
   assert.equal(isAutoDemoStopIndex(-1), false);
   assert.equal(isAutoDemoStopIndex(AUTO_DEMO_STOPS.length), false);
-  assert.equal(getAutoDemoStop(0)?.id, 'mission-control');
+  assert.equal(getAutoDemoStop(0)?.id, 'welcome');
   assert.equal(getAutoDemoStop(AUTO_DEMO_STOPS.length), null);
 });
 

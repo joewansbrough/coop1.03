@@ -600,6 +600,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                   </button>
                   <Link
                     to="/documents"
+                    data-demo-target="meeting-documents-link"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-slate-900 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all"
                   >
                     <i className="fa-solid fa-folder-open"></i>

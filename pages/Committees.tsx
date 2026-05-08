@@ -205,7 +205,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
   };
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all" data-demo-target="community-committees">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>

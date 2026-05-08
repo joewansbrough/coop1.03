@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, MousePointer2, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -54,6 +54,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const [isPanelVisible, setIsPanelVisible] = useState(false);
   const [hasCursorArrived, setHasCursorArrived] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
+  const [panelPosition, setPanelPosition] = useState<{ left: number; top: number } | null>(null);
   const stop = getAutoDemoStop(stepIndex);
 
   useEffect(() => {
@@ -142,22 +143,21 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     });
   }, [targetRect]);
 
-  if (!isOpen || !stop) return null;
-
   const isLastStep = stepIndex === AUTO_DEMO_STOPS.length - 1;
   const progress = Math.round(((stepIndex + 1) / AUTO_DEMO_STOPS.length) * 100);
   const cursorLeft = targetRect.left + Math.min(targetRect.width - 18, Math.max(18, targetRect.width * 0.72));
   const cursorTop = targetRect.top + Math.min(targetRect.height - 18, Math.max(18, targetRect.height * 0.42));
+  const resolvedPanelPosition = panelPosition || { left: cardPlacement.left, top: cardPlacement.top };
 
-  const goNext = () => {
+  const goNext = useCallback(() => {
     if (isLastStep) {
       onClose();
       return;
     }
     setStepIndex(getNextAutoDemoIndex(stepIndex));
-  };
+  }, [isLastStep, onClose, stepIndex]);
 
-  const clickThenNavigate = (route: string) => {
+  const clickThenNavigate = useCallback((route: string) => {
     setIsClicking(true);
     window.setTimeout(() => {
       navigate(route);
@@ -165,9 +165,10 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       setStepIndex(getNextAutoDemoIndex(stepIndex));
       setIsClicking(false);
     }, AUTO_DEMO_TIMING.clickPulseMs);
-  };
+  }, [navigate, stepIndex]);
 
-  const performAction = () => {
+  const performAction = useCallback(() => {
+    if (!stop) return;
     if (stop.action === 'switch-role' && isAdmin) {
       onRoleSwitch?.();
     }
@@ -176,7 +177,56 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       return;
     }
     goNext();
+  }, [clickThenNavigate, goNext, isAdmin, onRoleSwitch, stop]);
+
+  useEffect(() => {
+    if (!isOpen || !stop) return;
+
+    const interceptPageClick = (event: MouseEvent) => {
+      const node = event.target as HTMLElement | null;
+      if (!node || node.closest('[data-auto-demo-panel="true"]')) return;
+
+      const activeTarget = document.querySelector<HTMLElement>(`[data-demo-target="${stop.target}"]`);
+      const clickedActiveTarget = Boolean(activeTarget && activeTarget.contains(node));
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      if (clickedActiveTarget && !isClicking) {
+        performAction();
+      }
+    };
+
+    document.addEventListener('click', interceptPageClick, true);
+    return () => document.removeEventListener('click', interceptPageClick, true);
+  }, [isClicking, isOpen, performAction, stop]);
+
+  const beginPanelDrag = (event: React.PointerEvent<HTMLElement>) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startLeft = resolvedPanelPosition.left;
+    const startTop = resolvedPanelPosition.top;
+
+    const movePanel = (moveEvent: PointerEvent) => {
+      const maxLeft = Math.max(16, window.innerWidth - cardPlacement.width - 16);
+      const maxTop = Math.max(16, window.innerHeight - 120);
+      setPanelPosition({
+        left: Math.max(16, Math.min(maxLeft, startLeft + moveEvent.clientX - startX)),
+        top: Math.max(16, Math.min(maxTop, startTop + moveEvent.clientY - startY)),
+      });
+    };
+
+    const stopDrag = () => {
+      window.removeEventListener('pointermove', movePanel);
+      window.removeEventListener('pointerup', stopDrag);
+    };
+
+    window.addEventListener('pointermove', movePanel);
+    window.addEventListener('pointerup', stopDrag);
   };
+
+  if (!isOpen || !stop) return null;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[260]">
@@ -196,7 +246,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
         }
       `}</style>
       <div
-        className={`absolute rounded-[28px] border-2 shadow-[0_0_0_9999px_rgba(15,23,42,0.55),0_0_28px_rgba(20,184,166,0.55)] transition-all ease-out ${hasCursorArrived ? 'border-teal-200/95' : 'border-teal-300/70'}`}
+        className={`absolute rounded-[28px] border-2 bg-teal-200/5 shadow-[0_0_0_1px_rgba(45,212,191,0.35),0_0_34px_rgba(20,184,166,0.58)] transition-all ease-out ${hasCursorArrived ? 'border-teal-200/95' : 'border-teal-300/70'}`}
         style={{
           top: targetRect.top - 10,
           left: targetRect.left - 10,
@@ -228,21 +278,26 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       <aside
         className={`pointer-events-auto absolute overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl transition-all duration-500 dark:bg-slate-900 ${isPanelVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
         style={{
-          left: cardPlacement.left,
-          top: cardPlacement.top,
+          left: resolvedPanelPosition.left,
+          top: resolvedPanelPosition.top,
           width: cardPlacement.width,
           maxHeight: cardPlacement.maxHeight,
           pointerEvents: isPanelVisible ? 'auto' : 'none',
         }}
         aria-live="polite"
         aria-hidden={!isPanelVisible}
+        data-auto-demo-panel="true"
       >
-        <div className="border-b border-slate-100 bg-slate-950 p-4 text-white dark:border-white/5">
+        <div
+          className="cursor-move select-none border-b border-slate-100 bg-slate-950 p-4 text-white dark:border-white/5"
+          onPointerDown={beginPanelDrag}
+        >
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-[9px] font-black uppercase tracking-[0.24em] text-teal-300">Automated Demo</p>
             <button
               type="button"
               onClick={onClose}
+              onPointerDown={(event) => event.stopPropagation()}
               className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white transition-colors hover:bg-white/20"
               aria-label="Exit automated demo"
             >

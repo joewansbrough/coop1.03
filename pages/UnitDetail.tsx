@@ -691,6 +691,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
         ].map(tab => (
           <button 
             key={tab.id}
+            data-demo-target={`unit-tab-${tab.id}`}
             onClick={() => {
               setActiveTab(tab.id as any);
               navigate(`/admin/units/${unitId}?tab=${tab.id}`, { replace: true });

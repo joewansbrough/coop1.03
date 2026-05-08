@@ -263,6 +263,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 return (
                   <button
                     key={status}
+                    data-demo-target={status === RequestStatus.IN_PROGRESS ? 'maintenance-status-in-progress' : status === RequestStatus.PENDING ? 'maintenance-status-pending' : undefined}
                     disabled={savingField === 'status' || ((isLocked || !isAdmin) && !isActive)}
                     onClick={() => isAdmin && handleStatusChange(status)}
                     className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -323,7 +324,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <section className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-2 mb-6" data-demo-target="maintenance-category-tags">
               {availableCategories.map(cat => {
                 const isActive = request.category.includes(cat);
                 return (
@@ -347,7 +348,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
             <h1 className="text-4xl font-black text-slate-900 dark:text-white leading-tight mb-8">{request.description}</h1>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-8 border-t border-slate-50 dark:border-white/5">
-              <Link to={`/admin/units/${unit?.id}`} className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent hover:border-brand-500/50 transition-all">
+              <Link to={`/admin/units/${unit?.id}`} data-demo-target="maintenance-unit-link" className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent hover:border-brand-500/50 transition-all">
                 <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-brand-500 transition-colors">
                   <i className="fa-solid fa-door-open text-2xl"></i>
                 </div>
@@ -480,7 +481,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 </div>
               </div>
               {!isLocked && (
-                <form onSubmit={addNote} className="pt-4">
+                <form onSubmit={addNote} className="pt-4" data-demo-target="maintenance-update-log">
                   <textarea
                     className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none text-slate-800 dark:text-slate-200"
                     placeholder={isAdmin ? "Log a new update or member contact..." : "Add a comment for the maintenance committee..."}
@@ -509,6 +510,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
              <div className="space-y-3">
                 {canExportPdf && (
                   <button
+                    data-demo-target="maintenance-export-pdf"
                     onClick={handleExportPdf}
                     disabled={isExportingPdf}
                     className="w-full p-4 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-brand-700 transition-all active:scale-95 group disabled:opacity-60 disabled:cursor-not-allowed"
