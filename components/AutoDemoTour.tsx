@@ -161,7 +161,10 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   }, [isOpen, isWelcomeStep, location.pathname, location.search, stepIndex, stop]);
 
   const isLastStep = stepIndex === AUTO_DEMO_STOPS.length - 1;
-  const progress = Math.round(((stepIndex + 1) / AUTO_DEMO_STOPS.length) * 100);
+  const guidedStepCount = Math.max(1, AUTO_DEMO_STOPS.length - 1);
+  const progress = isWelcomeStep
+    ? 0
+    : Math.round((stepIndex / guidedStepCount) * 100);
   const cursorLeft = targetRect.left + Math.min(targetRect.width - 18, Math.max(18, targetRect.width * 0.72));
   const cursorTop = targetRect.top + Math.min(targetRect.height - 18, Math.max(18, targetRect.height * 0.42));
   const welcomePlacement = {
@@ -171,8 +174,6 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     maxHeight: typeof window === 'undefined' ? 520 : Math.max(320, window.innerHeight - 48),
   };
   const guidePlacement = {
-    left: typeof window === 'undefined' ? 24 : Math.max(8, window.innerWidth - Math.min(380, window.innerWidth - 16) - 8),
-    top: typeof window === 'undefined' ? 24 : Math.max(8, window.innerHeight - Math.min(520, window.innerHeight - 16) - 8),
     width: typeof window === 'undefined' ? 380 : Math.min(380, window.innerWidth - 16),
     maxHeight: typeof window === 'undefined' ? 520 : Math.min(520, window.innerHeight - 16),
   };
@@ -240,7 +241,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   if (!isOpen || !stop) return null;
 
   const guideHeaderLabel = isWelcomeStep ? 'Guided Welcome' : 'Guided Tour';
-  const panelTitle = isWelcomeStep ? stop.title : `${stepIndex + 1}. ${stop.title}`;
+  const panelTitle = isWelcomeStep ? stop.title : `${stepIndex}. ${stop.title}`;
   const shouldShowPanel = isWelcomeStep || !isGuideCollapsed;
 
   return (
@@ -316,8 +317,10 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       {shouldShowPanel && <aside
         className={`pointer-events-auto absolute overflow-hidden border border-white/20 bg-white shadow-2xl transition-all duration-500 dark:bg-slate-900 ${isWelcomeStep ? 'rounded-3xl shadow-teal-950/20' : 'rounded-3xl sm:max-w-sm'} ${isPanelVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
         style={{
-          left: isWelcomeStep ? welcomePlacement.left : guidePlacement.left,
-          top: isWelcomeStep ? welcomePlacement.top : guidePlacement.top,
+          left: isWelcomeStep ? welcomePlacement.left : undefined,
+          top: isWelcomeStep ? welcomePlacement.top : undefined,
+          right: isWelcomeStep ? undefined : 8,
+          bottom: isWelcomeStep ? undefined : 8,
           width: isWelcomeStep ? welcomePlacement.width : guidePlacement.width,
           maxHeight: isWelcomeStep ? welcomePlacement.maxHeight : guidePlacement.maxHeight,
           pointerEvents: isPanelVisible ? 'auto' : 'none',
