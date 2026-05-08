@@ -617,7 +617,7 @@ const ResourceLibrary: React.FC<{
             </p>
           </div>
           {isAdmin && !isGuest && (
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row" data-demo-target="document-upload-actions">
               <button
                 onClick={() => {
                   setShowUpload(true);
@@ -649,7 +649,7 @@ const ResourceLibrary: React.FC<{
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDocs.map(doc => {
+          {filteredDocs.map((doc, index) => {
             const fileUrl = getDocumentFileUrl(doc);
             const isCloud = fileUrl?.includes('drive.google.com');
             const ingestion = getIngestionDisplay(doc);
@@ -657,6 +657,7 @@ const ResourceLibrary: React.FC<{
               <div
                 key={doc.id}
                 onClick={() => handleViewDoc(doc)}
+                data-demo-target={index === 0 ? 'document-first-card' : undefined}
                 className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-brand-300 dark:hover:border-brand-600 transition-all group flex flex-col cursor-pointer active:scale-[0.98]"
               >
                 <div className="flex items-start gap-4 mb-4">

@@ -22,7 +22,7 @@ const DashboardTileCatalog: React.FC<DashboardTileCatalogProps> = ({
   const availableTiles = getAvailableDashboardTiles(role);
 
   return (
-    <div className="rounded-[20px] border border-dashed border-slate-300 bg-white/70 p-3 dark:border-white/10 dark:bg-slate-900/70 sm:p-4">
+    <div className="rounded-[20px] border border-dashed border-slate-300 bg-white/70 p-3 dark:border-white/10 dark:bg-slate-900/70 sm:p-4" data-demo-target="dashboard-tile-catalog">
       <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400">Tile catalog</p>

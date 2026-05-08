@@ -330,9 +330,10 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
 
       {!selectedId ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {committees.map(committee => (
+          {committees.map((committee, index) => (
             <div
               key={committee.id}
+              data-demo-target={index === 0 ? 'committee-first-card' : undefined}
               onClick={() => setSelectedId(committee.id)}
               className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5 hover:border-brand-400 dark:hover:border-brand-500/50 hover:-translate-y-1 transition-all text-left group overflow-hidden relative cursor-pointer"
             >
@@ -392,7 +393,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-white/5 relative overflow-hidden">
+              <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl border border-slate-200 dark:border-white/5 relative overflow-hidden" data-demo-target="committee-detail-overview">
                 <div className="absolute -top-10 -right-10 opacity-5 text-[15rem] text-brand-900 pointer-events-none">
                   <i className={`fa-solid ${selectedCommittee?.icon}`}></i>
                 </div>
@@ -441,7 +442,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5" data-demo-target="committee-meetings">
                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
                    <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase tracking-tight">
                      <i className="fa-solid fa-calendar-check text-brand-500"></i> Upcoming Meetings
@@ -485,7 +486,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                  </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5 space-y-8">
+              <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-white/5 space-y-8" data-demo-target="committee-documents">
                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                    <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase tracking-tight">
                      <i className="fa-solid fa-file-contract text-brand-500"></i> Committee Documents

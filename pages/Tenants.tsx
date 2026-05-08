@@ -100,7 +100,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, isLoading = false, t
   const waitlistMembers = filteredTenants.filter(t => t.status === 'Waitlist');
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all" data-demo-target="member-directory-page">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
 
       {/* Header */}
@@ -276,7 +276,7 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, isLoading = false, t
       </div>}
 
       {/* ── Desktop: Table ── */}
-      {!isLoading && <div className="hidden sm:block bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
+      {!isLoading && <div className="hidden sm:block bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm" data-demo-target="member-directory-table">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-white/5">

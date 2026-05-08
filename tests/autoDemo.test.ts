@@ -10,23 +10,43 @@ import {
   isAutoDemoStopIndex,
 } from '../utils/autoDemo.ts';
 
-test('defines a guided sales story in the expected order', () => {
+test('defines a guided customer demo in the expected order', () => {
   assert.deepEqual(
     AUTO_DEMO_STOPS.map(stop => stop.id),
     [
       'welcome',
       'mission-control',
+      'dashboard-maintenance-tile',
+      'dashboard-customize',
+      'dashboard-tile-catalog',
+      'dashboard-next-meeting',
+      'event-detail-overview',
+      'event-attendance',
       'open-calendar',
       'calendar-space',
+      'calendar-actions',
+      'calendar-month-grid',
+      'calendar-event-list',
       'open-calendar-event',
+      'calendar-event-details',
+      'calendar-event-participation',
       'open-meeting-minutes',
       'meeting-record-actions',
+      'meeting-record-scroll',
       'open-linked-documents',
       'governance-archive',
+      'document-upload-workflow',
+      'document-card-workflow',
       'open-committees',
       'committee-space',
+      'open-committee-detail',
+      'committee-detail-workflow',
+      'committee-meeting-workflow',
+      'committee-document-workflow',
       'open-communications',
       'communications-space',
+      'communications-new-broadcast',
+      'communications-first-broadcast',
       'open-maintenance',
       'maintenance-queue',
       'open-maintenance-detail',
@@ -42,7 +62,17 @@ test('defines a guided sales story in the expected order', () => {
       'unit-members-tab',
       'unit-history-tab',
       'unit-documents-tab',
+      'open-units-admin',
+      'units-admin-workflow',
+      'open-tenants-admin',
+      'tenants-admin-workflow',
+      'open-directory-admin',
+      'directory-admin-workflow',
+      'open-waitlist-admin',
+      'waitlist-admin-workflow',
       'policy-assistant',
+      'policy-assistant-question',
+      'policy-assistant-answer',
       'resident-view',
     ],
   );
@@ -69,18 +99,23 @@ test('defines explicit click-through navigation steps for maintenance and meetin
   assert.equal(byId.get('open-unit-from-maintenance')?.target, 'maintenance-unit-link');
   assert.equal(byId.get('open-unit-from-maintenance')?.routeAfterClick, '/admin/units/u1');
 
+  assert.equal(byId.get('dashboard-customize')?.action, 'toggle-dashboard-customize');
+  assert.equal(byId.get('dashboard-next-meeting')?.routeAfterClick, '/calendar/e1');
   assert.equal(byId.get('open-calendar')?.target, 'nav-calendar');
   assert.equal(byId.get('open-calendar')?.routeAfterClick, '/calendar');
   assert.equal(byId.get('open-calendar-event')?.target, 'calendar-demo-event');
   assert.equal(byId.get('open-calendar-event')?.routeAfterClick, '/calendar/e1');
+  assert.equal(byId.get('calendar-event-details')?.target, 'event-details-overview');
   assert.equal(byId.get('open-meeting-minutes')?.target, 'meeting-minutes-tab');
   assert.equal(byId.get('open-meeting-minutes')?.routeAfterClick, '/calendar/e1?tab=minutes');
   assert.equal(byId.get('meeting-record-actions')?.target, 'meeting-record-actions');
+  assert.equal(byId.get('meeting-record-scroll')?.scrollMode, 'minutes-record');
   assert.equal(byId.get('open-linked-documents')?.target, 'meeting-documents-link');
   assert.equal(byId.get('open-linked-documents')?.routeAfterClick, '/documents');
 
   assert.equal(byId.get('open-committees')?.target, 'nav-committees');
   assert.equal(byId.get('open-committees')?.routeAfterClick, '/committees');
+  assert.equal(byId.get('open-committee-detail')?.routeAfterClick, '/committees?id=c1');
   assert.equal(byId.get('open-communications')?.target, 'nav-communications');
   assert.equal(byId.get('open-communications')?.routeAfterClick, '/communications');
 
@@ -89,6 +124,11 @@ test('defines explicit click-through navigation steps for maintenance and meetin
   assert.equal(byId.get('unit-members-tab')?.routeAfterClick, '/admin/units/u1?tab=occupancy');
   assert.equal(byId.get('unit-history-tab')?.routeAfterClick, '/admin/units/u1?tab=history');
   assert.equal(byId.get('unit-documents-tab')?.routeAfterClick, '/admin/units/u1?tab=documents');
+  assert.equal(byId.get('open-units-admin')?.routeAfterClick, '/admin/units');
+  assert.equal(byId.get('open-tenants-admin')?.routeAfterClick, '/admin/tenants');
+  assert.equal(byId.get('open-directory-admin')?.routeAfterClick, '/directory');
+  assert.equal(byId.get('open-waitlist-admin')?.routeAfterClick, '/admin/waitlist');
+  assert.equal(byId.get('policy-assistant-question')?.action, 'ask-policy-demo');
 });
 
 test('looks up stops only for valid indices', () => {

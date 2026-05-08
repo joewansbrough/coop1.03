@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bot, Send, Sparkles, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { geminiService } from '../services/geminiService';
@@ -26,6 +26,31 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     { role: 'assistant', content: 'Ask me about co-op policies, meetings, documents, or maintenance steps.' },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const showDemoQuestion = () => {
+      const demoResponse: OracleResponse = {
+        answer: 'Yes. Residents should submit repair issues through Maintenance so the board has the unit, category, urgency, notes, and follow-up history in one place. If the issue affects water, electrical safety, heat, entry access, or another urgent building system, mark it high priority and contact the office as well. You can start from [Maintenance](/maintenance).',
+        citations: [
+          { documentId: 'd1', title: 'Maintenance Request Policy', pageNumber: 2 },
+          { documentId: 'd2', title: 'Resident Handbook', pageNumber: 8 },
+        ],
+        language: 'English',
+        intent: 'maintenance',
+        confidence: 0.94,
+        suggestedAction: { type: 'start-maintenance-request', label: 'Open Maintenance', href: '/maintenance' },
+      };
+      setIsLoading(false);
+      setMessages([
+        { role: 'assistant', content: 'Ask me about co-op policies, meetings, documents, or maintenance steps.' },
+        { role: 'user', content: 'A resident has a leaking sink. What should we do first?' },
+        { role: 'assistant', content: demoResponse.answer, response: demoResponse },
+      ]);
+    };
+
+    document.addEventListener('auto-demo-oracle-question', showDemoQuestion);
+    return () => document.removeEventListener('auto-demo-oracle-question', showDemoQuestion);
+  }, []);
 
   const ask = async (question: string) => {
     if (!question.trim() || isLoading) return;
@@ -116,7 +141,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           {ORACLE_LANGUAGES.map(item => <option key={item}>{item}</option>)}
         </select>
       </div>
-      <div className="h-80 space-y-3 overflow-y-auto p-4">
+      <div className="h-80 space-y-3 overflow-y-auto p-4" data-demo-target="policy-assistant-qa">
         {messages.map((message, index) => (
           <div key={index} className={message.role === 'user' ? 'text-right' : 'text-left'}>
             <div className={`inline-block max-w-[88%] rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed ${message.role === 'user' ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-200'}`}>

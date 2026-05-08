@@ -267,7 +267,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Co-op meetings, social gatherings, and building maintenance events.</p>
         </div>
         {isAdmin && !isGuest && (
-          <div className="flex gap-2">
+          <div className="flex gap-2" data-demo-target="calendar-actions">
             <button 
               onClick={handleExportICS}
               className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/5 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
@@ -398,7 +398,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
               <button onClick={handleNextMonth} className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-xl text-slate-400 transition-colors"><i className="fa-solid fa-chevron-right"></i></button>
             </div>
           </div>
-          <div className="grid grid-cols-7 gap-px bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden">
+          <div className="grid grid-cols-7 gap-px bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden" data-demo-target="calendar-month-grid">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
               <div key={day} className="bg-slate-50/50 dark:bg-slate-900/50 p-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">{day}</div>
             ))}
@@ -505,7 +505,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
             </Link>
           )}
 
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors duration-200">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors duration-200" data-demo-target="calendar-event-list">
             <h3 className="text-base font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2 border-b border-slate-50 dark:border-white/5 pb-4">
                <i className="fa-solid fa-clock-rotate-left text-brand-500"></i>
                {monthName} Events

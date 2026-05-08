@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import DashboardTileCatalog from '../components/dashboard/DashboardTileCatalog';
 import DashboardTileGrid from '../components/dashboard/DashboardTileGrid';
@@ -730,6 +730,12 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  useEffect(() => {
+    const openCustomizer = () => setIsEditing(true);
+    document.addEventListener('auto-demo-dashboard-customize', openCustomizer);
+    return () => document.removeEventListener('auto-demo-dashboard-customize', openCustomizer);
+  }, []);
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-12 animate-in fade-in duration-500" data-demo-target="dashboard-mission-control">
       <div className="relative overflow-hidden rounded-[20px] border border-white/5 bg-slate-900 p-5 pr-20 text-white shadow-2xl shadow-teal-accent/10 dark:bg-slate-950 sm:p-6 sm:pr-24 lg:p-10 lg:pr-28">
@@ -738,6 +744,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <button
             type="button"
             onClick={() => setIsEditing(!isEditing)}
+            data-demo-target="dashboard-customize"
             className={`inline-flex h-11 w-11 items-center justify-center rounded-2xl text-sm shadow-sm transition-all active:scale-95 ${
               isEditing ? 'bg-teal-500 text-white' : 'bg-white text-slate-950 hover:bg-teal-50'
             }`}

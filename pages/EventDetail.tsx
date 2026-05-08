@@ -551,7 +551,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
         ].map(tab => (
           <button
             key={tab.id}
-            data-demo-target={tab.id === 'minutes' ? 'meeting-minutes-tab' : undefined}
+            data-demo-target={tab.id === 'minutes' ? 'meeting-minutes-tab' : tab.id === 'overview' ? 'event-details-tab' : undefined}
             onClick={() => setActiveTab(tab.id as any)}
             className={`px-6 py-4 text-xs font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${activeTab === tab.id ? 'border-brand-600 text-brand-600 dark:text-brand-400 dark:border-brand-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white'}`}
           >
@@ -623,7 +623,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
           )}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden" data-demo-target="event-details-overview">
           <div className="h-48 bg-slate-900 relative overflow-hidden">
             <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=1200')] bg-cover bg-center"></div>
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
@@ -750,12 +750,13 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                   {isAdmin && !isGuest && (
                     <button
                       onClick={() => setIsEditing(true)}
+                      data-demo-target="event-edit-action"
                       className="w-full bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95"
                     >
                       <i className="fa-solid fa-pen-to-square mr-2"></i> Edit Event
                     </button>
                   )}
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-white/5">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-white/5" data-demo-target="event-attendance-actions">
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Attendee List</h4>
                     <div className="space-y-3">
                       {isTemp ? (

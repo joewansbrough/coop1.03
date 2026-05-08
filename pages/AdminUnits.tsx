@@ -60,7 +60,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
   const sortedBuildingNames = Object.keys(unitsByBuilding);
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all" data-demo-target="admin-units-page">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -130,12 +130,12 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
       )}
 
       <div className="space-y-12">
-        {sortedBuildingNames.length > 0 ? sortedBuildingNames.map(buildingName => (
+        {sortedBuildingNames.length > 0 ? sortedBuildingNames.map((buildingName, buildingIndex) => (
           <div key={buildingName} className="space-y-8">
             {sortedBuildingNames.length > 1 && <h3 className="text-sm font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{buildingName}</h3>}
-            {Object.keys(unitsByBuilding[buildingName]).map(Number).sort((a, b) => a - b).map(floor => (
+            {Object.keys(unitsByBuilding[buildingName]).map(Number).sort((a, b) => a - b).map((floor, floorIndex) => (
               <div key={`${buildingName}-${floor}`} className="space-y-6">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4" data-demo-target={buildingIndex === 0 && floorIndex === 0 ? 'admin-units-floor-group' : undefined}>
                   <div className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest border border-slate-200 dark:border-white/5 shadow-sm">
                     {sortedBuildingNames.length > 1 ? `${buildingName} - ` : ''}Floor {floor}
                   </div>

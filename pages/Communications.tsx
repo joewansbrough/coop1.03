@@ -150,6 +150,7 @@ const Communications: React.FC<{
         {isAdmin && (
           <button
             onClick={() => setShowNewAnnouncement(true)}
+            data-demo-target="communications-new-broadcast"
             className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-dashed border-slate-200 dark:border-white/5 rounded-[2.5rem] p-12 flex flex-col items-center justify-center text-center hover:border-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/10 transition-all group"
           >
             <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/30 rounded-3xl flex items-center justify-center text-slate-300 dark:text-slate-700 group-hover:text-brand-500 mb-6 transition-all duration-300">
@@ -162,10 +163,11 @@ const Communications: React.FC<{
           </button>
         )}
 
-        {filteredAnnouncements.map((announcement) => (
+        {filteredAnnouncements.map((announcement, index) => (
           <Link
             key={announcement.id}
             to={`/announcements/${announcement.id}`}
+            data-demo-target={index === 0 ? 'communications-first-broadcast' : undefined}
             className="group bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 relative overflow-hidden flex flex-col h-full transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/[0.03] hover:-translate-y-2 hover:border-brand-300 dark:hover:border-brand-600 cursor-pointer active:scale-[0.98] z-10 hover:z-20 no-underline"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full -mr-16 -mt-16 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>

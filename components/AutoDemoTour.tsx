@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, MousePointer2, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -45,6 +45,18 @@ const previewDashboardScroll = () => {
   window.setTimeout(() => container.scrollTo({ top: 0, behavior: 'smooth' }), 1300);
 };
 
+const scrollThroughMeetingRecord = (target: HTMLElement) => {
+  const container = getScrollContainer();
+  const scroller = container || document.documentElement;
+  target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+  window.setTimeout(() => {
+    scroller.scrollTo({ top: scroller.scrollTop + 480, behavior: 'smooth' });
+  }, AUTO_DEMO_TIMING.panelDelayMs + 500);
+  window.setTimeout(() => {
+    scroller.scrollTo({ top: scroller.scrollTop + 520, behavior: 'smooth' });
+  }, AUTO_DEMO_TIMING.panelDelayMs + 1800);
+};
+
 const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwitch, isAdmin = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,6 +68,8 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const [isGlowVisible, setIsGlowVisible] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   const [panelPosition, setPanelPosition] = useState<{ left: number; top: number } | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const dragFrameRef = useRef<number | null>(null);
   const stop = getAutoDemoStop(stepIndex);
 
   useEffect(() => {
@@ -86,6 +100,8 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
         } else if (stop.scrollMode === 'dashboard-preview') {
           snapPageToTop();
           window.setTimeout(previewDashboardScroll, AUTO_DEMO_TIMING.panelDelayMs + 500);
+        } else if (stop.scrollMode === 'minutes-record') {
+          scrollThroughMeetingRecord(target);
         } else {
           target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
         }
@@ -179,6 +195,12 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     if (stop.action === 'switch-role' && isAdmin) {
       onRoleSwitch?.();
     }
+    if (stop.action === 'toggle-dashboard-customize') {
+      document.dispatchEvent(new CustomEvent('auto-demo-dashboard-customize'));
+    }
+    if (stop.action === 'ask-policy-demo') {
+      document.dispatchEvent(new CustomEvent('auto-demo-oracle-question'));
+    }
     if (stop.routeAfterClick) {
       clickThenNavigate(stop.routeAfterClick);
       return;
@@ -210,21 +232,47 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
 
   const beginPanelDrag = (event: React.PointerEvent<HTMLElement>) => {
     event.preventDefault();
+    const panel = panelRef.current;
     const startX = event.clientX;
     const startY = event.clientY;
     const startLeft = resolvedPanelPosition.left;
     const startTop = resolvedPanelPosition.top;
+    let nextPosition = { left: startLeft, top: startTop };
+    const previousTransition = panel?.style.transition || '';
+    if (panel) {
+      panel.style.transition = 'none';
+    }
+
+    const applyPanelPosition = () => {
+      dragFrameRef.current = null;
+      if (!panel) return;
+      panel.style.left = `${nextPosition.left}px`;
+      panel.style.top = `${nextPosition.top}px`;
+    };
 
     const movePanel = (moveEvent: PointerEvent) => {
       const maxLeft = Math.max(16, window.innerWidth - cardPlacement.width - 16);
       const maxTop = Math.max(16, window.innerHeight - 120);
-      setPanelPosition({
+      nextPosition = {
         left: Math.max(16, Math.min(maxLeft, startLeft + moveEvent.clientX - startX)),
         top: Math.max(16, Math.min(maxTop, startTop + moveEvent.clientY - startY)),
-      });
+      };
+      if (dragFrameRef.current === null) {
+        dragFrameRef.current = window.requestAnimationFrame(applyPanelPosition);
+      }
     };
 
     const stopDrag = () => {
+      if (dragFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragFrameRef.current);
+        dragFrameRef.current = null;
+      }
+      if (panel) {
+        panel.style.left = `${nextPosition.left}px`;
+        panel.style.top = `${nextPosition.top}px`;
+        panel.style.transition = previousTransition;
+      }
+      setPanelPosition(nextPosition);
       window.removeEventListener('pointermove', movePanel);
       window.removeEventListener('pointerup', stopDrag);
     };
@@ -285,6 +333,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       </div>
 
       <aside
+        ref={panelRef}
         className={`pointer-events-auto absolute overflow-hidden rounded-3xl border border-white/20 bg-white shadow-2xl transition-all duration-500 dark:bg-slate-900 ${isPanelVisible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}
         style={{
           left: resolvedPanelPosition.left,
