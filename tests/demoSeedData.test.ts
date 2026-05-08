@@ -30,6 +30,15 @@ test('demo seed includes resident-visible minutes for existing calendar events',
   }
 });
 
+test('demo seed fleshes out the board committee detail page', () => {
+  const boardMeetings = MOCK_EVENTS.filter(event => event.committeeId === 'c1');
+  const boardDocuments = MOCK_DOCUMENTS.filter(document => document.committee === 'Board of Directors');
+
+  assert.ok(boardMeetings.length >= 2);
+  assert.ok(boardMeetings.some(event => event.date >= '2026-05-08'));
+  assert.ok(boardDocuments.length >= 2);
+});
+
 test('demo storage initializer refreshes older local demo snapshots to the current seed', () => {
   const store = new Map<string, string>([
     ['demo_v1_seed_version', 'legacy'],

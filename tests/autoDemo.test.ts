@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  AUTO_DEMO_SECTIONS,
   AUTO_DEMO_STOPS,
   AUTO_DEMO_TIMING,
+  getAutoDemoSectionForIndex,
+  getAutoDemoSectionForTarget,
+  getAutoDemoSectionStartIndex,
   getAutoDemoPanelPlacement,
   getAutoDemoStop,
   getNextAutoDemoIndex,
@@ -68,6 +72,7 @@ test('defines a guided onboarding demo in the expected order', () => {
       'directory-admin-workflow',
       'open-waitlist-admin',
       'waitlist-admin-workflow',
+      'open-policy-assistant',
       'policy-assistant',
       'policy-assistant-question',
       'policy-assistant-answer',
@@ -91,7 +96,7 @@ test('every stop has route target and onboarding copy', () => {
 test('defines explicit click-through navigation steps for maintenance and meeting minutes', () => {
   const byId = new Map(AUTO_DEMO_STOPS.map(stop => [stop.id, stop]));
 
-  assert.equal(byId.get('open-maintenance')?.route, '/');
+  assert.equal(byId.get('open-maintenance')?.route, '/communications');
   assert.equal(byId.get('open-maintenance')?.target, 'nav-maintenance');
   assert.equal(byId.get('open-maintenance')?.routeAfterClick, '/maintenance');
   assert.equal(byId.get('open-maintenance-detail')?.routeAfterClick, '/admin/maintenance/m1');
@@ -127,7 +132,48 @@ test('defines explicit click-through navigation steps for maintenance and meetin
   assert.equal(byId.get('open-tenants-admin')?.routeAfterClick, '/admin/tenants');
   assert.equal(byId.get('open-directory-admin')?.routeAfterClick, '/directory');
   assert.equal(byId.get('open-waitlist-admin')?.routeAfterClick, '/admin/waitlist');
+  assert.equal(byId.get('open-policy-assistant')?.routeAfterClick, '/policy-assistant');
   assert.equal(byId.get('policy-assistant-question')?.action, 'ask-policy-demo');
+});
+
+test('sidebar transition steps start from the current tour page instead of dashboard', () => {
+  const byId = new Map(AUTO_DEMO_STOPS.map(stop => [stop.id, stop]));
+
+  assert.equal(byId.get('open-committees')?.route, '/documents');
+  assert.equal(byId.get('open-communications')?.route, '/committees?id=c1');
+  assert.equal(byId.get('open-maintenance')?.route, '/communications');
+  assert.equal(byId.get('open-units-admin')?.route, '/admin/units/u1?tab=documents');
+  assert.equal(byId.get('open-tenants-admin')?.route, '/admin/units');
+  assert.equal(byId.get('open-directory-admin')?.route, '/admin/tenants');
+  assert.equal(byId.get('open-waitlist-admin')?.route, '/directory');
+  assert.equal(byId.get('open-policy-assistant')?.route, '/admin/waitlist');
+  assert.equal(byId.get('resident-view')?.route, '/policy-assistant');
+});
+
+test('defines numbered menu sections for page-level guided stops', () => {
+  assert.deepEqual(
+    AUTO_DEMO_SECTIONS.map(section => section.title),
+    [
+      'Dashboard',
+      'Calendar',
+      'Documents',
+      'Committees',
+      'Communications',
+      'Maintenance',
+      'Unit Detail',
+      'Unit Inventory',
+      'Members',
+      'Directory',
+      'Waitlist',
+      'Policy Assistant',
+      'Resident View',
+    ],
+  );
+
+  assert.equal(getAutoDemoSectionStartIndex('calendar'), AUTO_DEMO_STOPS.findIndex(stop => stop.id === 'open-calendar'));
+  assert.equal(getAutoDemoSectionForTarget('nav-maintenance')?.id, 'maintenance');
+  assert.equal(getAutoDemoSectionForIndex(AUTO_DEMO_STOPS.findIndex(stop => stop.id === 'committee-meeting-workflow'))?.title, 'Committees');
+  assert.equal(getAutoDemoSectionForIndex(0), null);
 });
 
 test('looks up stops only for valid indices', () => {

@@ -23,6 +23,29 @@ export interface AutoDemoStop {
   action?: AutoDemoAction;
 }
 
+export interface AutoDemoSection {
+  id: string;
+  title: string;
+  startStopId: string;
+  navTarget?: string;
+}
+
+export const AUTO_DEMO_SECTIONS: AutoDemoSection[] = [
+  { id: 'dashboard', title: 'Dashboard', startStopId: 'mission-control', navTarget: 'nav-dashboard' },
+  { id: 'calendar', title: 'Calendar', startStopId: 'open-calendar', navTarget: 'nav-calendar' },
+  { id: 'documents', title: 'Documents', startStopId: 'governance-archive', navTarget: 'nav-documents' },
+  { id: 'committees', title: 'Committees', startStopId: 'open-committees', navTarget: 'nav-committees' },
+  { id: 'communications', title: 'Communications', startStopId: 'open-communications', navTarget: 'nav-communications' },
+  { id: 'maintenance', title: 'Maintenance', startStopId: 'open-maintenance', navTarget: 'nav-maintenance' },
+  { id: 'unit-detail', title: 'Unit Detail', startStopId: 'open-unit-from-maintenance' },
+  { id: 'unit-inventory', title: 'Unit Inventory', startStopId: 'open-units-admin', navTarget: 'nav-units' },
+  { id: 'members', title: 'Members', startStopId: 'open-tenants-admin', navTarget: 'nav-tenants' },
+  { id: 'directory', title: 'Directory', startStopId: 'open-directory-admin', navTarget: 'nav-directory' },
+  { id: 'waitlist', title: 'Waitlist', startStopId: 'open-waitlist-admin', navTarget: 'nav-waitlist' },
+  { id: 'policy-assistant', title: 'Policy Assistant', startStopId: 'open-policy-assistant', navTarget: 'nav-policy-assistant' },
+  { id: 'resident-view', title: 'Resident View', startStopId: 'resident-view' },
+];
+
 export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
   {
     id: 'welcome',
@@ -220,7 +243,7 @@ export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
   },
   {
     id: 'open-committees',
-    route: '/',
+    route: '/documents',
     target: 'nav-committees',
     title: 'Open community spaces',
     body: 'Beyond records, move into the community tools that help people participate: committees and communications.',
@@ -276,7 +299,7 @@ export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
   },
   {
     id: 'open-communications',
-    route: '/',
+    route: '/committees?id=c1',
     target: 'nav-communications',
     title: 'Open communications',
     body: 'Communications is where announcements and building-wide updates live, so residents know where to look for current information.',
@@ -313,7 +336,7 @@ export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
   },
   {
     id: 'open-maintenance',
-    route: '/',
+    route: '/communications',
     target: 'nav-maintenance',
     title: 'Open maintenance from the sidebar',
     body: 'Follow the same path a board member would use: move to Maintenance in the sidebar, click it, and enter the shared maintenance workspace.',
@@ -455,7 +478,7 @@ export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
   },
   {
     id: 'open-units-admin',
-    route: '/',
+    route: '/admin/units/u1?tab=documents',
     target: 'nav-units',
     title: 'Open the Unit Inventory',
     body: 'The sidebar also gives admins a full unit inventory for scanning occupancy, vacancy, maintenance status, and building groupings.',
@@ -474,7 +497,7 @@ export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
   },
   {
     id: 'open-tenants-admin',
-    route: '/',
+    route: '/admin/units',
     target: 'nav-tenants',
     title: 'Open member administration',
     body: 'Tenant administration keeps current, past, and waitlisted members searchable with unit assignments and profile access.',
@@ -493,7 +516,7 @@ export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
   },
   {
     id: 'open-directory-admin',
-    route: '/',
+    route: '/admin/tenants',
     target: 'nav-directory',
     title: 'Open the admin directory',
     body: 'Directory now sits under Board Administration so admins can reach it without making it a primary resident navigation item.',
@@ -512,7 +535,7 @@ export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
   },
   {
     id: 'open-waitlist-admin',
-    route: '/',
+    route: '/directory',
     target: 'nav-waitlist',
     title: 'Open waitlist administration',
     body: 'The waitlist is available to admins for prospective member tracking, follow-up, and application intake.',
@@ -528,6 +551,16 @@ export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
     body: 'Waitlist records can be filtered, reviewed, and expanded with new applications as the co-op manages future occupancy.',
     keyCapability: 'The board gets a cleaner pipeline for membership planning and fewer loose application notes.',
     scrollMode: 'target',
+  },
+  {
+    id: 'open-policy-assistant',
+    route: '/admin/waitlist',
+    target: 'nav-policy-assistant',
+    title: 'Open the Policy Assistant',
+    body: 'Move from board administration into the Policy Assistant through the sidebar, following the same navigation path you would use when a question comes up.',
+    keyCapability: 'The assistant is easy to reach when records, rules, or maintenance questions need quick context during everyday work.',
+    routeAfterClick: '/policy-assistant',
+    scrollMode: 'top',
   },
   {
     id: 'policy-assistant',
@@ -559,7 +592,7 @@ export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
   },
   {
     id: 'resident-view',
-    route: '/',
+    route: '/policy-assistant',
     target: 'role-switcher',
     title: 'One platform for board and residents',
     body: 'Switch into resident view to show personal requests, useful documents, community updates, meetings, committees, and self-service entry points.',
@@ -609,6 +642,32 @@ export const isAutoDemoStopIndex = (index: number) =>
 
 export const getAutoDemoStop = (index: number) =>
   isAutoDemoStopIndex(index) ? AUTO_DEMO_STOPS[index] : null;
+
+export const getAutoDemoSectionStartIndex = (sectionId: string) => {
+  const section = AUTO_DEMO_SECTIONS.find(item => item.id === sectionId);
+  if (!section) return -1;
+  return AUTO_DEMO_STOPS.findIndex(stop => stop.id === section.startStopId);
+};
+
+export const getAutoDemoSectionForIndex = (index: number) => {
+  if (!isAutoDemoStopIndex(index) || index === 0) return null;
+  let currentSection: (AutoDemoSection & { number: number; startIndex: number }) | null = null;
+  AUTO_DEMO_SECTIONS.forEach((section, sectionIndex) => {
+    const startIndex = AUTO_DEMO_STOPS.findIndex(stop => stop.id === section.startStopId);
+    if (startIndex > 0 && startIndex <= index) {
+      currentSection = { ...section, number: sectionIndex + 1, startIndex };
+    }
+  });
+  return currentSection;
+};
+
+export const getAutoDemoSectionForTarget = (target?: string | null) => {
+  if (!target) return null;
+  const section = AUTO_DEMO_SECTIONS.find(item => item.navTarget === target);
+  if (!section) return null;
+  const startIndex = getAutoDemoSectionStartIndex(section.id);
+  return startIndex >= 0 ? { ...section, startIndex } : null;
+};
 
 export const getNextAutoDemoIndex = (index: number) =>
   Math.min(AUTO_DEMO_STOPS.length - 1, Math.max(0, index + 1));

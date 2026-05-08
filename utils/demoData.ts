@@ -258,7 +258,7 @@ export const MOCK_ANNOUNCEMENTS: Announcement[] = [
 ];
 
 export const MOCK_EVENTS: CoopEvent[] = [
-  { id: 'e1', title: 'Co-op AGM', description: 'Official annual meeting and board elections.', date: '2026-04-12T19:00:00Z', time: '19:00', location: 'Common Room', category: 'Meeting' },
+  { id: 'e1', title: 'Co-op AGM', description: 'Official annual meeting and board elections.', date: '2026-04-12T19:00:00Z', time: '19:00', location: 'Common Room', category: 'Meeting', committeeId: 'c1' },
   { id: 'e2', title: 'Block Party Prep', description: 'Planning meeting for the Cook Street Block Party.', date: '2026-04-20T18:30:00Z', time: '18:30', location: 'Unit 210', category: 'Social' },
   { id: 'e3', title: 'Community Garden Kickoff', description: 'First planting session of the year.', date: '2026-05-02T10:00:00Z', time: '10:00', location: 'Back Courtyard', category: 'Social' },
   { id: 'e4', title: 'Coffee & Conversation', description: 'Casual meetup for new and old members.', date: '2026-05-15T11:00:00Z', time: '11:00', location: 'Common Room', category: 'Social' },
@@ -267,20 +267,24 @@ export const MOCK_EVENTS: CoopEvent[] = [
   { id: 'e7', title: 'Emergency Drill', description: 'Fire safety walkthrough for all residents.', date: '2026-05-10T14:00:00Z', time: '14:00', location: 'Main Entrance', category: 'Maintenance' },
   { id: 'e8', title: 'Finance Committee Review', description: 'Operating budget and reserve fund review.', date: '2026-06-09T18:00:00Z', time: '18:00', location: 'Common Room', category: 'Meeting' },
   { id: 'e9', title: 'Maintenance Committee Walkthrough', description: 'Shared-area walkthrough and open request triage.', date: '2026-06-18T10:00:00Z', time: '10:00', location: 'Lobby', category: 'Maintenance' },
+  { id: 'e10', title: 'Board Package Review', description: 'Directors review agenda materials, resident correspondence, and follow-up items before the next board meeting.', date: '2026-06-02T18:30:00Z', time: '18:30', location: 'Common Room', category: 'Board', committeeId: 'c1' },
+  { id: 'e11', title: 'Board Policy Working Session', description: 'Focused board session for bylaw updates, communications planning, and document readiness.', date: '2026-06-23T19:00:00Z', time: '19:00', location: 'Zoom', category: 'Meeting', committeeId: 'c1' },
 ];
 
 export const MOCK_DOCUMENTS: Document[] = [
   { id: 'd1', title: 'Rules & Regulations', category: 'Bylaws', url: '#', fileType: 'pdf', author: 'Board', date: '2020-01-01', tags: ['rules', 'governance'] },
   { id: 'd2', title: 'Pet Policy 2026', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board', date: '2026-01-15', tags: ['pets', 'policy'] },
-  { id: 'd3', title: 'AGM Minutes March 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-03-10', tags: ['minutes', 'agm', 'minutes-meeting:e1'] },
+  { id: 'd3', title: 'AGM Minutes March 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-03-10', tags: ['minutes', 'agm', 'minutes-meeting:e1', 'Board of Directors'], committee: 'Board of Directors' },
   { id: 'd4', title: 'Co-op Membership Application', category: 'Forms', url: '#', fileType: 'pdf', author: 'Admin', date: '2025-11-01', tags: ['membership', 'forms'] },
   { id: 'd5', title: 'Building Safety Map', category: 'Safety', url: '#', fileType: 'pdf', author: 'Maintenance', date: '2024-05-20', tags: ['safety'] },
-  { id: 'd6', title: 'Board Meeting Minutes - April 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-04-28', tags: ['minutes', 'board', 'minutes-meeting:e5'] },
+  { id: 'd6', title: 'Board Meeting Minutes - April 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-04-28', tags: ['minutes', 'board', 'minutes-meeting:e5', 'Board of Directors'], committee: 'Board of Directors' },
   { id: 'd7', title: '2026 Operating Budget', category: 'Financials', url: '#', fileType: 'xls', author: 'Finance Committee', date: '2026-01-10', tags: ['budget', 'financial'] },
   { id: 'd8', title: 'Reserve Fund Study 2024', category: 'Financials', url: '#', fileType: 'pdf', author: 'Board', date: '2024-06-15', tags: ['reserve', 'planning'] },
   { id: 'd9', title: 'Noise & Quiet Hours Policy', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board', date: '2022-11-15', tags: ['noise', 'living'] },
   { id: 'd10', title: 'Parking Policy & Stall Assignment', category: 'Policies', url: '#', fileType: 'pdf', author: 'Maintenance', date: '2024-03-01', tags: ['parking', 'vehicles'] },
   { id: 'd11', title: 'Finance Committee Review Minutes - June 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-06-09', tags: ['minutes', 'finance', 'minutes-meeting:e8'] },
+  { id: 'd12', title: 'Board Orientation Package', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board of Directors', date: '2026-05-20', tags: ['orientation', 'governance', 'Board of Directors'], committee: 'Board of Directors' },
+  { id: 'd13', title: 'June Board Package Draft', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-28', tags: ['agenda', 'board', 'Board of Directors'], committee: 'Board of Directors' },
 ];
 
 export const MOCK_COMMITTEES: Committee[] = [

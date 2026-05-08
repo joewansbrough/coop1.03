@@ -1,9 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, ArrowRight, ChevronDown, ListChecks, MousePointer2, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronDown, ListChecks, Menu, MousePointer2, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  AUTO_DEMO_SECTIONS,
   AUTO_DEMO_STOPS,
   AUTO_DEMO_TIMING,
+  getAutoDemoSectionForIndex,
+  getAutoDemoSectionForTarget,
+  getAutoDemoSectionStartIndex,
   getAutoDemoStop,
   getNextAutoDemoIndex,
   getPreviousAutoDemoIndex,
@@ -56,6 +60,19 @@ const scrollThroughMeetingRecord = (target: HTMLElement) => {
   }, AUTO_DEMO_TIMING.panelDelayMs + 1800);
 };
 
+const getRouteFromClickedLink = (node: HTMLElement | null) => {
+  const href = node?.closest('a')?.getAttribute('href');
+  if (!href) return null;
+  if (href.startsWith('#/')) return href.slice(1);
+  if (href.startsWith('/')) return href;
+  try {
+    const url = new URL(href, window.location.origin);
+    return url.hash.startsWith('#/') ? url.hash.slice(1) : `${url.pathname}${url.search}`;
+  } catch {
+    return null;
+  }
+};
+
 const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwitch, isAdmin = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,8 +84,10 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const [isGlowVisible, setIsGlowVisible] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   const [isGuideCollapsed, setIsGuideCollapsed] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const stop = getAutoDemoStop(stepIndex);
   const isWelcomeStep = stop?.id === 'welcome';
+  const activeSection = getAutoDemoSectionForIndex(stepIndex);
 
   useEffect(() => {
     if (!isOpen || !stop) return;
@@ -186,7 +205,16 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
       setIsGuideCollapsed(false);
     }
     setStepIndex(getNextAutoDemoIndex(stepIndex));
+    setIsMenuOpen(false);
   }, [isLastStep, onClose, stepIndex]);
+
+  const goToSection = useCallback((sectionId: string) => {
+    const startIndex = getAutoDemoSectionStartIndex(sectionId);
+    if (startIndex < 0) return;
+    setStepIndex(startIndex);
+    setIsMenuOpen(false);
+    setIsGuideCollapsed(false);
+  }, []);
 
   const clickThenNavigate = useCallback((route: string) => {
     setIsClicking(true);
@@ -225,23 +253,39 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
 
       const activeTarget = isWelcomeStep ? null : document.querySelector<HTMLElement>(`[data-demo-target="${stop.target}"]`);
       const clickedActiveTarget = Boolean(activeTarget && activeTarget.contains(node));
+      const clickedDemoTarget = node.closest<HTMLElement>('[data-demo-target]');
+      const clickedSection = getAutoDemoSectionForTarget(clickedDemoTarget?.dataset.demoTarget);
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
 
       if (clickedActiveTarget && !isClicking) {
         performAction();
+        return;
+      }
+
+      if (clickedSection && !isClicking) {
+        const linkRoute = getRouteFromClickedLink(clickedDemoTarget);
+        const clickedStop = AUTO_DEMO_STOPS[clickedSection.startIndex];
+        const nextIndex = clickedStop?.routeAfterClick ? getNextAutoDemoIndex(clickedSection.startIndex) : clickedSection.startIndex;
+        if (linkRoute) {
+          navigate(linkRoute);
+          window.setTimeout(snapPageToTop, 80);
+        }
+        setStepIndex(nextIndex);
+        setIsMenuOpen(false);
+        setIsGuideCollapsed(false);
       }
     };
 
     document.addEventListener('click', interceptPageClick, true);
     return () => document.removeEventListener('click', interceptPageClick, true);
-  }, [isClicking, isOpen, isWelcomeStep, performAction, stop]);
+  }, [isClicking, isOpen, isWelcomeStep, navigate, performAction, stop]);
 
   if (!isOpen || !stop) return null;
 
-  const guideHeaderLabel = isWelcomeStep ? 'Guided Welcome' : 'Guided Tour';
-  const panelTitle = isWelcomeStep ? stop.title : `${stepIndex}. ${stop.title}`;
+  const guideHeaderLabel = isWelcomeStep ? 'Guided Welcome' : activeSection ? `${activeSection.number}. ${activeSection.title}` : 'Guided Tour';
+  const panelTitle = stop.title;
   const shouldShowPanel = isWelcomeStep || !isGuideCollapsed;
 
   return (
@@ -366,6 +410,23 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
             <p className="text-[9px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Key capability</p>
             <p className="mt-1 text-xs font-bold leading-relaxed text-teal-900 dark:text-teal-100">{stop.keyCapability}</p>
           </div>
+          {!isWelcomeStep && isMenuOpen && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2 dark:border-white/10 dark:bg-slate-950/50">
+              <p className="px-2 pb-2 text-[9px] font-black uppercase tracking-widest text-slate-400">Jump to a section</p>
+              <div className="grid gap-1">
+                {AUTO_DEMO_SECTIONS.map((section, index) => (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => goToSection(section.id)}
+                    className={`rounded-xl px-3 py-2 text-left text-[11px] font-black transition-colors ${activeSection?.id === section.id ? 'bg-teal-600 text-white' : 'text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white'}`}
+                  >
+                    {index + 1}. {section.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
@@ -377,13 +438,23 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
               <ArrowLeft className="h-4 w-4" />
             </button>
             {!isWelcomeStep && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="h-10 rounded-xl bg-slate-100 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-200 hover:text-rose-600 dark:bg-slate-800 dark:text-slate-300"
-              >
-                End
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsMenuOpen(current => !current)}
+                  className="flex h-10 items-center gap-2 rounded-xl bg-slate-100 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:text-white"
+                >
+                  <Menu className="h-3.5 w-3.5" />
+                  Menu
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="h-10 rounded-xl bg-slate-100 px-3 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-200 hover:text-rose-600 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  End
+                </button>
+              </div>
             )}
             <button
               type="button"
