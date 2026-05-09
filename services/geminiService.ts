@@ -287,7 +287,12 @@ export const geminiService = {
     onInterrupted: () => void;
     onToolCall?: (name: string, args: any) => void;
   }, systemInstruction: string) {
-    const genAI = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || '' });
+    const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || '';
+    if (!apiKey) {
+      console.error("VITE_GEMINI_API_KEY is missing from environment variables.");
+    }
+    
+    const genAI = new GoogleGenAI({ apiKey });
     
     let activeSession: any = null;
 
@@ -296,11 +301,10 @@ export const geminiService = {
       config: {
         systemInstruction: { parts: [{ text: systemInstruction }] },
         tools: tools as any,
-        generationConfig: {
-          responseModalities: ["audio"] as any,
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } }
-          }
+        // Newer SDK versions expect these flat on config
+        responseModalities: ["audio"] as any,
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } }
         }
       },
       callbacks: {

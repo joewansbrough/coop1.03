@@ -72,8 +72,12 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     setIsLiveMode(false);
     setIsLoading(false);
 
-    if (liveSessionRef.current) {
-      liveSessionRef.current.close();
+    if (liveSessionRef.current && typeof liveSessionRef.current.close === 'function') {
+      try {
+        liveSessionRef.current.close();
+      } catch (e) {
+        console.warn("Error closing live session:", e);
+      }
       liveSessionRef.current = null;
     }
 
