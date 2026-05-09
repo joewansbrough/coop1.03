@@ -314,7 +314,9 @@ export const geminiService = {
           callbacks.onOpen();
         },
         onclose: (event: any) => {
-          console.log("WebSocket Connection Closed:", event);
+          console.log(`WebSocket Connection Closed. Code: ${event.code}, Reason: ${event.reason}`);
+          if (event.code === 4000) console.error("Error: Invalid API Key or Model Name.");
+          if (event.code === 4003) console.error("Error: Model not found or not available in your region.");
           callbacks.onClose();
         },
         onerror: (err: any) => {
