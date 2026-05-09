@@ -447,17 +447,23 @@ const CoopOracle: React.FC<CoopOracleProps> = ({ documents }) => {
 
   return (
     <>
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setIsOpen(!isOpen)}
-        aria-label={isOpen ? "Close Co-op Oracle" : "Open Co-op Oracle AI Chatbot"}
-        aria-expanded={isOpen}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[100] cursor-pointer"
-        id="coop-oracle-fab"
-      >
-        <i className={`fa-solid ${isOpen ? 'fa-xmark' : 'fa-sparkles'} text-xl`}></i>
-      </motion.button>
+      <AnimatePresence>
+        {!isOpen && (
+          <motion.button
+            initial={{ scale: 0, rotate: -45 }}
+            animate={{ scale: 1, rotate: 0 }}
+            exit={{ scale: 0, rotate: 45 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setIsOpen(true)}
+            aria-label="Open Co-op Oracle AI Chatbot"
+            className="fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center z-[100] cursor-pointer"
+            id="coop-oracle-fab"
+          >
+            <i className="fa-solid fa-sparkles text-xl"></i>
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isOpen && (
@@ -465,7 +471,8 @@ const CoopOracle: React.FC<CoopOracleProps> = ({ documents }) => {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-6 w-[400px] max-w-[calc(100vw-48px)] h-[540px] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-white/5 flex flex-col z-[100] overflow-hidden"
+            className="fixed bottom-6 right-6 w-[400px] max-w-[calc(100vw-48px)] h-[600px] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-white/5 flex flex-col z-[110] overflow-hidden"
+            style={{ transformOrigin: 'bottom right' }}
             role="dialog"
             aria-labelledby="oracle-title"
           >
@@ -479,31 +486,40 @@ const CoopOracle: React.FC<CoopOracleProps> = ({ documents }) => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-                  <button
-                    onClick={() => toggleMode('chat')}
-                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'chat' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
-                  >
-                    Chat
-                  </button>
-                  <button
-                    onClick={() => toggleMode('voice')}
-                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'voice' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
-                  >
-                    Voice
-                  </button>
-                </div>
-                
-                <select 
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-widest outline-none focus:ring-1 focus:ring-emerald-500 text-slate-300"
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
                 >
-                  {LANGUAGES.map(lang => (
-                    <option key={lang} value={lang}>{lang}</option>
-                  ))}
-                </select>
+                  <i className="fa-solid fa-xmark text-slate-400"></i>
+                </button>
               </div>
+            </div>
+
+            <div className="px-6 py-3 bg-slate-800/50 border-b border-white/5 flex items-center justify-between">
+              <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+                <button
+                  onClick={() => toggleMode('chat')}
+                  className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'chat' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Chat
+                </button>
+                <button
+                  onClick={() => toggleMode('voice')}
+                  className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'voice' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Live
+                </button>
+              </div>
+              
+              <select 
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-widest outline-none focus:ring-1 focus:ring-emerald-500 text-slate-300"
+              >
+                {LANGUAGES.map(lang => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
             </div>
 
             <div 
@@ -617,13 +633,26 @@ const CoopOracle: React.FC<CoopOracleProps> = ({ documents }) => {
                     placeholder={isListening ? "Listening..." : "Ask a question..."}
                     className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500 outline-none dark:text-white placeholder:text-[10px] placeholder:uppercase placeholder:font-black placeholder:tracking-widest"
                   />
-                  <button
-                    onClick={() => handleSend()}
-                    disabled={isLoading || !input.trim()}
-                    className="w-12 h-12 bg-slate-900 dark:bg-emerald-600 text-white rounded-xl flex items-center justify-center hover:bg-black dark:hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    <i className="fa-solid fa-paper-plane text-xs"></i>
-                  </button>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={startVoiceInput}
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all active:scale-95 ${
+                        isListening 
+                          ? 'bg-rose-500 text-white animate-pulse' 
+                          : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-400 hover:text-emerald-500'
+                      }`}
+                      title="Voice Input"
+                    >
+                      <i className="fa-solid fa-microphone text-xs"></i>
+                    </button>
+                    <button
+                      onClick={() => handleSend()}
+                      disabled={isLoading || !input.trim()}
+                      className="w-12 h-12 bg-slate-900 dark:bg-emerald-600 text-white rounded-xl flex items-center justify-center hover:bg-black dark:hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      <i className="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                  </div>
                 </div>
               )}
 
