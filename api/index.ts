@@ -33,7 +33,7 @@ const upload = multer({
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
-const DEFAULT_GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || 'gemini-3.1-flash-tts-preview';
+const DEFAULT_GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts';
 const STABLE_GEMINI_FALLBACK_MODELS = [
   DEFAULT_GEMINI_MODEL,
   'gemini-3.1-flash',
@@ -2427,7 +2427,7 @@ app.post('/api/ai/summarize', requireAuth, async (req, res) => {
   }
 });
 
-const FALLBACK_GEMINI_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
+const FALLBACK_GEMINI_TTS_MODEL = 'gemini-2.5-pro-preview-tts';
 
 app.post('/api/ai/demo-tour-tts', async (req, res) => {
   try {
@@ -2443,7 +2443,7 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
     const cachePath = `tts-cache/${textHash}.wav`;
     const token = getBlobToken();
 
-    if (token) {
+    if (token && token.length > 10) {
       try {
         const { blobs } = await list({ prefix: cachePath, token, limit: 1 });
         const existing = blobs.find(b => b.pathname === cachePath);
@@ -2458,6 +2458,7 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
 
     // 2. Cache miss: Generate narration
     const generateSpeech = async (modelName: string) => {
+      console.log(`[TTS] Requesting generation from ${modelName}...`);
       return axios.post(
         `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
         {
@@ -2481,7 +2482,7 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
             'Content-Type': 'application/json',
             'x-goog-api-key': apiKey,
           },
-          timeout: 20000,
+          timeout: 25000,
         },
       );
     };
@@ -2490,23 +2491,35 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
     try {
       response = await generateSpeech(DEFAULT_GEMINI_TTS_MODEL);
     } catch (e: any) {
-      const isRateLimit = e.response?.status === 429;
-      if (isRateLimit) {
-        console.log(`TTS primary model ${DEFAULT_GEMINI_TTS_MODEL} rate limited, trying fallback ${FALLBACK_GEMINI_TTS_MODEL}...`);
-        response = await generateSpeech(FALLBACK_GEMINI_TTS_MODEL);
+      const status = e.response?.status;
+      const isRateLimit = status === 429;
+      const isModelNotFound = status === 404 || status === 400;
+      
+      if (isRateLimit || isModelNotFound) {
+        console.log(`TTS model ${DEFAULT_GEMINI_TTS_MODEL} failed (status ${status}), trying fallback ${FALLBACK_GEMINI_TTS_MODEL}...`);
+        try {
+          response = await generateSpeech(FALLBACK_GEMINI_TTS_MODEL);
+        } catch (e2: any) {
+          console.error(`TTS fallback model ${FALLBACK_GEMINI_TTS_MODEL} also failed:`, e2.response?.data || e2.message);
+          throw e2;
+        }
       } else {
+        console.error(`TTS primary model ${DEFAULT_GEMINI_TTS_MODEL} failed with unhandled status ${status}:`, e.response?.data || e.message);
         throw e;
       }
     }
 
     const inlineData = response.data?.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData || part.inline_data);
     const audioBase64 = inlineData?.inlineData?.data || inlineData?.inline_data?.data;
-    if (!audioBase64) throw new Error('Gemini did not return audio data.');
+    if (!audioBase64) {
+      console.error('Gemini response missing audio data:', JSON.stringify(response.data, null, 2));
+      throw new Error('Gemini did not return audio data.');
+    }
 
     const wav = pcm16ToWavBuffer(Buffer.from(audioBase64, 'base64'), 24000, 1);
 
     // 3. Save to persistent cache asynchronously
-    if (token) {
+    if (token && token.length > 10) {
       put(cachePath, wav, {
         access: 'public',
         contentType: 'audio/wav',

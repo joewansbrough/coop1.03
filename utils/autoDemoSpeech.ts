@@ -96,7 +96,10 @@ const loadStopSpeech = async (stop: AutoDemoStop, options: { onDone: () => void;
         body: JSON.stringify({ text: getAutoDemoSpeechText(stop) }),
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
 
       // We use the direct URL if redirected (CDN), otherwise create a blob
       const url = res.redirected ? res.url : URL.createObjectURL(await res.blob());
