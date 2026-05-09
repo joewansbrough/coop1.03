@@ -73,7 +73,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     setIsLoading(false);
 
     if (liveSessionRef.current) {
-      liveSessionRef.current.then((s: any) => s.close());
+      liveSessionRef.current.close();
       liveSessionRef.current = null;
     }
 
@@ -170,14 +170,16 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         } else if (event.data.type === 'audio') {
           // Convert ArrayBuffer to Base64 for the Live API
           const base64 = btoa(String.fromCharCode(...new Uint8Array(event.data.data)));
-          (session as any).send({
-            realtimeInput: {
-              mediaChunks: [{
-                mimeType: 'audio/pcm;rate=16000',
-                data: base64
-              }]
-            }
-          });
+          if (session && typeof session.send === 'function') {
+            session.send({
+              realtimeInput: {
+                mediaChunks: [{
+                  mimeType: 'audio/pcm;rate=16000',
+                  data: base64
+                }]
+              }
+            });
+          }
         }
       };
 

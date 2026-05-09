@@ -289,6 +289,8 @@ export const geminiService = {
   }, systemInstruction: string) {
     const genAI = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || '' });
     
+    let activeSession: any = null;
+
     const session = await genAI.live.connect({
       model: "models/gemini-2.0-flash-exp",
       config: {
@@ -302,7 +304,10 @@ export const geminiService = {
         }
       },
       callbacks: {
-        onopen: callbacks.onOpen,
+        onopen: () => {
+          activeSession = session;
+          callbacks.onOpen();
+        },
         onclose: callbacks.onClose,
         onerror: callbacks.onError,
         onmessage: async (message: any) => {
@@ -329,8 +334,8 @@ export const geminiService = {
                 }
               }
             }
-            if (toolResponses.length > 0) {
-              (session as any).send({ toolResponse: { functionResponses: toolResponses } });
+            if (toolResponses.length > 0 && session) {
+              session.send({ toolResponse: { functionResponses: toolResponses } });
             }
           }
 
