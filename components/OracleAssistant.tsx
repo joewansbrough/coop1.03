@@ -68,7 +68,18 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     activeSourceRef.current = source;
   };
 
+  // Robust helper to convert ArrayBuffer to Base64
+  const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+  };
+
   const stopLiveMode = () => {
+    console.log("Stopping Live Mode...");
     setIsLiveMode(false);
     setIsLoading(false);
 
@@ -114,8 +125,13 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioContextClass({ sampleRate: 16000 });
       audioContextRef.current = ctx;
+      
+      // Ensure context is running (required for some browsers)
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
 
-      await ctx.audioWorklet.addModule('/VoiceWorklet.js');
+      console.log("AudioContext initialized:", ctx.state, ctx.sampleRate);
 
       const workletNode = new AudioWorkletNode(ctx, 'voice-worklet');
       audioWorkletNodeRef.current = workletNode;

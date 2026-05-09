@@ -296,12 +296,12 @@ export const geminiService = {
     
     let activeSession: any = null;
 
+    console.log("Initiating Live connection with model: gemini-2.0-flash-exp");
     const session = await genAI.live.connect({
-      model: "models/gemini-2.0-flash-exp",
+      model: "gemini-2.0-flash-exp",
       config: {
         systemInstruction: { parts: [{ text: systemInstruction }] },
         tools: tools as any,
-        // Newer SDK versions expect these flat on config
         responseModalities: ["audio"] as any,
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } }
@@ -309,11 +309,18 @@ export const geminiService = {
       },
       callbacks: {
         onopen: () => {
+          console.log("WebSocket Connection Opened");
           activeSession = session;
           callbacks.onOpen();
         },
-        onclose: callbacks.onClose,
-        onerror: callbacks.onError,
+        onclose: (event: any) => {
+          console.log("WebSocket Connection Closed:", event);
+          callbacks.onClose();
+        },
+        onerror: (err: any) => {
+          console.error("WebSocket Connection Error:", err);
+          callbacks.onError(err);
+        },
         onmessage: async (message: any) => {
           // Handle Tool Calls
           if (message.toolCall) {
