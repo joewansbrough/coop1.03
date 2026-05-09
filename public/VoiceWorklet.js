@@ -1,15 +1,15 @@
 /**
- * VoiceWorklet.ts
+ * VoiceWorklet.js
  * Dedicated audio processing thread for the Co-op Oracle.
  * Handles PCM 16-bit conversion and volume metering off the main thread.
  */
 
-class VoiceWorklet extends (globalThis as any).AudioWorkletProcessor {
+class VoiceWorklet extends AudioWorkletProcessor {
   constructor() {
     super();
   }
 
-  process(inputs: Float32Array[][]): boolean {
+  process(inputs) {
     const input = inputs[0][0]; // Get the first channel of the first input
 
     if (input && input.length > 0) {
@@ -19,7 +19,7 @@ class VoiceWorklet extends (globalThis as any).AudioWorkletProcessor {
         sum += input[i] * input[i];
       }
       const rms = Math.sqrt(sum / input.length);
-      (this as any).port.postMessage({ type: 'volume', volume: rms });
+      this.port.postMessage({ type: 'volume', volume: rms });
 
       // 2. Convert Float32 to Int16 PCM for Gemini API
       const pcm = new Int16Array(input.length);
@@ -31,13 +31,11 @@ class VoiceWorklet extends (globalThis as any).AudioWorkletProcessor {
 
       // Send the PCM data back to the main thread
       // We use the buffer directly for performance
-      (this as any).port.postMessage({ type: 'audio', data: pcm.buffer }, [pcm.buffer]);
+      this.port.postMessage({ type: 'audio', data: pcm.buffer }, [pcm.buffer]);
     }
 
     return true; // Keep the processor alive
   }
 }
 
-(globalThis as any).registerProcessor('voice-worklet', VoiceWorklet);
-
-export {}; // Ensure it's treated as a module
+registerProcessor('voice-worklet', VoiceWorklet);

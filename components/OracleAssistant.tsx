@@ -111,7 +111,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       const ctx = new AudioContextClass({ sampleRate: 16000 });
       audioContextRef.current = ctx;
 
-      await ctx.audioWorklet.addModule(new URL('./VoiceWorklet.ts', import.meta.url));
+      await ctx.audioWorklet.addModule('/VoiceWorklet.js');
 
       const workletNode = new AudioWorkletNode(ctx, 'voice-worklet');
       audioWorkletNodeRef.current = workletNode;
@@ -326,28 +326,10 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           </button>
         )}
       </div>
-      <div className="border-b border-slate-100 p-3 dark:border-white/5 flex gap-2">
-        <select value={language} onChange={event => setLanguage(event.target.value as OracleLanguage)} className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
+      <div className="border-b border-slate-100 p-3 dark:border-white/5">
+        <select value={language} onChange={event => setLanguage(event.target.value as OracleLanguage)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
           {ORACLE_LANGUAGES.map(item => <option key={item}>{item}</option>)}
         </select>
-        <button 
-          onClick={startLiveMode}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isLiveMode ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400' : 'bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-300'}`}
-        >
-          {isLiveMode ? (
-            <>
-              <div className="flex items-center gap-1">
-                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600"></div>
-                Stop Live
-              </div>
-            </>
-          ) : (
-            <>
-              <Mic className="h-3.5 w-3.5" />
-              Go Live
-            </>
-          )}
-        </button>
       </div>
 
       {isLiveMode && (
@@ -396,9 +378,19 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       </div>
       <form onSubmit={event => { event.preventDefault(); ask(input); }} className="flex gap-2 p-3">
         <input value={input} onChange={event => setInput(event.target.value)} placeholder="Ask a co-op question..." className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white" />
-        <button type="submit" disabled={!input.trim() || isLoading} className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-600 text-white disabled:opacity-50">
-          <Send className="h-4 w-4" />
-        </button>
+        <div className="flex gap-2">
+          <button 
+            type="button"
+            onClick={startLiveMode} 
+            className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all shadow-sm ${isLiveMode ? 'bg-red-600 text-white animate-pulse' : 'bg-teal-50 text-teal-600 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-300'}`}
+            aria-label={isLiveMode ? "Stop Live Mode" : "Start Live Mode"}
+          >
+            <Mic className={`h-5 w-5 ${isLiveMode ? 'animate-bounce' : ''}`} />
+          </button>
+          <button type="submit" disabled={!input.trim() || isLoading} className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-600 text-white disabled:opacity-50 shadow-sm">
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
       </form>
     </div>
   );
