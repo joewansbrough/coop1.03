@@ -133,6 +133,16 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
 
       console.log("AudioContext initialized:", ctx.state, ctx.sampleRate);
 
+      // 1. Load the module FIRST and await it completely
+      try {
+        await ctx.audioWorklet.addModule('/VoiceWorklet.js');
+        console.log("VoiceWorklet module loaded successfully");
+      } catch (e) {
+        console.error("Failed to load VoiceWorklet module:", e);
+        throw new Error("Could not load audio processor. Please refresh.");
+      }
+
+      // 2. ONLY then create the node
       const workletNode = new AudioWorkletNode(ctx, 'voice-worklet');
       audioWorkletNodeRef.current = workletNode;
 
