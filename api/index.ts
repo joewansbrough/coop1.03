@@ -2427,7 +2427,7 @@ app.post('/api/ai/summarize', requireAuth, async (req, res) => {
   }
 });
 
-const FALLBACK_GEMINI_TTS_MODEL = 'gemini-2.5-flash-tts-preview-001';
+const FALLBACK_GEMINI_TTS_MODEL = 'gemini-2.5-flash-preview-tts';
 
 app.post('/api/ai/demo-tour-tts', async (req, res) => {
   try {

@@ -107,6 +107,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
   const [isGuideCollapsed, setIsGuideCollapsed] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUsingMobileNavOpener, setIsUsingMobileNavOpener] = useState(false);
+  const [showTargetWarning, setShowTargetWarning] = useState(false);
   const [speechState, setSpeechState] = useState<'idle' | 'loading' | 'playing'>('idle');
   const [speechError, setSpeechError] = useState('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -196,6 +197,11 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     setHasCursorArrived(false);
     setIsGlowVisible(!isWelcomeStep);
     setIsClicking(false);
+    setShowTargetWarning(false);
+
+    const warningTimer = window.setTimeout(() => {
+      setShowTargetWarning(true);
+    }, 2200);
 
     const arrivalTimer = window.setTimeout(() => {
       setHasCursorArrived(true);
@@ -493,7 +499,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
           className="space-y-4 overflow-y-auto p-4"
           style={{ maxHeight: Math.max(220, (isWelcomeStep ? welcomePlacement.maxHeight : guidePlacement.maxHeight) - 96) }}
         >
-          {!targetFound && (
+          {!targetFound && showTargetWarning && (
             <p className="rounded-2xl bg-amber-50 p-3 text-[10px] font-black uppercase tracking-widest text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
               Finding this area on the current screen. You can continue if the page is still loading.
             </p>
