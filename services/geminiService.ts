@@ -1,7 +1,19 @@
-// All Gemini calls go through the backend API to keep the API key server-side
+// All Gemini calls go through the backend API for standard requests
+// Multimodal Live API uses direct client-side SDK (@google/genai) with standard API Key handling
 
+import { GoogleGenAI } from "@google/genai";
+import { 
+  MOCK_UNITS, 
+  MOCK_TENANTS, 
+  MOCK_MAINTENANCE, 
+  MOCK_DOCUMENTS, 
+  MOCK_EVENTS, 
+  MOCK_ANNOUNCEMENTS, 
+  MOCK_COMMITTEES, 
+  MOCK_NOTIFICATIONS, 
+  MOCK_USER 
+} from '../utils/demoData';
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
-import { MOCK_USER } from '../utils/demoData.js';
 import { DEMO_TUTORIAL_ROLE_VIEW_KEY } from '../utils/demoTutorial.js';
 
 const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
@@ -16,6 +28,143 @@ const getDemoOracleUser = () => {
     role: isResidentView ? 'MEMBER' : MOCK_USER.role,
     isAdmin: !isResidentView && !!MOCK_USER.isAdmin,
   };
+};
+
+// Define tools for Gemini to interact with the "Database"
+const tools = [
+  {
+    functionDeclarations: [
+      {
+        name: "getUnits",
+        description: "Fetch all housing units or filter by status, floor, or type.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            status: { type: "STRING", description: "Filter by 'Occupied', 'Vacant', 'Maintenance'." },
+            floor: { type: "NUMBER" },
+            unitNumber: { type: "STRING" }
+          }
+        }
+      },
+      {
+        name: "getTenants",
+        description: "Fetch all co-op members (tenants) or search by name/status.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: { type: "STRING", description: "Search by first or last name." },
+            status: { type: "STRING", description: "Filter by 'Current', 'Past', 'Waitlist'." },
+            email: { type: "STRING" }
+          }
+        }
+      },
+      {
+        name: "getMaintenanceRequests",
+        description: "Fetch all maintenance requests, filtering by unit, status, or urgency.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            unitNumber: { type: "STRING" },
+            status: { type: "STRING" },
+            urgency: { type: "STRING" }
+          }
+        }
+      },
+      {
+        name: "getCommittees",
+        description: "Fetch committee details, chairs, and members.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            name: { type: "STRING", description: "Filter by committee name." }
+          }
+        }
+      },
+      {
+        name: "getDocuments",
+        description: "Search bylaws, policies, and minutes.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            query: { type: "STRING" }
+          }
+        }
+      },
+      {
+        name: "getEvents",
+        description: "Fetch meetings and social events.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            category: { type: "STRING" }
+          }
+        }
+      },
+      {
+        name: "viewMaintenanceRequest",
+        description: "Navigate the user's interface to a specific maintenance request to show details.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            requestId: { type: "STRING", description: "The ID of the maintenance request (e.g., 'm1')." }
+          },
+          required: ["requestId"]
+        }
+      }
+    ]
+  }
+];
+
+// Tool implementations using Mock Data
+const functions = {
+  getUnits: ({ status, floor, unitNumber }: any) => {
+    let list = [...MOCK_UNITS];
+    if (status) list = list.filter(u => u.status.toLowerCase() === status.toLowerCase());
+    if (floor) list = list.filter(u => u.floor === floor);
+    if (unitNumber) list = list.filter(u => u.number === unitNumber);
+    return list;
+  },
+  getTenants: ({ name, status, email }: any) => {
+    let list = [...MOCK_TENANTS];
+    if (status) list = list.filter(t => t.status.toLowerCase() === status.toLowerCase());
+    if (email) list = list.filter(t => t.email.toLowerCase() === email.toLowerCase());
+    if (name) {
+      const term = name.toLowerCase();
+      list = list.filter(t => t.firstName.toLowerCase().includes(term) || t.lastName.toLowerCase().includes(term));
+    }
+    return list;
+  },
+  getMaintenanceRequests: ({ unitNumber, status, urgency }: any) => {
+    let list = [...MOCK_MAINTENANCE];
+    if (unitNumber) {
+      const unit = MOCK_UNITS.find(u => u.number === unitNumber);
+      if (unit) list = list.filter(r => r.unitId === unit.id);
+    }
+    if (status) list = list.filter(r => r.status.toLowerCase().includes(status.toLowerCase()));
+    if (urgency) list = list.filter(r => r.priority.toLowerCase() === urgency.toLowerCase());
+    return list;
+  },
+  getCommittees: ({ name }: any) => {
+    if (name) {
+      const term = name.toLowerCase();
+      return MOCK_COMMITTEES.filter(c => c.name.toLowerCase().includes(term));
+    }
+    return MOCK_COMMITTEES;
+  },
+  getDocuments: ({ query }: any) => {
+    if (query) {
+      const term = query.toLowerCase();
+      return MOCK_DOCUMENTS.filter(d => d.title.toLowerCase().includes(term) || d.category.toLowerCase().includes(term));
+    }
+    return MOCK_DOCUMENTS;
+  },
+  getEvents: ({ category }: any) => {
+    if (category) return MOCK_EVENTS.filter(e => e.category.toLowerCase() === category.toLowerCase());
+    return MOCK_EVENTS;
+  },
+  viewMaintenanceRequest: ({ requestId }: any) => {
+    return { success: true, message: `Showing maintenance request ${requestId}` };
+  }
 };
 
 export const geminiService = {
@@ -125,4 +274,85 @@ export const geminiService = {
     }
     return res.blob();
   },
+
+  /**
+   * Multimodal Live API session for real-time conversation
+   */
+  async connectLive(callbacks: {
+    onOpen: () => void;
+    onClose: () => void;
+    onAudio: (base64PCM: string) => void;
+    onText: (text: string) => void;
+    onError: (err: any) => void;
+    onInterrupted: () => void;
+    onToolCall?: (name: string, args: any) => void;
+  }, systemInstruction: string) {
+    const genAI = new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_GEMINI_API_KEY || '' });
+    
+    const session = await genAI.live.connect({
+      model: "models/gemini-2.0-flash-exp",
+      config: {
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        tools: tools as any,
+        generationConfig: {
+          responseModalities: ["audio"] as any,
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } }
+          }
+        }
+      },
+      callbacks: {
+        onopen: callbacks.onOpen,
+        onclose: callbacks.onClose,
+        onerror: callbacks.onError,
+        onmessage: async (message: any) => {
+          // Handle Tool Calls
+          if (message.toolCall) {
+            const toolResponses: any[] = [];
+            for (const call of message.toolCall.functionCalls) {
+              const fnName = call.name as keyof typeof functions;
+              if (functions[fnName]) {
+                try {
+                  const result = await (functions[fnName] as any)(call.args);
+                  if (callbacks.onToolCall) callbacks.onToolCall(call.name, call.args);
+                  toolResponses.push({
+                    name: call.name,
+                    id: call.id,
+                    response: { result }
+                  });
+                } catch (err) {
+                  toolResponses.push({
+                    name: call.name,
+                    id: call.id,
+                    response: { error: String(err) }
+                  });
+                }
+              }
+            }
+            if (toolResponses.length > 0) {
+              (session as any).send({ toolResponse: { functionResponses: toolResponses } });
+            }
+          }
+
+          // Handle Content
+          if (message.serverContent?.modelTurn?.parts) {
+            for (const part of message.serverContent.modelTurn.parts) {
+              if (part.inlineData?.data) {
+                callbacks.onAudio(part.inlineData.data);
+              }
+              if (part.text) {
+                callbacks.onText(part.text);
+              }
+            }
+          }
+          
+          if (message.serverContent?.interrupted) {
+            callbacks.onInterrupted();
+          }
+        }
+      } as any
+    });
+
+    return session;
+  }
 };

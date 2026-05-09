@@ -33,12 +33,188 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioWorkletNodeRef = useRef<AudioWorkletNode | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
   const liveSessionRef = useRef<any>(null);
   const nextStartTimeRef = useRef<number>(0);
   const activeSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // ... (Add audio orchestration logic from CoopOracle.tsx) ...
+  // Gapless Audio Playback for Live Mode
+  const playAudioChunk = async (base64: string) => {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!audioContextRef.current) audioContextRef.current = new AudioContextClass();
+    const ctx = audioContextRef.current;
+
+    const binaryString = window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+    
+    // Convert PCM 16-bit to Float32 for Web Audio API
+    const pcm16 = new Int16Array(bytes.buffer);
+    const float32 = new Float32Array(pcm16.length);
+    for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 32768;
+
+    const buffer = ctx.createBuffer(1, float32.length, 24000); // Live API uses 24kHz
+    buffer.getChannelData(0).set(float32);
+
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    
+    const startTime = Math.max(ctx.currentTime, nextStartTimeRef.current);
+    source.start(startTime);
+    nextStartTimeRef.current = startTime + buffer.duration;
+    activeSourceRef.current = source;
+  };
+
+  const stopLiveMode = () => {
+    setIsLiveMode(false);
+    setIsLoading(false);
+
+    if (liveSessionRef.current) {
+      liveSessionRef.current.then((s: any) => s.close());
+      liveSessionRef.current = null;
+    }
+
+    if (activeSourceRef.current) {
+      activeSourceRef.current.stop();
+      activeSourceRef.current = null;
+    }
+
+    if (audioWorkletNodeRef.current) {
+      audioWorkletNodeRef.current.disconnect();
+      audioWorkletNodeRef.current = null;
+    }
+
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(t => t.stop());
+      audioStreamRef.current = null;
+    }
+  };
+
+  const startLiveMode = async () => {
+    if (isLiveMode) {
+      stopLiveMode();
+      return;
+    }
+
+    setIsLiveMode(true);
+    setMode('voice');
+    setMessages(prev => [...prev, { role: 'assistant', content: "[Live Mode Started] You can talk naturally now." }]);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioContextClass({ sampleRate: 16000 });
+      audioContextRef.current = ctx;
+
+      await ctx.audioWorklet.addModule(new URL('./VoiceWorklet.ts', import.meta.url));
+
+      const workletNode = new AudioWorkletNode(ctx, 'voice-worklet');
+      audioWorkletNodeRef.current = workletNode;
+
+      const source = ctx.createMediaStreamSource(stream);
+      source.connect(workletNode);
+
+      const systemInstruction = `You are the smart "Oak Bay Co-op Oracle". 
+        You have direct access to the co-op's database via specialized tools.
+        
+        Rules:
+        1. BE SUCCINCT: Provide the answer directly and briefly.
+        2. BE FRIENDLY: Maintain a helpful, community-oriented tone.
+        3. Use tools to fetch real data for member, unit, policy, events, etc.
+        4. If a user interrupts, stop your current thought.`;
+
+      const sessionPromise = geminiService.connectLive({
+        onOpen: () => console.log("Live session open"),
+        onClose: () => stopLiveMode(),
+        onError: (err) => {
+          console.error("Live error", err);
+          setMessages(prev => [...prev, { role: 'assistant', content: "The Oracle has lost its connection. Please try again." }]);
+          stopLiveMode();
+        },
+        onInterrupted: () => {
+          if (activeSourceRef.current) {
+            activeSourceRef.current.stop();
+            activeSourceRef.current = null;
+          }
+          nextStartTimeRef.current = 0;
+        },
+        onText: (text) => {
+          setMessages(prev => {
+            const last = prev[prev.length - 1];
+            if (last && last.role === 'assistant' && !last.response) {
+              return [...prev.slice(0, -1), { ...last, content: last.content + text }];
+            }
+            return [...prev, { role: 'assistant', content: text }];
+          });
+        },
+        onAudio: (base64) => playAudioChunk(base64),
+        onToolCall: (name, args) => {
+          console.log(`Tool called: ${name}`, args);
+          if (name === 'viewMaintenanceRequest' && args.requestId) {
+            navigate(`/maintenance?highlight=${args.requestId}`);
+          }
+        }
+      }, systemInstruction);
+
+      liveSessionRef.current = sessionPromise;
+
+      workletNode.port.onmessage = async (event) => {
+        const session = await sessionPromise;
+        if (event.data.type === 'volume') {
+          setVolume(event.data.volume);
+        } else if (event.data.type === 'audio') {
+          // Convert ArrayBuffer to Base64 for the Live API
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(event.data.data)));
+          (session as any).send({
+            realtimeInput: {
+              mediaChunks: [{
+                mimeType: 'audio/pcm;rate=16000',
+                data: base64
+              }]
+            }
+          });
+        }
+      };
+
+    } catch (err) {
+      console.error("Failed to start live mode", err);
+      setIsLiveMode(false);
+      setMessages(prev => [...prev, { role: 'assistant', content: "Microphone access is required for Live Mode." }]);
+    }
+  };
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      let animationId: number;
+      const render = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const barCount = 12;
+        const spacing = 4;
+        const width = (canvas.width - (barCount - 1) * spacing) / barCount;
+        
+        ctx.fillStyle = '#0d9488';
+        for (let i = 0; i < barCount; i++) {
+          const v = Math.max(2, volume * 100 * (0.5 + Math.random() * 0.5));
+          const h = (v / 100) * canvas.height;
+          ctx.beginPath();
+          ctx.roundRect(i * (width + spacing), (canvas.height - h) / 2, width, h, 2);
+          ctx.fill();
+        }
+        animationId = requestAnimationFrame(render);
+      };
+      render();
+      return () => cancelAnimationFrame(animationId);
+    }
+  }, [volume]);
 
 
   useEffect(() => {
@@ -150,11 +326,48 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           </button>
         )}
       </div>
-      <div className="border-b border-slate-100 p-3 dark:border-white/5">
-        <select value={language} onChange={event => setLanguage(event.target.value as OracleLanguage)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
+      <div className="border-b border-slate-100 p-3 dark:border-white/5 flex gap-2">
+        <select value={language} onChange={event => setLanguage(event.target.value as OracleLanguage)} className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
           {ORACLE_LANGUAGES.map(item => <option key={item}>{item}</option>)}
         </select>
+        <button 
+          onClick={startLiveMode}
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isLiveMode ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400' : 'bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-300'}`}
+        >
+          {isLiveMode ? (
+            <>
+              <div className="flex items-center gap-1">
+                <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-600"></div>
+                Stop Live
+              </div>
+            </>
+          ) : (
+            <>
+              <Mic className="h-3.5 w-3.5" />
+              Go Live
+            </>
+          )}
+        </button>
       </div>
+
+      {isLiveMode && (
+        <div className="bg-slate-50 dark:bg-slate-950/50 p-4 border-b border-slate-100 dark:border-white/5">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-teal-600 animate-pulse">Live Session Active</p>
+            <div className="flex items-center gap-1.5">
+              <Volume2 className="h-3 w-3 text-slate-400" />
+              <div className="h-1 w-24 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-teal-500 transition-all duration-75" 
+                  style={{ width: `${Math.min(100, volume * 500)}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          <canvas ref={canvasRef} width={400} height={40} className="w-full h-10" />
+        </div>
+      )}
+
       <div className="h-80 space-y-3 overflow-y-auto p-4" data-demo-target="policy-assistant-qa">
         {messages.map((message, index) => (
           <div key={index} className={message.role === 'user' ? 'text-right' : 'text-left'}>
