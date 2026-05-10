@@ -23,6 +23,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const [isOpen, setIsOpen] = useState(embedded);
   const [mode, setMode] = useState<'chat' | 'voice'>('chat');
   const [isLiveMode, setIsLiveMode] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
   const [volume, setVolume] = useState(0);
   const [language, setLanguage] = useState<OracleLanguage>('English');
   const [input, setInput] = useState('');
@@ -81,6 +82,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const stopLiveMode = () => {
     console.log("Stopping Live Mode...");
     setIsLiveMode(false);
+    setSessionReady(false);
     setIsLoading(false);
 
     if (liveSessionRef.current && typeof liveSessionRef.current.close === 'function') {
@@ -98,7 +100,12 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     }
 
     if (audioWorkletNodeRef.current) {
-      audioWorkletNodeRef.current.disconnect();
+      try {
+        audioWorkletNodeRef.current.port.onmessage = null;
+        audioWorkletNodeRef.current.disconnect();
+      } catch (e) {
+        console.warn("Error disconnecting worklet:", e);
+      }
       audioWorkletNodeRef.current = null;
     }
 
@@ -159,7 +166,8 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
 
       const sessionPromise = geminiService.connectLive({
         onOpen: async () => {
-          console.log("Live session open");
+          console.log("Live session fully established");
+          setSessionReady(true);
           setMessages(prev => [...prev, { role: 'assistant', content: "[Connected] The Oracle is listening." }]);
         },
         onClose: () => {
@@ -200,27 +208,25 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
 
       let chunkCount = 0;
       workletNode.port.onmessage = async (event) => {
-        const session = await sessionPromise;
         if (event.data.type === 'volume') {
           setVolume(event.data.volume);
         } else if (event.data.type === 'audio') {
+          // IMPORTANT: Only send audio if session is fully open and ready
+          if (!sessionReady) return;
+
+          const session = await sessionPromise;
           chunkCount++;
           if (chunkCount % 100 === 0) console.log(`DEBUG: Sent ${chunkCount} audio chunks to Google`);
-          
+          const base64 = arrayBufferToBase64(event.data.data);
           if (session && typeof (session as any).send === 'function') {
-            try {
-              const base64 = arrayBufferToBase64(event.data.data);
-              (session as any).send({
-                realtimeInput: {
-                  mediaChunks: [{
-                    mimeType: 'audio/pcm;rate=16000',
-                    data: base64
-                  }]
-                }
-              });
-            } catch (e) {
-              console.error("Failed to send audio chunk:", e);
-            }
+            (session as any).send({
+              realtimeInput: {
+                mediaChunks: [{
+                  mimeType: 'audio/pcm;rate=16000',
+                  data: base64
+                }]
+              }
+            });
           }
         }
       };
