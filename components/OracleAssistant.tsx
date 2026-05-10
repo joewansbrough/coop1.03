@@ -133,7 +133,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
 
       console.log("AudioContext initialized:", ctx.state, ctx.sampleRate);
 
-      // 1. Load the module FIRST and await it completely
+      // Load the module FIRST and await it completely
       try {
         await ctx.audioWorklet.addModule('/VoiceWorklet.js');
         console.log("VoiceWorklet module loaded successfully");
@@ -142,7 +142,6 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         throw new Error("Could not load audio processor. Please refresh.");
       }
 
-      // 2. ONLY then create the node
       const workletNode = new AudioWorkletNode(ctx, 'voice-worklet');
       audioWorkletNodeRef.current = workletNode;
 
@@ -159,7 +158,25 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         4. If a user interrupts, stop your current thought.`;
 
       const sessionPromise = geminiService.connectLive({
-        onOpen: () => console.log("Live session open"),
+        onOpen: async () => {
+          console.log("Live session open - sending greeting");
+          const session = await sessionPromise;
+          if (session && typeof (session as any).send === 'function') {
+             try {
+               (session as any).send({
+                 realtimeInput: {
+                   mediaChunks: [{
+                     mimeType: 'text/plain',
+                     data: btoa("Hello Oracle, can you hear me? Please introduce yourself briefly.")
+                   }]
+                 }
+               });
+             } catch (e) {
+               console.warn("Greeting nudge failed:", e);
+             }
+          }
+          setMessages(prev => [...prev, { role: 'assistant', content: "[Connected] The Oracle is listening." }]);
+        },
         onClose: () => stopLiveMode(),
         onError: (err) => {
           console.error("Live error", err);
@@ -189,29 +206,10 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
             navigate(`/maintenance?highlight=${args.requestId}`);
           }
         }
-      const sessionPromise = geminiService.connectLive({
-        onOpen: async () => {
-          console.log("Live session open - sending greeting");
-          const session = await sessionPromise;
-          if (session && typeof session.send === 'function') {
-             // Sending an initial text chunk as a "nudge" to make it start talking
-             // In the Live API, text can be sent via the same bidi channel
-             try {
-               session.send({
-                 realtimeInput: {
-                   mediaChunks: [{
-                     mimeType: 'text/plain',
-                     data: btoa("Hello Oracle, can you hear me? Please introduce yourself briefly.")
-                   }]
-                 }
-               });
-             } catch (e) {
-               console.warn("Greeting nudge failed:", e);
-             }
-          }
-          setMessages(prev => [...prev, { role: 'assistant', content: "[Connected] The Oracle is listening." }]);
-        },
-      ...
+      }, systemInstruction);
+
+      liveSessionRef.current = sessionPromise;
+
       let chunkCount = 0;
       workletNode.port.onmessage = async (event) => {
         const session = await sessionPromise;
@@ -220,11 +218,9 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         } else if (event.data.type === 'audio') {
           chunkCount++;
           if (chunkCount % 50 === 0) console.log(`DEBUG: Sent ${chunkCount} audio chunks to Google`);
-
-          // Convert ArrayBuffer to Base64 for the Live API
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(event.data.data)));
-          if (session && typeof session.send === 'function') {
-            session.send({
+          const base64 = arrayBufferToBase64(event.data.data);
+          if (session && typeof (session as any).send === 'function') {
+            (session as any).send({
               realtimeInput: {
                 mediaChunks: [{
                   mimeType: 'audio/pcm;rate=16000',
@@ -234,8 +230,6 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
             });
           }
         }
-      };
-
       };
 
     } catch (err) {
@@ -318,7 +312,6 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   };
 
   const renderContent = (content: string, response?: OracleResponse) => {
-    // Simple regex to find internal links like [Title](/path)
     const parts = content.split(/(\[.+?\]\(.+?\))/g);
     
     return (
@@ -342,7 +335,6 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           })}
         </p>
         
-        {/* Render Citations */}
         {response?.citations && response.citations.length > 0 && (
           <div className="mt-4 space-y-2 border-t border-slate-200/50 pt-3 dark:border-white/5">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sources</p>

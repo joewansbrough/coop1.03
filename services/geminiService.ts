@@ -330,7 +330,32 @@ export const geminiService = {
           // Handle Tool Calls
           if (message.toolCall) {
             console.log("DEBUG: Received Tool Call:", message.toolCall);
-...
+            const toolResponses: any[] = [];
+            for (const call of message.toolCall.functionCalls) {
+              const fnName = call.name as keyof typeof functions;
+              if (functions[fnName]) {
+                try {
+                  const result = await (functions[fnName] as any)(call.args);
+                  if (callbacks.onToolCall) callbacks.onToolCall(call.name, call.args);
+                  toolResponses.push({
+                    name: call.name,
+                    id: call.id,
+                    response: { result }
+                  });
+                } catch (err) {
+                  toolResponses.push({
+                    name: call.name,
+                    id: call.id,
+                    response: { error: String(err) }
+                  });
+                }
+              }
+            }
+            if (toolResponses.length > 0 && session) {
+              (session as any).send({ toolResponse: { functionResponses: toolResponses } });
+            }
+          }
+
           // Handle Content
           if (message.serverContent?.modelTurn?.parts) {
             for (const part of message.serverContent.modelTurn.parts) {
