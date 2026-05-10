@@ -23,7 +23,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const [isOpen, setIsOpen] = useState(embedded);
   const [mode, setMode] = useState<'chat' | 'voice'>('chat');
   const [isLiveMode, setIsLiveMode] = useState(false);
-  const [sessionReady, setSessionReady] = useState(false);
+  const sessionReadyRef = useRef(false);
   const [volume, setVolume] = useState(0);
   const [language, setLanguage] = useState<OracleLanguage>('English');
   const [input, setInput] = useState('');
@@ -42,6 +42,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
 
   // Gapless Audio Playback for Live Mode
   const playAudioChunk = async (base64: string) => {
+    console.log("DEBUG: Received Audio Chunk from Gemini - Processing for playback");
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!audioContextRef.current) audioContextRef.current = new AudioContextClass();
     const ctx = audioContextRef.current;
@@ -82,7 +83,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const stopLiveMode = () => {
     console.log("Stopping Live Mode...");
     setIsLiveMode(false);
-    setSessionReady(false);
+    sessionReadyRef.current = false;
     setIsLoading(false);
 
     if (liveSessionRef.current && typeof liveSessionRef.current.close === 'function') {
@@ -167,7 +168,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       const sessionPromise = geminiService.connectLive({
         onOpen: async () => {
           console.log("Live session fully established");
-          setSessionReady(true);
+          sessionReadyRef.current = true;
           setMessages(prev => [...prev, { role: 'assistant', content: "[Connected] The Oracle is listening." }]);
         },
         onClose: () => {
@@ -209,10 +210,11 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       let chunkCount = 0;
       workletNode.port.onmessage = async (event) => {
         if (event.data.type === 'volume') {
-          setVolume(event.data.volume);
+          // Boost sensitivity for the UI meter
+          setVolume(Math.min(1, event.data.volume * 10));
         } else if (event.data.type === 'audio') {
-          // IMPORTANT: Only send audio if session is fully open and ready
-          if (!sessionReady) return;
+          // IMPORTANT: Check the REF, not state, to avoid stale closure
+          if (!sessionReadyRef.current) return;
 
           const session = await sessionPromise;
           chunkCount++;
