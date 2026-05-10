@@ -300,11 +300,17 @@ export const geminiService = {
     const session = await genAI.live.connect({
       model: "gemini-3.1-flash-live-preview",
       config: {
-        systemInstruction: { parts: [{ text: systemInstruction }] },
+        systemInstruction: { 
+          parts: [{ 
+            text: `${systemInstruction} 
+            IMPORTANT: Greet the user immediately as soon as the connection is established. 
+            Confirm you are ready to help with co-op questions.` 
+          }] 
+        },
         tools: tools as any,
-        responseModalities: ["audio"] as any,
+        responseModalities: ["audio"],
         speechConfig: {
-          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } }
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } }
         }
       },
       callbacks: {
