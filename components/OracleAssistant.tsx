@@ -159,27 +159,15 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
 
       const sessionPromise = geminiService.connectLive({
         onOpen: async () => {
-          console.log("Live session open - sending greeting");
-          const session = await sessionPromise;
-          if (session && typeof (session as any).send === 'function') {
-             try {
-               (session as any).send({
-                 realtimeInput: {
-                   mediaChunks: [{
-                     mimeType: 'text/plain',
-                     data: btoa("Hello Oracle, can you hear me? Please introduce yourself briefly.")
-                   }]
-                 }
-               });
-             } catch (e) {
-               console.warn("Greeting nudge failed:", e);
-             }
-          }
+          console.log("Live session open");
           setMessages(prev => [...prev, { role: 'assistant', content: "[Connected] The Oracle is listening." }]);
         },
-        onClose: () => stopLiveMode(),
+        onClose: () => {
+          console.log("Live session closed");
+          stopLiveMode();
+        },
         onError: (err) => {
-          console.error("Live error", err);
+          console.error("Live error:", err);
           setMessages(prev => [...prev, { role: 'assistant', content: "The Oracle has lost its connection. Please try again." }]);
           stopLiveMode();
         },
@@ -217,17 +205,22 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           setVolume(event.data.volume);
         } else if (event.data.type === 'audio') {
           chunkCount++;
-          if (chunkCount % 50 === 0) console.log(`DEBUG: Sent ${chunkCount} audio chunks to Google`);
-          const base64 = arrayBufferToBase64(event.data.data);
+          if (chunkCount % 100 === 0) console.log(`DEBUG: Sent ${chunkCount} audio chunks to Google`);
+          
           if (session && typeof (session as any).send === 'function') {
-            (session as any).send({
-              realtimeInput: {
-                mediaChunks: [{
-                  mimeType: 'audio/pcm;rate=16000',
-                  data: base64
-                }]
-              }
-            });
+            try {
+              const base64 = arrayBufferToBase64(event.data.data);
+              (session as any).send({
+                realtimeInput: {
+                  mediaChunks: [{
+                    mimeType: 'audio/pcm;rate=16000',
+                    data: base64
+                  }]
+                }
+              });
+            } catch (e) {
+              console.error("Failed to send audio chunk:", e);
+            }
           }
         }
       };
