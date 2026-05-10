@@ -296,9 +296,9 @@ export const geminiService = {
     
     let activeSession: any = null;
 
-    console.log("Initiating Live connection with model: gemini-2.0-flash-001");
+    console.log("Initiating Live connection with model: gemini-2.5-flash-live-preview");
     const session = await genAI.live.connect({
-      model: "gemini-2.0-flash-001",
+      model: "gemini-2.5-flash-live-preview",
       config: {
         systemInstruction: { parts: [{ text: systemInstruction }] },
         tools: tools as any,
