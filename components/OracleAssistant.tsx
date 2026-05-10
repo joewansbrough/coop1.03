@@ -189,15 +189,38 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
             navigate(`/maintenance?highlight=${args.requestId}`);
           }
         }
-      }, systemInstruction);
-
-      liveSessionRef.current = sessionPromise;
-
+      const sessionPromise = geminiService.connectLive({
+        onOpen: async () => {
+          console.log("Live session open - sending greeting");
+          const session = await sessionPromise;
+          if (session && typeof session.send === 'function') {
+             // Sending an initial text chunk as a "nudge" to make it start talking
+             // In the Live API, text can be sent via the same bidi channel
+             try {
+               session.send({
+                 realtimeInput: {
+                   mediaChunks: [{
+                     mimeType: 'text/plain',
+                     data: btoa("Hello Oracle, can you hear me? Please introduce yourself briefly.")
+                   }]
+                 }
+               });
+             } catch (e) {
+               console.warn("Greeting nudge failed:", e);
+             }
+          }
+          setMessages(prev => [...prev, { role: 'assistant', content: "[Connected] The Oracle is listening." }]);
+        },
+      ...
+      let chunkCount = 0;
       workletNode.port.onmessage = async (event) => {
         const session = await sessionPromise;
         if (event.data.type === 'volume') {
           setVolume(event.data.volume);
         } else if (event.data.type === 'audio') {
+          chunkCount++;
+          if (chunkCount % 50 === 0) console.log(`DEBUG: Sent ${chunkCount} audio chunks to Google`);
+
           // Convert ArrayBuffer to Base64 for the Live API
           const base64 = btoa(String.fromCharCode(...new Uint8Array(event.data.data)));
           if (session && typeof session.send === 'function') {
@@ -211,6 +234,8 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
             });
           }
         }
+      };
+
       };
 
     } catch (err) {

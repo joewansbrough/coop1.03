@@ -325,47 +325,28 @@ export const geminiService = {
           callbacks.onError(err);
         },
         onmessage: async (message: any) => {
+          console.log("DEBUG: Received message from Gemini:", Object.keys(message));
+          
           // Handle Tool Calls
           if (message.toolCall) {
-            const toolResponses: any[] = [];
-            for (const call of message.toolCall.functionCalls) {
-              const fnName = call.name as keyof typeof functions;
-              if (functions[fnName]) {
-                try {
-                  const result = await (functions[fnName] as any)(call.args);
-                  if (callbacks.onToolCall) callbacks.onToolCall(call.name, call.args);
-                  toolResponses.push({
-                    name: call.name,
-                    id: call.id,
-                    response: { result }
-                  });
-                } catch (err) {
-                  toolResponses.push({
-                    name: call.name,
-                    id: call.id,
-                    response: { error: String(err) }
-                  });
-                }
-              }
-            }
-            if (toolResponses.length > 0 && session) {
-              session.send({ toolResponse: { functionResponses: toolResponses } });
-            }
-          }
-
+            console.log("DEBUG: Received Tool Call:", message.toolCall);
+...
           // Handle Content
           if (message.serverContent?.modelTurn?.parts) {
             for (const part of message.serverContent.modelTurn.parts) {
               if (part.inlineData?.data) {
+                console.log("DEBUG: Received Audio Chunk from Gemini (Base64 length):", part.inlineData.data.length);
                 callbacks.onAudio(part.inlineData.data);
               }
               if (part.text) {
+                console.log("DEBUG: Received Text from Gemini:", part.text);
                 callbacks.onText(part.text);
               }
             }
           }
           
           if (message.serverContent?.interrupted) {
+            console.log("DEBUG: AI was interrupted by user.");
             callbacks.onInterrupted();
           }
         }
