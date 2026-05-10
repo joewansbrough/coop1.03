@@ -296,9 +296,9 @@ export const geminiService = {
     
     let activeSession: any = null;
 
-    console.log("Initiating Live connection with model: gemini-2.0-flash-exp");
+    console.log("Initiating Live connection with model: gemini-2.0-flash-001");
     const session = await genAI.live.connect({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.0-flash-001",
       config: {
         systemInstruction: { parts: [{ text: systemInstruction }] },
         tools: tools as any,
@@ -309,14 +309,15 @@ export const geminiService = {
       },
       callbacks: {
         onopen: () => {
-          console.log("WebSocket Connection Opened");
+          console.log("WebSocket Connection Opened Successfully");
           activeSession = session;
           callbacks.onOpen();
         },
         onclose: (event: any) => {
           console.log(`WebSocket Connection Closed. Code: ${event.code}, Reason: ${event.reason}`);
-          if (event.code === 4000) console.error("Error: Invalid API Key or Model Name.");
-          if (event.code === 4003) console.error("Error: Model not found or not available in your region.");
+          if (event.code === 1008) {
+            console.error("DEBUG: Model not found or BIDI not supported. Checking model list might be required.");
+          }
           callbacks.onClose();
         },
         onerror: (err: any) => {
