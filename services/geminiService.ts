@@ -302,16 +302,23 @@ export const geminiService = {
       config: {
         systemInstruction: { 
           parts: [{ 
-            text: `${systemInstruction} 
-            IMPORTANT: Greet the user immediately as soon as the connection is established. 
-            Confirm you are ready to help with co-op questions.` 
+            text: `You are the smart "Oak Bay Co-op Oracle". 
+            Greet the user IMMEDIATELY when they connect.
+            BE PROACTIVE: If you hear any audio, assume the user is talking to you.
+            BE SUCCINCT: Provide the answer directly and briefly.` 
           }] 
         },
         tools: tools as any,
         responseModalities: ["audio"],
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } }
-        }
+        },
+        // Enable automatic turn detection (VAD)
+        generationConfig: {
+          candidateCount: 1,
+          maxOutputTokens: 500,
+          temperature: 0.7,
+        } as any
       },
       callbacks: {
         onopen: () => {
