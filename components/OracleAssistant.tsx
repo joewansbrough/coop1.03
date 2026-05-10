@@ -42,7 +42,6 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
 
   // Gapless Audio Playback for Live Mode
   const playAudioChunk = async (base64: string) => {
-    console.log("DEBUG: Received Audio Chunk from Gemini - Processing for playback");
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!audioContextRef.current) audioContextRef.current = new AudioContextClass();
     const ctx = audioContextRef.current;
@@ -70,33 +69,19 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     activeSourceRef.current = source;
   };
 
-  // Robust helper to convert ArrayBuffer to Base64
-  const arrayBufferToBase64 = (buffer: ArrayBuffer) => {
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return window.btoa(binary);
-  };
-
   const stopLiveMode = () => {
     console.log("Stopping Live Mode...");
     setIsLiveMode(false);
     sessionReadyRef.current = false;
     setIsLoading(false);
 
-    if (liveSessionRef.current && typeof liveSessionRef.current.close === 'function') {
-      try {
-        liveSessionRef.current.close();
-      } catch (e) {
-        console.warn("Error closing live session:", e);
-      }
+    if (liveSessionRef.current) {
+      liveSessionRef.current.then((s: any) => s.close());
       liveSessionRef.current = null;
     }
 
     if (activeSourceRef.current) {
-      activeSourceRef.current.stop();
+      try { activeSourceRef.current.stop(); } catch (e) {}
       activeSourceRef.current = null;
     }
 
@@ -114,6 +99,8 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       audioStreamRef.current.getTracks().forEach(t => t.stop());
       audioStreamRef.current = null;
     }
+    
+    nextStartTimeRef.current = 0;
   };
 
   const startLiveMode = async () => {
@@ -134,7 +121,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       const ctx = new AudioContextClass({ sampleRate: 16000 });
       audioContextRef.current = ctx;
       
-      // Ensure context is running (required for some browsers)
+      // Ensure context is running
       if (ctx.state === 'suspended') {
         await ctx.resume();
       }
@@ -156,20 +143,24 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       const source = ctx.createMediaStreamSource(stream);
       source.connect(workletNode);
 
-      const systemInstruction = `You are the smart "Oak Bay Co-op Oracle". 
-        You have direct access to the co-op's database via specialized tools.
-        
-        Rules:
-        1. BE SUCCINCT: Provide the answer directly and briefly.
-        2. BE FRIENDLY: Maintain a helpful, community-oriented tone.
-        3. Use tools to fetch real data for member, unit, policy, events, etc.
-        4. If a user interrupts, stop your current thought.`;
+      const systemInstruction = `You are the smart "Oak Bay Co-op Oracle" in Real-time Mode.
+      Respond briefly and conversationally. You can help with database queries too.
+      Always stay in ${language}.
+      
+      Greet the user IMMEDIATELY when they connect.
+      Confirm you are ready to help with co-op questions.`;
 
       const sessionPromise = geminiService.connectLive({
         onOpen: async () => {
           console.log("Live session fully established");
           sessionReadyRef.current = true;
           setMessages(prev => [...prev, { role: 'assistant', content: "[Connected] The Oracle is listening." }]);
+          
+          // Send an initial text signal as seen in reference
+          const session = await sessionPromise;
+          (session as any).sendRealtimeInput({
+            text: "Hello! I am ready to help. Please introduce yourself briefly."
+          });
         },
         onClose: () => {
           console.log("Live session closed");
@@ -182,7 +173,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         },
         onInterrupted: () => {
           if (activeSourceRef.current) {
-            activeSourceRef.current.stop();
+            try { activeSourceRef.current.stop(); } catch (e) {}
             activeSourceRef.current = null;
           }
           nextStartTimeRef.current = 0;
@@ -210,24 +201,20 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       let chunkCount = 0;
       workletNode.port.onmessage = async (event) => {
         if (event.data.type === 'volume') {
-          // Boost sensitivity for the UI meter
-          setVolume(Math.min(1, event.data.volume * 10));
+          setVolume(event.data.volume);
         } else if (event.data.type === 'audio') {
-          // IMPORTANT: Check the REF, not state, to avoid stale closure
           if (!sessionReadyRef.current) return;
 
+          const pcmBuffer = event.data.data;
+          const base64 = window.btoa(String.fromCharCode(...new Uint8Array(pcmBuffer)));
+          
           const session = await sessionPromise;
           chunkCount++;
           if (chunkCount % 100 === 0) console.log(`DEBUG: Sent ${chunkCount} audio chunks to Google`);
-          const base64 = arrayBufferToBase64(event.data.data);
-          if (session && typeof (session as any).send === 'function') {
-            (session as any).send({
-              realtimeInput: {
-                mediaChunks: [{
-                  mimeType: 'audio/pcm;rate=16000',
-                  data: base64
-                }]
-              }
+          
+          if (session && typeof (session as any).sendRealtimeInput === 'function') {
+            (session as any).sendRealtimeInput({
+              audio: { data: base64, mimeType: 'audio/pcm;rate=16000' }
             });
           }
         }
@@ -255,7 +242,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         
         ctx.fillStyle = '#0d9488';
         for (let i = 0; i < barCount; i++) {
-          const v = Math.max(2, volume * 100 * (0.5 + Math.random() * 0.5));
+          const v = Math.max(2, volume * 1000 * (0.5 + Math.random() * 0.5));
           const h = (v / 100) * canvas.height;
           ctx.beginPath();
           ctx.roundRect(i * (width + spacing), (canvas.height - h) / 2, width, h, 2);

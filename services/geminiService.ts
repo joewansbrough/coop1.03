@@ -1,7 +1,7 @@
 // All Gemini calls go through the backend API for standard requests
 // Multimodal Live API uses direct client-side SDK (@google/genai) with standard API Key handling
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { 
   MOCK_UNITS, 
   MOCK_TENANTS, 
@@ -38,11 +38,11 @@ const tools = [
         name: "getUnits",
         description: "Fetch all housing units or filter by status, floor, or type.",
         parameters: {
-          type: "OBJECT",
+          type: Type.OBJECT,
           properties: {
-            status: { type: "STRING", description: "Filter by 'Occupied', 'Vacant', 'Maintenance'." },
-            floor: { type: "NUMBER" },
-            unitNumber: { type: "STRING" }
+            status: { type: Type.STRING, description: "Filter by 'Occupied', 'Vacant', 'Maintenance'." },
+            floor: { type: Type.NUMBER },
+            unitNumber: { type: Type.STRING }
           }
         }
       },
@@ -50,11 +50,11 @@ const tools = [
         name: "getTenants",
         description: "Fetch all co-op members (tenants) or search by name/status.",
         parameters: {
-          type: "OBJECT",
+          type: Type.OBJECT,
           properties: {
-            name: { type: "STRING", description: "Search by first or last name." },
-            status: { type: "STRING", description: "Filter by 'Current', 'Past', 'Waitlist'." },
-            email: { type: "STRING" }
+            name: { type: Type.STRING, description: "Search by first or last name." },
+            status: { type: Type.STRING, description: "Filter by 'Current', 'Past', 'Waitlist'." },
+            email: { type: Type.STRING }
           }
         }
       },
@@ -62,11 +62,11 @@ const tools = [
         name: "getMaintenanceRequests",
         description: "Fetch all maintenance requests, filtering by unit, status, or urgency.",
         parameters: {
-          type: "OBJECT",
+          type: Type.OBJECT,
           properties: {
-            unitNumber: { type: "STRING" },
-            status: { type: "STRING" },
-            urgency: { type: "STRING" }
+            unitNumber: { type: Type.STRING },
+            status: { type: Type.STRING },
+            urgency: { type: Type.STRING }
           }
         }
       },
@@ -74,9 +74,9 @@ const tools = [
         name: "getCommittees",
         description: "Fetch committee details, chairs, and members.",
         parameters: {
-          type: "OBJECT",
+          type: Type.OBJECT,
           properties: {
-            name: { type: "STRING", description: "Filter by committee name." }
+            name: { type: Type.STRING, description: "Filter by committee name." }
           }
         }
       },
@@ -84,9 +84,9 @@ const tools = [
         name: "getDocuments",
         description: "Search bylaws, policies, and minutes.",
         parameters: {
-          type: "OBJECT",
+          type: Type.OBJECT,
           properties: {
-            query: { type: "STRING" }
+            query: { type: Type.STRING }
           }
         }
       },
@@ -94,9 +94,9 @@ const tools = [
         name: "getEvents",
         description: "Fetch meetings and social events.",
         parameters: {
-          type: "OBJECT",
+          type: Type.OBJECT,
           properties: {
-            category: { type: "STRING" }
+            category: { type: Type.STRING }
           }
         }
       },
@@ -104,9 +104,9 @@ const tools = [
         name: "viewMaintenanceRequest",
         description: "Navigate the user's interface to a specific maintenance request to show details.",
         parameters: {
-          type: "OBJECT",
+          type: Type.OBJECT,
           properties: {
-            requestId: { type: "STRING", description: "The ID of the maintenance request (e.g., 'm1')." }
+            requestId: { type: Type.STRING, description: "The ID of the maintenance request (e.g., 'm1')." }
           },
           required: ["requestId"]
         }
@@ -288,49 +288,18 @@ export const geminiService = {
     onToolCall?: (name: string, args: any) => void;
   }, systemInstruction: string) {
     const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || '';
-    if (!apiKey) {
-      console.error("VITE_GEMINI_API_KEY is missing from environment variables.");
-    }
-    
     const genAI = new GoogleGenAI({ apiKey });
     
-    let activeSession: any = null;
-
     console.log("Initiating Live connection with model: gemini-3.1-flash-live-preview");
     const session = await genAI.live.connect({
       model: "gemini-3.1-flash-live-preview",
-      config: {
-        systemInstruction: { 
-          parts: [{ 
-            text: `You are the smart "Oak Bay Co-op Oracle". 
-            Greet the user IMMEDIATELY when they connect.
-            BE PROACTIVE: If you hear any audio, assume the user is talking to you.
-            BE SUCCINCT: Provide the answer directly and briefly.` 
-          }] 
-        },
-        tools: tools as any,
-        responseModalities: ["audio"],
-        speechConfig: {
-          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } }
-        },
-        // Enable automatic turn detection (VAD)
-        generationConfig: {
-          candidateCount: 1,
-          maxOutputTokens: 500,
-          temperature: 0.7,
-        } as any
-      },
       callbacks: {
         onopen: () => {
           console.log("WebSocket Connection Opened Successfully");
-          activeSession = session;
           callbacks.onOpen();
         },
         onclose: (event: any) => {
           console.log(`WebSocket Connection Closed. Code: ${event.code}, Reason: ${event.reason}`);
-          if (event.code === 1008) {
-            console.error("DEBUG: Model not found or BIDI not supported. Checking model list might be required.");
-          }
           callbacks.onClose();
         },
         onerror: (err: any) => {
@@ -364,31 +333,36 @@ export const geminiService = {
                 }
               }
             }
-            if (toolResponses.length > 0 && session) {
-              (session as any).send({ toolResponse: { functionResponses: toolResponses } });
+            if (toolResponses.length > 0) {
+              const liveSession = await session;
+              (liveSession as any).sendToolResponse({ functionResponses: toolResponses });
             }
           }
 
-          // Handle Content
           if (message.serverContent?.modelTurn?.parts) {
             for (const part of message.serverContent.modelTurn.parts) {
               if (part.inlineData?.data) {
-                console.log("DEBUG: Received Audio Chunk from Gemini (Base64 length):", part.inlineData.data.length);
                 callbacks.onAudio(part.inlineData.data);
               }
               if (part.text) {
-                console.log("DEBUG: Received Text from Gemini:", part.text);
                 callbacks.onText(part.text);
               }
             }
           }
           
           if (message.serverContent?.interrupted) {
-            console.log("DEBUG: AI was interrupted by user.");
             callbacks.onInterrupted();
           }
         }
-      } as any
+      },
+      config: {
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        tools: tools as any,
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } }
+        }
+      }
     });
 
     return session;
