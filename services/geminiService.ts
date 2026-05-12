@@ -231,7 +231,10 @@ const functions = {
   },
   getEvents: ({ category, query, startDate, endDate }: any) => {
     let list = [...MOCK_EVENTS];
-    if (category) list = list.filter(e => e.category.toLowerCase() === category.toLowerCase());
+    if (category) {
+      const cat = category.toLowerCase();
+      list = list.filter(e => e.category.toLowerCase().includes(cat) || e.title.toLowerCase().includes(cat));
+    }
     if (query) {
       const term = query.toLowerCase();
       list = list.filter(e => e.title.toLowerCase().includes(term) || e.description.toLowerCase().includes(term));

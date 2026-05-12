@@ -524,10 +524,17 @@ export const oracleTools = {
 
   get_events: async (context: ToolContext, params: { query?: string; category?: string; committeeId?: string; startDate?: string; endDate?: string; upcomingOnly?: boolean; limit?: number }) => {
     const query = textFilter(params.query);
+    const categoryFilter = params.category ? {
+      OR: [
+        { category: { contains: params.category, mode: 'insensitive' } },
+        { title: { contains: params.category, mode: 'insensitive' } }
+      ]
+    } : {};
+
     return (context.prisma as any).coopEvent.findMany({
       where: {
         cooperativeId: context.cooperativeId,
-        ...(params.category ? { category: params.category } : {}),
+        ...categoryFilter,
         ...(params.committeeId ? { committeeId: params.committeeId } : {}),
         ...(params.upcomingOnly ? { date: { gte: new Date() } } : {}),
         ...((params.startDate || params.endDate) ? {

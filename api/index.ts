@@ -2971,13 +2971,13 @@ app.get('/api/seed', async (req, res) => {
     ];
 
     const eventData = [
-      { title: 'Co-op AGM', description: 'Official annual meeting and board elections.', date: '2026-04-12T19:00:00Z', location: 'Common Room' },
-      { title: 'Block Party Prep', description: 'Planning meeting for the Cook Street Block Party.', date: '2026-04-20T18:30:00Z', location: 'Unit 210' },
-      { title: 'Community Garden Kickoff', description: 'First planting session of the year.', date: '2026-05-02T10:00:00Z', location: 'Back Courtyard' },
-      { title: 'Coffee & Conversation', description: 'Casual meetup for new and old members.', date: '2026-05-15T11:00:00Z', location: 'Common Room' },
-      { title: 'Board Meeting', description: 'Monthly oversight meeting.', date: '2026-04-28T19:30:00Z', location: 'Zoom' },
-      { title: 'Summer BBQ', description: 'Annual summer social.', date: '2026-07-04T16:00:00Z', location: 'Front Lawn' },
-      { title: 'Emergency Drill', description: 'Fire safety walkthrough for all residents.', date: '2026-05-10T14:00:00Z', location: 'Main Entrance' },
+      { title: 'Co-op AGM', description: 'Official annual meeting and board elections.', date: '2026-04-12T19:00:00Z', location: 'Common Room', category: 'Meeting' },
+      { title: 'Block Party Prep', description: 'Planning meeting for the Cook Street Block Party.', date: '2026-04-20T18:30:00Z', location: 'Unit 210', category: 'Social' },
+      { title: 'Community Garden Kickoff', description: 'First planting session of the year.', date: '2026-05-02T10:00:00Z', location: 'Back Courtyard', category: 'Social' },
+      { title: 'Coffee & Conversation', description: 'Casual meetup for new and old members.', date: '2026-05-15T11:00:00Z', location: 'Common Room', category: 'Social' },
+      { title: 'Board Meeting', description: 'Monthly oversight meeting.', date: '2026-04-28T19:30:00Z', location: 'Zoom', category: 'Board' },
+      { title: 'Summer BBQ', description: 'Annual summer social.', date: '2026-07-04T16:00:00Z', location: 'Front Lawn', category: 'Social' },
+      { title: 'Emergency Drill', description: 'Fire safety walkthrough for all residents.', date: '2026-05-10T14:00:00Z', location: 'Main Entrance', category: 'Maintenance' },
     ];
 
     const documentData = [
@@ -3100,7 +3100,7 @@ app.get('/api/seed', async (req, res) => {
           date: dt,
           time: dt.toISOString().split('T')[1].substring(0, 5),
           location: sanitizeUtf8(e.location).trim(),
-          category: "General",
+          category: e.category || "General",
         }
       });
     }
