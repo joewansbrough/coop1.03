@@ -3,7 +3,12 @@ import { Link, useSearchParams } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import { Announcement } from '../types';
 import { useCreateAnnouncement } from '../hooks/useCoopData';
-import { getAnnouncementPriorityAccentClass, getAnnouncementPriorityBadgeClass } from '../utils/announcementPriorityStyles';
+import {
+  getAnnouncementPriorityAccentClass,
+  getAnnouncementPriorityBadgeClass,
+  getAnnouncementPriorityFilterOptions,
+  getAnnouncementPriorityFormOptions,
+} from '../utils/announcementPriorityStyles';
 import { sortNewestFirst } from '../utils/contentOrdering';
 
 const Communications: React.FC<{
@@ -78,7 +83,7 @@ const Communications: React.FC<{
         searchPlaceholder="Search broadcasts..."
         filter={annFilter}
         onFilterChange={setAnnFilter}
-        filterOptions={['All', 'High', 'Medium', 'Low', 'Urgent', 'Normal']}
+        filterOptions={getAnnouncementPriorityFilterOptions()}
       />
 
       {isAdmin && showNewAnnouncement && (
@@ -112,9 +117,9 @@ const Communications: React.FC<{
                   onChange={(e) => setNewAnnPriority(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
                 >
-                  <option value="High">High Priority</option>
-                  <option value="Medium">Medium Priority</option>
-                  <option value="Low">Low Priority</option>
+                  {getAnnouncementPriorityFormOptions().map(priority => (
+                    <option key={priority} value={priority}>{priority} Priority</option>
+                  ))}
                 </select>
               </div>
               <div>

@@ -3008,12 +3008,12 @@ app.get('/api/seed', async (req, res) => {
       { name: 'Landscape Committee', chair: 'Michael Johansson', members: ['michael.johansson@email.com', 'wei.liu@email.com', 'james.nakamura@email.com'] },
     ];
     const committeeEventData = [
-      { committeeName: 'Board of Directors', title: 'Board Package Review', description: 'Directors review agenda materials, resident correspondence, and follow-up items before the next board meeting.', date: '2026-06-02T18:30:00Z', location: 'Common Room', category: 'Board' },
-      { committeeName: 'Maintenance Committee', title: 'Maintenance Committee Triage', description: 'Review open repair requests, contractor follow-ups, and preventive maintenance priorities.', date: '2026-06-12T17:30:00Z', location: 'Workshop', category: 'Maintenance' },
+      { committeeName: 'Board of Directors', title: 'Board Package Review', description: 'Directors review agenda materials, resident correspondence, and follow-up items before the next board meeting.', date: '2026-06-02T18:30:00Z', location: 'Common Room', category: 'Meeting' },
+      { committeeName: 'Maintenance Committee', title: 'Maintenance Committee Triage', description: 'Review open repair requests, contractor follow-ups, and preventive maintenance priorities.', date: '2026-06-12T17:30:00Z', location: 'Workshop', category: 'Meeting' },
       { committeeName: 'Finance Committee', title: 'Finance Committee Budget Review', description: 'Review operating budget assumptions, arrears reporting, and reserve planning updates.', date: '2026-06-16T18:00:00Z', location: 'Common Room', category: 'Meeting' },
       { committeeName: 'Membership Committee', title: 'Membership Orientation Planning', description: 'Prepare the next orientation package and review waitlist interview scheduling.', date: '2026-06-20T11:00:00Z', location: 'Library Room', category: 'Meeting' },
-      { committeeName: 'Social Committee', title: 'Social Committee Summer Planning', description: 'Coordinate volunteers, supplies, and notices for summer community events.', date: '2026-06-27T14:00:00Z', location: 'Courtyard', category: 'Social' },
-      { committeeName: 'Landscape Committee', title: 'Landscape Committee Garden Walk', description: 'Walk the exterior areas and confirm seasonal planting and cleanup tasks.', date: '2026-06-29T09:30:00Z', location: 'Garden Shed', category: 'Social' },
+      { committeeName: 'Social Committee', title: 'Social Committee Summer Planning', description: 'Coordinate volunteers, supplies, and notices for summer community events.', date: '2026-06-27T14:00:00Z', location: 'Courtyard', category: 'Meeting' },
+      { committeeName: 'Landscape Committee', title: 'Landscape Committee Garden Walk', description: 'Walk the exterior areas and confirm seasonal planting and cleanup tasks.', date: '2026-06-29T09:30:00Z', location: 'Garden Shed', category: 'Meeting' },
     ];
 
     // 2. ENSURE COOPERATIVE EXISTS

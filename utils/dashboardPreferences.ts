@@ -77,7 +77,7 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
   'announcement-digest': {
     id: 'announcement-digest',
     title: 'Community Announcements',
-    description: 'Urgent and recent community notices.',
+    description: 'High-priority and recent community notices.',
     roles: ['admin'],
     defaultSize: 'large',
     allowedSizes: ['small', 'wide', 'large'],

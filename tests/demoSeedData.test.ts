@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   MOCK_DOCUMENTS,
+  MOCK_ANNOUNCEMENTS,
   MOCK_EVENTS,
   MOCK_MAINTENANCE,
   MOCK_MINUTES,
@@ -62,6 +63,29 @@ test('demo seed gives every committee at least one calendar event', () => {
 
   for (const committee of MOCK_COMMITTEES) {
     assert.ok(committeeIdsWithEvents.has(committee.id), `${committee.name} should have a seeded event`);
+  }
+});
+
+test('committee-linked demo events are categorized as meetings', () => {
+  const committeeEvents = MOCK_EVENTS.filter(event => event.committeeId);
+  assert.ok(committeeEvents.length > 0);
+
+  for (const event of committeeEvents) {
+    assert.equal(event.category, 'Meeting', `${event.title} should be categorized as a Meeting`);
+  }
+});
+
+test('demo seed version refreshes stored snapshots for committee meeting seed changes', () => {
+  assert.notEqual(DEMO_DATA_SEED_VERSION, '2026-05-12-ob-hc-demo-resident');
+});
+
+test('demo announcements use only high medium and low priorities', () => {
+  const allowedPriorities = new Set(['High', 'Medium', 'Low']);
+  for (const announcement of MOCK_ANNOUNCEMENTS) {
+    assert.ok(
+      allowedPriorities.has(announcement.priority),
+      `${announcement.title} should use High, Medium, or Low priority`,
+    );
   }
 });
 

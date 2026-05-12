@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   getAnnouncementPriorityAccentClass,
   getAnnouncementPriorityBadgeClass,
+  getAnnouncementPriorityFilterOptions,
+  getAnnouncementPriorityFormOptions,
 } from '../utils/announcementPriorityStyles.ts';
 
 test('announcement priority badges use distinct high medium and low colors', () => {
@@ -18,7 +20,12 @@ test('announcement priority badges use distinct high medium and low colors', () 
   assert.match(low, /emerald/);
 });
 
-test('urgent announcements share the high-priority color treatment', () => {
-  assert.equal(getAnnouncementPriorityBadgeClass('Urgent'), getAnnouncementPriorityBadgeClass('High'));
-  assert.equal(getAnnouncementPriorityAccentClass('Urgent'), getAnnouncementPriorityAccentClass('High'));
+test('announcement priority options only expose high medium and low', () => {
+  assert.deepEqual(getAnnouncementPriorityFormOptions(), ['High', 'Medium', 'Low']);
+  assert.deepEqual(getAnnouncementPriorityFilterOptions(), ['All', 'High', 'Medium', 'Low']);
+});
+
+test('legacy urgent and normal values are not treated as supported priorities', () => {
+  assert.equal(getAnnouncementPriorityBadgeClass('Urgent'), getAnnouncementPriorityBadgeClass());
+  assert.equal(getAnnouncementPriorityAccentClass('Normal'), getAnnouncementPriorityAccentClass());
 });

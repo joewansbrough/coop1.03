@@ -227,7 +227,7 @@ model Announcement {
   title    String
   content  String
   type     String
-  priority String   @default("Normal")
+  priority String   @default("Medium")
   author   String
   date     DateTime // Changed from String to DateTime
 
