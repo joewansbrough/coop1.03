@@ -10,7 +10,7 @@ const PolicyAssistant: React.FC<{ documents: Document[]; announcements: Announce
         Ask natural-language questions about co-op policies, documents, governance, and maintenance next steps.
       </p>
     </div>
-    <div className="h-[520px]">
+    <div className="h-[clamp(260px,calc(100dvh-16rem),520px)]">
       <OracleAssistant embedded />
     </div>
   </div>

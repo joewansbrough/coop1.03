@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import OracleAssistant from '../components/OracleAssistant.tsx';
+import OracleAssistant, { floatingOraclePanelClassName } from '../components/OracleAssistant.tsx';
 import { FloatingOracleAssistant } from '../components/Layout.tsx';
 import PolicyAssistant from '../pages/PolicyAssistant.tsx';
 
@@ -40,15 +40,17 @@ test('floating OracleAssistant remains available away from the Policy Assistant 
   );
 
   assert.match(html, /Open Co-op Oracle/);
+  assert.match(floatingOraclePanelClassName, /h-\[min\(560px,calc\(100dvh-7rem\)\)\]/);
+  assert.doesNotMatch(floatingOraclePanelClassName, /h-80/);
 });
 
-test('Policy Assistant page uses a compact embedded chat height', () => {
+test('Policy Assistant page uses a responsive embedded chat height', () => {
   const html = renderToStaticMarkup(
     <MemoryRouter>
       <PolicyAssistant documents={[]} announcements={[]} />
     </MemoryRouter>,
   );
 
-  assert.match(html, /h-\[520px\]/);
+  assert.match(html, /h-\[clamp\(260px,calc\(100dvh-16rem\),520px\)\]/);
   assert.doesNotMatch(html, /h-\[720px\]/);
 });

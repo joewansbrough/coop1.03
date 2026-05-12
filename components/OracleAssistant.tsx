@@ -10,6 +10,8 @@ interface OracleAssistantProps {
   embedded?: boolean;
 }
 
+export const floatingOraclePanelClassName = 'fixed bottom-24 right-8 z-[120] h-[min(560px,calc(100dvh-7rem))] w-[calc(100vw-4rem)] max-w-md';
+
 const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(embedded);
@@ -468,9 +470,9 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
             animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
             exit={{ opacity: 0, scale: 0.5, x: 100, y: 100 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-[112px] right-8 z-[120] w-[calc(100vw-4rem)] max-w-md"
+            className={floatingOraclePanelClassName}
           >
-            {renderChatSurface('h-80')}
+            {renderChatSurface('min-h-0 flex-1')}
           </motion.div>
         )}
       </AnimatePresence>
