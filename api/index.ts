@@ -10,6 +10,7 @@ import { get, put, list } from '@vercel/blob';
 import { Readable } from 'node:stream';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import driveRoutes from './drive.js';
+import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
 import {
   getStoredDashboardPreference,
@@ -295,6 +296,16 @@ app.get('/api/health', (req, res) => {
 const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   if ((req as any).session?.user) {
     (req as any).user = (req as any).session.user;
+    return next();
+  }
+
+  return res.status(401).json({ error: 'Unauthorized' });
+};
+
+const requireDriveAccess = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const sessionUser = (req as any).session?.user;
+  if (canAccessDriveRoutes({ sessionUser, demoModeHeader: req.get('x-coophub-demo-mode') })) {
+    if (sessionUser) (req as any).user = sessionUser;
     return next();
   }
 
@@ -622,7 +633,7 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
 });
 
 
-app.use('/api/drive', requireAuth, driveRoutes);
+app.use('/api/drive', requireDriveAccess, driveRoutes);
 
 // --- Database API Routes ---
 
@@ -3160,9 +3171,6 @@ app.get('/api/seed', async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
-
-
-   app.use('/api/drive', driveRoutes);
 
 app.get(['/api/debug/config', '/debug/config'], (req, res) => {
   res.json({
