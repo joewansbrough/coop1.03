@@ -522,7 +522,7 @@ export const oracleTools = {
     };
   },
 
-  get_events: async (context: ToolContext, params: { query?: string; category?: string; committeeId?: string; upcomingOnly?: boolean; limit?: number }) => {
+  get_events: async (context: ToolContext, params: { query?: string; category?: string; committeeId?: string; startDate?: string; endDate?: string; upcomingOnly?: boolean; limit?: number }) => {
     const query = textFilter(params.query);
     return (context.prisma as any).coopEvent.findMany({
       where: {
@@ -530,6 +530,12 @@ export const oracleTools = {
         ...(params.category ? { category: params.category } : {}),
         ...(params.committeeId ? { committeeId: params.committeeId } : {}),
         ...(params.upcomingOnly ? { date: { gte: new Date() } } : {}),
+        ...((params.startDate || params.endDate) ? {
+          date: {
+            ...(params.startDate ? { gte: new Date(params.startDate) } : {}),
+            ...(params.endDate ? { lte: new Date(params.endDate) } : {}),
+          }
+        } : {}),
         ...(query ? { OR: [{ title: contains(query) }, { description: contains(query) }, { location: contains(query) }] } : {}),
       },
       orderBy: { date: params.upcomingOnly ? 'asc' : 'desc' },
@@ -792,6 +798,8 @@ export const oracleToolDeclarations: ToolDeclaration[] = [
     ...commonFilters,
     category: stringProp('Filter by event category.'),
     committeeId: stringProp('Filter by committee ID.'),
+    startDate: stringProp('Filter events from this date (ISO 8601).'),
+    endDate: stringProp('Filter events until this date (ISO 8601).'),
     upcomingOnly: booleanProp('Only future events.'),
   }),
   declaration('get_upcoming_events', 'Get upcoming co-op events and meetings.'),

@@ -1944,7 +1944,7 @@ Reasoning:
 - For broad factual questions, use search_coop_database first so the whole permission-accessible database can inform the answer.
 - For policy questions, use search_coop_knowledge first; it searches document text and announcements together.
 - Chain tools when needed, for example committee -> chair/member -> tenant -> unit.
-- Prefer specific filtered calls over broad calls.
+- Prefer specific filtered calls over broad calls (e.g., if asked for a specific date like "April 28th", use 'get_events' with 'startDate' and 'endDate' as '2026-04-28').
 - If a tool returns usable records plus errors, answer from the usable records and do not say the tool failed.
 - Only mention a failed lookup when no usable records were returned for the member's question.
 

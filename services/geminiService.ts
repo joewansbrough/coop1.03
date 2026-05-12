@@ -96,7 +96,10 @@ const tools = [
         parameters: {
           type: Type.OBJECT,
           properties: {
-            category: { type: Type.STRING }
+            query: { type: Type.STRING, description: "Text search in title or description." },
+            category: { type: Type.STRING },
+            startDate: { type: Type.STRING, description: "ISO 8601 date string." },
+            endDate: { type: Type.STRING, description: "ISO 8601 date string." }
           }
         }
       },
@@ -226,9 +229,22 @@ const functions = {
     }
     return MOCK_DOCUMENTS;
   },
-  getEvents: ({ category }: any) => {
-    if (category) return MOCK_EVENTS.filter(e => e.category.toLowerCase() === category.toLowerCase());
-    return MOCK_EVENTS;
+  getEvents: ({ category, query, startDate, endDate }: any) => {
+    let list = [...MOCK_EVENTS];
+    if (category) list = list.filter(e => e.category.toLowerCase() === category.toLowerCase());
+    if (query) {
+      const term = query.toLowerCase();
+      list = list.filter(e => e.title.toLowerCase().includes(term) || e.description.toLowerCase().includes(term));
+    }
+    if (startDate) {
+      const start = new Date(startDate);
+      list = list.filter(e => new Date(e.date) >= start);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      list = list.filter(e => new Date(e.date) <= end);
+    }
+    return list;
   },
   viewMaintenanceRequest: ({ requestId }: any) => {
     return { success: true, message: `Showing maintenance request ${requestId}` };
