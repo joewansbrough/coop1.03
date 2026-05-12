@@ -290,8 +290,9 @@ async function main() {
     { name: 'Social Committee', description: 'Organizes community events, potlucks, seasonal celebrations, and fosters neighbourly connections among members.', chair: 'Susan Tremblay', icon: 'fa-calendar', members: ['susan.tremblay@email.com', 'priya.sharma@email.com', 'nadia.patel@email.com', 'david.okafor@email.com'] },
   ];
 
+  const committeesByName: Record<string, { id: string }> = {};
   for (const c of committeeData) {
-    await prisma.committee.create({
+    const committee = await prisma.committee.create({
       data: {
         name: c.name,
         description: c.description,
@@ -303,9 +304,36 @@ async function main() {
         },
       },
     });
+    committeesByName[c.name] = committee;
   }
 
   console.log('Seeding calendar events...');
+  const committeeEvents = [
+    { committeeName: 'Board of Directors', title: 'Board Package Review', category: 'Board', location: 'Community Room', time: '18:30', description: 'Directors review agenda materials, resident correspondence, and follow-up items.', date: new Date('2026-06-02T18:30:00') },
+    { committeeName: 'Maintenance Committee', title: 'Maintenance Committee Triage', category: 'Maintenance', location: 'Workshop', time: '17:30', description: 'Review open repair requests, contractor follow-ups, and preventive maintenance priorities.', date: new Date('2026-06-12T17:30:00') },
+    { committeeName: 'Finance Committee', title: 'Finance Committee Budget Review', category: 'Meeting', location: 'Community Room', time: '18:00', description: 'Review operating budget assumptions, arrears reporting, and reserve planning updates.', date: new Date('2026-06-16T18:00:00') },
+    { committeeName: 'Membership Committee', title: 'Membership Orientation Planning', category: 'Meeting', location: 'Library Room', time: '11:00', description: 'Prepare the next orientation package and review waitlist interview scheduling.', date: new Date('2026-06-20T11:00:00') },
+    { committeeName: 'Garden Committee', title: 'Garden Committee Seasonal Walk', category: 'Social', location: 'Garden Beds', time: '09:30', description: 'Walk the exterior areas and confirm seasonal planting and cleanup tasks.', date: new Date('2026-06-24T09:30:00') },
+    { committeeName: 'Social Committee', title: 'Social Committee Summer Planning', category: 'Social', location: 'Courtyard', time: '14:00', description: 'Coordinate volunteers, supplies, and notices for summer community events.', date: new Date('2026-06-27T14:00:00') },
+  ];
+
+  for (const event of committeeEvents) {
+    const committee = committeesByName[event.committeeName];
+    if (!committee) continue;
+    await prisma.coopEvent.create({
+      data: {
+        cooperativeId,
+        committeeId: committee.id,
+        title: event.title,
+        category: event.category,
+        location: event.location,
+        time: event.time,
+        description: event.description,
+        date: event.date,
+      },
+    });
+  }
+
   const baseEvents = [
     { title: 'Board of Directors Meeting', category: 'Board', location: 'Community Room', time: '19:00', description: 'Monthly governance review and policy discussion.' },
     { title: 'Community Potluck', category: 'Social', location: 'Courtyard', time: '17:30', description: 'Bring a dish to share and meet your neighbours!' },

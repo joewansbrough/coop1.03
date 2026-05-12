@@ -53,6 +53,18 @@ test('demo seed fleshes out the board committee detail page', () => {
   assert.ok(boardDocuments.length >= 2);
 });
 
+test('demo seed gives every committee at least one calendar event', () => {
+  const committeeIdsWithEvents = new Set(
+    MOCK_EVENTS
+      .map(event => event.committeeId)
+      .filter((committeeId): committeeId is string => Boolean(committeeId)),
+  );
+
+  for (const committee of MOCK_COMMITTEES) {
+    assert.ok(committeeIdsWithEvents.has(committee.id), `${committee.name} should have a seeded event`);
+  }
+});
+
 test('demo seed makes OB HC the default resident with complete detail-page context', () => {
   assert.equal(MOCK_USER.firstName, 'OB');
   assert.equal(MOCK_USER.lastName, 'HC');

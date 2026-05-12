@@ -3007,6 +3007,14 @@ app.get('/api/seed', async (req, res) => {
       { name: 'Social Committee', chair: 'Wei Liu', members: ['wei.liu@email.com', 'maya.ellison@email.com', 'fatima.alhassan@email.com'] },
       { name: 'Landscape Committee', chair: 'Michael Johansson', members: ['michael.johansson@email.com', 'wei.liu@email.com', 'james.nakamura@email.com'] },
     ];
+    const committeeEventData = [
+      { committeeName: 'Board of Directors', title: 'Board Package Review', description: 'Directors review agenda materials, resident correspondence, and follow-up items before the next board meeting.', date: '2026-06-02T18:30:00Z', location: 'Common Room', category: 'Board' },
+      { committeeName: 'Maintenance Committee', title: 'Maintenance Committee Triage', description: 'Review open repair requests, contractor follow-ups, and preventive maintenance priorities.', date: '2026-06-12T17:30:00Z', location: 'Workshop', category: 'Maintenance' },
+      { committeeName: 'Finance Committee', title: 'Finance Committee Budget Review', description: 'Review operating budget assumptions, arrears reporting, and reserve planning updates.', date: '2026-06-16T18:00:00Z', location: 'Common Room', category: 'Meeting' },
+      { committeeName: 'Membership Committee', title: 'Membership Orientation Planning', description: 'Prepare the next orientation package and review waitlist interview scheduling.', date: '2026-06-20T11:00:00Z', location: 'Library Room', category: 'Meeting' },
+      { committeeName: 'Social Committee', title: 'Social Committee Summer Planning', description: 'Coordinate volunteers, supplies, and notices for summer community events.', date: '2026-06-27T14:00:00Z', location: 'Courtyard', category: 'Social' },
+      { committeeName: 'Landscape Committee', title: 'Landscape Committee Garden Walk', description: 'Walk the exterior areas and confirm seasonal planting and cleanup tasks.', date: '2026-06-29T09:30:00Z', location: 'Garden Shed', category: 'Social' },
+    ];
 
     // 2. ENSURE COOPERATIVE EXISTS
     const coop = await p.cooperative.upsert({
@@ -3149,8 +3157,9 @@ app.get('/api/seed', async (req, res) => {
     }
 
     console.log('Seeding committees...');
+    const committeesByName: Record<string, any> = {};
     for (const c of committeeData) {
-      await p.committee.create({
+      const committee = await p.committee.create({
         data: {
           name: sanitizeUtf8(c.name),
           chair: sanitizeUtf8(c.chair),
@@ -3161,6 +3170,26 @@ app.get('/api/seed', async (req, res) => {
               .filter(email => tenants[email])
               .map(email => ({ id: tenants[email].id }))
           }
+        }
+      });
+      committeesByName[c.name] = committee;
+    }
+
+    console.log('Seeding committee events...');
+    for (const e of committeeEventData) {
+      const committee = committeesByName[e.committeeName];
+      if (!committee) continue;
+      const dt = new Date(e.date);
+      await p.coopEvent.create({
+        data: {
+          cooperativeId: coopId,
+          committeeId: committee.id,
+          title: sanitizeUtf8(e.title).trim(),
+          description: sanitizeUtf8(e.description).trim(),
+          date: dt,
+          time: dt.toISOString().split('T')[1].substring(0, 5),
+          location: sanitizeUtf8(e.location).trim(),
+          category: e.category,
         }
       });
     }

@@ -16,6 +16,7 @@ import {
 import { formatDate, formatShortDate } from '../utils/dateUtils';
 import { getDashboardDocumentLink } from '../utils/dashboardDocumentLinks';
 import { getDashboardQuickActions } from '../utils/dashboardQuickActions';
+import { getAnnouncementPriorityBadgeClass } from '../utils/announcementPriorityStyles';
 import {
   Announcement,
   Building,
@@ -569,7 +570,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="space-y-3">
               {recentAnnouncements.slice(0, listLimit).map(announcement => (
                 <Link key={announcement.id} to={`/announcements/${announcement.id}`} className={`block rounded-2xl bg-slate-50 p-4 dark:bg-slate-950/40 ${tileActionClass}`}>
-                  <div className="flex items-center justify-between gap-2"><span className={`rounded-lg px-2 py-1 text-[8px] font-black uppercase tracking-widest ${announcement.priority === 'Urgent' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}>{announcement.priority}</span><span className="text-[9px] font-bold uppercase text-slate-400">{formatDate(announcement.date)}</span></div>
+                  <div className="flex items-center justify-between gap-2"><span className={`rounded-lg px-2 py-1 text-[8px] font-black uppercase tracking-widest ${getAnnouncementPriorityBadgeClass(announcement.priority)}`}>{announcement.priority}</span><span className="text-[9px] font-bold uppercase text-slate-400">{formatDate(announcement.date)}</span></div>
                   <p className="mt-2 line-clamp-2 text-sm font-black text-slate-900 dark:text-white">{announcement.title}</p>
                   {tileSize === 'large' && <p className="mt-2 line-clamp-2 text-xs font-semibold leading-relaxed text-slate-500">{announcement.content}</p>}
                 </Link>

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import { Announcement } from '../types';
 import { useCreateAnnouncement } from '../hooks/useCoopData';
+import { getAnnouncementPriorityAccentClass, getAnnouncementPriorityBadgeClass } from '../utils/announcementPriorityStyles';
 import { sortNewestFirst } from '../utils/contentOrdering';
 
 const Communications: React.FC<{
@@ -16,7 +17,7 @@ const Communications: React.FC<{
   const [showNewAnnouncement, setShowNewAnnouncement] = useState(false);
   const [newAnnTitle, setNewAnnTitle] = useState('');
   const [newAnnContent, setNewAnnContent] = useState('');
-  const [newAnnPriority, setNewAnnPriority] = useState<'Normal' | 'Urgent'>('Normal');
+  const [newAnnPriority, setNewAnnPriority] = useState('Medium');
 
   const createAnnouncementMutation = useCreateAnnouncement();
 
@@ -45,7 +46,7 @@ const Communications: React.FC<{
         setShowNewAnnouncement(false);
         setNewAnnTitle('');
         setNewAnnContent('');
-        setNewAnnPriority('Normal');
+        setNewAnnPriority('Medium');
       }
     });
   };
@@ -77,7 +78,7 @@ const Communications: React.FC<{
         searchPlaceholder="Search broadcasts..."
         filter={annFilter}
         onFilterChange={setAnnFilter}
-        filterOptions={['All', 'Normal', 'Urgent']}
+        filterOptions={['All', 'High', 'Medium', 'Low', 'Urgent', 'Normal']}
       />
 
       {isAdmin && showNewAnnouncement && (
@@ -108,11 +109,12 @@ const Communications: React.FC<{
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Priority</label>
                 <select
                   value={newAnnPriority}
-                  onChange={(e) => setNewAnnPriority(e.target.value as 'Normal' | 'Urgent')}
+                  onChange={(e) => setNewAnnPriority(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
                 >
-                  <option value="Normal">Normal Priority</option>
-                  <option value="Urgent">Urgent Broadcast</option>
+                  <option value="High">High Priority</option>
+                  <option value="Medium">Medium Priority</option>
+                  <option value="Low">Low Priority</option>
                 </select>
               </div>
               <div>
@@ -171,9 +173,9 @@ const Communications: React.FC<{
             className="group bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-8 rounded-[2.5rem] border border-slate-200 dark:border-white/5 relative overflow-hidden flex flex-col h-full transition-all duration-300 hover:shadow-2xl hover:shadow-brand-500/[0.03] hover:-translate-y-2 hover:border-brand-300 dark:hover:border-brand-600 cursor-pointer active:scale-[0.98] z-10 hover:z-20 no-underline"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full -mr-16 -mt-16 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            {announcement.priority === 'Urgent' && <div className="absolute top-0 left-0 right-0 h-1.5 bg-rose-500 dark:bg-rose-600"></div>}
+            <div className={`absolute top-0 left-0 right-0 h-1.5 ${getAnnouncementPriorityAccentClass(announcement.priority)}`}></div>
             <div className="flex justify-between items-center mb-6">
-              <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider ${announcement.priority === 'Urgent' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+              <span className={`text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider ${getAnnouncementPriorityBadgeClass(announcement.priority)}`}>
                 {announcement.priority}
               </span>
               <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-tight">{announcement.date}</span>

@@ -339,6 +339,11 @@ export const MOCK_EVENTS: CoopEvent[] = [
   { id: 'e9', title: 'Maintenance Committee Walkthrough', description: 'Shared-area walkthrough and open request triage.', date: '2026-06-18T10:00:00Z', time: '10:00', location: 'Lobby', category: 'Maintenance' },
   { id: 'e10', title: 'Board Package Review', description: 'Directors review agenda materials, resident correspondence, and follow-up items before the next board meeting.', date: '2026-06-02T18:30:00Z', time: '18:30', location: 'Common Room', category: 'Board', committeeId: 'c1' },
   { id: 'e11', title: 'Board Policy Working Session', description: 'Focused board session for bylaw updates, communications planning, and document readiness.', date: '2026-06-23T19:00:00Z', time: '19:00', location: 'Zoom', category: 'Meeting', committeeId: 'c1' },
+  { id: 'e12', title: 'Maintenance Committee Triage', description: 'Review open repair requests, contractor follow-ups, and preventive maintenance priorities.', date: '2026-06-12T17:30:00Z', time: '17:30', location: 'Workshop', category: 'Maintenance', committeeId: 'c2' },
+  { id: 'e13', title: 'Finance Committee Budget Review', description: 'Review operating budget assumptions, arrears reporting, and reserve planning updates.', date: '2026-06-16T18:00:00Z', time: '18:00', location: 'Common Room', category: 'Meeting', committeeId: 'c3' },
+  { id: 'e14', title: 'Membership Orientation Planning', description: 'Prepare the next orientation package and review waitlist interview scheduling.', date: '2026-06-20T11:00:00Z', time: '11:00', location: 'Library Room', category: 'Meeting', committeeId: 'c4' },
+  { id: 'e15', title: 'Social Committee Summer Planning', description: 'Coordinate volunteers, supplies, and notices for summer community events.', date: '2026-06-27T14:00:00Z', time: '14:00', location: 'Courtyard', category: 'Social', committeeId: 'c5' },
+  { id: 'e16', title: 'Landscape Committee Garden Walk', description: 'Walk the exterior areas and confirm seasonal planting and cleanup tasks.', date: '2026-06-29T09:30:00Z', time: '09:30', location: 'Garden Shed', category: 'Social', committeeId: 'c6' },
 ];
 
 export const MOCK_DOCUMENTS: Document[] = [
