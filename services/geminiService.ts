@@ -413,11 +413,8 @@ export const geminiService = {
           callbacks.onError(err);
         },
         onmessage: async (message: any) => {
-          console.log("DEBUG: Received message from Gemini:", Object.keys(message));
-          
           // Handle Tool Calls
           if (message.toolCall) {
-            console.log("DEBUG: Received Tool Call:", message.toolCall);
             const toolResponses: any[] = [];
             for (const call of message.toolCall.functionCalls) {
               const fnName = call.name as keyof typeof functions;
@@ -444,7 +441,6 @@ export const geminiService = {
               (liveSession as any).sendToolResponse({ functionResponses: toolResponses });
             }
           }
-
           if (message.serverContent?.modelTurn?.parts) {
             for (const part of message.serverContent.modelTurn.parts) {
               if (part.inlineData?.data) {
