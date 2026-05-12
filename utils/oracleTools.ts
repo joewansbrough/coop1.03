@@ -268,10 +268,18 @@ export const oracleTools = {
 
   get_announcements: async (context: ToolContext, params: { query?: string; type?: string; priority?: string; limit?: number }) => {
     const query = textFilter(params.query);
+    const typeFilter = params.type ? {
+      OR: [
+        { type: { contains: params.type, mode: 'insensitive' } },
+        { title: { contains: params.type, mode: 'insensitive' } },
+        { content: { contains: params.type, mode: 'insensitive' } }
+      ]
+    } : {};
+
     return (context.prisma as any).announcement.findMany({
       where: {
         cooperativeId: context.cooperativeId,
-        ...(params.type ? { type: params.type } : {}),
+        ...typeFilter,
         ...(params.priority ? { priority: params.priority } : {}),
         ...(query ? { OR: [{ title: contains(query) }, { content: contains(query) }, { author: contains(query) }] } : {}),
       },
@@ -681,6 +689,10 @@ export const oracleTools = {
     return { success: true, message: `Showing document ${params.documentId || params.title}` };
   },
 
+  view_announcement: async (context: ToolContext, params: { announcementId: string }) => {
+    return { success: true, message: `Showing announcement ${params.announcementId}` };
+  },
+
   view_tenant: async (context: ToolContext, params: { tenantId: string }) => {
     return { success: true, message: `Showing tenant ${params.tenantId}` };
   },
@@ -847,6 +859,9 @@ export const oracleToolDeclarations: ToolDeclaration[] = [
     documentId: stringProp('The ID of the document.'),
     title: stringProp('The title of the document.'),
   }),
+  declaration('view_announcement', 'Navigate the UI to show a specific announcement.', {
+    announcementId: stringProp('The ID of the announcement.'),
+  }, ['announcementId']),
   declaration('view_tenant', 'Board/admin only: Navigate the UI to show a specific tenant record.', {
     tenantId: stringProp('The ID of the tenant.'),
   }, ['tenantId']),

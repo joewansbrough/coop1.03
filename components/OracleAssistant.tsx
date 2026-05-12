@@ -232,6 +232,8 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
             } else if (args.title) {
               navigate(`/documents?search=${encodeURIComponent(args.title)}`);
             }
+          } else if ((name === 'viewAnnouncement' || name === 'view_announcement') && args.announcementId) {
+            navigate(`/announcements/${args.announcementId}`);
           } else if ((name === 'viewTenant' || name === 'view_tenant') && args.tenantId) {
             navigate(`/admin/tenants/${args.tenantId}`);
           } else if ((name === 'viewUnit' || name === 'view_unit') && args.unitId) {

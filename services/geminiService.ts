@@ -104,6 +104,17 @@ const tools = [
         }
       },
       {
+        name: "getAnnouncements",
+        description: "Fetch co-op announcements.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            query: { type: Type.STRING, description: "Text search in title or content." },
+            type: { type: Type.STRING, description: "Filter by type (e.g., 'Maintenance', 'Social', 'Governance')." }
+          }
+        }
+      },
+      {
         name: "viewMaintenanceRequest",
         description: "Navigate the user's interface to a specific maintenance request to show details.",
         parameters: {
@@ -146,6 +157,17 @@ const tools = [
             documentId: { type: Type.STRING, description: "The ID of the document (e.g., 'd1')." },
             title: { type: Type.STRING, description: "The title of the document." }
           }
+        }
+      },
+      {
+        name: "viewAnnouncement",
+        description: "Navigate the user's interface to a specific announcement.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            announcementId: { type: Type.STRING, description: "The ID of the announcement (e.g., 'a1')." }
+          },
+          required: ["announcementId"]
         }
       },
       {
@@ -229,6 +251,18 @@ const functions = {
     }
     return MOCK_DOCUMENTS;
   },
+  getAnnouncements: ({ type, query }: any) => {
+    let list = [...MOCK_ANNOUNCEMENTS];
+    if (type) {
+      const term = type.toLowerCase();
+      list = list.filter(a => a.type.toLowerCase().includes(term) || a.title.toLowerCase().includes(term) || a.content.toLowerCase().includes(term));
+    }
+    if (query) {
+      const term = query.toLowerCase();
+      list = list.filter(a => a.title.toLowerCase().includes(term) || a.content.toLowerCase().includes(term));
+    }
+    return list;
+  },
   getEvents: ({ category, query, startDate, endDate }: any) => {
     let list = [...MOCK_EVENTS];
     if (category) {
@@ -260,6 +294,9 @@ const functions = {
   },
   viewDocument: ({ documentId, title }: any) => {
     return { success: true, message: `Showing document ${documentId || title}` };
+  },
+  viewAnnouncement: ({ announcementId }: any) => {
+    return { success: true, message: `Showing announcement ${announcementId}` };
   },
   viewTenant: ({ tenantId }: any) => {
     return { success: true, message: `Showing tenant ${tenantId}` };
