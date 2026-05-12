@@ -24,6 +24,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const [mode, setMode] = useState<'chat' | 'voice'>('chat');
   const [isLiveMode, setIsLiveMode] = useState(false);
   const sessionReadyRef = useRef(false);
+  const greetingSentRef = useRef(false);
   const [volume, setVolume] = useState(0);
   const [language, setLanguage] = useState<OracleLanguage>('English');
   const [input, setInput] = useState('');
@@ -143,6 +144,8 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       const source = ctx.createMediaStreamSource(stream);
       source.connect(workletNode);
 
+      const hasAlreadyBeenGreeted = typeof window !== 'undefined' && sessionStorage.getItem('oracle_greeted') === 'true';
+
       const systemInstruction = `You are the smart "Oak Bay Co-op Oracle" in Real-time Mode.
       Respond briefly and conversationally. You can help with database queries too.
       Always stay in ${language}.
@@ -158,8 +161,11 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       If you are discussing a specific record or if a page would be helpful context, use these tools to "show" it to the user.
       If the user's request is ambiguous (e.g., they ask for the "last meeting" but there are several), ASK for clarifying details first, then use the tool once you are sure.
       
-      Greet the user IMMEDIATELY when they connect.
-      Confirm you are ready to help with co-op questions.`;
+      GREETING LOGIC:
+      - This user has ${hasAlreadyBeenGreeted ? 'ALREADY' : 'NOT YET'} been greeted this session.
+      - If NOT YET greeted: Greet them warmly and explain you are ready to help.
+      - If ALREADY greeted: Provide a very brief acknowledgment (e.g. "I'm back," "Listening," or just a quick "Hello again"). Do NOT give a long intro.
+      - Stay concise.`;
 
       const sessionPromise = geminiService.connectLive({
         onOpen: async () => {
@@ -167,11 +173,23 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           sessionReadyRef.current = true;
           setMessages(prev => [...prev, { role: 'assistant', content: "[Connected] The Oracle is listening." }]);
           
-          // Send an initial text signal as seen in reference
-          const session = await sessionPromise;
-          (session as any).sendRealtimeInput({
-            text: "Hello! I am ready to help. Please introduce yourself briefly."
-          });
+          // Only send the automatic text trigger if we haven't greeted them this session
+          if (!hasAlreadyBeenGreeted && !greetingSentRef.current) {
+            const session = await sessionPromise;
+            (session as any).sendRealtimeInput({
+              text: "Hello! I am ready to help. Please let me know how I can assist with your co-op questions."
+            });
+            greetingSentRef.current = true;
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('oracle_greeted', 'true');
+            }
+          } else {
+             // Subtle acknowledgement for return users
+             const session = await sessionPromise;
+             (session as any).sendRealtimeInput({
+               text: "I'm back and ready to help."
+             });
+          }
         },
         onClose: () => {
           console.log("Live session closed");
