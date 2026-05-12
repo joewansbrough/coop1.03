@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Bot, Send, Sparkles, X, Mic, Volume2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { geminiService } from '../services/geminiService';
 import { ORACLE_LANGUAGES } from '../utils/oracle';
@@ -404,7 +404,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
             animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
             exit={{ opacity: 0, scale: 0.5, x: 100, y: 100 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-28 right-8 z-[120] w-[calc(100vw-4rem)] max-w-md overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900"
+            className="fixed bottom-[112px] right-8 z-[120] w-[calc(100vw-4rem)] max-w-md overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900"
           >
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-white/5">
