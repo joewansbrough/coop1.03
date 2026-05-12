@@ -404,7 +404,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
             animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
             exit={{ opacity: 0, scale: 0.5, x: 100, y: 100 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-24 right-4 z-[120] w-[calc(100vw-2rem)] max-w-md overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900"
+            className="fixed bottom-28 right-8 z-[120] w-[calc(100vw-4rem)] max-w-md overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900"
           >
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-white/5">
@@ -479,7 +479,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
 
       <button 
         onClick={() => setIsOpen(!isOpen)} 
-        className={`fixed bottom-5 right-5 z-[130] flex h-14 w-14 items-center justify-center rounded-2xl transition-all active:scale-95 shadow-xl ${isOpen ? 'bg-slate-800 text-white rotate-90' : 'bg-teal-600 text-white shadow-teal-900/20'}`}
+        className={`fixed bottom-8 right-8 z-[130] flex h-14 w-14 items-center justify-center rounded-2xl transition-all active:scale-95 shadow-xl ${isOpen ? 'bg-slate-800 text-white rotate-90' : 'bg-teal-600 text-white shadow-teal-900/20'}`}
         aria-label={isOpen ? "Close Co-op Oracle" : "Open Co-op Oracle"}
       >
         <AnimatePresence mode="wait">
