@@ -16,11 +16,11 @@ import {
 
 export const MOCK_USER = {
   id: 'demo-user-id',
-  tenantId: 't1',
-  firstName: 'Margaret',
-  lastName: 'Chen',
-  name: 'Margaret Chen',
-  email: 'margaret.chen@email.com',
+  tenantId: 't-ob-hc',
+  firstName: 'OB',
+  lastName: 'HC',
+  name: 'OB HC',
+  email: 'ob.hc@email.com',
   role: 'ADMIN',
   isAdmin: true,
   isGuest: false,
@@ -132,10 +132,17 @@ const adminEmails = new Set([
   'joewansbrough@gmail.com',
   'samisaeed123@gmail.com',
   'margaret.chen@email.com',
+  'ob.hc@email.com',
 ]);
 
 const unitIdByNumber = new Map(unitDefs.map(([number], index) => [number, `u${index + 1}`]));
-const tenantIdByEmail = new Map(tenantDefs.map((tenant, index) => [tenant[2], `t${index + 1}`]));
+const DEMO_OB_TENANT_ID = 't-ob-hc';
+const DEMO_OB_UNIT_NUMBER = '101';
+const DEMO_OB_UNIT_ID = unitIdByNumber.get(DEMO_OB_UNIT_NUMBER) || 'u1';
+const tenantIdByEmail = new Map([
+  ...tenantDefs.map((tenant, index) => [tenant[2], `t${index + 1}`] as const),
+  ['ob.hc@email.com', DEMO_OB_TENANT_ID] as const,
+]);
 
 export const MOCK_BUILDINGS: Building[] = [
   {
@@ -148,7 +155,8 @@ export const MOCK_BUILDINGS: Building[] = [
   },
 ];
 
-export const MOCK_TENANTS: Tenant[] = tenantDefs.map(([firstName, lastName, email, phone, startDate, status, unitNumber], index) => ({
+export const MOCK_TENANTS: Tenant[] = [
+  ...tenantDefs.map(([firstName, lastName, email, phone, startDate, status, unitNumber], index) => ({
   id: `t${index + 1}`,
   firstName,
   lastName,
@@ -167,11 +175,42 @@ export const MOCK_TENANTS: Tenant[] = tenantDefs.map(([firstName, lastName, emai
         moveReason: 'Initial Seed Residency',
       }]
     : [],
-}));
+  })),
+  {
+    id: DEMO_OB_TENANT_ID,
+    firstName: 'OB',
+    lastName: 'HC',
+    email: 'ob.hc@email.com',
+    phone: '250-555-0199',
+    startDate: '2025-10-01',
+    status: 'Current',
+    unitId: DEMO_OB_UNIT_ID,
+    role: 'ADMIN',
+    notes: 'Default demo resident profile with complete unit, service, committee, and history context.',
+    history: [
+      {
+        id: 'h-ob-hc-previous',
+        tenantId: DEMO_OB_TENANT_ID,
+        unitId: unitIdByNumber.get('304') || 'u23',
+        startDate: '2023-04-15',
+        endDate: '2025-09-30',
+        moveReason: 'Internal transfer after accessibility review',
+      },
+      {
+        id: 'h-ob-hc-current',
+        tenantId: DEMO_OB_TENANT_ID,
+        unitId: DEMO_OB_UNIT_ID,
+        startDate: '2025-10-01',
+        moveReason: 'Internal transfer to maintenance-monitored unit',
+      },
+    ],
+  },
+];
 
 export const MOCK_UNITS: Unit[] = unitDefs.map(([number, type, floor, status], index) => {
   const id = `u${index + 1}`;
   const currentTenant = MOCK_TENANTS.find(tenant => tenant.unitId === id && tenant.status === 'Current');
+  const isDemoUserUnit = number === DEMO_OB_UNIT_NUMBER;
   return {
     id,
     number,
@@ -180,12 +219,41 @@ export const MOCK_UNITS: Unit[] = unitDefs.map(([number, type, floor, status], i
     buildingId: 'b1',
     building: MOCK_BUILDINGS[0],
     status,
-    currentTenantId: currentTenant?.id,
+    currentTenantId: isDemoUserUnit ? DEMO_OB_TENANT_ID : currentTenant?.id,
+    occupancyHistory: isDemoUserUnit ? [
+      {
+        id: 'u101-history-evelyn-hart',
+        tenantId: 'past-u101-evelyn',
+        unitId: id,
+        tenant: {
+          id: 'past-u101-evelyn',
+          firstName: 'Evelyn',
+          lastName: 'Hart',
+          email: 'evelyn.hart.archive@email.com',
+          phone: '250-555-0188',
+          startDate: '2014-05-01',
+          status: 'Past',
+          role: 'MEMBER',
+        },
+        startDate: '2014-05-01',
+        endDate: '2019-02-28',
+        moveReason: 'Moved to be closer to family',
+      },
+      {
+        id: 'u101-history-ob-previous-review',
+        tenantId: DEMO_OB_TENANT_ID,
+        unitId: id,
+        tenant: MOCK_TENANTS.find(tenant => tenant.id === DEMO_OB_TENANT_ID),
+        startDate: '2025-10-01',
+        endDate: '2025-10-01',
+        moveReason: 'Current residency opened after internal transfer',
+      },
+    ] : undefined,
   };
 });
 
 const maintenanceDefs = [
-  ['Leaking kitchen faucet', 'The kitchen faucet has been dripping constantly and water is pooling under the sink cabinet.', RequestStatus.PENDING, MaintenancePriority.MEDIUM, 'Plumbing', '101', 'margaret.chen@email.com'],
+  ['Leaking kitchen faucet', 'The kitchen faucet has been dripping constantly and water is pooling under the sink cabinet.', RequestStatus.PENDING, MaintenancePriority.MEDIUM, 'Plumbing', '101', 'ob.hc@email.com'],
   ['Bathroom exhaust fan not working', 'The exhaust fan stopped working and condensation is building up on the ceiling.', RequestStatus.IN_PROGRESS, MaintenancePriority.MEDIUM, 'Electrical', '102', 'david.okafor@email.com'],
   ['Broken window latch - balcony door', 'The balcony door latch does not lock properly, creating a security concern.', RequestStatus.COMPLETED, MaintenancePriority.HIGH, 'Safety', '104', 'james.nakamura@email.com'],
   ['Hallway light flickering', 'Light fixture near unit 205 flickers throughout the evening.', RequestStatus.COMPLETED, MaintenancePriority.LOW, 'Electrical', '205', 'patricia.macleod@email.com'],
@@ -196,7 +264,9 @@ const maintenanceDefs = [
   ['Loose floorboards', 'Several living room boards are lifting and could become a tripping hazard.', RequestStatus.PENDING, MaintenancePriority.LOW, 'Structural', '109', 'lena.kowalski@email.com'],
   ['Slow drain in tub', 'Standing water remains after showers.', RequestStatus.COMPLETED, MaintenancePriority.MEDIUM, 'Plumbing', '402', 'ravi.krishnamurthy@email.com'],
   ['Clogged gutter', 'Overflowing gutter is draining onto the balcony during rain.', RequestStatus.PENDING, MaintenancePriority.MEDIUM, 'Exterior', '401', 'bernard.lefebvre@email.com'],
-  ['Loose railing', 'External stairs near parking have a loose railing.', RequestStatus.IN_PROGRESS, MaintenancePriority.HIGH, 'Safety', '101', 'margaret.chen@email.com'],
+  ['Loose railing', 'External stairs near parking have a loose railing.', RequestStatus.IN_PROGRESS, MaintenancePriority.HIGH, 'Safety', '101', 'ob.hc@email.com'],
+  ['Baseboard heater serviced', 'Bedroom baseboard heater was cycling inconsistently and was inspected, cleaned, and recalibrated.', RequestStatus.COMPLETED, MaintenancePriority.MEDIUM, 'HVAC', '101', 'ob.hc@email.com'],
+  ['Entry threshold repaired', 'Front entry threshold was loose after the fall rain cycle and has been secured with new fasteners.', RequestStatus.COMPLETED, MaintenancePriority.LOW, 'Structural', '101', 'ob.hc@email.com'],
 ] as const;
 
 export const MOCK_MAINTENANCE: MaintenanceRequest[] = maintenanceDefs.map(([title, description, status, priority, category, unitNumber, requestedBy], index) => ({
@@ -289,10 +359,10 @@ export const MOCK_DOCUMENTS: Document[] = [
 
 export const MOCK_COMMITTEES: Committee[] = [
   { id: 'c1', name: 'Board of Directors', description: 'Elected governing body responsible for management, policy decisions, and financial oversight.', chair: 'George Papadopoulos', icon: 'fa-landmark', members: ['George Papadopoulos', 'Thomas Bergstrom', 'Margaret Chen', 'Joe Wansbrough'] },
-  { id: 'c2', name: 'Maintenance Committee', description: 'Coordinates building repairs and contractor relationships.', chair: 'Thomas Bergstrom', icon: 'fa-wrench', members: ['Thomas Bergstrom', 'Carlos Rivera', 'Patricia MacLeod'] },
+  { id: 'c2', name: 'Maintenance Committee', description: 'Coordinates building repairs and contractor relationships.', chair: 'Thomas Bergstrom', icon: 'fa-wrench', members: ['Thomas Bergstrom', 'Carlos Rivera', 'Patricia MacLeod', 'OB HC'] },
   { id: 'c3', name: 'Finance Committee', description: 'Reviews statements, budgets, and reserve fund planning.', chair: 'Patricia MacLeod', icon: 'fa-dollar-sign', members: ['Patricia MacLeod', 'Margaret Chen', 'Ahmed Patel'] },
   { id: 'c4', name: 'Membership Committee', description: 'Reviews applications, manages waitlist interviews, and supports orientation.', chair: 'Linda Nakamura', icon: 'fa-users', members: ['Linda Nakamura', 'Priya Sharma', 'Yuki Tanaka'] },
-  { id: 'c5', name: 'Social Committee', description: 'Organizes community events and seasonal gatherings.', chair: 'Wei Liu', icon: 'fa-calendar', members: ['Wei Liu', 'Joe Wansbrough', 'Fatima Al-Hassan'] },
+  { id: 'c5', name: 'Social Committee', description: 'Organizes community events and seasonal gatherings.', chair: 'Wei Liu', icon: 'fa-calendar', members: ['Wei Liu', 'Joe Wansbrough', 'Fatima Al-Hassan', 'OB HC'] },
   { id: 'c6', name: 'Landscape Committee', description: 'Plans garden and exterior volunteer projects.', chair: 'Michael Johansson', icon: 'fa-leaf', members: ['Michael Johansson', 'Wei Liu', 'James Nakamura'] },
 ];
 

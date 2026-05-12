@@ -4,7 +4,7 @@ import { geminiService } from '../services/geminiService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
-import { isDemoMode, useCreateMaintenance, useUpdateMaintenance } from '../hooks/useCoopData';
+import { isDemoMode, useCreateMaintenance, useUpdateMaintenance, useUser } from '../hooks/useCoopData';
 import { recordTutorialEvent } from '../utils/demoTutorial';
 
 interface MaintenanceProps {
@@ -19,6 +19,7 @@ interface MaintenanceProps {
 const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, setRequests, units, isRequestsLoading, isRequestsError }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { data: user } = useUser();
   const userUnitId = units.length > 0 ? units[0].id : 'u1';
   const statusParam = searchParams.get('status');
   const priorityParam = searchParams.get('priority') as MaintenancePriority | null;
@@ -172,7 +173,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     const payload: Omit<MaintenanceRequest, 'id'> = {
       title: description.substring(0, 30) + (description.length > 30 ? '...' : ''),
       unitId,
-      tenantId: 't1', 
+      tenantId: user?.tenantId || user?.id || 't1',
       category: category,
       description,
       priority: priority as MaintenancePriority,

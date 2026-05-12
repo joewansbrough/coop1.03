@@ -7,6 +7,8 @@ import {
   MOCK_MINUTES,
   MOCK_TENANTS,
   MOCK_UNITS,
+  MOCK_USER,
+  MOCK_COMMITTEES,
 } from '../utils/demoData.ts';
 import { DEMO_DATA_SEED_VERSION, demoStorage, initializeDemoStorage } from '../utils/demoStorage.ts';
 
@@ -37,6 +39,32 @@ test('demo seed fleshes out the board committee detail page', () => {
   assert.ok(boardMeetings.length >= 2);
   assert.ok(boardMeetings.some(event => event.date >= '2026-05-08'));
   assert.ok(boardDocuments.length >= 2);
+});
+
+test('demo seed makes OB HC the default resident with complete detail-page context', () => {
+  assert.equal(MOCK_USER.firstName, 'OB');
+  assert.equal(MOCK_USER.lastName, 'HC');
+
+  const tenant = MOCK_TENANTS.find(item => item.id === MOCK_USER.tenantId);
+  assert.ok(tenant, 'default demo tenant should exist in tenant seed data');
+  assert.equal(tenant.firstName, 'OB');
+  assert.equal(tenant.lastName, 'HC');
+
+  const unit = MOCK_UNITS.find(item => item.id === tenant.unitId);
+  assert.ok(unit, 'default demo tenant should have a seeded unit');
+  assert.equal(unit.currentTenantId, tenant.id);
+  assert.ok(unit.occupancyHistory?.some(record => record.endDate), 'unit should include historical occupancy records');
+  assert.ok(tenant.history && tenant.history.length >= 2, 'tenant should include current and past residency history');
+
+  const unitRequests = MOCK_MAINTENANCE.filter(request => request.unitId === unit.id);
+  assert.ok(unitRequests.some(request => request.status === 'Pending' || request.status === 'In Progress'), 'unit should include active service history');
+  assert.ok(unitRequests.some(request => request.status === 'Completed' || request.status === 'Cancelled'), 'unit should include historical service history');
+  assert.ok(unitRequests.some(request => request.tenantId === tenant.id), 'service history should include requests filed by OB HC');
+
+  const committeeNames = MOCK_COMMITTEES
+    .filter(committee => committee.members?.includes('OB HC'))
+    .map(committee => committee.name);
+  assert.deepEqual(committeeNames.sort(), ['Maintenance Committee', 'Social Committee']);
 });
 
 test('demo storage initializer refreshes older local demo snapshots to the current seed', () => {

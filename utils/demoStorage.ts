@@ -7,7 +7,7 @@
 import * as demoData from './demoData';
 
 const PREFIX = 'demo_v1_';
-export const DEMO_DATA_SEED_VERSION = '2026-05-06-roadmap-ai-notifications-buildings';
+export const DEMO_DATA_SEED_VERSION = '2026-05-12-ob-hc-demo-resident';
 
 const seededCollections: Record<string, any[]> = {
   events: demoData.MOCK_EVENTS,

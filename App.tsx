@@ -23,6 +23,7 @@ import Login from './pages/Login';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useUser, useUnits, useTenants, useMaintenance, useAnnouncements, useDocuments, useCommittees, useEvents, useScheduledMaintenance, useNotifications, useBuildings } from './hooks/useCoopData';
 import { DEMO_TUTORIAL_ROLE_VIEW_KEY, recordTutorialEvent } from './utils/demoTutorial';
+import { initializeDemoStorage } from './utils/demoStorage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +35,13 @@ const queryClient = new QueryClient({
 });
 
 const AppContent: React.FC = () => {
+  useState(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true') {
+      initializeDemoStorage();
+    }
+    return true;
+  });
+
   const [isAdminOverride, setIsAdminOverride] = useState(() =>
     typeof window !== 'undefined' && localStorage.getItem(DEMO_TUTORIAL_ROLE_VIEW_KEY) === 'true'
   );
