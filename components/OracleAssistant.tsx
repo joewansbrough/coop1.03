@@ -454,29 +454,18 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         ))}
         {isLoading && <p className="text-xs font-black uppercase tracking-widest text-teal-600">Oracle is reading...</p>}
       </div>
-      <div className="flex flex-wrap gap-2 border-t border-slate-100 p-3 dark:border-white/5">
-        {chips.slice(0, embedded ? 5 : 3).map(chip => (
-          <button key={chip} type="button" onClick={() => ask(chip)} className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            {chip}
-          </button>
-        ))}
+      
+      {/* Voice-Only Mode: Hiding chips and input field for now */}
+      <div className="flex justify-center border-t border-slate-100 p-6 dark:border-white/5">
+        <button 
+          type="button"
+          onClick={startLiveMode} 
+          className={`flex h-16 w-16 items-center justify-center rounded-full transition-all shadow-lg ${isLiveMode ? 'bg-red-600 text-white animate-pulse' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
+          aria-label={isLiveMode ? "Stop Live Mode" : "Start Live Mode"}
+        >
+          <Mic className={`h-7 w-7 ${isLiveMode ? 'animate-bounce' : ''}`} />
+        </button>
       </div>
-      <form onSubmit={event => { event.preventDefault(); ask(input); }} className="flex gap-2 p-3">
-        <input value={input} onChange={event => setInput(event.target.value)} placeholder="Ask a co-op question..." className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white" />
-        <div className="flex gap-2">
-          <button 
-            type="button"
-            onClick={startLiveMode} 
-            className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all shadow-sm ${isLiveMode ? 'bg-red-600 text-white animate-pulse' : 'bg-teal-50 text-teal-600 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-300'}`}
-            aria-label={isLiveMode ? "Stop Live Mode" : "Start Live Mode"}
-          >
-            <Mic className={`h-5 w-5 ${isLiveMode ? 'animate-bounce' : ''}`} />
-          </button>
-          <button type="submit" disabled={!input.trim() || isLoading} className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-600 text-white disabled:opacity-50 shadow-sm">
-            <Send className="h-4 w-4" />
-          </button>
-        </div>
-      </form>
     </div>
   );
 
