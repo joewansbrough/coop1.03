@@ -5,6 +5,7 @@ import StatCard from '../components/StatCard';
 import AppAlert from '../components/AppAlert';
 import { Tenant, Unit, MaintenanceRequest, TenantHistory, Committee } from '../types';
 import { getTenantCommitteeAssignments } from '../utils/committeeMembership';
+import { getTenantHistoryFallback } from '../utils/tenantHistory';
 
 interface TenantDetailProps {
   tenants: Tenant[];
@@ -40,8 +41,7 @@ const TenantDetail: React.FC<TenantDetailProps> = ({ tenants, units, requests, c
         setIsLoadingHistory(true);
         try {
           if (localStorage.getItem('demo_mode') === 'true') {
-             // Mock history data for demo
-             setHistory([{ id: 'h1', tenantId, unitId: 'u1', startDate: tenant?.startDate || '2019-03-15', moveReason: 'Initial move-in', unit: units.find(u => u.id === 'u1') }]);
+             setHistory(tenant ? getTenantHistoryFallback(tenant, units) : []);
           } else {
             const res = await fetch(`/api/tenants/${tenantId}/history`);
             const data = await res.json();

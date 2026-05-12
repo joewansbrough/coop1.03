@@ -1,18 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Bot, Send, Sparkles, X, Mic, Volume2 } from 'lucide-react';
+import { Bot, Sparkles, X, Mic, Volume2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { geminiService } from '../services/geminiService';
 import { ORACLE_LANGUAGES } from '../utils/oracle';
 import type { OracleLanguage, OracleResponse } from '../types';
-
-const chips = [
-  'What is the pet policy?',
-  'How do I join a committee?',
-  'Can a guest stay for two weeks?',
-  'What is the hallway clutter policy?',
-  'My sink is leaking, what do I do?',
-];
 
 interface OracleAssistantProps {
   embedded?: boolean;
@@ -395,7 +387,77 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     );
   };
 
-  if (embedded) return <div className="h-full w-full">Embedded Oracle Assistant</div>;
+  const renderChatSurface = (messageAreaClassName: string) => (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900">
+      <div className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-white/5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-300">
+            <Bot className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-black uppercase text-slate-900 dark:text-white">Co-op Oracle</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Policy assistant</p>
+          </div>
+        </div>
+      </div>
+      <div className="border-b border-slate-100 p-3 dark:border-white/5">
+        <select value={language} onChange={event => setLanguage(event.target.value as OracleLanguage)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
+          {ORACLE_LANGUAGES.map(item => <option key={item}>{item}</option>)}
+        </select>
+      </div>
+
+      {isLiveMode && (
+        <div className="border-b border-slate-100 bg-slate-50 p-4 dark:border-white/5 dark:bg-slate-950/50">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="animate-pulse text-[10px] font-black uppercase tracking-widest text-teal-600">Live Session Active</p>
+            <div className="flex items-center gap-1.5">
+              <Volume2 className="h-3 w-3 text-slate-400" />
+              <div className="h-1 w-24 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                <div
+                  className="h-full bg-teal-500 transition-all duration-75"
+                  style={{ width: `${Math.min(100, volume * 500)}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+          <canvas ref={canvasRef} width={400} height={40} className="h-10 w-full" />
+        </div>
+      )}
+
+      <div className={`${messageAreaClassName} space-y-3 overflow-y-auto p-4`} data-demo-target="policy-assistant-qa">
+        {messages.map((message, index) => (
+          <div key={index} className={message.role === 'user' ? 'text-right' : 'text-left'}>
+            <div className={`inline-block max-w-[88%] rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed ${message.role === 'user' ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-200'}`}>
+              {message.role === 'assistant' ? renderContent(message.content, message.response) : message.content}
+              {message.response?.suggestedAction && (
+                <button
+                  type="button"
+                  onClick={() => navigate(message.response?.suggestedAction?.href || '/maintenance')}
+                  className="mt-3 block rounded-xl bg-white px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest text-teal-700"
+                >
+                  {message.response.suggestedAction.label}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {isLoading && <p className="text-xs font-black uppercase tracking-widest text-teal-600">Oracle is reading...</p>}
+      </div>
+
+      <div className="flex justify-center border-t border-slate-100 p-6 dark:border-white/5">
+        <button
+          type="button"
+          onClick={startLiveMode}
+          className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-lg transition-all ${isLiveMode ? 'animate-pulse bg-red-600 text-white' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
+          aria-label={isLiveMode ? 'Stop Live Mode' : 'Start Live Mode'}
+        >
+          <Mic className={`h-7 w-7 ${isLiveMode ? 'animate-bounce' : ''}`} />
+        </button>
+      </div>
+    </div>
+  );
+
+  if (embedded) return renderChatSurface('min-h-0 flex-1');
 
   return (
     <>
@@ -406,75 +468,9 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
             animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
             exit={{ opacity: 0, scale: 0.5, x: 100, y: 100 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-[112px] right-8 z-[120] w-[calc(100vw-4rem)] max-w-md overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900"
+            className="fixed bottom-[112px] right-8 z-[120] w-[calc(100vw-4rem)] max-w-md"
           >
-            <div className="flex h-full flex-col">
-              <div className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-600 dark:bg-teal-950/40 dark:text-teal-300">
-                    <Bot className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black uppercase text-slate-900 dark:text-white">Co-op Oracle</p>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Policy assistant</p>
-                  </div>
-                </div>
-              </div>
-              <div className="border-b border-slate-100 p-3 dark:border-white/5">
-                <select value={language} onChange={event => setLanguage(event.target.value as OracleLanguage)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
-                  {ORACLE_LANGUAGES.map(item => <option key={item}>{item}</option>)}
-                </select>
-              </div>
-
-              {isLiveMode && (
-                <div className="bg-slate-50 dark:bg-slate-950/50 p-4 border-b border-slate-100 dark:border-white/5">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-teal-600 animate-pulse">Live Session Active</p>
-                    <div className="flex items-center gap-1.5">
-                      <Volume2 className="h-3 w-3 text-slate-400" />
-                      <div className="h-1 w-24 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-teal-500 transition-all duration-75" 
-                          style={{ width: `${Math.min(100, volume * 500)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                  <canvas ref={canvasRef} width={400} height={40} className="w-full h-10" />
-                </div>
-              )}
-
-              <div className="h-80 space-y-3 overflow-y-auto p-4" data-demo-target="policy-assistant-qa">
-                {messages.map((message, index) => (
-                  <div key={index} className={message.role === 'user' ? 'text-right' : 'text-left'}>
-                    <div className={`inline-block max-w-[88%] rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed ${message.role === 'user' ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-700 dark:bg-slate-950 dark:text-slate-200'}`}>
-                      {message.role === 'assistant' ? renderContent(message.content, message.response) : message.content}
-                      {message.response?.suggestedAction && (
-                        <button
-                          type="button"
-                          onClick={() => navigate(message.response?.suggestedAction?.href || '/maintenance')}
-                          className="mt-3 block rounded-xl bg-white px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest text-teal-700"
-                        >
-                          {message.response.suggestedAction.label}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {isLoading && <p className="text-xs font-black uppercase tracking-widest text-teal-600">Oracle is reading...</p>}
-              </div>
-              
-              <div className="flex justify-center border-t border-slate-100 p-6 dark:border-white/5">
-                <button 
-                  type="button"
-                  onClick={startLiveMode} 
-                  className={`flex h-16 w-16 items-center justify-center rounded-full transition-all shadow-lg ${isLiveMode ? 'bg-red-600 text-white animate-pulse' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
-                  aria-label={isLiveMode ? "Stop Live Mode" : "Start Live Mode"}
-                >
-                  <Mic className={`h-7 w-7 ${isLiveMode ? 'animate-bounce' : ''}`} />
-                </button>
-              </div>
-            </div>
+            {renderChatSurface('h-80')}
           </motion.div>
         )}
       </AnimatePresence>

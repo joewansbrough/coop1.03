@@ -32,6 +32,12 @@ interface LayoutProps {
   coopName: string;
 }
 
+export const FloatingOracleAssistant: React.FC<{ isAutoDemoOpen: boolean }> = ({ isAutoDemoOpen }) => {
+  const location = useLocation();
+  if (isAutoDemoOpen || location.pathname === '/policy-assistant') return null;
+  return <OracleAssistant />;
+};
+
 interface NavItem {
   label: string;
   path: string;
@@ -498,7 +504,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             {children}
           </div>
         </section>
-        {!isAutoDemoOpen && <OracleAssistant />}
+        <FloatingOracleAssistant isAutoDemoOpen={isAutoDemoOpen} />
       </main>
     </div>
   );
