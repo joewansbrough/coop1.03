@@ -395,7 +395,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     );
   };
 
-  if (embedded) return panel;
+  if (embedded) return <div className="h-full w-full">Embedded Oracle Assistant</div>;
 
   return (
     <>
