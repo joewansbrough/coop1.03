@@ -139,7 +139,7 @@ async function main() {
   ];
 
   const tenants: Record<string, any> = {};
-  const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
+  const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'maya.ellison@email.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
   for (const t of tenantData) {
     const tenant = await prisma.tenant.create({
       data: {

@@ -32,6 +32,18 @@ test('demo seed includes resident-visible minutes for existing calendar events',
   }
 });
 
+test('demo seed does not include the old Joe Wansbrough tenant identity', () => {
+  assert.equal(
+    MOCK_TENANTS.some(tenant => tenant.firstName === 'Joe' && tenant.lastName === 'Wansbrough'),
+    false,
+  );
+  assert.equal(MOCK_TENANTS.some(tenant => tenant.email === 'joewansbrough@gmail.com'), false);
+  assert.equal(
+    MOCK_COMMITTEES.some(committee => committee.members?.includes('Joe Wansbrough')),
+    false,
+  );
+});
+
 test('demo seed fleshes out the board committee detail page', () => {
   const boardMeetings = MOCK_EVENTS.filter(event => event.committeeId === 'c1');
   const boardDocuments = MOCK_DOCUMENTS.filter(document => document.committee === 'Board of Directors');

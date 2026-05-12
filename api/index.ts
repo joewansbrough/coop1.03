@@ -2946,7 +2946,7 @@ app.get('/api/seed', async (req, res) => {
       { firstName: 'Isaiah', lastName: 'Campbell', email: 'isaiah.campbell@email.com', phone: '250-555-0156', startDate: '2025-01-15', status: 'Current', unit: '406' },
       { firstName: 'Natasha', lastName: 'Ivanova', email: 'natasha.ivanova@email.com', phone: '250-555-0157', startDate: '2025-02-01', status: 'Current', unit: '407' },
       { firstName: 'Dmitri', lastName: 'Ivanov', email: 'dmitri.ivanov@email.com', phone: '250-555-0158', startDate: '2025-02-01', status: 'Current', unit: '407' },
-      { firstName: 'Joe', lastName: 'Wansbrough', email: 'joewansbrough@gmail.com', phone: '250-555-9999', startDate: '2025-05-01', status: 'Current', unit: '210' },
+      { firstName: 'Maya', lastName: 'Ellison', email: 'maya.ellison@email.com', phone: '250-555-9999', startDate: '2025-05-01', status: 'Current', unit: '210' },
       // Waitlist
       { firstName: 'Alice', lastName: 'Waites', email: 'alice.wait@email.com', phone: '250-555-1001', startDate: '2026-01-01', status: 'Waitlist', unit: null },
       { firstName: 'Bob', lastName: 'Waites', email: 'bob.wait@email.com', phone: '250-555-1002', startDate: '2026-01-01', status: 'Waitlist', unit: null },
@@ -3000,11 +3000,11 @@ app.get('/api/seed', async (req, res) => {
     ];
 
     const committeeData = [
-      { name: 'Board of Directors', chair: 'George Papadopoulos', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com', 'margaret.chen@email.com', 'joewansbrough@gmail.com'] },
+      { name: 'Board of Directors', chair: 'George Papadopoulos', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com', 'margaret.chen@email.com', 'maya.ellison@email.com'] },
       { name: 'Maintenance Committee', chair: 'Thomas Bergstrom', members: ['thomas.bergstrom@email.com', 'carlos.rivera@email.com', 'patricia.macleod@email.com'] },
       { name: 'Finance Committee', chair: 'Patricia MacLeod', members: ['patricia.macleod@email.com', 'margaret.chen@email.com', 'ahmed.patel@email.com'] },
       { name: 'Membership Committee', chair: 'Linda Nakamura', members: ['linda.nakamura@email.com', 'priya.sharma@email.com', 'yuki.tanaka@email.com'] },
-      { name: 'Social Committee', chair: 'Wei Liu', members: ['wei.liu@email.com', 'joewansbrough@gmail.com', 'fatima.alhassan@email.com'] },
+      { name: 'Social Committee', chair: 'Wei Liu', members: ['wei.liu@email.com', 'maya.ellison@email.com', 'fatima.alhassan@email.com'] },
       { name: 'Landscape Committee', chair: 'Michael Johansson', members: ['michael.johansson@email.com', 'wei.liu@email.com', 'james.nakamura@email.com'] },
     ];
 
@@ -3045,7 +3045,7 @@ app.get('/api/seed', async (req, res) => {
     units.forEach(u => { unitMap[u.number] = u.id; });
 
     console.log('Seeding tenants...');
-    const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
+    const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'maya.ellison@email.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
     const tenants: Record<string, any> = {};
 
     for (const t of tenantData) {

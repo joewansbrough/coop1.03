@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Committee, Tenant, Document, CoopEvent } from '../types';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
@@ -459,7 +459,11 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                  <div className="space-y-4">
                     {selectedCommitteeMeetings.length > 0 ? (
                       selectedCommitteeMeetings.map(event => (
-                          <div key={event.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5">
+                          <Link
+                            key={event.id}
+                            to={`/calendar/${event.id}`}
+                            className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-brand-300 dark:hover:border-brand-500/50 hover:bg-white dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all group"
+                          >
                             <div className="flex items-center gap-4">
                               <div className="bg-white dark:bg-slate-900 p-2 rounded-xl text-center min-w-[50px] border dark:border-white/5">
                                 <p className="text-[8px] font-black text-slate-400 uppercase">{parseDateOnly(event.date).toLocaleDateString([], { month: 'short' })}</p>
@@ -470,13 +474,8 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-wider">{event.time} • {event.location}</p>
                               </div>
                             </div>
-                            <button 
-                              onClick={() => window.location.href = `#/calendar/${event.id}`}
-                              className="p-2 text-slate-300 hover:text-brand-500 transition-colors"
-                            >
-                              <i className="fa-solid fa-circle-info"></i>
-                            </button>
-                          </div>
+                            <i className="fa-solid fa-arrow-up-right-from-square p-2 text-slate-300 group-hover:text-brand-500 group-hover:scale-110 transition-all"></i>
+                          </Link>
                         ))
                     ) : (
                       <div className="text-center py-8 bg-slate-50/50 dark:bg-slate-950/20 rounded-2xl border border-dashed border-slate-100 dark:border-white/5">

@@ -115,7 +115,7 @@ const tenantDefs = [
   ['Isaiah', 'Campbell', 'isaiah.campbell@email.com', '250-555-0156', '2025-01-15', 'Current', '406'],
   ['Natasha', 'Ivanova', 'natasha.ivanova@email.com', '250-555-0157', '2025-02-01', 'Current', '407'],
   ['Dmitri', 'Ivanov', 'dmitri.ivanov@email.com', '250-555-0158', '2025-02-01', 'Current', '407'],
-  ['Joe', 'Wansbrough', 'joewansbrough@gmail.com', '250-555-9999', '2025-05-01', 'Current', '210'],
+  ['Maya', 'Ellison', 'maya.ellison@email.com', '250-555-9999', '2025-05-01', 'Current', '210'],
   ['Alice', 'Waites', 'alice.wait@email.com', '250-555-1001', '2026-01-01', 'Waitlist', null],
   ['Bob', 'Waites', 'bob.wait@email.com', '250-555-1002', '2026-01-01', 'Waitlist', null],
   ['Sarah', 'Jenkins', 'sarah.j@email.com', '250-555-1003', '2026-02-15', 'Waitlist', null],
@@ -129,7 +129,7 @@ const tenantDefs = [
 const adminEmails = new Set([
   'joewcoupons@gmail.com',
   'wwansbro@gmail.com',
-  'joewansbrough@gmail.com',
+  'maya.ellison@email.com',
   'samisaeed123@gmail.com',
   'margaret.chen@email.com',
   'ob.hc@email.com',
@@ -358,11 +358,11 @@ export const MOCK_DOCUMENTS: Document[] = [
 ];
 
 export const MOCK_COMMITTEES: Committee[] = [
-  { id: 'c1', name: 'Board of Directors', description: 'Elected governing body responsible for management, policy decisions, and financial oversight.', chair: 'George Papadopoulos', icon: 'fa-landmark', members: ['George Papadopoulos', 'Thomas Bergstrom', 'Margaret Chen', 'Joe Wansbrough'] },
+  { id: 'c1', name: 'Board of Directors', description: 'Elected governing body responsible for management, policy decisions, and financial oversight.', chair: 'George Papadopoulos', icon: 'fa-landmark', members: ['George Papadopoulos', 'Thomas Bergstrom', 'Margaret Chen', 'Maya Ellison'] },
   { id: 'c2', name: 'Maintenance Committee', description: 'Coordinates building repairs and contractor relationships.', chair: 'Thomas Bergstrom', icon: 'fa-wrench', members: ['Thomas Bergstrom', 'Carlos Rivera', 'Patricia MacLeod', 'OB HC'] },
   { id: 'c3', name: 'Finance Committee', description: 'Reviews statements, budgets, and reserve fund planning.', chair: 'Patricia MacLeod', icon: 'fa-dollar-sign', members: ['Patricia MacLeod', 'Margaret Chen', 'Ahmed Patel'] },
   { id: 'c4', name: 'Membership Committee', description: 'Reviews applications, manages waitlist interviews, and supports orientation.', chair: 'Linda Nakamura', icon: 'fa-users', members: ['Linda Nakamura', 'Priya Sharma', 'Yuki Tanaka'] },
-  { id: 'c5', name: 'Social Committee', description: 'Organizes community events and seasonal gatherings.', chair: 'Wei Liu', icon: 'fa-calendar', members: ['Wei Liu', 'Joe Wansbrough', 'Fatima Al-Hassan', 'OB HC'] },
+  { id: 'c5', name: 'Social Committee', description: 'Organizes community events and seasonal gatherings.', chair: 'Wei Liu', icon: 'fa-calendar', members: ['Wei Liu', 'Maya Ellison', 'Fatima Al-Hassan', 'OB HC'] },
   { id: 'c6', name: 'Landscape Committee', description: 'Plans garden and exterior volunteer projects.', chair: 'Michael Johansson', icon: 'fa-leaf', members: ['Michael Johansson', 'Wei Liu', 'James Nakamura'] },
 ];
 
