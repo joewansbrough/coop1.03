@@ -1947,6 +1947,11 @@ Reasoning:
 - Prefer specific filtered calls over broad calls.
 - If a tool returns usable records plus errors, answer from the usable records and do not say the tool failed.
 - Only mention a failed lookup when no usable records were returned for the member's question.
+
+Deep Linking:
+- Use 'view_maintenance_request' to show a specific maintenance record if you are discussing one.
+- Use 'navigate_to_page' to pull up helpful co-op pages (e.g., /maintenance, /tenants, /committees, /calendar, /resource-library, /announcements).
+
 Role: ${demoRole} (Demo Mode, isAdmin: ${isDemoAdmin}).
 Page context: ${pageContext || 'none'}.
 
@@ -1966,6 +1971,7 @@ Return JSON:
 }
 
 Member Question: ${question}`;
+
 
       let result = await withTimeout(chat.sendMessage(prompt), AI_INITIAL_TIMEOUT_MS, 'Demo Initial sendMessage');
       let response = result.response;
@@ -2101,6 +2107,16 @@ Reasoning & Strategy:
 - Prefer specific filtered calls (e.g. filter by 'floor' in 'get_maintenance_requests') to reduce latency.
 - If a tool returns errors but also usable data, answer from the data and don't mention the error.
 
+Deep Linking:
+- Use 'view_maintenance_request' to show a specific maintenance record.
+- Use 'view_event' to show a specific event/meeting. Set view='minutes' to jump straight to the minutes/decisions for that meeting.
+- Use 'view_committee' to show a specific committee page.
+- Use 'view_document' to pull up a specific document (ID is best, Title is fallback).
+- Use 'view_tenant' or 'view_unit' for admin-only deep links to records.
+- Use 'navigate_to_page' for general pages (e.g., /maintenance, /tenants, /committees, /calendar, /resource-library, /announcements, /directory).
+
+If a user asks about something specific (like "last social committee meeting") but you find multiple options or are unsure, ASK for clarifying details first, then use the tool once you are certain.
+
 Answer style:
 - Use plain, resident-friendly language. Be concise (2-4 sentences).
 - Use bullets only for lists. Avoid legal jargon.
@@ -2123,6 +2139,7 @@ Return JSON:
 }
 
 Member Question: ${question}`;
+
 
       let result = await withTimeout(chat.sendMessage(prompt), AI_INITIAL_TIMEOUT_MS, 'Initial sendMessage');
       let response = result.response;

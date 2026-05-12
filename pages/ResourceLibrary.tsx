@@ -165,7 +165,21 @@ const ResourceLibrary: React.FC<{
       setShowUpload(true);
       setUploadMode('file');
     }
-  }, [searchParams, isAdmin, isGuest]);
+    
+    const id = searchParams.get('id');
+    if (id && Array.isArray(documents)) {
+      const doc = documents.find(d => d.id === id);
+      if (doc) {
+        setReviewingDoc(doc);
+        setSearch(''); // Clear search if viewing specific ID
+      }
+    }
+
+    const searchQuery = searchParams.get('search');
+    if (searchQuery) {
+      setSearch(searchQuery);
+    }
+  }, [searchParams, isAdmin, isGuest, documents]);
 
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {

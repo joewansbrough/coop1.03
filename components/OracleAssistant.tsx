@@ -147,6 +147,17 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
       Respond briefly and conversationally. You can help with database queries too.
       Always stay in ${language}.
       
+      NEW CAPABILITY: Integrated Deep Linking. 
+      You can automatically navigate the user's interface to specific co-op pages or records using tools.
+      - Use 'view_event' (or 'viewEvent') to show a specific event/meeting. Set view='minutes' to show decisions/minutes.
+      - Use 'view_maintenance_request' (or 'viewMaintenanceRequest') to show a specific maintenance record.
+      - Use 'view_committee' (or 'viewCommittee') to show a specific committee.
+      - Use 'view_document' (or 'viewDocument') to pull up a document.
+      - Use 'navigate_to_page' (or 'navigateToPage') to pull up helpful pages like /maintenance, /tenants, /committees, /calendar, /resource-library, or /announcements.
+      
+      If you are discussing a specific record or if a page would be helpful context, use these tools to "show" it to the user.
+      If the user's request is ambiguous (e.g., they ask for the "last meeting" but there are several), ASK for clarifying details first, then use the tool once you are sure.
+      
       Greet the user IMMEDIATELY when they connect.
       Confirm you are ready to help with co-op questions.`;
 
@@ -190,11 +201,30 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         onAudio: (base64) => playAudioChunk(base64),
         onToolCall: (name, args) => {
           console.log(`Tool called: ${name}`, args);
-          if (name === 'viewMaintenanceRequest' && args.requestId) {
-            navigate(`/maintenance?highlight=${args.requestId}`);
+          if ((name === 'viewMaintenanceRequest' || name === 'view_maintenance_request') && args.requestId) {
+            navigate(`/maintenance/${args.requestId}`);
+          } else if ((name === 'viewEvent' || name === 'view_event') && args.eventId) {
+            const url = args.view === 'minutes' ? `/calendar/${args.eventId}?tab=minutes` : `/calendar/${args.eventId}`;
+            navigate(url);
+          } else if ((name === 'viewCommittee' || name === 'view_committee') && args.committeeId) {
+            navigate(`/committees?id=${args.committeeId}`);
+          } else if ((name === 'viewDocument' || name === 'view_document')) {
+            if (args.documentId) {
+              navigate(`/documents?id=${args.documentId}`);
+            } else if (args.title) {
+              navigate(`/documents?search=${encodeURIComponent(args.title)}`);
+            }
+          } else if ((name === 'viewTenant' || name === 'view_tenant') && args.tenantId) {
+            navigate(`/admin/tenants/${args.tenantId}`);
+          } else if ((name === 'viewUnit' || name === 'view_unit') && args.unitId) {
+            navigate(`/admin/units/${args.unitId}`);
+          } else if ((name === 'navigateToPage' || name === 'navigate_to_page') && args.page) {
+            const url = args.query ? `${args.page}?${args.query}` : args.page;
+            navigate(url);
           }
         }
       }, systemInstruction);
+
 
       liveSessionRef.current = sessionPromise;
 

@@ -651,6 +651,34 @@ export const oracleTools = {
   admin_query_tenants: async (context: ToolContext, params: { query?: string; limit?: number }) => {
     return oracleTools.get_tenants(context, params);
   },
+
+  view_maintenance_request: async (context: ToolContext, params: { requestId: string }) => {
+    return { success: true, message: `Showing maintenance request ${params.requestId}` };
+  },
+
+  view_event: async (context: ToolContext, params: { eventId: string; view?: string }) => {
+    return { success: true, message: `Showing event ${params.eventId}${params.view ? ` (${params.view})` : ''}` };
+  },
+
+  view_committee: async (context: ToolContext, params: { committeeId: string }) => {
+    return { success: true, message: `Showing committee ${params.committeeId}` };
+  },
+
+  view_document: async (context: ToolContext, params: { documentId?: string; title?: string }) => {
+    return { success: true, message: `Showing document ${params.documentId || params.title}` };
+  },
+
+  view_tenant: async (context: ToolContext, params: { tenantId: string }) => {
+    return { success: true, message: `Showing tenant ${params.tenantId}` };
+  },
+
+  view_unit: async (context: ToolContext, params: { unitId: string }) => {
+    return { success: true, message: `Showing unit ${params.unitId}` };
+  },
+
+  navigate_to_page: async (context: ToolContext, params: { page: string; query?: string }) => {
+    return { success: true, message: `Navigating to ${params.page}` };
+  },
 };
 
 const stringProp = (description: string) => ({ type: 'string', description });
@@ -790,6 +818,30 @@ export const oracleToolDeclarations: ToolDeclaration[] = [
     query: stringProp('Name, email, phone, or partial search text.'),
     limit: commonFilters.limit,
   }),
+  declaration('view_maintenance_request', 'Navigate the UI to show a specific maintenance request.', {
+    requestId: stringProp('The ID of the maintenance request.'),
+  }, ['requestId']),
+  declaration('view_event', 'Navigate the UI to show a specific co-op event or meeting.', {
+    eventId: stringProp('The ID of the event.'),
+    view: stringProp('Optional view: "details" or "minutes".'),
+  }, ['eventId']),
+  declaration('view_committee', 'Navigate the UI to show a specific committee.', {
+    committeeId: stringProp('The ID of the committee.'),
+  }, ['committeeId']),
+  declaration('view_document', 'Navigate the UI to show a specific document.', {
+    documentId: stringProp('The ID of the document.'),
+    title: stringProp('The title of the document.'),
+  }),
+  declaration('view_tenant', 'Board/admin only: Navigate the UI to show a specific tenant record.', {
+    tenantId: stringProp('The ID of the tenant.'),
+  }, ['tenantId']),
+  declaration('view_unit', 'Board/admin only: Navigate the UI to show a specific unit record.', {
+    unitId: stringProp('The ID of the unit.'),
+  }, ['unitId']),
+  declaration('navigate_to_page', 'Navigate the UI to a specific co-op page.', {
+    page: stringProp('The target page (e.g., /maintenance, /tenants, /committees, /calendar, /resource-library, /announcements, /directory).'),
+    query: stringProp('Optional query parameters.'),
+  }, ['page']),
 ];
 
 export const oracleToolNames = oracleToolDeclarations.map(tool => tool.name);

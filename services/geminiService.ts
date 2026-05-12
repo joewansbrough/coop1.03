@@ -110,6 +110,74 @@ const tools = [
           },
           required: ["requestId"]
         }
+      },
+      {
+        name: "viewEvent",
+        description: "Navigate the user's interface to a specific co-op event or meeting.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            eventId: { type: Type.STRING, description: "The ID of the event (e.g., 'e1')." },
+            view: { type: Type.STRING, description: "Optional view: 'details' or 'minutes'." }
+          },
+          required: ["eventId"]
+        }
+      },
+      {
+        name: "viewCommittee",
+        description: "Navigate the user's interface to a specific committee.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            committeeId: { type: Type.STRING, description: "The ID of the committee (e.g., 'c1')." }
+          },
+          required: ["committeeId"]
+        }
+      },
+      {
+        name: "viewDocument",
+        description: "Navigate the user's interface to a specific document.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            documentId: { type: Type.STRING, description: "The ID of the document (e.g., 'd1')." },
+            title: { type: Type.STRING, description: "The title of the document." }
+          }
+        }
+      },
+      {
+        name: "viewTenant",
+        description: "Navigate the user's interface to a specific tenant record.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            tenantId: { type: Type.STRING, description: "The ID of the tenant (e.g., 't1')." }
+          },
+          required: ["tenantId"]
+        }
+      },
+      {
+        name: "viewUnit",
+        description: "Navigate the user's interface to a specific unit record.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            unitId: { type: Type.STRING, description: "The ID of the unit (e.g., 'u1')." }
+          },
+          required: ["unitId"]
+        }
+      },
+      {
+        name: "navigateToPage",
+        description: "Navigate the user's interface to a specific co-op page.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            page: { type: Type.STRING, description: "The target page (e.g., '/maintenance', '/tenants', '/committees', '/calendar', '/resource-library', '/announcements')." },
+            query: { type: Type.STRING, description: "Optional query parameters." }
+          },
+          required: ["page"]
+        }
       }
     ]
   }
@@ -164,8 +232,27 @@ const functions = {
   },
   viewMaintenanceRequest: ({ requestId }: any) => {
     return { success: true, message: `Showing maintenance request ${requestId}` };
+  },
+  viewEvent: ({ eventId, view }: any) => {
+    return { success: true, message: `Showing event ${eventId}${view ? ` (${view})` : ''}` };
+  },
+  viewCommittee: ({ committeeId }: any) => {
+    return { success: true, message: `Showing committee ${committeeId}` };
+  },
+  viewDocument: ({ documentId, title }: any) => {
+    return { success: true, message: `Showing document ${documentId || title}` };
+  },
+  viewTenant: ({ tenantId }: any) => {
+    return { success: true, message: `Showing tenant ${tenantId}` };
+  },
+  viewUnit: ({ unitId }: any) => {
+    return { success: true, message: `Showing unit ${unitId}` };
+  },
+  navigateToPage: ({ page, query }: any) => {
+    return { success: true, message: `Navigating to ${page}${query ? '?' + query : ''}` };
   }
 };
+
 
 export const geminiService = {
   async triageMaintenanceRequest(description: string, visualDescription?: string) {
