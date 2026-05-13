@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
@@ -30,23 +30,11 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   user
 }) => {
   const { requestId } = useParams<{ requestId: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   
   const request = requests.find(r => r.id === requestId);
   const unit = units.find(u => u.id === request?.unitId);
   const tenant = tenants.find(t => t.id === request?.tenantId);
-  
-  if (request && !isAdmin && !isCurrentTenantForMaintenanceRequest(request, unit, tenants, user)) {
-    return (
-      <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5">
-        <i className="fa-solid fa-shield-halved text-5xl text-rose-500 mb-4 opacity-20"></i>
-        <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Access Restricted</h2>
-        <p className="text-slate-500 dark:text-slate-400 font-medium">You are only authorized to view service records for your assigned unit.</p>
-        <Link to="/maintenance" className="mt-8 inline-block bg-slate-900 dark:bg-brand-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Return to Queue</Link>
-      </div>
-    );
-  }
 
   const [newNote, setNewNote] = useState('');
   const [showReopenModal, setShowReopenModal] = useState(false);
@@ -65,6 +53,17 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   };
 
   if (!request) return <div className="p-12 text-center text-slate-500 font-bold">Ticket not found in archive.</div>;
+
+  if (!isAdmin && !isCurrentTenantForMaintenanceRequest(request, unit, tenants, user)) {
+    return (
+      <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5">
+        <i className="fa-solid fa-shield-halved text-5xl text-rose-500 mb-4 opacity-20"></i>
+        <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Access Restricted</h2>
+        <p className="text-slate-500 dark:text-slate-400 font-medium">You are only authorized to view service records for your assigned unit.</p>
+        <Link to="/maintenance" className="mt-8 inline-block bg-slate-900 dark:bg-brand-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Return to Queue</Link>
+      </div>
+    );
+  }
 
   const isLocked = request.status === RequestStatus.COMPLETED || request.status === RequestStatus.CANCELLED;
   const canModifyRequest = isAdmin || isCurrentTenantForMaintenanceRequest(request, unit, tenants, user);
