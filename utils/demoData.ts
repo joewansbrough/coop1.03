@@ -337,6 +337,10 @@ export const MOCK_EVENTS: CoopEvent[] = [
   { id: 'e7', title: 'Emergency Drill', description: 'Fire safety walkthrough for all residents.', date: '2026-05-10T14:00:00Z', time: '14:00', location: 'Main Entrance', category: 'Maintenance' },
   { id: 'e8', title: 'Finance Committee Review', description: 'Operating budget and reserve fund review.', date: '2026-06-09T18:00:00Z', time: '18:00', location: 'Common Room', category: 'Meeting' },
   { id: 'e9', title: 'Maintenance Committee Walkthrough', description: 'Shared-area walkthrough and open request triage.', date: '2026-06-18T10:00:00Z', time: '10:00', location: 'Lobby', category: 'Maintenance' },
+  { id: 'e17', title: 'May Board Meeting', description: 'Monthly board review of maintenance priorities, member communications, and policy follow-up.', date: '2026-05-04T19:00:00Z', time: '19:00', location: 'Common Room', category: 'Meeting', committeeId: 'c1' },
+  { id: 'e18', title: 'Finance Committee Check-in', description: 'Review arrears reporting, insurance renewal assumptions, and reserve contribution timing.', date: '2026-05-06T18:00:00Z', time: '18:00', location: 'Library Room', category: 'Meeting', committeeId: 'c3' },
+  { id: 'e19', title: 'Maintenance Committee Review', description: 'Triage spring repair requests and confirm contractor follow-up for shared areas.', date: '2026-05-08T17:30:00Z', time: '17:30', location: 'Workshop', category: 'Meeting', committeeId: 'c2' },
+  { id: 'e20', title: 'Membership Committee Debrief', description: 'Review orientation feedback, waitlist communication, and upcoming interview scheduling.', date: '2026-05-12T18:30:00Z', time: '18:30', location: 'Library Room', category: 'Meeting', committeeId: 'c4' },
   { id: 'e10', title: 'Board Package Review', description: 'Directors review agenda materials, resident correspondence, and follow-up items before the next board meeting.', date: '2026-06-02T18:30:00Z', time: '18:30', location: 'Common Room', category: 'Meeting', committeeId: 'c1' },
   { id: 'e11', title: 'Board Policy Working Session', description: 'Focused board session for bylaw updates, communications planning, and document readiness.', date: '2026-06-23T19:00:00Z', time: '19:00', location: 'Zoom', category: 'Meeting', committeeId: 'c1' },
   { id: 'e12', title: 'Maintenance Committee Triage', description: 'Review open repair requests, contractor follow-ups, and preventive maintenance priorities.', date: '2026-06-12T17:30:00Z', time: '17:30', location: 'Workshop', category: 'Meeting', committeeId: 'c2' },
@@ -360,6 +364,10 @@ export const MOCK_DOCUMENTS: Document[] = [
   { id: 'd11', title: 'Finance Committee Review Minutes - June 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-06-09', tags: ['minutes', 'finance', 'minutes-meeting:e8'] },
   { id: 'd12', title: 'Board Orientation Package', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board of Directors', date: '2026-05-20', tags: ['orientation', 'governance', 'Board of Directors'], committee: 'Board of Directors' },
   { id: 'd13', title: 'June Board Package Draft', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-28', tags: ['agenda', 'board', 'Board of Directors'], committee: 'Board of Directors' },
+  { id: 'd14', title: 'May Board Meeting Minutes', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-04', tags: ['minutes', 'board', 'minutes-meeting:e17', 'Board of Directors'], committee: 'Board of Directors' },
+  { id: 'd15', title: 'Finance Committee Check-in Minutes - May 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-06', tags: ['minutes', 'finance', 'minutes-meeting:e18', 'Finance Committee'], committee: 'Finance Committee' },
+  { id: 'd16', title: 'Maintenance Committee Review Minutes - May 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-08', tags: ['minutes', 'maintenance', 'minutes-meeting:e19', 'Maintenance Committee'], committee: 'Maintenance Committee' },
+  { id: 'd17', title: 'Membership Committee Debrief Minutes - May 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-12', tags: ['minutes', 'membership', 'minutes-meeting:e20', 'Membership Committee'], committee: 'Membership Committee' },
 ];
 
 export const MOCK_COMMITTEES: Committee[] = [
@@ -461,4 +469,8 @@ export const MOCK_MINUTES = [
   makeMinutes('min1', 'e1', 'agm', '2026-04-12', 'George Papadopoulos', 'Margaret Chen', 'The AGM confirmed board election results, reviewed the annual budget, and approved publication of updated member materials.'),
   makeMinutes('min2', 'e5', 'regular', '2026-04-28', 'George Papadopoulos', 'Margaret Chen', 'The board reviewed open service requests, document library readiness, and upcoming resident communications.'),
   makeMinutes('min3', 'e8', 'regular', '2026-06-09', 'Patricia MacLeod', 'Margaret Chen', 'The finance committee reviewed reserve fund assumptions and recommended preparing a plain-language budget notice.'),
+  makeMinutes('min4', 'e17', 'regular', '2026-05-04', 'George Papadopoulos', 'Margaret Chen', 'The board reviewed spring maintenance priorities, member communications, and follow-up from the AGM.'),
+  makeMinutes('min5', 'e18', 'regular', '2026-05-06', 'Patricia MacLeod', 'Ahmed Patel', 'The finance committee reviewed arrears reporting, insurance renewal assumptions, and reserve contribution timing.'),
+  makeMinutes('min6', 'e19', 'regular', '2026-05-08', 'Thomas Bergstrom', 'Carlos Rivera', 'The maintenance committee triaged spring repairs, confirmed contractor follow-up, and prioritized shared-area safety items.'),
+  makeMinutes('min7', 'e20', 'regular', '2026-05-12', 'Linda Nakamura', 'Priya Sharma', 'The membership committee reviewed orientation feedback, waitlist communication, and the next interview schedule.'),
 ];

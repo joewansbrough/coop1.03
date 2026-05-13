@@ -272,6 +272,10 @@ async function main() {
     { title: 'AGM Minutes — April 2025', category: 'Minutes', url: 'https://storage.example.com/docs/agm-minutes-2025.pdf', fileType: 'pdf', author: 'Secretary', date: '2025-04-20', createdAt: new Date('2025-04-20'), tags: ['minutes', 'agm'] },
     { title: 'Board Meeting Minutes — February 2026', category: 'Minutes', url: 'https://storage.example.com/docs/board-minutes-feb-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-02-18', createdAt: new Date('2026-02-18'), tags: ['minutes', 'board'] },
     { title: 'Board Meeting Minutes — January 2026', category: 'Minutes', url: 'https://storage.example.com/docs/board-minutes-jan-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-01-21', createdAt: new Date('2026-01-21'), tags: ['minutes', 'board'] },
+    { title: 'May Board Meeting Minutes', category: 'Minutes', url: 'https://storage.example.com/docs/board-minutes-may-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-05-04', createdAt: new Date('2026-05-04'), tags: ['minutes', 'board'] },
+    { title: 'Finance Committee Check-in Minutes - May 2026', category: 'Minutes', url: 'https://storage.example.com/docs/finance-minutes-may-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-05-06', createdAt: new Date('2026-05-06'), tags: ['minutes', 'finance'] },
+    { title: 'Maintenance Committee Review Minutes - May 2026', category: 'Minutes', url: 'https://storage.example.com/docs/maintenance-minutes-may-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-05-08', createdAt: new Date('2026-05-08'), tags: ['minutes', 'maintenance'] },
+    { title: 'Membership Committee Debrief Minutes - May 2026', category: 'Minutes', url: 'https://storage.example.com/docs/membership-minutes-may-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-05-12', createdAt: new Date('2026-05-12'), tags: ['minutes', 'membership'] },
     { title: '2025 Annual Financial Statements', category: 'Financials', url: 'https://storage.example.com/docs/financials-2025.pdf', fileType: 'pdf', author: 'Finance Committee', date: '2026-02-01', createdAt: new Date('2026-02-01'), tags: ['financial', 'audit'] },
     { title: '2026 Operating Budget', category: 'Financials', url: 'https://storage.example.com/docs/budget-2026.xls', fileType: 'xls', author: 'Finance Committee', date: '2026-01-10', createdAt: new Date('2026-01-10'), tags: ['budget', 'financial'] },
     { title: 'Reserve Fund Study 2024', category: 'Financials', url: 'https://storage.example.com/docs/reserve-fund-2024.pdf', fileType: 'pdf', author: 'Board Administration', date: '2024-06-15', createdAt: new Date('2024-06-15'), tags: ['reserve', 'future-planning'] },
@@ -309,6 +313,10 @@ async function main() {
 
   console.log('Seeding calendar events...');
   const committeeEvents = [
+    { committeeName: 'Board of Directors', title: 'May Board Meeting', category: 'Meeting', location: 'Community Room', time: '19:00', description: 'Monthly board review of maintenance priorities, member communications, and policy follow-up.', date: new Date('2026-05-04T19:00:00') },
+    { committeeName: 'Finance Committee', title: 'Finance Committee Check-in', category: 'Meeting', location: 'Library Room', time: '18:00', description: 'Review arrears reporting, insurance renewal assumptions, and reserve contribution timing.', date: new Date('2026-05-06T18:00:00') },
+    { committeeName: 'Maintenance Committee', title: 'Maintenance Committee Review', category: 'Meeting', location: 'Workshop', time: '17:30', description: 'Triage spring repair requests and confirm contractor follow-up for shared areas.', date: new Date('2026-05-08T17:30:00') },
+    { committeeName: 'Membership Committee', title: 'Membership Committee Debrief', category: 'Meeting', location: 'Library Room', time: '18:30', description: 'Review orientation feedback, waitlist communication, and upcoming interview scheduling.', date: new Date('2026-05-12T18:30:00') },
     { committeeName: 'Board of Directors', title: 'Board Package Review', category: 'Meeting', location: 'Community Room', time: '18:30', description: 'Directors review agenda materials, resident correspondence, and follow-up items.', date: new Date('2026-06-02T18:30:00') },
     { committeeName: 'Maintenance Committee', title: 'Maintenance Committee Triage', category: 'Meeting', location: 'Workshop', time: '17:30', description: 'Review open repair requests, contractor follow-ups, and preventive maintenance priorities.', date: new Date('2026-06-12T17:30:00') },
     { committeeName: 'Finance Committee', title: 'Finance Committee Budget Review', category: 'Meeting', location: 'Community Room', time: '18:00', description: 'Review operating budget assumptions, arrears reporting, and reserve planning updates.', date: new Date('2026-06-16T18:00:00') },
@@ -373,7 +381,7 @@ async function main() {
   console.log(`  - ${Object.keys(tenants).length} tenants`);
   console.log('  - 12 maintenance requests');
   console.log('  - 7 announcements');
-  console.log('  - 12 documents');
+  console.log('  - 16 documents');
   console.log('  - 6 committees');
   console.log('  - Monthly calendar events through end of 2026');
 }

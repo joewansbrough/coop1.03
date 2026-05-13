@@ -33,6 +33,23 @@ test('demo seed includes resident-visible minutes for existing calendar events',
   }
 });
 
+test('demo calendar includes several past May meetings with finalized minutes', () => {
+  const mayPastMeetings = MOCK_EVENTS.filter(event =>
+    event.date >= '2026-05-01' &&
+    event.date < '2026-05-13' &&
+    event.category === 'Meeting'
+  );
+  const mayPastMeetingIds = new Set(mayPastMeetings.map(event => event.id));
+  const mayMinutes = MOCK_MINUTES.filter(minutes => mayPastMeetingIds.has(minutes.meetingId));
+
+  assert.ok(mayPastMeetings.length >= 4);
+  assert.ok(mayMinutes.length >= 4);
+  for (const minutes of mayMinutes) {
+    assert.equal(minutes.status, 'Finalized');
+    assert.ok(minutes.formData.linkedDocuments.length >= 1);
+  }
+});
+
 test('demo seed does not include the old Joe Wansbrough tenant identity', () => {
   assert.equal(
     MOCK_TENANTS.some(tenant => tenant.firstName === 'Joe' && tenant.lastName === 'Wansbrough'),
