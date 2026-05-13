@@ -7,8 +7,10 @@ import {
   createNotification,
 } from '../utils/notifications.ts';
 import {
+  createMaintenanceRequestHref,
   createDemoOracleResponse,
   detectOracleIntent,
+  mergeOracleSuggestedAction,
   normalizeOracleLanguage,
 } from '../utils/oracle.ts';
 import {
@@ -63,11 +65,27 @@ test('oracle language normalization supports the production language list', () =
 });
 
 test('oracle detects maintenance intent without losing policy context', () => {
-  const intent = detectOracleIntent('My sink is leaking and I need to know what the rules say.');
+  const question = 'My sink is leaking and I need to know what the rules say.';
+  const intent = detectOracleIntent(question);
 
   assert.equal(intent.intent, 'maintenance');
   assert.equal(intent.suggestedAction?.type, 'start-maintenance-request');
-  assert.equal(intent.suggestedAction?.href, '/maintenance?action=new-request');
+  assert.equal(intent.suggestedAction?.label, 'Yes, help me submit a request');
+  assert.equal(intent.suggestedAction?.href, createMaintenanceRequestHref(question));
+  assert.equal(new URLSearchParams(intent.suggestedAction?.href.split('?')[1]).get('issue'), question);
+});
+
+test('oracle maintenance smart nudge preserves direct form prefill even if gemini returns a generic link', () => {
+  const question = 'My sink is leaking, what do I do?';
+  const action = mergeOracleSuggestedAction(question, {
+    type: 'start-maintenance-request',
+    label: 'Open maintenance',
+    href: '/maintenance',
+  });
+
+  assert.equal(action?.label, 'Open maintenance');
+  assert.equal(action?.href, createMaintenanceRequestHref(question));
+  assert.equal(new URLSearchParams(action?.href.split('?')[1]).get('issue'), question);
 });
 
 test('demo oracle returns useful local answers without server auth', () => {

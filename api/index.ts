@@ -18,7 +18,7 @@ import {
 } from '../services/dashboardPreferenceStore.js';
 import { type DashboardRole } from '../utils/dashboardPreferences.js';
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
-import { detectOracleIntent, normalizeOracleLanguage } from '../utils/oracle.js';
+import { detectOracleIntent, mergeOracleSuggestedAction, normalizeOracleLanguage } from '../utils/oracle.js';
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
@@ -2010,6 +2010,7 @@ Reasoning:
 Deep Linking:
 - Use 'view_maintenance_request' to show a specific maintenance record if you are discussing one.
 - Use 'navigate_to_page' to pull up helpful co-op pages (e.g., /maintenance, /tenants, /committees, /calendar, /resource-library, /announcements).
+- When the member describes a new maintenance problem, answer the policy/safety question and include a suggestedAction asking if they want help submitting a maintenance request. The assistant will gather extra details before opening the prefilled request form for auto-triage.
 
 Role: ${demoRole} (Demo Mode, isAdmin: ${isDemoAdmin}).
 Page context: ${pageContext || 'none'}.
@@ -2096,7 +2097,7 @@ Member Question: ${question}`;
         language: normalizedLanguage,
         confidence: parsed.confidence || 0.85,
         intent: parsed.intent || intent.intent,
-        suggestedAction: parsed.suggestedAction || (intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined),
+        suggestedAction: mergeOracleSuggestedAction(question, parsed.suggestedAction || intent.suggestedAction),
       };
     });
 
@@ -2173,6 +2174,7 @@ Deep Linking:
 - Use 'view_document' to pull up a specific document (ID is best, Title is fallback).
 - Use 'view_tenant' or 'view_unit' for admin-only deep links to records.
 - Use 'navigate_to_page' for general pages (e.g., /maintenance, /tenants, /committees, /calendar, /resource-library, /announcements, /directory).
+- When the member describes a new maintenance problem, answer the policy/safety question and include a suggestedAction asking if they want help submitting a maintenance request. The assistant will gather extra details before opening the prefilled request form for auto-triage.
 
 If a user asks about something specific (like "last social committee meeting") but you find multiple options or are unsure, ASK for clarifying details first, then use the tool once you are certain.
 
@@ -2281,7 +2283,7 @@ Member Question: ${question}`;
         language: normalizedLanguage,
         confidence: parsed.confidence || 0.9,
         intent: parsed.intent || intent.intent,
-        suggestedAction: parsed.suggestedAction || (intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined),
+        suggestedAction: mergeOracleSuggestedAction(question, parsed.suggestedAction || intent.suggestedAction),
       };
     }, primaryModel);
 
@@ -2296,7 +2298,7 @@ Member Question: ${question}`;
         citations: [],
         language: normalizedLanguage,
         intent: intent.intent,
-        suggestedAction: intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined,
+        suggestedAction: JSON.parse(JSON.stringify(mergeOracleSuggestedAction(question, intent.suggestedAction) || null)),
         latencyMs: Date.now() - startedAt,
       },
     });
@@ -2315,7 +2317,7 @@ Member Question: ${question}`;
           citations: [],
           language: normalizedLanguage,
           intent: intent.intent,
-          suggestedAction: intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined,
+          suggestedAction: JSON.parse(JSON.stringify(mergeOracleSuggestedAction(question, intent.suggestedAction) || null)),
           latencyMs: Date.now() - startedAt,
         },
       }).catch(() => undefined);
