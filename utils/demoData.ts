@@ -363,7 +363,7 @@ export const MOCK_DOCUMENTS: Document[] = [
   { id: 'd10', title: 'Parking Policy & Stall Assignment', category: 'Policies', url: '#', fileType: 'pdf', author: 'Maintenance', date: '2024-03-01', tags: ['parking', 'vehicles'] },
   { id: 'd11', title: 'Finance Committee Review Minutes - June 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-06-09', tags: ['minutes', 'finance', 'minutes-meeting:e8'] },
   { id: 'd12', title: 'Board Orientation Package', category: 'Policies', url: '#', fileType: 'pdf', author: 'Board of Directors', date: '2026-05-20', tags: ['orientation', 'governance', 'Board of Directors'], committee: 'Board of Directors' },
-  { id: 'd13', title: 'June Board Package Draft', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-28', tags: ['agenda', 'board', 'Board of Directors'], committee: 'Board of Directors' },
+  { id: 'd13', title: 'June Board Package Draft', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-28', tags: ['agenda', 'board', 'minutes-meeting:e10', 'Board of Directors'], committee: 'Board of Directors' },
   { id: 'd14', title: 'May Board Meeting Minutes', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-04', tags: ['minutes', 'board', 'minutes-meeting:e17', 'Board of Directors'], committee: 'Board of Directors' },
   { id: 'd15', title: 'Finance Committee Check-in Minutes - May 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-06', tags: ['minutes', 'finance', 'minutes-meeting:e18', 'Finance Committee'], committee: 'Finance Committee' },
   { id: 'd16', title: 'Maintenance Committee Review Minutes - May 2026', category: 'Minutes', url: '#', fileType: 'pdf', author: 'Secretary', date: '2026-05-08', tags: ['minutes', 'maintenance', 'minutes-meeting:e19', 'Maintenance Committee'], committee: 'Maintenance Committee' },
@@ -379,15 +379,27 @@ export const MOCK_COMMITTEES: Committee[] = [
   { id: 'c6', name: 'Landscape Committee', description: 'Plans garden and exterior volunteer projects.', chair: 'Michael Johansson', icon: 'fa-leaf', members: ['Michael Johansson', 'Wei Liu', 'James Nakamura'] },
 ];
 
-export const MOCK_SCHEDULED_MAINTENANCE: ScheduledMaintenance[] = MOCK_UNITS.slice(0, 12).map((unit, index) => ({
-  id: `sm${index + 1}`,
-  unitId: unit.id,
-  task: index % 2 === 0 ? 'HVAC Filter Change' : 'Smoke Detector Test',
-  dueDate: new Date(2026, 3 + index, 15).toISOString(),
-  frequency: index % 3 === 0 ? 'MONTHLY' : index % 3 === 1 ? 'QUARTERLY' : 'ANNUAL',
-  assignedTo: 'Maintenance Committee',
-  category: index % 2 === 0 ? 'HVAC' : 'SAFETY',
-}));
+const preventativeTaskTemplates: Array<Pick<ScheduledMaintenance, 'task' | 'frequency' | 'assignedTo' | 'category'>> = [
+  { task: 'Smoke and CO Alarm Test', frequency: 'ANNUAL', assignedTo: 'Maintenance Committee', category: 'SAFETY' },
+  { task: 'Bathroom Fan and Vent Cleaning', frequency: 'QUARTERLY', assignedTo: 'Maintenance Committee', category: 'HVAC' },
+  { task: 'Plumbing Shutoff and Leak Check', frequency: 'ANNUAL', assignedTo: 'Maintenance Committee', category: 'PLUMBING' },
+];
+
+export const MOCK_SCHEDULED_MAINTENANCE: ScheduledMaintenance[] = MOCK_UNITS.flatMap((unit, unitIndex) => {
+  const templates = unit.currentTenantId ? preventativeTaskTemplates : preventativeTaskTemplates.slice(0, 2);
+
+  return templates.map((template, taskIndex) => {
+    const dueDate = new Date(Date.UTC(2026, 4 + ((unitIndex + taskIndex) % 6), 8 + ((unitIndex * 3 + taskIndex * 5) % 18)));
+
+    return {
+      id: `sm-${unit.id}-${taskIndex + 1}`,
+      unitId: unit.id,
+      dueDate: dueDate.toISOString(),
+      isCompleted: false,
+      ...template,
+    };
+  });
+});
 
 type DemoMinutesSeed = MinutesTemplate & {
   formData: Record<string, any>;
@@ -473,4 +485,5 @@ export const MOCK_MINUTES = [
   makeMinutes('min5', 'e18', 'regular', '2026-05-06', 'Patricia MacLeod', 'Ahmed Patel', 'The finance committee reviewed arrears reporting, insurance renewal assumptions, and reserve contribution timing.'),
   makeMinutes('min6', 'e19', 'regular', '2026-05-08', 'Thomas Bergstrom', 'Carlos Rivera', 'The maintenance committee triaged spring repairs, confirmed contractor follow-up, and prioritized shared-area safety items.'),
   makeMinutes('min7', 'e20', 'regular', '2026-05-12', 'Linda Nakamura', 'Priya Sharma', 'The membership committee reviewed orientation feedback, waitlist communication, and the next interview schedule.'),
+  makeMinutes('min8', 'e10', 'regular', '2026-06-02', 'George Papadopoulos', 'Margaret Chen', 'Directors reviewed the June board package, resident correspondence, and follow-up items before the next board meeting.'),
 ];

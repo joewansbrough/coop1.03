@@ -6,6 +6,7 @@ import {
   MOCK_EVENTS,
   MOCK_MAINTENANCE,
   MOCK_MINUTES,
+  MOCK_SCHEDULED_MAINTENANCE,
   MOCK_TENANTS,
   MOCK_UNITS,
   MOCK_USER,
@@ -48,6 +49,28 @@ test('demo calendar includes several past May meetings with finalized minutes', 
     assert.equal(minutes.status, 'Finalized');
     assert.ok(minutes.formData.linkedDocuments.length >= 1);
   }
+});
+
+test('June board package document deep links to the board package meeting minutes', () => {
+  const document = MOCK_DOCUMENTS.find(doc => doc.title === 'June Board Package Draft');
+  assert.ok(document, 'June Board Package Draft should exist in the demo documents');
+  assert.ok(document.tags?.includes('minutes-meeting:e10'));
+  assert.ok(MOCK_MINUTES.some(minutes => minutes.meetingId === 'e10'));
+});
+
+test('demo seed includes preventative schedules for every unit without manual seeding', () => {
+  const taskCountsByUnit = new Map<string, number>();
+  for (const task of MOCK_SCHEDULED_MAINTENANCE) {
+    taskCountsByUnit.set(task.unitId, (taskCountsByUnit.get(task.unitId) || 0) + 1);
+  }
+
+  for (const unit of MOCK_UNITS) {
+    assert.ok((taskCountsByUnit.get(unit.id) || 0) >= 2, `Unit ${unit.number} should have preventative tasks`);
+  }
+
+  const defaultTenant = MOCK_TENANTS.find(tenant => tenant.id === MOCK_USER.tenantId);
+  assert.ok(defaultTenant?.unitId, 'default demo tenant should have a unit');
+  assert.ok((taskCountsByUnit.get(defaultTenant.unitId) || 0) >= 3, 'default demo unit should show a full preventative schedule');
 });
 
 test('demo seed does not include the old Joe Wansbrough tenant identity', () => {

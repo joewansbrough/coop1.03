@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { MaintenanceCategory, MaintenanceFrequency, PrismaClient } from '@prisma/client';
 import 'dotenv/config';
 
 const prisma = new PrismaClient();
@@ -245,6 +245,28 @@ async function main() {
         expenses: m.expenses || null
       }
     });
+  }
+
+  console.log('Seeding scheduled preventative maintenance...');
+  const preventativeTaskTemplates = [
+    { task: 'Smoke and CO Alarm Test', frequency: MaintenanceFrequency.ANNUAL, assignedTo: 'Maintenance Committee', category: MaintenanceCategory.SAFETY },
+    { task: 'Bathroom Fan and Vent Cleaning', frequency: MaintenanceFrequency.QUARTERLY, assignedTo: 'Maintenance Committee', category: MaintenanceCategory.HVAC },
+    { task: 'Plumbing Shutoff and Leak Check', frequency: MaintenanceFrequency.ANNUAL, assignedTo: 'Maintenance Committee', category: MaintenanceCategory.PLUMBING },
+  ];
+  const unitEntries = Object.entries(unitMap);
+  for (const [unitNumber, unitId] of unitEntries) {
+    const unitIndex = unitEntries.findIndex(([number]) => number === unitNumber);
+    for (const [taskIndex, template] of preventativeTaskTemplates.entries()) {
+      await prisma.scheduledMaintenance.create({
+        data: {
+          cooperative: { connect: { id: cooperativeId } },
+          unit: { connect: { id: unitId } },
+          ...template,
+          dueDate: new Date(Date.UTC(2026, 4 + ((unitIndex + taskIndex) % 6), 8 + ((unitIndex * 3 + taskIndex * 5) % 18))),
+          isCompleted: false,
+        },
+      });
+    }
   }
 
   console.log('Seeding announcements...');
