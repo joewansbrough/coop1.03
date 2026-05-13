@@ -45,6 +45,68 @@ interface NavItem {
   isAdmin?: boolean;
 }
 
+interface ProfileDropdownProps {
+  isAdmin: boolean;
+  user: {
+    email: string;
+    name: string;
+    picture: string;
+  };
+  unreadCount: number;
+  onOpenProfile: () => void;
+  onOpenHelp: () => void;
+  onNavigate: (path: string) => void;
+  onLogout: () => void;
+}
+
+export const desktopNotificationButtonClassName = "relative hidden h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors hover:text-teal-600 dark:bg-slate-800 dark:text-slate-300 lg:flex";
+
+export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
+  isAdmin,
+  user,
+  unreadCount,
+  onOpenProfile,
+  onOpenHelp,
+  onNavigate,
+  onLogout,
+}) => (
+  <div className="absolute right-0 z-[140] mt-3 w-64 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 py-2 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
+    <div className="px-4 py-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-white/5 mb-1">
+      <p className="text-xs font-black text-slate-900 dark:text-slate-100">{user.name}</p>
+      <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>
+      <div className="mt-3 flex gap-1">
+        <span className="text-[8px] font-black px-1.5 py-0.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded uppercase">Certified</span>
+        {isAdmin && <span className="text-[8px] font-black px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded uppercase">Administrator</span>}
+      </div>
+    </div>
+    <button onClick={() => onNavigate('/notifications')} className="flex w-full items-center justify-between px-4 py-3 text-left text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5 lg:hidden">
+      <span className="flex items-center gap-3">
+        <i className="fa-solid fa-bell text-slate-400"></i>
+        Notifications Hub
+      </span>
+      {unreadCount > 0 && (
+        <span className="rounded-full bg-rose-50 px-2 py-1 text-[9px] font-black uppercase text-rose-600 dark:bg-rose-950/40 dark:text-rose-300">
+          {unreadCount > 9 ? '9+' : unreadCount} unread
+        </span>
+      )}
+    </button>
+    <button onClick={onOpenProfile} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
+      <i className="fa-solid fa-gear text-slate-400"></i> Account Configuration
+    </button>
+    <button onClick={() => onNavigate('/documents')} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
+      <i className="fa-solid fa-circle-info text-slate-400"></i> Association Protocols
+    </button>
+    <button onClick={onOpenHelp} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
+      <i className="fa-solid fa-circle-question text-slate-400"></i> Help & Support
+    </button>
+    <div className="border-t border-slate-100 dark:border-white/5 mt-1">
+      <button onClick={onLogout} className="w-full text-left px-4 py-3 text-xs font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-3 transition-colors uppercase tracking-widest">
+        <i className="fa-solid fa-power-off"></i> Log Out
+      </button>
+    </div>
+  </div>
+);
+
 const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onToggleAdminView, user, coopName }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -341,7 +403,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               <button
                 type="button"
                 onClick={() => setIsNotificationsOpen(value => !value)}
-                className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors hover:text-teal-600 dark:bg-slate-800 dark:text-slate-300"
+                className={desktopNotificationButtonClassName}
                 aria-label="Open notifications"
                 title="Notifications"
               >
@@ -397,30 +459,15 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 z-[140] mt-3 w-64 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 py-2 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
-                  <div className="px-4 py-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-white/5 mb-1">
-                    <p className="text-xs font-black text-slate-900 dark:text-slate-100">{user.name}</p>
-                    <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>
-                    <div className="mt-3 flex gap-1">
-                       <span className="text-[8px] font-black px-1.5 py-0.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded uppercase">Certified</span>
-                       {isAdmin && <span className="text-[8px] font-black px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded uppercase">Administrator</span>}
-                    </div>
-                  </div>
-                  <button onClick={() => { setIsProfileModalOpen(true); setIsProfileOpen(false); }} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
-                    <i className="fa-solid fa-gear text-slate-400"></i> Account Configuration
-                  </button>
-                  <button onClick={() => { navigate('/documents'); setIsProfileOpen(false); }} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
-                    <i className="fa-solid fa-circle-info text-slate-400"></i> Association Protocols
-                  </button>
-                  <button onClick={() => { setIsHelpModalOpen(true); setIsProfileOpen(false); }} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
-                    <i className="fa-solid fa-circle-question text-slate-400"></i> Help & Support
-                  </button>
-                  <div className="border-t border-slate-100 dark:border-white/5 mt-1">
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-xs font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-3 transition-colors uppercase tracking-widest">
-                      <i className="fa-solid fa-power-off"></i> Log Out
-                    </button>
-                  </div>
-                </div>
+                <ProfileDropdown
+                  isAdmin={isAdmin}
+                  user={user}
+                  unreadCount={unreadCount}
+                  onOpenProfile={() => { setIsProfileModalOpen(true); setIsProfileOpen(false); }}
+                  onOpenHelp={() => { setIsHelpModalOpen(true); setIsProfileOpen(false); }}
+                  onNavigate={(path) => { navigate(path); setIsProfileOpen(false); }}
+                  onLogout={handleLogout}
+                />
               )}
             </div>
           </div>

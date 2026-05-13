@@ -3,7 +3,7 @@ import OracleAssistant from '../components/OracleAssistant';
 import { Announcement, Document } from '../types';
 
 const PolicyAssistant: React.FC<{ documents: Document[]; announcements: Announcement[] }> = () => (
-  <div className="mx-auto max-w-5xl space-y-4 pb-4" data-demo-target="policy-assistant">
+  <div className="mx-auto max-w-7xl space-y-4 pb-4" data-demo-target="policy-assistant">
     <div className="flex flex-col gap-2">
       <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900 dark:text-white">Co-op Oracle</h2>
       <p className="text-sm font-medium text-slate-500 dark:text-slate-400">

@@ -54,3 +54,14 @@ test('Policy Assistant page uses a responsive embedded chat height', () => {
   assert.match(html, /h-\[clamp\(260px,calc\(100dvh-16rem\),520px\)\]/);
   assert.doesNotMatch(html, /h-\[720px\]/);
 });
+
+test('Policy Assistant page aligns with the standard page width', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <PolicyAssistant documents={[]} announcements={[]} />
+    </MemoryRouter>,
+  );
+
+  assert.match(html, /max-w-7xl/);
+  assert.doesNotMatch(html, /max-w-5xl/);
+});
