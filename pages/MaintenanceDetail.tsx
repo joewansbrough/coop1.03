@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { pdf } from '@react-pdf/renderer';
@@ -11,6 +11,7 @@ import { MaintenanceRequestPDF } from '../services/export/maintenancePdfGenerato
 import { canExportMaintenanceRequest, isCurrentTenantForMaintenanceRequest } from '../utils/maintenanceRequestAccess';
 import { isDemoMode } from '../hooks/useCoopData';
 import { demoStorage } from '../utils/demoStorage';
+import { geminiService } from '../services/geminiService';
 
 interface MaintenanceDetailProps {
   isAdmin?: boolean;
@@ -44,13 +45,25 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [savingField, setSavingField] = useState<'status' | 'priority' | 'category' | null>(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [visualDescriptionAudioKey, setVisualDescriptionAudioKey] = useState<string | null>(null);
   const [showAllNotes, setShowAllNotes] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const visualDescriptionAudioRef = useRef<HTMLAudioElement | null>(null);
+  const visualDescriptionAudioUrlRef = useRef<string | null>(null);
 
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertMessage({ message, type });
     window.setTimeout(() => setAlertMessage(null), 5000);
   };
+
+  useEffect(() => {
+    return () => {
+      visualDescriptionAudioRef.current?.pause();
+      if (visualDescriptionAudioUrlRef.current) {
+        URL.revokeObjectURL(visualDescriptionAudioUrlRef.current);
+      }
+    };
+  }, []);
 
   if (!request) return <div className="p-12 text-center text-slate-500 font-bold">Ticket not found in archive.</div>;
 
@@ -233,6 +246,41 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
     }
   };
 
+  const playVisualDescriptionWithBrowserVoice = (description: string) => {
+    if (!description || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(description));
+  };
+
+  const playAttachmentVisualDescription = async (description: string, audioKey: string) => {
+    if (!description || visualDescriptionAudioKey) return;
+    visualDescriptionAudioRef.current?.pause();
+    if (visualDescriptionAudioUrlRef.current) {
+      URL.revokeObjectURL(visualDescriptionAudioUrlRef.current);
+      visualDescriptionAudioUrlRef.current = null;
+    }
+
+    setVisualDescriptionAudioKey(audioKey);
+    try {
+      const blob = await geminiService.synthesizeVisualDescriptionSpeech(description);
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      visualDescriptionAudioRef.current = audio;
+      visualDescriptionAudioUrlRef.current = url;
+      audio.onended = () => setVisualDescriptionAudioKey(null);
+      audio.onerror = () => {
+        setVisualDescriptionAudioKey(null);
+        playVisualDescriptionWithBrowserVoice(description);
+      };
+      await audio.play();
+    } catch (err) {
+      console.warn('Gemini visual description audio failed; falling back to browser voice.', err);
+      playVisualDescriptionWithBrowserVoice(description);
+    } finally {
+      setVisualDescriptionAudioKey(null);
+    }
+  };
+
   const availableCategories: MaintenanceCategory[] = ['Plumbing', 'Electrical', 'Structural', 'Appliance', 'HVAC', 'Exterior', 'Safety', 'Other'];
 
   return (
@@ -390,12 +438,11 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 {attachments.map((attachment: any, index: number) => {
                   const href = attachment.url || attachment.storageUrl;
                   const isImage = String(attachment.contentType || '').startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(String(attachment.fileName || href));
+                  const audioKey = String(attachment.id || href || index);
+                  const attachmentVisualDescription = String(attachment.visualDescription || (attachments.length === 1 ? request.visualDescription || '' : '')).trim();
                   return (
-                    <a
+                    <div
                       key={attachment.id || href || index}
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className="group overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 transition-all hover:border-brand-400 dark:border-white/5 dark:bg-slate-950/30"
                     >
                       {isImage && (
@@ -404,12 +451,33 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                         </div>
                       )}
                       <div className="p-4">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 group-hover:underline">{attachment.fileName || `Attachment ${index + 1}`}</p>
-                        {attachment.visualDescription && (
-                          <p className="mt-2 line-clamp-3 text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">{attachment.visualDescription}</p>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-black uppercase tracking-widest text-brand-600 hover:underline dark:text-brand-400"
+                          >
+                            {attachment.fileName || `Attachment ${index + 1}`}
+                          </a>
+                          {attachmentVisualDescription && (
+                            <button
+                              type="button"
+                              onClick={() => playAttachmentVisualDescription(attachmentVisualDescription, audioKey)}
+                              disabled={Boolean(visualDescriptionAudioKey)}
+                              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70 dark:bg-slate-900 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-800"
+                              aria-label={`Play audio description for ${attachment.fileName || `attachment ${index + 1}`}`}
+                            >
+                              <i className={`fa-solid ${visualDescriptionAudioKey === audioKey ? 'fa-spinner fa-spin' : 'fa-volume-high'} text-[10px]`}></i>
+                              {visualDescriptionAudioKey === audioKey ? 'Preparing' : 'Play Audio'}
+                            </button>
+                          )}
+                        </div>
+                        {attachmentVisualDescription && (
+                          <p className="mt-2 line-clamp-3 text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">{attachmentVisualDescription}</p>
                         )}
                       </div>
-                    </a>
+                    </div>
                   );
                 })}
               </div>

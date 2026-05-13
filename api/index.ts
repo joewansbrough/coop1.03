@@ -2511,11 +2511,12 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
     if (!apiKey) return res.status(503).json({ error: 'Gemini API key is not configured.' });
 
     const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+    const style = req.body?.style === 'visual-description' ? 'visual-description' : 'tour';
     if (text.length < 8) return res.status(400).json({ error: 'Narration text is required.' });
     if (text.length > 1600) return res.status(400).json({ error: 'Narration text is too long.' });
 
     // 1. Check persistent cache (Vercel Blob)
-    const textHash = crypto.createHash('sha256').update(text).digest('hex');
+    const textHash = crypto.createHash('sha256').update(`${style}:${text}`).digest('hex');
     const cachePath = `tts-cache/${textHash}.wav`;
     const token = getBlobToken();
 
@@ -2535,12 +2536,15 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
     // 2. Cache miss: Generate narration
     const generateSpeech = async (modelName: string) => {
       console.log(`[TTS] Requesting generation from ${modelName}...`);
+      const instruction = style === 'visual-description'
+        ? `Read this maintenance photo visual description in a warm, clear, calm voice:\n\n${text}`
+        : `Read this guided tour narration in a warm, clear, welcoming voice at a calm pace:\n\n${text}`;
       return axios.post(
         `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
         {
           contents: [{
             parts: [{
-              text: `Read this guided tour narration in a warm, clear, welcoming voice at a calm pace:\n\n${text}`,
+              text: instruction,
             }],
           }],
           generationConfig: {
@@ -2613,7 +2617,7 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
     res.send(wav);
   } catch (e: any) {
     const message = e.response?.data?.error?.message || e.message || 'Unknown Gemini TTS error';
-    res.status(500).json({ error: `Gemini tour narration failed: ${message}` });
+    res.status(500).json({ error: `Gemini narration failed: ${message}` });
   }
 });
 

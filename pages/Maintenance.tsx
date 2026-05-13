@@ -36,11 +36,23 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [visualDescription, setVisualDescription] = useState('');
   const [attachments, setAttachments] = useState<any[]>([]);
   const [imageAnalysisLoading, setImageAnalysisLoading] = useState(false);
+  const [visualDescriptionAudioLoading, setVisualDescriptionAudioLoading] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const lastTriageKey = useRef('');
+  const visualDescriptionAudioRef = useRef<HTMLAudioElement | null>(null);
+  const visualDescriptionAudioUrlRef = useRef<string | null>(null);
 
   const createMaintenanceMutation = useCreateMaintenance();
   const updateMaintenanceMutation = useUpdateMaintenance();
+
+  useEffect(() => {
+    return () => {
+      visualDescriptionAudioRef.current?.pause();
+      if (visualDescriptionAudioUrlRef.current) {
+        URL.revokeObjectURL(visualDescriptionAudioUrlRef.current);
+      }
+    };
+  }, []);
 
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertMessage({ message, type });
@@ -156,10 +168,39 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     }
   };
 
-  const hearVisualDescription = () => {
+  const hearVisualDescriptionWithBrowserVoice = () => {
     if (!visualDescription || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(visualDescription));
+  };
+
+  const hearVisualDescription = async () => {
+    if (!visualDescription || visualDescriptionAudioLoading) return;
+    visualDescriptionAudioRef.current?.pause();
+    if (visualDescriptionAudioUrlRef.current) {
+      URL.revokeObjectURL(visualDescriptionAudioUrlRef.current);
+      visualDescriptionAudioUrlRef.current = null;
+    }
+
+    setVisualDescriptionAudioLoading(true);
+    try {
+      const blob = await geminiService.synthesizeVisualDescriptionSpeech(visualDescription);
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      visualDescriptionAudioRef.current = audio;
+      visualDescriptionAudioUrlRef.current = url;
+      audio.onended = () => setVisualDescriptionAudioLoading(false);
+      audio.onerror = () => {
+        setVisualDescriptionAudioLoading(false);
+        hearVisualDescriptionWithBrowserVoice();
+      };
+      await audio.play();
+    } catch (err) {
+      console.warn('Gemini visual description audio failed; falling back to browser voice.', err);
+      hearVisualDescriptionWithBrowserVoice();
+    } finally {
+      setVisualDescriptionAudioLoading(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -371,8 +412,13 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                 <div className="mt-4 rounded-2xl bg-white p-4 dark:bg-slate-900">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">AI visual description</p>
-                    <button type="button" onClick={hearVisualDescription} className="rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                      Hear Audio Description
+                    <button
+                      type="button"
+                      onClick={hearVisualDescription}
+                      disabled={visualDescriptionAudioLoading}
+                      className="rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase text-slate-600 transition-colors hover:bg-slate-200 disabled:cursor-wait disabled:opacity-70 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                    >
+                      {visualDescriptionAudioLoading ? 'Preparing Audio...' : 'Hear Audio Description'}
                     </button>
                   </div>
                   <p className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">{visualDescription}</p>

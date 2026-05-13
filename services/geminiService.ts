@@ -418,6 +418,20 @@ export const geminiService = {
     return res.blob();
   },
 
+  async synthesizeVisualDescriptionSpeech(text: string) {
+    const res = await fetch('/api/ai/demo-tour-tts', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, style: 'visual-description' }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to generate visual description audio');
+    }
+    return res.blob();
+  },
+
   /**
    * Multimodal Live API session for real-time conversation
    */
