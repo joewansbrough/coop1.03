@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
@@ -264,6 +265,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => (
   <QueryClientProvider client={queryClient}>
     <AppContent />
+    <Analytics />
   </QueryClientProvider>
 );
 
