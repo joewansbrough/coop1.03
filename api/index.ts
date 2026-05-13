@@ -1,6 +1,6 @@
 import express from 'express';
 import crypto from 'crypto';
-import { MaintenanceCategory, MaintenanceFrequency, PrismaClient } from '@prisma/client';
+import { MaintenanceCategory, MaintenanceFrequency, Prisma, PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import axios from 'axios';
@@ -321,11 +321,52 @@ const requireAdmin = (req: express.Request, res: express.Response, next: express
   next();
 };
 
-const normalizeNotification = (notification: any) => ({
+const normalizeNotification = (notification: any, readReceipt?: { readAt?: Date | string | null }) => ({
   ...notification,
-  isRead: Boolean(notification.readAt),
+  isRead: Boolean(notification.readAt || readReceipt?.readAt),
+  readAt: notification.readAt || readReceipt?.readAt || null,
   timestamp: notification.createdAt,
 });
+
+const getVisibleNotificationWhere = (coopId: string, user: any, userEmail?: string) => ({
+  cooperativeId: coopId,
+  OR: [
+    { audience: 'all' },
+    { audience: 'member' },
+    ...(user?.isAdmin ? [{ audience: 'admin' }] : []),
+    ...(userEmail ? [{ audience: 'user', recipientUserEmail: userEmail }] : []),
+  ],
+});
+
+const getNotificationReadReceipts = async (
+  p: PrismaClient,
+  notificationIds: string[],
+  userEmail?: string,
+) => {
+  if (!userEmail || notificationIds.length === 0) return new Map<string, { readAt: Date }>();
+  const receipts = await p.$queryRaw<Array<{ notificationId: string; readAt: Date }>>(Prisma.sql`
+    SELECT "notificationId", "readAt"
+    FROM "NotificationReadReceipt"
+    WHERE "userEmail" = ${userEmail}
+      AND "notificationId" IN (${Prisma.join(notificationIds)})
+  `);
+  return new Map(receipts.map(receipt => [receipt.notificationId, { readAt: receipt.readAt }]));
+};
+
+const markNotificationReadForUser = async (
+  p: PrismaClient,
+  notificationId: string,
+  userEmail: string,
+) => {
+  const readAt = new Date();
+  await p.$executeRaw(Prisma.sql`
+    INSERT INTO "NotificationReadReceipt" ("id", "notificationId", "userEmail", "readAt")
+    VALUES (${crypto.randomUUID()}, ${notificationId}, ${userEmail}, ${readAt})
+    ON CONFLICT ("notificationId", "userEmail")
+    DO UPDATE SET "readAt" = EXCLUDED."readAt"
+  `);
+  return readAt;
+};
 
 const createSystemNotification = async (
   p: PrismaClient,
@@ -430,21 +471,13 @@ app.get('/api/notifications', requireAuth, async (req, res, next) => {
     const user = (req as any).user || (req as any).session?.user;
     const coopId = await getCoopId(req, p);
     const userEmail = user?.email?.toLowerCase();
-    const where: any = {
-      cooperativeId: coopId,
-      OR: [
-        { audience: 'all' },
-        { audience: 'member' },
-        ...(user?.isAdmin ? [{ audience: 'admin' }] : []),
-        ...(userEmail ? [{ audience: 'user', recipientUserEmail: userEmail }] : []),
-      ],
-    };
     const notifications = await p.notification.findMany({
-      where,
+      where: getVisibleNotificationWhere(coopId, user, userEmail),
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
-    res.json(notifications.map(normalizeNotification));
+    const readReceipts = await getNotificationReadReceipts(p, notifications.map(notification => notification.id), userEmail);
+    res.json(notifications.map(notification => normalizeNotification(notification, readReceipts.get(notification.id))));
   } catch (error) {
     next(error);
   }
@@ -475,14 +508,19 @@ app.put('/api/notifications/:id/read', requireAuth, async (req, res, next) => {
   try {
     const p = getPrisma();
     const coopId = await getCoopId(req, p);
+    const user = (req as any).user || (req as any).session?.user;
+    const userEmail = user?.email?.toLowerCase();
+    if (!userEmail) return res.status(401).json({ error: 'User session invalid' });
     const notificationId = getParam(req.params.id);
-    const existing = await p.notification.findFirst({ where: { id: notificationId, cooperativeId: coopId } });
-    if (!existing) return res.status(404).json({ error: 'Notification not found' });
-    const notification = await p.notification.update({
-      where: { id: notificationId },
-      data: { readAt: new Date() },
+    const existing = await p.notification.findFirst({
+      where: {
+        id: notificationId,
+        ...getVisibleNotificationWhere(coopId, user, userEmail),
+      },
     });
-    res.json(normalizeNotification(notification));
+    if (!existing) return res.status(404).json({ error: 'Notification not found' });
+    const readAt = await markNotificationReadForUser(p, notificationId, userEmail);
+    res.json(normalizeNotification(existing, { readAt }));
   } catch (error) {
     next(error);
   }
@@ -494,19 +532,15 @@ app.put('/api/notifications/read-all', requireAuth, async (req, res, next) => {
     const coopId = await getCoopId(req, p);
     const user = (req as any).user || (req as any).session?.user;
     const userEmail = user?.email?.toLowerCase();
-    await p.notification.updateMany({
+    if (!userEmail) return res.status(401).json({ error: 'User session invalid' });
+    const notifications = await p.notification.findMany({
       where: {
-        cooperativeId: coopId,
+        ...getVisibleNotificationWhere(coopId, user, userEmail),
         readAt: null,
-        OR: [
-          { audience: 'all' },
-          { audience: 'member' },
-          ...(user?.isAdmin ? [{ audience: 'admin' }] : []),
-          ...(userEmail ? [{ audience: 'user', recipientUserEmail: userEmail }] : []),
-        ],
       },
-      data: { readAt: new Date() },
+      select: { id: true },
     });
+    await Promise.all(notifications.map(notification => markNotificationReadForUser(p, notification.id, userEmail)));
     res.json({ success: true });
   } catch (error) {
     next(error);
@@ -2661,6 +2695,19 @@ app.get('/api/migrate', async (req, res) => {
     await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_readAt_idx" ON "Notification"("readAt");`);
     await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_createdAt_idx" ON "Notification"("createdAt");`);
     await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_type_idx" ON "Notification"("type");`);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "NotificationReadReceipt" (
+        "id" TEXT NOT NULL,
+        "notificationId" TEXT NOT NULL,
+        "userEmail" TEXT NOT NULL,
+        "readAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "NotificationReadReceipt_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "NotificationReadReceipt_notificationId_userEmail_key" ON "NotificationReadReceipt"("notificationId", "userEmail");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "NotificationReadReceipt_userEmail_idx" ON "NotificationReadReceipt"("userEmail");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "NotificationReadReceipt_readAt_idx" ON "NotificationReadReceipt"("readAt");`);
 
     await p.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "MeetingAnalysis" (

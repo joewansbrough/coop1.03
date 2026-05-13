@@ -214,12 +214,25 @@ model Notification {
   actionUrl          String?
   readAt             DateTime?
   createdAt          DateTime @default(now())
+  readReceipts       NotificationReadReceipt[]
 
   @@index([cooperativeId])
   @@index([recipientUserEmail])
   @@index([readAt])
   @@index([createdAt])
   @@index([type])
+}
+
+model NotificationReadReceipt {
+  id             String       @id @default(uuid())
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  userEmail      String
+  readAt         DateTime     @default(now())
+
+  @@unique([notificationId, userEmail])
+  @@index([userEmail])
+  @@index([readAt])
 }
 
 model Announcement {
