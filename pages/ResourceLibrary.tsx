@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { pdf } from '@react-pdf/renderer';
 import { geminiService } from '../services/geminiService';
 import { Document, Committee } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,12 +9,13 @@ import DriveExplorer from '../components/DriveExplorer';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
 
-import { isDemoMode, useUser, useRefreshData } from '../hooks/useCoopData';
+import { isDemoMode, useUser, useRefreshData, useEvents, useMinutes } from '../hooks/useCoopData';
 import { formatDate } from '../utils/dateUtils';
 import { recordTutorialEvent } from '../utils/demoTutorial';
-import { getDocumentFileUrl, getDocumentLibraryOriginalUrl } from '../utils/dashboardDocumentLinks';
+import { getDocumentFileUrl, getDocumentLibraryDestination, getDocumentLibraryOriginalUrl, getMinutesEventId } from '../utils/dashboardDocumentLinks';
 import { demoStorage } from '../utils/demoStorage';
 import { sortNewestFirst } from '../utils/contentOrdering';
+import { MinutesPDF } from '../services/export/pdfGenerator';
 
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
@@ -24,8 +26,11 @@ const ResourceLibrary: React.FC<{
   isDocumentsLoading?: boolean,
   isDocumentsError?: boolean
 }> = ({ isAdmin, isGuest = false, documents, setDocuments, committees = [] }) => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { data: user } = useUser();
+  const { data: calendarEvents = [] } = useEvents();
+  const { data: minutesList = [] } = useMinutes();
   const refreshData = useRefreshData();
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
@@ -129,6 +134,56 @@ const ResourceLibrary: React.FC<{
     }
   };
 
+  const getMinutesPdfContext = (doc: Document) => {
+    const eventId = getMinutesEventId(doc);
+    const event = calendarEvents.find(item => item.id === eventId);
+    const minutes = minutesList.find(item => item.meetingId === eventId) as any;
+
+    if (!eventId || !event || !minutes) return null;
+
+    return {
+      event,
+      minutesData: {
+        ...minutes,
+        formData: minutes.formData || minutes.data,
+      },
+    };
+  };
+
+  const createMinutesPdfUrl = async (doc: Document) => {
+    const context = getMinutesPdfContext(doc);
+    if (!context) return null;
+
+    const blob = await pdf(<MinutesPDF data={context.minutesData} event={context.event} />).toBlob();
+    return URL.createObjectURL(blob);
+  };
+
+  const handleViewOriginalFile = async (doc: Document, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const launchUrl = getLaunchUrl(doc);
+
+    if (launchUrl) {
+      window.open(launchUrl, '_blank', 'noopener,noreferrer');
+      if (launchUrl.startsWith('blob:')) {
+        window.setTimeout(() => URL.revokeObjectURL(launchUrl), 30000);
+      }
+      return;
+    }
+
+    try {
+      const minutesPdfUrl = await createMinutesPdfUrl(doc);
+      if (!minutesPdfUrl) {
+        showAlert('No original file is attached to this document yet.', 'info');
+        return;
+      }
+      window.open(minutesPdfUrl, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(minutesPdfUrl), 30000);
+    } catch (error) {
+      console.error('Minutes PDF view error:', error);
+      showAlert('Unable to generate the minutes PDF copy.', 'error');
+    }
+  };
+
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertMessage({ message, type });
     window.setTimeout(() => setAlertMessage(null), 5000);
@@ -165,7 +220,21 @@ const ResourceLibrary: React.FC<{
       setShowUpload(true);
       setUploadMode('file');
     }
-  }, [searchParams, isAdmin, isGuest]);
+    
+    const id = searchParams.get('id');
+    if (id && Array.isArray(documents)) {
+      const doc = documents.find(d => d.id === id);
+      if (doc) {
+        setReviewingDoc(doc);
+        setSearch(''); // Clear search if viewing specific ID
+      }
+    }
+
+    const searchQuery = searchParams.get('search');
+    if (searchQuery) {
+      setSearch(searchQuery);
+    }
+  }, [searchParams, isAdmin, isGuest, documents]);
 
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {
@@ -338,15 +407,25 @@ const ResourceLibrary: React.FC<{
     setFilter(cat);
   };
 
-  const handleDownload = (doc: Document, e?: React.MouseEvent) => {
+  const handleDownload = async (doc: Document, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (!getDocumentFileUrl(doc)) {
-      showAlert('This document is stored in the secure association vault. Open it from the viewer instead.', 'info');
+
+    let launchUrl = getLaunchUrl(doc, true);
+    if (!launchUrl) {
+      try {
+        launchUrl = await createMinutesPdfUrl(doc);
+      } catch (error) {
+        console.error('Minutes PDF download error:', error);
+        showAlert('Unable to generate the minutes PDF copy.', 'error');
+        return;
+      }
+    }
+
+    if (!launchUrl) {
+      showAlert('No downloadable file is attached to this document yet.', 'info');
       return;
     }
 
-    const launchUrl = getLaunchUrl(doc, true);
-    if (!launchUrl) return;
     const link = window.document.createElement('a');
     link.href = launchUrl;
     link.download = getDocumentFileName(doc);
@@ -362,11 +441,19 @@ const ResourceLibrary: React.FC<{
 
   const handleViewDoc = (doc: Document) => {
     recordTutorialEvent('document_opened');
-    if (getDocumentFileUrl(doc)) {
-      openDocument(doc);
-    } else {
+    const destination = getDocumentLibraryDestination(doc, { isAdmin: isAdmin && !isGuest });
+
+    if (destination.type === 'review') {
       setReviewingDoc(getDocumentWithInferredCommittee(doc));
+      return;
     }
+
+    if (destination.type === 'route') {
+      navigate(destination.href);
+      return;
+    }
+
+    openDocument(doc);
   };
 
   const handleAskAI = async (e: React.FormEvent) => {
@@ -590,7 +677,7 @@ const ResourceLibrary: React.FC<{
   };
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500" data-demo-target="governance-archive">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="space-y-2 lg:space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -617,7 +704,7 @@ const ResourceLibrary: React.FC<{
             </p>
           </div>
           {isAdmin && !isGuest && (
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row" data-demo-target="document-upload-actions">
               <button
                 onClick={() => {
                   setShowUpload(true);
@@ -649,7 +736,7 @@ const ResourceLibrary: React.FC<{
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDocs.map(doc => {
+          {filteredDocs.map((doc, index) => {
             const fileUrl = getDocumentFileUrl(doc);
             const isCloud = fileUrl?.includes('drive.google.com');
             const ingestion = getIngestionDisplay(doc);
@@ -657,6 +744,7 @@ const ResourceLibrary: React.FC<{
               <div
                 key={doc.id}
                 onClick={() => handleViewDoc(doc)}
+                data-demo-target={index === 0 ? 'document-first-card' : undefined}
                 className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-brand-300 dark:hover:border-brand-600 transition-all group flex flex-col cursor-pointer active:scale-[0.98]"
               >
                 <div className="flex items-start gap-4 mb-4">
@@ -890,7 +978,7 @@ const ResourceLibrary: React.FC<{
                     <h4 className="text-lg font-black text-slate-800 dark:text-white mb-2 uppercase tracking-tight">Streamlined Metadata View</h4>
                     <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-xs">Association documents are now stored externally. Managing metadata below will update the searchable archive.</p>
                     <button
-                      onClick={() => handleViewDoc(reviewingDoc)}
+                      onClick={(e) => handleViewOriginalFile(reviewingDoc, e)}
                       className={`mt-8 ${getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'bg-blue-600 hover:bg-brand-600' : 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-brand-600 dark:hover:bg-brand-600'} px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all`}
                     >
                       <i className="fa-solid fa-arrow-up-right-from-square"></i>

@@ -1,8 +1,9 @@
-import React from 'react';
-import { ArrowRight, Presentation, ShieldCheck, UserRound } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowRight, MousePointer2, Presentation, ShieldCheck, UserRound } from 'lucide-react';
 import {
   createInitialTutorialState,
   DEMO_TUTORIAL_ROLE_VIEW_KEY,
+  DEMO_TUTORIAL_STORAGE_KEY,
   DEMO_TUTORIAL_TRACKS,
   getVisibleTutorialTracks,
   saveTutorialState,
@@ -10,6 +11,12 @@ import {
   type DemoTutorialTrackId,
 } from '../utils/demoTutorial';
 import { initializeDemoStorage } from '../utils/demoStorage';
+import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
+import {
+  preloadAutoDemoSpeech,
+  subscribeAutoDemoSpeech,
+  type AutoDemoSpeechSnapshot,
+} from '../utils/autoDemoSpeech';
 
 interface DemoTrackPickerProps {
   onStart: () => void;
@@ -23,9 +30,18 @@ const trackIcons: Record<DemoTutorialTrackId, React.ReactNode> = {
 };
 
 const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) => {
+  const [isPreparingAutoDemo, setIsPreparingAutoDemo] = useState(false);
+  const [speechSnapshot, setSpeechSnapshot] = useState<AutoDemoSpeechSnapshot | null>(null);
+
+  useEffect(() => {
+    if (!isPreparingAutoDemo) return undefined;
+    return subscribeAutoDemoSpeech(setSpeechSnapshot);
+  }, [isPreparingAutoDemo]);
+
   const startTrack = (trackId: DemoTutorialTrackId) => {
     const track = DEMO_TUTORIAL_TRACKS.find(item => item.id === trackId);
     localStorage.setItem('demo_mode', 'true');
+    localStorage.removeItem(AUTO_DEMO_STORAGE_KEY);
     initializeDemoStorage();
     saveTutorialState(createInitialTutorialState(trackId));
     localStorage.setItem(DEMO_TUTORIAL_ROLE_VIEW_KEY, track?.startAsResident ? 'true' : 'false');
@@ -35,10 +51,63 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
 
   const skipTour = () => {
     skipDemoTutorial();
+    localStorage.removeItem(AUTO_DEMO_STORAGE_KEY);
     initializeDemoStorage();
     window.location.hash = '/';
     onStart();
   };
+
+  const startAutoDemo = async () => {
+    setIsPreparingAutoDemo(true);
+    localStorage.setItem('demo_mode', 'true');
+    localStorage.setItem(AUTO_DEMO_STORAGE_KEY, 'true');
+    localStorage.removeItem(DEMO_TUTORIAL_STORAGE_KEY);
+    localStorage.setItem(DEMO_TUTORIAL_ROLE_VIEW_KEY, 'false');
+    initializeDemoStorage();
+    await preloadAutoDemoSpeech();
+    window.location.hash = '/';
+    onStart();
+  };
+
+  if (isPreparingAutoDemo) {
+    const total = speechSnapshot?.total || 1;
+    const completed = speechSnapshot?.completed || 0;
+    const progress = Math.min(100, Math.round((completed / total) * 100));
+
+    return (
+      <div className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950 text-white">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(20,184,166,0.26),transparent_32%),radial-gradient(circle_at_70%_80%,rgba(45,212,191,0.18),transparent_30%)]" />
+        <div className="relative mx-5 w-full max-w-md text-center">
+          <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-[2rem] bg-white/10 text-teal-200 shadow-2xl shadow-teal-950/30">
+            <MousePointer2 className="h-9 w-9 animate-pulse" />
+          </div>
+          <p className="mb-3 text-[10px] font-black uppercase tracking-[0.26em] text-teal-300">Automated Demo</p>
+          <h2 className="text-3xl font-black tracking-tight">Preparing Demonstration Session</h2>
+          <div className="mt-8 overflow-hidden rounded-full bg-white/10">
+            <div className="h-2 rounded-full bg-teal-400 transition-all duration-500" style={{ width: `${progress}%` }} />
+          </div>
+          <p className="mt-4 text-xs font-bold uppercase tracking-widest text-slate-300">
+            {completed} of {total} ready
+          </p>
+          <div className="mx-auto mt-8 flex w-28 justify-between">
+            {[0, 1, 2].map(index => (
+              <span
+                key={index}
+                className="h-3 w-3 rounded-full bg-teal-300"
+                style={{ animation: `auto-demo-loading-dot 900ms ease-in-out ${index * 140}ms infinite alternate` }}
+              />
+            ))}
+          </div>
+          <style>{`
+            @keyframes auto-demo-loading-dot {
+              from { opacity: 0.35; transform: translateY(0); }
+              to { opacity: 1; transform: translateY(-10px); }
+            }
+          `}</style>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[300] bg-slate-950/80 backdrop-blur-md flex sm:items-center sm:justify-center sm:p-4">
@@ -80,6 +149,23 @@ const DemoTrackPicker: React.FC<DemoTrackPickerProps> = ({ onStart, onCancel }) 
               </div>
             </button>
           ))}
+          <button
+            type="button"
+            onClick={startAutoDemo}
+            className="text-left p-4 sm:p-5 rounded-2xl border border-teal-200 dark:border-teal-900/40 bg-teal-50 dark:bg-teal-950/20 hover:border-teal-500 hover:bg-white dark:hover:bg-slate-900 transition-all group active:scale-[0.98] flex items-center sm:items-start gap-4 sm:gap-0 sm:flex-col sm:min-h-[220px]"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-slate-950 text-teal-300 flex items-center justify-center sm:mb-5 group-hover:scale-105 transition-transform shrink-0">
+              <MousePointer2 className="w-6 h-6" />
+            </div>
+            <div className="min-w-0 flex-1 sm:flex sm:flex-col sm:min-h-[144px]">
+              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Automated Spotlight Demo</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed mt-1.5 sm:mt-2">A guided sales story that moves the cursor, highlights product value, and waits at each stop.</p>
+              <div className="mt-4 sm:mt-auto sm:pt-6 flex min-w-0 items-center justify-between gap-3 text-teal-600 dark:text-teal-400">
+                <span className="min-w-0 break-words text-[10px] font-black uppercase leading-snug">7 spotlight stops</span>
+                <ArrowRight className="w-4 h-4 shrink-0 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </button>
           <button
             type="button"
             onClick={skipTour}

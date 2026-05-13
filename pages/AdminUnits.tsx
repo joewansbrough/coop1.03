@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Unit, Tenant } from '../types';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
-import { useCreateUnit } from '../hooks/useCoopData';
+import { useBuildings, useCreateUnit } from '../hooks/useCoopData';
+import { groupUnitsByBuildingAndFloor } from '../utils/buildingHierarchy';
 
 const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetStateAction<Unit[]>>, tenants: Tenant[] }> = ({ units, setUnits, tenants }) => {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
   const [number, setNumber] = useState('');
   const [type, setType] = useState<'1BR' | '2BR' | '3BR' | '4BR'>('2BR');
   const [floor, setFloor] = useState(1);
+  const [buildingId, setBuildingId] = useState('');
+  const { data: buildings = [] } = useBuildings();
 
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertMessage({ message, type });
@@ -30,6 +33,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
       number,
       type,
       floor,
+      buildingId: buildingId || buildings[0]?.id,
       status: 'Vacant',
     };
 
@@ -38,6 +42,7 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
         setUnits([...units, data]);
         setShowAddModal(false);
         setNumber('');
+        setBuildingId('');
         showAlert('New unit added to association inventory.', 'success');
       },
       onError: () => showAlert('Failed to add unit.', 'error')
@@ -51,19 +56,11 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
       return matchesFilter && matchesSearch;
     });
 
-  const unitsByFloor = sortedUnits.reduce((acc, unit) => {
-    const floor = unit.floor || 0;
-    if (!acc[floor]) acc[floor] = [];
-    acc[floor].push(unit);
-    return acc;
-  }, {} as Record<number, Unit[]>);
-
-  const sortedFloors = Object.keys(unitsByFloor)
-    .map(Number)
-    .sort((a, b) => a - b);
+  const unitsByBuilding = groupUnitsByBuildingAndFloor(sortedUnits, buildings);
+  const sortedBuildingNames = Object.keys(unitsByBuilding);
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all" data-demo-target="admin-units-page">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -101,6 +98,15 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
                 <input type="text" required value={number} onChange={e => setNumber(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white" placeholder="e.g. 402" />
               </div>
               <div className="grid grid-cols-2 gap-4">
+                {buildings.length > 1 && (
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Building</label>
+                    <select value={buildingId} onChange={e => setBuildingId(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white">
+                      <option value="">Default building</option>
+                      {buildings.map(building => <option key={building.id} value={building.id}>{building.name}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Unit Type</label>
                   <select value={type} onChange={e => setType(e.target.value as any)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white">
@@ -124,16 +130,19 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
       )}
 
       <div className="space-y-12">
-        {sortedFloors.length > 0 ? sortedFloors.map(floor => (
-          <div key={floor} className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest border border-slate-200 dark:border-white/5 shadow-sm">
-                Floor {floor}
-              </div>
-              <div className="h-px bg-slate-100 dark:bg-slate-800 flex-1"></div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {unitsByFloor[floor].sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true })).map(unit => {
+        {sortedBuildingNames.length > 0 ? sortedBuildingNames.map((buildingName, buildingIndex) => (
+          <div key={buildingName} className="space-y-8">
+            {sortedBuildingNames.length > 1 && <h3 className="text-sm font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{buildingName}</h3>}
+            {Object.keys(unitsByBuilding[buildingName]).map(Number).sort((a, b) => a - b).map((floor, floorIndex) => (
+              <div key={`${buildingName}-${floor}`} className="space-y-6">
+                <div className="flex items-center gap-4" data-demo-target={buildingIndex === 0 && floorIndex === 0 ? 'admin-units-floor-group' : undefined}>
+                  <div className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest border border-slate-200 dark:border-white/5 shadow-sm">
+                    {sortedBuildingNames.length > 1 ? `${buildingName} - ` : ''}Floor {floor}
+                  </div>
+                  <div className="h-px bg-slate-100 dark:bg-slate-800 flex-1"></div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {unitsByBuilding[buildingName][floor].sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true })).map(unit => {
                 const tenant = tenants.find(t => t.id === unit.currentTenantId);
                 return (
                   <div 
@@ -174,7 +183,9 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
                   </div>
                 );
               })}
+                </div>
             </div>
+            ))}
           </div>
         )) : (
           <div className="py-20 text-center border-2 border-dashed border-slate-100 dark:border-white/5 rounded-[2.5rem]">

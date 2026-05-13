@@ -1,4 +1,4 @@
-import { CoopEvent } from '../types';
+import type { CoopEvent } from '../types';
 
 export type EventEditPayload = Pick<CoopEvent, 'title' | 'category' | 'date' | 'time' | 'location' | 'description'> & {
   committeeId: string | null;

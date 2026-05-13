@@ -51,6 +51,13 @@ function formatDate(iso?: string) {
     return new Date(iso).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+const isDemoMode = () => typeof window !== 'undefined' && window.localStorage.getItem('demo_mode') === 'true';
+
+const fetchDrive = (url: string) =>
+    fetch(url, {
+        headers: isDemoMode() ? { 'x-coophub-demo-mode': 'true' } : undefined,
+    });
+
 const DriveExplorer: React.FC = () => {
     const [contents, setContents] = useState<DriveFolderContents | null>(null);
     const [rootDetails, setRootDetails] = useState<RootDetail[]>([]);
@@ -79,7 +86,7 @@ const DriveExplorer: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch('/api/drive/root');
+            const res = await fetchDrive('/api/drive/root');
             if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.error || 'Failed to load documents');
@@ -117,7 +124,7 @@ const DriveExplorer: React.FC = () => {
         setSearch('');
         setSearchResults(null);
         try {
-            const res = await fetch(`/api/drive/folders/${root.id}/contents`);
+            const res = await fetchDrive(`/api/drive/folders/${root.id}/contents`);
             if (!res.ok) throw new Error('Failed to load folder');
             const data = await res.json();
             setIsAtRootLevel(false);
@@ -138,7 +145,7 @@ const DriveExplorer: React.FC = () => {
         setSearch('');
         setSearchResults(null);
         try {
-            const res = await fetch(`/api/drive/folders/${folder.id}/contents`);
+            const res = await fetchDrive(`/api/drive/folders/${folder.id}/contents`);
             if (!res.ok) throw new Error('Failed to load folder');
             const data = await res.json();
             setIsAtRootLevel(false);
@@ -168,7 +175,7 @@ const DriveExplorer: React.FC = () => {
                 setLoading(false);
                 return;
             }
-            const res = await fetch(`/api/drive/folders/${crumb.id}/contents`);
+            const res = await fetchDrive(`/api/drive/folders/${crumb.id}/contents`);
             if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.error || 'Failed to navigate');
@@ -190,7 +197,7 @@ const DriveExplorer: React.FC = () => {
         if (!term.trim()) { setSearchResults(null); return; }
         setSearching(true);
         try {
-            const res = await fetch(`/api/drive/search?q=${encodeURIComponent(term)}`);
+            const res = await fetchDrive(`/api/drive/search?q=${encodeURIComponent(term)}`);
             if (!res.ok) throw new Error('Search failed');
             const data = await res.json();
             setSearchResults(data.files);

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
-import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent, ScheduledMaintenance, MinutesTemplate } from '../types';
+import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent, ScheduledMaintenance, MinutesTemplate, Building, Notification } from '../types';
 import * as demoData from '../utils/demoData';
 import { demoStorage } from '../utils/demoStorage';
 
@@ -251,6 +251,78 @@ export const useScheduledMaintenance = (options?: DataQueryOptions<ScheduledMain
   ...dataQueryConfig,
   ...options,
 });
+
+export const useBuildings = (options?: DataQueryOptions<Building[]>) => useQuery<Building[]>({
+  queryKey: ['buildings'],
+  queryFn: () => isDemoMode() ? Promise.resolve(demoStorage.getBuildings()) : fetchJson('/api/buildings'),
+  ...dataQueryConfig,
+  ...options,
+});
+
+export const useNotifications = (options?: DataQueryOptions<Notification[]>) => useQuery<Notification[]>({
+  queryKey: ['notifications'],
+  queryFn: () => isDemoMode() ? Promise.resolve(demoStorage.getNotifications()) : fetchJson('/api/notifications'),
+  ...dataQueryConfig,
+  ...options,
+});
+
+export const useCreateNotification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notification: Omit<Notification, 'id' | 'createdAt' | 'isRead'>) => {
+      if (isDemoMode()) {
+        const item = {
+          ...notification,
+          id: `notification-${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          isRead: false,
+        } as Notification;
+        demoStorage.addNotification(item);
+        return item;
+      }
+      return fetchJson('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notification),
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+};
+
+export const useMarkNotificationRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (notification: Notification) => {
+      if (isDemoMode()) {
+        const updated = {
+          ...notification,
+          readAt: notification.readAt || new Date().toISOString(),
+          isRead: true,
+        };
+        demoStorage.updateNotification(updated);
+        return updated;
+      }
+      return fetchJson(`/api/notifications/${notification.id}/read`, { method: 'PUT' });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+};
+
+export const useMarkAllNotificationsRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (isDemoMode()) {
+        const readAt = new Date().toISOString();
+        demoStorage.getNotifications().forEach(notification => demoStorage.updateNotification({ ...notification, readAt, isRead: true }));
+        return { success: true };
+      }
+      return fetchJson('/api/notifications/read-all', { method: 'PUT' });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+};
 
 export const useRefreshData = () => {
   const queryClient = useQueryClient();

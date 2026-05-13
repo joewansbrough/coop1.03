@@ -1,0 +1,213 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {
+  AUTO_DEMO_SECTIONS,
+  AUTO_DEMO_STOPS,
+  AUTO_DEMO_TIMING,
+  getAutoDemoSectionForIndex,
+  getAutoDemoSectionForTarget,
+  getAutoDemoSectionStartIndex,
+  getAutoDemoPanelPlacement,
+  getAutoDemoStop,
+  getNextAutoDemoIndex,
+  getPreviousAutoDemoIndex,
+  isAutoDemoStopIndex,
+} from '../utils/autoDemo.ts';
+
+test('defines a guided onboarding demo in the expected order', () => {
+  assert.deepEqual(
+    AUTO_DEMO_STOPS.map(stop => stop.id),
+    [
+      'welcome',
+      'mission-control',
+      'dashboard-maintenance-tile',
+      'dashboard-customize',
+      'dashboard-tile-catalog',
+      'dashboard-next-meeting',
+      'open-calendar',
+      'calendar-space',
+      'calendar-actions',
+      'calendar-month-grid',
+      'calendar-event-list',
+      'open-calendar-event',
+      'calendar-event-details',
+      'calendar-event-participation',
+      'open-meeting-minutes',
+      'meeting-record-actions',
+      'meeting-record-scroll',
+      'open-linked-documents',
+      'governance-archive',
+      'document-upload-workflow',
+      'document-card-workflow',
+      'open-committees',
+      'committee-space',
+      'open-committee-detail',
+      'committee-detail-workflow',
+      'committee-meeting-workflow',
+      'committee-document-workflow',
+      'open-communications',
+      'communications-space',
+      'communications-new-broadcast',
+      'communications-first-broadcast',
+      'open-maintenance',
+      'maintenance-queue',
+      'open-maintenance-detail',
+      'maintenance-detail',
+      'maintenance-status',
+      'maintenance-update-log',
+      'maintenance-categories',
+      'maintenance-export',
+      'open-unit-from-maintenance',
+      'unit-intelligence',
+      'unit-maintenance-tab',
+      'unit-schedule-tab',
+      'unit-members-tab',
+      'unit-history-tab',
+      'unit-documents-tab',
+      'open-units-admin',
+      'units-admin-workflow',
+      'open-tenants-admin',
+      'tenants-admin-workflow',
+      'open-directory-admin',
+      'directory-admin-workflow',
+      'open-waitlist-admin',
+      'waitlist-admin-workflow',
+      'open-policy-assistant',
+      'policy-assistant',
+      'policy-assistant-question',
+      'policy-assistant-answer',
+      'resident-view',
+    ],
+  );
+});
+
+test('every stop has route target and onboarding copy', () => {
+  for (const stop of AUTO_DEMO_STOPS) {
+    assert.match(stop.route, /^\//);
+    assert.match(stop.target, /^[a-z0-9-]+$/);
+    assert.ok(stop.title.length >= 8);
+    assert.ok(stop.body.length >= 80);
+    assert.ok(stop.keyCapability.length >= 40);
+    assert.doesNotMatch(`${stop.title} ${stop.body} ${stop.keyCapability}`, /customer|selling point|investor|product/i);
+    assert.doesNotMatch(`${stop.title} ${stop.body} ${stop.keyCapability}`, /\bdemo\b|new users|users can|users see|so users|the tour|the wizard/i);
+  }
+});
+
+test('defines explicit click-through navigation steps for maintenance and meeting minutes', () => {
+  const byId = new Map(AUTO_DEMO_STOPS.map(stop => [stop.id, stop]));
+
+  assert.equal(byId.get('open-maintenance')?.route, '/communications');
+  assert.equal(byId.get('open-maintenance')?.target, 'nav-maintenance');
+  assert.equal(byId.get('open-maintenance')?.routeAfterClick, '/maintenance');
+  assert.equal(byId.get('open-maintenance-detail')?.routeAfterClick, '/admin/maintenance/m1');
+  assert.equal(byId.get('open-unit-from-maintenance')?.target, 'maintenance-unit-link');
+  assert.equal(byId.get('open-unit-from-maintenance')?.routeAfterClick, '/admin/units/u1');
+
+  assert.equal(byId.get('dashboard-customize')?.action, 'toggle-dashboard-customize');
+  assert.equal(byId.get('dashboard-next-meeting')?.routeAfterClick, undefined);
+  assert.equal(byId.get('open-calendar')?.target, 'nav-calendar');
+  assert.equal(byId.get('open-calendar')?.routeAfterClick, '/calendar');
+  assert.equal(byId.get('open-calendar-event')?.target, 'calendar-demo-event');
+  assert.equal(byId.get('open-calendar-event')?.routeAfterClick, '/calendar/e1');
+  assert.equal(byId.get('calendar-event-details')?.target, 'event-details-overview');
+  assert.equal(byId.get('open-meeting-minutes')?.target, 'meeting-minutes-tab');
+  assert.equal(byId.get('open-meeting-minutes')?.routeAfterClick, '/calendar/e1?tab=minutes');
+  assert.equal(byId.get('meeting-record-actions')?.target, 'meeting-record-actions');
+  assert.equal(byId.get('meeting-record-scroll')?.scrollMode, 'minutes-record');
+  assert.equal(byId.get('open-linked-documents')?.target, 'meeting-documents-link');
+  assert.equal(byId.get('open-linked-documents')?.routeAfterClick, '/documents');
+
+  assert.equal(byId.get('open-committees')?.target, 'nav-committees');
+  assert.equal(byId.get('open-committees')?.routeAfterClick, '/committees');
+  assert.equal(byId.get('open-committee-detail')?.routeAfterClick, '/committees?id=c1');
+  assert.equal(byId.get('open-communications')?.target, 'nav-communications');
+  assert.equal(byId.get('open-communications')?.routeAfterClick, '/communications');
+
+  assert.equal(byId.get('unit-maintenance-tab')?.routeAfterClick, '/admin/units/u1?tab=maintenance');
+  assert.equal(byId.get('unit-schedule-tab')?.routeAfterClick, '/admin/units/u1?tab=schedule');
+  assert.equal(byId.get('unit-members-tab')?.routeAfterClick, '/admin/units/u1?tab=occupancy');
+  assert.equal(byId.get('unit-history-tab')?.routeAfterClick, '/admin/units/u1?tab=history');
+  assert.equal(byId.get('unit-documents-tab')?.routeAfterClick, '/admin/units/u1?tab=documents');
+  assert.equal(byId.get('open-units-admin')?.routeAfterClick, '/admin/units');
+  assert.equal(byId.get('open-tenants-admin')?.routeAfterClick, '/admin/tenants');
+  assert.equal(byId.get('open-directory-admin')?.routeAfterClick, '/directory');
+  assert.equal(byId.get('open-waitlist-admin')?.routeAfterClick, '/admin/waitlist');
+  assert.equal(byId.get('open-policy-assistant')?.routeAfterClick, '/policy-assistant');
+  assert.equal(byId.get('policy-assistant-question')?.action, 'ask-policy-demo');
+});
+
+test('sidebar transition steps start from the current tour page instead of dashboard', () => {
+  const byId = new Map(AUTO_DEMO_STOPS.map(stop => [stop.id, stop]));
+
+  assert.equal(byId.get('open-committees')?.route, '/documents');
+  assert.equal(byId.get('open-communications')?.route, '/committees?id=c1');
+  assert.equal(byId.get('open-maintenance')?.route, '/communications');
+  assert.equal(byId.get('open-units-admin')?.route, '/admin/units/u1?tab=documents');
+  assert.equal(byId.get('open-tenants-admin')?.route, '/admin/units');
+  assert.equal(byId.get('open-directory-admin')?.route, '/admin/tenants');
+  assert.equal(byId.get('open-waitlist-admin')?.route, '/directory');
+  assert.equal(byId.get('open-policy-assistant')?.route, '/admin/waitlist');
+  assert.equal(byId.get('resident-view')?.route, '/policy-assistant');
+});
+
+test('defines numbered menu sections for page-level guided stops', () => {
+  assert.deepEqual(
+    AUTO_DEMO_SECTIONS.map(section => section.title),
+    [
+      'Dashboard',
+      'Calendar',
+      'Documents',
+      'Committees',
+      'Communications',
+      'Maintenance',
+      'Unit Detail',
+      'Unit Inventory',
+      'Members',
+      'Directory',
+      'Waitlist',
+      'Policy Assistant',
+      'Resident View',
+    ],
+  );
+
+  assert.equal(getAutoDemoSectionStartIndex('calendar'), AUTO_DEMO_STOPS.findIndex(stop => stop.id === 'open-calendar'));
+  assert.equal(getAutoDemoSectionForTarget('nav-maintenance')?.id, 'maintenance');
+  assert.equal(getAutoDemoSectionForIndex(AUTO_DEMO_STOPS.findIndex(stop => stop.id === 'committee-meeting-workflow'))?.title, 'Committees');
+  assert.equal(getAutoDemoSectionForIndex(0), null);
+});
+
+test('looks up stops only for valid indices', () => {
+  assert.equal(isAutoDemoStopIndex(0), true);
+  assert.equal(isAutoDemoStopIndex(AUTO_DEMO_STOPS.length - 1), true);
+  assert.equal(isAutoDemoStopIndex(-1), false);
+  assert.equal(isAutoDemoStopIndex(AUTO_DEMO_STOPS.length), false);
+  assert.equal(getAutoDemoStop(0)?.id, 'welcome');
+  assert.equal(getAutoDemoStop(AUTO_DEMO_STOPS.length), null);
+});
+
+test('progress helpers clamp at tour boundaries', () => {
+  assert.equal(getNextAutoDemoIndex(0), 1);
+  assert.equal(getNextAutoDemoIndex(AUTO_DEMO_STOPS.length - 1), AUTO_DEMO_STOPS.length - 1);
+  assert.equal(getPreviousAutoDemoIndex(1), 0);
+  assert.equal(getPreviousAutoDemoIndex(0), 0);
+});
+
+test('uses a staged cursor reveal before opening the narration panel', () => {
+  assert.ok(AUTO_DEMO_TIMING.cursorTravelMs >= 1000);
+  assert.ok(AUTO_DEMO_TIMING.arrivalHoldMs >= 500);
+  assert.ok(AUTO_DEMO_TIMING.panelDelayMs >= AUTO_DEMO_TIMING.cursorTravelMs + AUTO_DEMO_TIMING.arrivalHoldMs);
+  assert.ok(AUTO_DEMO_TIMING.clickPulseMs >= 500);
+});
+
+test('keeps the narration panel inside small viewport bounds', () => {
+  const placement = getAutoDemoPanelPlacement({
+    rect: { top: 620, left: 930, width: 180, height: 90 },
+    viewportWidth: 1024,
+    viewportHeight: 700,
+  });
+
+  assert.ok(placement.left >= 16);
+  assert.ok(placement.top >= 16);
+  assert.ok(placement.left + placement.width <= 1024 - 16);
+  assert.ok(placement.top + placement.maxHeight <= 700 || placement.maxHeight <= 700 - 32);
+});

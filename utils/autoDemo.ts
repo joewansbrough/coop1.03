@@ -1,0 +1,676 @@
+export const AUTO_DEMO_STORAGE_KEY = 'auto_demo_active';
+
+export const AUTO_DEMO_TIMING = {
+  measureDelayMs: 450,
+  cursorTravelMs: 1200,
+  arrivalHoldMs: 650,
+  panelDelayMs: 1850,
+  clickPulseMs: 650,
+} as const;
+
+export type AutoDemoAction = 'switch-role' | 'toggle-dashboard-customize' | 'ask-policy-demo';
+export type AutoDemoScrollMode = 'top' | 'target' | 'dashboard-preview' | 'minutes-record';
+
+export interface AutoDemoStop {
+  id: string;
+  route: string;
+  target: string;
+  title: string;
+  body: string;
+  keyCapability: string;
+  routeAfterClick?: string;
+  scrollMode?: AutoDemoScrollMode;
+  action?: AutoDemoAction;
+}
+
+export interface AutoDemoSection {
+  id: string;
+  title: string;
+  startStopId: string;
+  navTarget?: string;
+}
+
+export const AUTO_DEMO_SECTIONS: AutoDemoSection[] = [
+  { id: 'dashboard', title: 'Dashboard', startStopId: 'mission-control', navTarget: 'nav-dashboard' },
+  { id: 'calendar', title: 'Calendar', startStopId: 'open-calendar', navTarget: 'nav-calendar' },
+  { id: 'documents', title: 'Documents', startStopId: 'governance-archive', navTarget: 'nav-documents' },
+  { id: 'committees', title: 'Committees', startStopId: 'open-committees', navTarget: 'nav-committees' },
+  { id: 'communications', title: 'Communications', startStopId: 'open-communications', navTarget: 'nav-communications' },
+  { id: 'maintenance', title: 'Maintenance', startStopId: 'open-maintenance', navTarget: 'nav-maintenance' },
+  { id: 'unit-detail', title: 'Unit Detail', startStopId: 'open-unit-from-maintenance' },
+  { id: 'unit-inventory', title: 'Unit Inventory', startStopId: 'open-units-admin', navTarget: 'nav-units' },
+  { id: 'members', title: 'Members', startStopId: 'open-tenants-admin', navTarget: 'nav-tenants' },
+  { id: 'directory', title: 'Directory', startStopId: 'open-directory-admin', navTarget: 'nav-directory' },
+  { id: 'waitlist', title: 'Waitlist', startStopId: 'open-waitlist-admin', navTarget: 'nav-waitlist' },
+  { id: 'policy-assistant', title: 'Policy Assistant', startStopId: 'open-policy-assistant', navTarget: 'nav-policy-assistant' },
+  { id: 'resident-view', title: 'Resident View', startStopId: 'resident-view' },
+];
+
+export const AUTO_DEMO_STOPS: AutoDemoStop[] = [
+  {
+    id: 'welcome',
+    route: '/',
+    target: 'dashboard-mission-control',
+    title: 'Welcome to your guided tour',
+    body: 'Welcome in. This tour will walk you through the everyday places where your co-op keeps work moving: the dashboard, calendar, meeting records, documents, maintenance, units, and resident tools.',
+    keyCapability: 'Use this first pass to get comfortable with the system, then follow the highlighted actions as each step introduces the next area.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'mission-control',
+    route: '/',
+    target: 'dashboard-mission-control',
+    title: 'Mission control for the board',
+    body: 'Start at the top of the board dashboard, where the day begins with maintenance load, planned work, upcoming meetings, quick actions, documents, and building health in one workspace.',
+    keyCapability: 'Board members save time because the important work is gathered before the meeting starts, instead of scattered across inboxes, spreadsheets, and file folders.',
+    scrollMode: 'dashboard-preview',
+  },
+  {
+    id: 'dashboard-maintenance-tile',
+    route: '/',
+    target: 'dashboard-tile-maintenance-pulse',
+    title: 'Spot maintenance before it piles up',
+    body: 'Dashboard tiles summarize open requests, priority, status, and recent movement so board members can see where attention is needed without opening five different reports.',
+    keyCapability: 'This gives volunteers a calmer starting point and helps urgent work get noticed earlier.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'dashboard-customize',
+    route: '/',
+    target: 'dashboard-customize',
+    title: 'Personalize the board view',
+    body: 'The dashboard is not fixed. Open customization to add, hide, resize, and reorder the tiles that matter to your board role.',
+    keyCapability: 'A treasurer, secretary, maintenance chair, and resident member can all keep the same source of truth while seeing a more useful daily view.',
+    scrollMode: 'top',
+    action: 'toggle-dashboard-customize',
+  },
+  {
+    id: 'dashboard-tile-catalog',
+    route: '/',
+    target: 'dashboard-tile-catalog',
+    title: 'Add and restore useful tiles',
+    body: 'The tile catalog makes dashboard setup approachable: restore hidden widgets, add role-specific information, and keep the dashboard from becoming cluttered.',
+    keyCapability: 'Adapt the dashboard as the co-op grows, keeping your workspace focused on the role and task at hand.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'dashboard-next-meeting',
+    route: '/',
+    target: 'dashboard-tile-next-meeting',
+    title: 'Preview upcoming meeting work',
+    body: 'Use the meeting tile as a quick preview of what is coming up next. The full event workflow appears once you reach Calendar, so this dashboard stop stays focused on orientation.',
+    keyCapability: 'The dashboard can surface important next steps without pulling you away from the main tour path.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-calendar',
+    route: '/',
+    target: 'nav-calendar',
+    title: 'Open the community calendar',
+    body: 'Meeting work starts where people already look for events: the Calendar. Open it from the sidebar so the navigation path is clear.',
+    keyCapability: 'Boards and residents share one calendar for governance, maintenance, and community events, which makes participation easier.',
+    routeAfterClick: '/calendar',
+    scrollMode: 'top',
+  },
+  {
+    id: 'calendar-space',
+    route: '/calendar',
+    target: 'calendar-page',
+    title: 'A shared community calendar',
+    body: 'The calendar combines board meetings, community events, maintenance windows, committee activity, imports, and exports in one place.',
+    keyCapability: 'Residents have fewer places to check, and boards can turn dates into working records instead of isolated reminders.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'calendar-actions',
+    route: '/calendar',
+    target: 'calendar-actions',
+    title: 'Import, export, and create events',
+    body: 'Calendar actions let admins add events, import outside calendars, and export an .ics file so the co-op calendar can stay connected to the tools people already use.',
+    keyCapability: 'The co-op does not have to abandon existing habits to become more organized.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'calendar-month-grid',
+    route: '/calendar',
+    target: 'calendar-month-grid',
+    title: 'A shared month view',
+    body: 'The month grid shows meetings, social events, maintenance windows, and board activity in the same place, with each event opening into its own record.',
+    keyCapability: 'Residents have a clearer picture of community life, and boards can plan around real activity instead of guessing.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'calendar-event-list',
+    route: '/calendar',
+    target: 'calendar-event-list',
+    title: 'Scan the month as a work list',
+    body: 'The side list turns the calendar into a scannable agenda, making it easier to find the next meeting or review a busy month.',
+    keyCapability: 'This saves time for board members preparing for meetings and gives residents a simple way to catch up.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-calendar-event',
+    route: '/calendar',
+    target: 'calendar-demo-event',
+    title: 'Open an event record',
+    body: 'From the calendar, open an AGM event. This is where meeting details, attendance, and minutes live together.',
+    keyCapability: 'The calendar stops being just a date list and becomes a clear path from event to shared community record.',
+    routeAfterClick: '/calendar/e1',
+    scrollMode: 'top',
+  },
+  {
+    id: 'calendar-event-details',
+    route: '/calendar/e1',
+    target: 'event-details-overview',
+    title: 'Review the Event Details tab',
+    body: 'Start on Event Details to review the meeting description, date, location, attendance, and admin edit controls before moving into minutes.',
+    keyCapability: 'People can understand the meeting before they read the record, which makes the system easier to follow for new board members and residents.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'calendar-event-participation',
+    route: '/calendar/e1',
+    target: 'event-attendance-actions',
+    title: 'Encourage attendance and collaboration',
+    body: 'The attendance area shows how residents can signal participation and how the event record becomes a community touchpoint, not just a board filing cabinet.',
+    keyCapability: 'This area shows how the system supports participation while still keeping formal governance records organized.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-meeting-minutes',
+    route: '/calendar/e1',
+    target: 'meeting-minutes-tab',
+    title: 'Open the Meeting Minutes tab',
+    body: 'Move from Event Details into the Meeting Minutes tab, following the same path a secretary or board chair would use after a meeting.',
+    keyCapability: 'Minutes are attached to the meeting itself, so the record is easier to find and easier to finish.',
+    routeAfterClick: '/calendar/e1?tab=minutes',
+    scrollMode: 'top',
+  },
+  {
+    id: 'meeting-record-actions',
+    route: '/calendar/e1?tab=minutes',
+    target: 'meeting-record-actions',
+    title: 'Edit, export, and connect records',
+    body: 'Meeting minutes can be edited, exported to PDF, and connected back to the document library so decisions do not disappear after the meeting ends.',
+    keyCapability: 'This frees up secretary time, keeps decisions accountable, and builds a usable archive for future board members.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'meeting-record-scroll',
+    route: '/calendar/e1?tab=minutes',
+    target: 'meeting-records',
+    title: 'Scroll through the community record',
+    body: 'Scroll through the read-only minutes to review motions, decisions, attendance, action items, and supporting context as one complete community record.',
+    keyCapability: 'A finished record is easier to trust, share, and revisit than scattered notes after the meeting.',
+    scrollMode: 'minutes-record',
+  },
+  {
+    id: 'open-linked-documents',
+    route: '/calendar/e1?tab=minutes',
+    target: 'meeting-documents-link',
+    title: 'Open linked documents',
+    body: 'The meeting record can jump directly to the document library, showing how minutes, attachments, bylaws, and governance records connect.',
+    keyCapability: 'Follow the practical path from calendar to meeting to archive, without duplicate filing work.',
+    routeAfterClick: '/documents',
+    scrollMode: 'target',
+  },
+  {
+    id: 'governance-archive',
+    route: '/documents',
+    target: 'governance-archive',
+    title: 'One home for governance records',
+    body: 'The document library organizes bylaws, policies, minutes, financial records, uploads, Drive-linked files, metadata, versions, and searchable archive status.',
+    keyCapability: 'The co-op gets fewer lost documents, fewer repeated questions, and a clearer path from records to answers.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'document-upload-workflow',
+    route: '/documents',
+    target: 'document-upload-actions',
+    title: 'Upload or link shared records',
+    body: 'Admins can upload files directly or link Google Drive records while keeping metadata, versions, and AI indexing status visible.',
+    keyCapability: 'Documents can move into one archive without forcing the co-op to redo every existing filing habit on day one.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'document-card-workflow',
+    route: '/documents',
+    target: 'document-first-card',
+    title: 'Every document becomes searchable context',
+    body: 'Document cards show category, source, tags, storage, ingestion status, and download or review actions.',
+    keyCapability: 'That structure turns old records into useful answers instead of a folder nobody wants to search.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-committees',
+    route: '/documents',
+    target: 'nav-committees',
+    title: 'Open community spaces',
+    body: 'Beyond records, move into the community tools that help people participate: committees and communications.',
+    keyCapability: 'The system supports belonging and shared work, not only administration.',
+    routeAfterClick: '/committees',
+    scrollMode: 'top',
+  },
+  {
+    id: 'committee-space',
+    route: '/committees',
+    target: 'community-committees',
+    title: 'Committees keep work organized',
+    body: 'Committee pages gather members, meetings, documents, and responsibilities so work can continue between board meetings.',
+    keyCapability: 'Volunteer energy is easier to direct when every committee has a visible home and a clear set of records.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'open-committee-detail',
+    route: '/committees',
+    target: 'committee-first-card',
+    title: 'Open a committee workspace',
+    body: 'Committee cards are gateways into the actual volunteer workspace: membership, meetings, documents, and ways to participate.',
+    keyCapability: 'Residents can find where to contribute, and board members can keep committee work visible between meetings.',
+    routeAfterClick: '/committees?id=c1',
+    scrollMode: 'target',
+  },
+  {
+    id: 'committee-detail-workflow',
+    route: '/committees?id=c1',
+    target: 'committee-detail-overview',
+    title: 'Keep committee ownership clear',
+    body: 'The committee overview shows mandate, active members, chair contact, and admin controls so responsibility is easier to understand.',
+    keyCapability: 'Clear ownership reduces dropped tasks and makes volunteer work feel more approachable.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'committee-meeting-workflow',
+    route: '/committees?id=c1',
+    target: 'committee-meetings',
+    title: 'Schedule and connect committee meetings',
+    body: 'Committee meetings stay attached to the committee and can link back into the shared calendar.',
+    keyCapability: 'This keeps committee work connected to governance instead of hidden in side conversations.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'committee-document-workflow',
+    route: '/committees?id=c1',
+    target: 'committee-documents',
+    title: 'Attach working documents to the committee',
+    body: 'Committee records can surface policies, minutes, proposals, and working documents that belong to that group.',
+    keyCapability: 'New volunteers can catch up faster because the history and current files are already gathered.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-communications',
+    route: '/committees?id=c1',
+    target: 'nav-communications',
+    title: 'Open communications',
+    body: 'Communications is where announcements and building-wide updates live, so residents know where to look for current information.',
+    keyCapability: 'Fewer missed updates means less confusion and a stronger sense that the co-op is communicating in one voice.',
+    routeAfterClick: '/communications',
+    scrollMode: 'top',
+  },
+  {
+    id: 'communications-space',
+    route: '/communications',
+    target: 'community-communications',
+    title: 'Broadcasts in one place',
+    body: 'Communications centralize urgent notices, routine updates, authorship, and announcement history.',
+    keyCapability: 'Residents do not have to piece together messages from hallway notes, email chains, and old chat threads.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'communications-new-broadcast',
+    route: '/communications',
+    target: 'communications-new-broadcast',
+    title: 'Create a building-wide broadcast',
+    body: 'Admins can publish urgent or routine updates from a dedicated communications space instead of relying on scattered email threads.',
+    keyCapability: 'Residents know where official updates live, and boards have a clearer record of what was communicated.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'communications-first-broadcast',
+    route: '/communications',
+    target: 'communications-first-broadcast',
+    title: 'Preserve announcement history',
+    body: 'Broadcast cards keep author, date, priority, and message content available after the initial notice is sent.',
+    keyCapability: 'The co-op can answer "what did we tell residents?" without searching old inboxes.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-maintenance',
+    route: '/communications',
+    target: 'nav-maintenance',
+    title: 'Open maintenance from the sidebar',
+    body: 'Follow the same path a board member would use: move to Maintenance in the sidebar, click it, and enter the shared maintenance workspace.',
+    keyCapability: 'This step teaches the navigation path first, so you know where to find maintenance again later.',
+    routeAfterClick: '/maintenance',
+    scrollMode: 'top',
+  },
+  {
+    id: 'maintenance-queue',
+    route: '/maintenance',
+    target: 'maintenance-operations',
+    title: 'A shared maintenance queue',
+    body: 'The queue shows open work, status, priority, unit context, AI triage hints, and recent history so the maintenance committee can decide what needs attention next.',
+    keyCapability: 'Residents get a simple place to report problems, and volunteers spend less time reconstructing the story before assigning work.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'open-maintenance-detail',
+    route: '/maintenance',
+    target: 'maintenance-first-request',
+    title: 'Open the actual work order',
+    body: 'A request is not just a row in a table. Open the work order to see the whole maintenance record behind it.',
+    keyCapability: 'Every repair can carry the unit, resident, notes, attachments, PDF export, and status history forward for the next board or committee.',
+    routeAfterClick: '/admin/maintenance/m1',
+  },
+  {
+    id: 'maintenance-detail',
+    route: '/admin/maintenance/m1',
+    target: 'maintenance-detail-record',
+    title: 'The complete repair record',
+    body: 'Inside the work order, staff can review workflow stage, priority, category, unit, resident, activity notes, and exportable documentation.',
+    keyCapability: 'This reduces repeat questions and helps the co-op keep a clean institutional memory for maintenance decisions.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'maintenance-status',
+    route: '/admin/maintenance/m1',
+    target: 'maintenance-status-in-progress',
+    title: 'Move work from pending to in progress',
+    body: 'Workflow controls make it clear when a request has been reviewed, assigned, started, completed, or cancelled.',
+    keyCapability: 'Residents and boards get a shared source of truth instead of wondering whether anyone has picked up the issue.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'maintenance-update-log',
+    route: '/admin/maintenance/m1',
+    target: 'maintenance-update-log',
+    title: 'Log staff updates',
+    body: 'Maintenance staff can add updates as work happens, creating a communication trail that stays attached to the request.',
+    keyCapability: 'This reduces repeated follow-up and keeps future boards from losing the story behind a repair.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'maintenance-categories',
+    route: '/admin/maintenance/m1',
+    target: 'maintenance-category-tags',
+    title: 'Tag the type of work',
+    body: 'Categories such as plumbing, appliance, safety, and exterior help the co-op sort work and understand what types of issues recur.',
+    keyCapability: 'Better categorization makes reporting, prioritization, and preventative planning easier over time.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'maintenance-export',
+    route: '/admin/maintenance/m1',
+    target: 'maintenance-export-pdf',
+    title: 'Export a complete work order',
+    body: 'The request can be exported to PDF with the unit, resident, status, notes, and supporting record in one package.',
+    keyCapability: 'Boards can share or archive a clean record without manually assembling screenshots and emails.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-unit-from-maintenance',
+    route: '/admin/maintenance/m1',
+    target: 'maintenance-unit-link',
+    title: 'Open the connected unit',
+    body: 'Use the Unit link inside the maintenance request to move from the repair record into the connected unit record.',
+    keyCapability: 'This shows how one object leads to the next: request, unit, resident, documents, and history.',
+    routeAfterClick: '/admin/units/u1',
+    scrollMode: 'target',
+  },
+  {
+    id: 'unit-intelligence',
+    route: '/admin/units/u1',
+    target: 'unit-intelligence',
+    title: 'Unit records with resident history',
+    body: 'Each unit becomes a durable record of occupancy, member history, linked maintenance, documents, and operational notes.',
+    keyCapability: 'Co-ops keep continuity even as board members, residents, and committee roles change over time.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'unit-maintenance-tab',
+    route: '/admin/units/u1',
+    target: 'unit-tab-maintenance',
+    title: 'Open service history',
+    body: 'The unit tabs organize different kinds of information without making users leave the unit record.',
+    keyCapability: 'A board member can understand the service story of a unit without searching the maintenance queue separately.',
+    routeAfterClick: '/admin/units/u1?tab=maintenance',
+    scrollMode: 'top',
+  },
+  {
+    id: 'unit-schedule-tab',
+    route: '/admin/units/u1?tab=maintenance',
+    target: 'unit-tab-schedule',
+    title: 'Open preventative maintenance',
+    body: 'Preventative schedules keep recurring inspections and safety tasks visible alongside the unit they affect.',
+    keyCapability: 'This helps co-ops move from reactive repairs toward planned building care.',
+    routeAfterClick: '/admin/units/u1?tab=schedule',
+    scrollMode: 'top',
+  },
+  {
+    id: 'unit-members-tab',
+    route: '/admin/units/u1?tab=schedule',
+    target: 'unit-tab-occupancy',
+    title: 'Open household members',
+    body: 'The Members tab shows the current household and profile links for the people connected to the unit.',
+    keyCapability: 'The board can understand who is connected to a unit while keeping that context tied to the right record.',
+    routeAfterClick: '/admin/units/u1?tab=occupancy',
+    scrollMode: 'top',
+  },
+  {
+    id: 'unit-history-tab',
+    route: '/admin/units/u1?tab=occupancy',
+    target: 'unit-tab-history',
+    title: 'Open tenant history',
+    body: 'Tenant History preserves past and current occupancy records so the unit story is not lost when households change.',
+    keyCapability: 'Boards can answer who lived where and when without digging through paper files or relying on memory.',
+    routeAfterClick: '/admin/units/u1?tab=history',
+    scrollMode: 'top',
+  },
+  {
+    id: 'unit-documents-tab',
+    route: '/admin/units/u1?tab=history',
+    target: 'unit-tab-documents',
+    title: 'Open unit documents',
+    body: 'The Documents tab keeps inspection files, unit records, and cloud-linked documents attached to the unit.',
+    keyCapability: 'Important unit information is easier to find years later, even after board turnover.',
+    routeAfterClick: '/admin/units/u1?tab=documents',
+    scrollMode: 'top',
+  },
+  {
+    id: 'open-units-admin',
+    route: '/admin/units/u1?tab=documents',
+    target: 'nav-units',
+    title: 'Open the Unit Inventory',
+    body: 'The sidebar also gives admins a full unit inventory for scanning occupancy, vacancy, maintenance status, and building groupings.',
+    keyCapability: 'Boards can understand the building at a glance without opening individual unit records first.',
+    routeAfterClick: '/admin/units',
+    scrollMode: 'top',
+  },
+  {
+    id: 'units-admin-workflow',
+    route: '/admin/units',
+    target: 'admin-units-floor-group',
+    title: 'Manage units by building and floor',
+    body: 'The unit inventory groups records by building and floor, then lets admins open the connected unit detail when they need deeper context.',
+    keyCapability: 'This keeps operational navigation familiar for people who think in terms of the physical building.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-tenants-admin',
+    route: '/admin/units',
+    target: 'nav-tenants',
+    title: 'Open member administration',
+    body: 'Tenant administration keeps current, past, and waitlisted members searchable with unit assignments and profile access.',
+    keyCapability: 'Boards can answer membership questions faster while keeping the resident directory organized.',
+    routeAfterClick: '/admin/tenants',
+    scrollMode: 'top',
+  },
+  {
+    id: 'tenants-admin-workflow',
+    route: '/admin/tenants',
+    target: 'member-directory-table',
+    title: 'Scan households and members',
+    body: 'The member table groups households by unit and keeps contact, status, dates, and profile links together.',
+    keyCapability: 'Less time is spent reconciling spreadsheets, and more time can go into member support.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-directory-admin',
+    route: '/admin/tenants',
+    target: 'nav-directory',
+    title: 'Open the admin directory',
+    body: 'Directory now sits under Board Administration so admins can reach it without making it a primary resident navigation item.',
+    keyCapability: 'The sidebar stays calmer for residents while admin tools remain easy for board users to find.',
+    routeAfterClick: '/directory',
+    scrollMode: 'top',
+  },
+  {
+    id: 'directory-admin-workflow',
+    route: '/directory',
+    target: 'member-directory-page',
+    title: 'Use directory context when needed',
+    body: 'The directory view supports search and member lookup when admins need contact or household context.',
+    keyCapability: 'Contact context is available without turning the main resident experience into an admin-heavy interface.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-waitlist-admin',
+    route: '/directory',
+    target: 'nav-waitlist',
+    title: 'Open waitlist administration',
+    body: 'The waitlist is available to admins for prospective member tracking, follow-up, and application intake.',
+    keyCapability: 'Future membership can be managed transparently without mixing applicants into current resident workflows.',
+    routeAfterClick: '/admin/waitlist',
+    scrollMode: 'top',
+  },
+  {
+    id: 'waitlist-admin-workflow',
+    route: '/admin/waitlist',
+    target: 'waitlist-applications',
+    title: 'Track prospective members',
+    body: 'Waitlist records can be filtered, reviewed, and expanded with new applications as the co-op manages future occupancy.',
+    keyCapability: 'The board gets a cleaner pipeline for membership planning and fewer loose application notes.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'open-policy-assistant',
+    route: '/admin/waitlist',
+    target: 'nav-policy-assistant',
+    title: 'Open the Policy Assistant',
+    body: 'Move from board administration into the Policy Assistant through the sidebar, following the same navigation path you would use when a question comes up.',
+    keyCapability: 'The assistant is easy to reach when records, rules, or maintenance questions need quick context during everyday work.',
+    routeAfterClick: '/policy-assistant',
+    scrollMode: 'top',
+  },
+  {
+    id: 'policy-assistant',
+    route: '/policy-assistant',
+    target: 'policy-assistant',
+    title: 'Policy answers from co-op records',
+    body: 'The Policy Assistant is the payoff: once records are organized, board members and residents can ask natural-language questions about rules, policies, and governance context.',
+    keyCapability: 'Instead of digging through PDFs during a meeting, people can get a faster starting point grounded in the co-op archive.',
+    scrollMode: 'top',
+  },
+  {
+    id: 'policy-assistant-question',
+    route: '/policy-assistant',
+    target: 'policy-assistant-qa',
+    title: 'Ask a practical policy question',
+    body: 'Ask a realistic question about a leaking sink to see how the assistant answers from co-op context, cites records, and suggests the next action.',
+    keyCapability: 'Policy and operations answers become faster starting points for residents and board members, without replacing human judgment.',
+    scrollMode: 'target',
+    action: 'ask-policy-demo',
+  },
+  {
+    id: 'policy-assistant-answer',
+    route: '/policy-assistant',
+    target: 'policy-assistant-qa',
+    title: 'Turn records into next steps',
+    body: 'The assistant response includes sources and a suggested action, connecting the answer back into maintenance instead of leaving the user with a static paragraph.',
+    keyCapability: 'This frees up time for board volunteers and helps residents feel guided, not bounced between documents.',
+    scrollMode: 'target',
+  },
+  {
+    id: 'resident-view',
+    route: '/policy-assistant',
+    target: 'role-switcher',
+    title: 'One platform for board and residents',
+    body: 'Switch into resident view to show personal requests, useful documents, community updates, meetings, committees, and self-service entry points.',
+    keyCapability: 'The same system supports board work and resident experience, helping the co-op feel more transparent, organized, and connected.',
+    scrollMode: 'top',
+    action: 'switch-role',
+  },
+];
+
+export interface AutoDemoPanelPlacementInput {
+  rect: { top: number; left: number; width: number; height: number };
+  viewportWidth: number;
+  viewportHeight: number;
+  panelWidth?: number;
+  panelHeight?: number;
+  margin?: number;
+}
+
+export const getAutoDemoPanelPlacement = ({
+  rect,
+  viewportWidth,
+  viewportHeight,
+  panelWidth = 360,
+  panelHeight = 420,
+  margin = 16,
+}: AutoDemoPanelPlacementInput) => {
+  const effectiveWidth = Math.min(panelWidth, Math.max(240, viewportWidth - margin * 2));
+  const effectiveHeight = Math.min(panelHeight, Math.max(240, viewportHeight - margin * 2));
+  const placeRight = rect.left + rect.width + effectiveWidth + margin < viewportWidth;
+  const placeLeft = rect.left - effectiveWidth - margin > margin;
+  const preferredLeft = placeRight
+    ? rect.left + rect.width + margin
+    : placeLeft
+      ? rect.left - effectiveWidth - margin
+      : rect.left;
+
+  return {
+    left: Math.max(margin, Math.min(viewportWidth - effectiveWidth - margin, preferredLeft)),
+    top: Math.max(margin, Math.min(viewportHeight - effectiveHeight - margin, rect.top)),
+    width: effectiveWidth,
+    maxHeight: Math.max(240, viewportHeight - margin * 2),
+  };
+};
+
+export const isAutoDemoStopIndex = (index: number) =>
+  Number.isInteger(index) && index >= 0 && index < AUTO_DEMO_STOPS.length;
+
+export const getAutoDemoStop = (index: number) =>
+  isAutoDemoStopIndex(index) ? AUTO_DEMO_STOPS[index] : null;
+
+export const getAutoDemoSectionStartIndex = (sectionId: string) => {
+  const section = AUTO_DEMO_SECTIONS.find(item => item.id === sectionId);
+  if (!section) return -1;
+  return AUTO_DEMO_STOPS.findIndex(stop => stop.id === section.startStopId);
+};
+
+export const getAutoDemoSectionForIndex = (index: number) => {
+  if (!isAutoDemoStopIndex(index) || index === 0) return null;
+  let currentSection: (AutoDemoSection & { number: number; startIndex: number }) | null = null;
+  AUTO_DEMO_SECTIONS.forEach((section, sectionIndex) => {
+    const startIndex = AUTO_DEMO_STOPS.findIndex(stop => stop.id === section.startStopId);
+    if (startIndex > 0 && startIndex <= index) {
+      currentSection = { ...section, number: sectionIndex + 1, startIndex };
+    }
+  });
+  return currentSection;
+};
+
+export const getAutoDemoSectionForTarget = (target?: string | null) => {
+  if (!target) return null;
+  const section = AUTO_DEMO_SECTIONS.find(item => item.navTarget === target);
+  if (!section) return null;
+  const startIndex = getAutoDemoSectionStartIndex(section.id);
+  return startIndex >= 0 ? { ...section, startIndex } : null;
+};
+
+export const getNextAutoDemoIndex = (index: number) =>
+  Math.min(AUTO_DEMO_STOPS.length - 1, Math.max(0, index + 1));
+
+export const getPreviousAutoDemoIndex = (index: number) =>
+  Math.max(0, Math.min(AUTO_DEMO_STOPS.length - 1, index - 1));

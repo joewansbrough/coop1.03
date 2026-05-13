@@ -3,6 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Committee, CoopEvent } from '../types';
 import AppAlert from '../components/AppAlert';
 import { useCreateEvent, useUpdateEvent, useDeleteEvent } from '../hooks/useCoopData';
+import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
+import { formatCalendarDateLabel, getDateOnlyValue, getLocalDateInputValue } from '../utils/dateUtils';
 
 interface CalendarProps {
   isAdmin?: boolean;
@@ -14,11 +16,14 @@ interface CalendarProps {
   isEventsError?: boolean;
 }
 
+const isAutoDemoActive = () =>
+  typeof window !== 'undefined' && window.localStorage.getItem(AUTO_DEMO_STORAGE_KEY) === 'true';
+
 const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, events, setEvents, committees = [], isEventsLoading, isEventsError }) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [viewDate, setViewDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [viewDate, setViewDate] = useState(() => isAutoDemoActive() ? new Date(2026, 3, 1) : new Date());
+  const [selectedDate, setSelectedDate] = useState(() => isAutoDemoActive() ? '2026-04-12' : getLocalDateInputValue());
   const [showAddForm, setShowAddForm] = useState(false);
   const [editEvent, setEditEvent] = useState<CoopEvent | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -225,14 +230,8 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const monthName = viewDate.toLocaleString('default', { month: 'long' });
 
   // Robust date parsing to ensure consistent sorting across browsers
-  const formatEventDateOnly = (dateInput: string) => {
-    if (!dateInput) return '';
-    if (dateInput.includes('T')) return dateInput.split('T')[0];
-    return dateInput;
-  };
-
   const parseEventDate = (e: CoopEvent) => {
-    const dateOnly = formatEventDateOnly(e.date);
+    const dateOnly = getDateOnlyValue(e.date);
     if (!dateOnly || !e.time) return new Date(0);
     const [year, month, day] = dateOnly.split('-').map(Number);
     const [hour, minute] = e.time.split(':').map(Number);
@@ -255,7 +254,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
     .sort((a, b) => parseEventDate(a).getTime() - parseEventDate(b).getTime())[0];
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all" data-demo-target="calendar-page">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -263,7 +262,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
           <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Co-op meetings, social gatherings, and building maintenance events.</p>
         </div>
         {isAdmin && !isGuest && (
-          <div className="flex gap-2">
+          <div className="flex gap-2" data-demo-target="calendar-actions">
             <button 
               onClick={handleExportICS}
               className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/5 px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-sm"
@@ -394,7 +393,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
               <button onClick={handleNextMonth} className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-white/5 rounded-xl text-slate-400 transition-colors"><i className="fa-solid fa-chevron-right"></i></button>
             </div>
           </div>
-          <div className="grid grid-cols-7 gap-px bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden">
+          <div className="grid grid-cols-7 gap-px bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-2xl overflow-hidden" data-demo-target="calendar-month-grid">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
               <div key={day} className="bg-slate-50/50 dark:bg-slate-900/50 p-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">{day}</div>
             ))}
@@ -404,7 +403,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
             {[...Array(daysInMonth)].map((_, i) => {
               const day = i + 1;
               const dateStr = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-              const hasEvents = allEvents.filter(e => formatEventDateOnly(e.date) === dateStr);
+              const hasEvents = allEvents.filter(e => getDateOnlyValue(e.date) === dateStr);
               return (
                 <button
                   key={i}
@@ -416,6 +415,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                     {hasEvents.map(e => (
                       <div 
                         key={e.id} 
+                        data-demo-target={e.id === 'e1' ? 'calendar-demo-event' : undefined}
                         onClick={(ev) => { ev.stopPropagation(); navigate(`/calendar/${e.id}`); }}
                         className={`text-[8px] font-black p-1 rounded-md truncate border cursor-pointer hover:scale-105 transition-transform ${
                           e.category === 'Meeting' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-800' :
@@ -437,6 +437,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
           {nextEvent && (
             <Link 
               to={`/calendar/${nextEvent.id}`}
+              data-demo-target="calendar-next-event"
               className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 hover:border-brand-500 transition-all group cursor-pointer relative overflow-hidden block active:scale-[0.98] shadow-sm hover:shadow-2xl hover:shadow-brand-500/10"
             >
               {/* Image Banner */}
@@ -499,7 +500,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
             </Link>
           )}
 
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors duration-200">
+          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-white/5 transition-colors duration-200" data-demo-target="calendar-event-list">
             <h3 className="text-base font-black text-slate-900 dark:text-white mb-6 flex items-center gap-2 border-b border-slate-50 dark:border-white/5 pb-4">
                <i className="fa-solid fa-clock-rotate-left text-brand-500"></i>
                {monthName} Events
@@ -559,7 +560,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                          )}
                          <div className="flex flex-col items-end">
                            <span className="text-[10px] font-black text-slate-400 uppercase">{formatTime12h(e.time)}</span>
-                           <span className="text-[8px] font-bold text-slate-400 uppercase">{new Date(e.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                           <span className="text-[8px] font-bold text-slate-400 uppercase">{formatCalendarDateLabel(e.date)}</span>
                          </div>
                        </div>
                     </div>

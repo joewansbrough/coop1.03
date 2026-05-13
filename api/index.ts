@@ -1,20 +1,27 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import crypto from 'crypto';
+import { MaintenanceCategory, MaintenanceFrequency, PrismaClient } from '@prisma/client';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { z } from 'zod';
 import axios from 'axios';
 import cookieSession from 'cookie-session';
 import multer from 'multer';
-import { get, put } from '@vercel/blob';
+import { get, put, list } from '@vercel/blob';
 import { Readable } from 'node:stream';
 import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } from './validation.js';
 import driveRoutes from './drive.js';
+import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
 import {
   getStoredDashboardPreference,
   saveStoredDashboardPreference,
 } from '../services/dashboardPreferenceStore.js';
 import { type DashboardRole } from '../utils/dashboardPreferences.js';
+import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
+import { detectOracleIntent, normalizeOracleLanguage } from '../utils/oracle.js';
+import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
+import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
+import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 
 
 
@@ -26,7 +33,136 @@ const upload = multer({
 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+const DEFAULT_GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts';
+const STABLE_GEMINI_FALLBACK_MODELS = [
+  DEFAULT_GEMINI_MODEL,
+  'gemini-3.1-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+];
+
+const AI_INITIAL_TIMEOUT_MS = 4000; // First call should be fast
+const AI_TOOL_TIMEOUT_MS = 3500;    // Tool calls give more room but still capped
+
+/**
+ * Helper to run a promise with a timeout
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label = 'Operation'): Promise<T> {
+  let timeoutId: any;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+}
+
+// Dynamic model registry
+let activeModels: string[] = [...STABLE_GEMINI_FALLBACK_MODELS]; // Hard fallback
+let lastModelUpdate = 0;
+let modelRegistrySource: 'api' | 'fallback' = 'fallback';
+
+const normalizeGeminiModelName = (name: string) => name.replace(/^models\//, '');
+
+const rankGeminiModel = (model: string) => {
+  const name = model.toLowerCase();
+  let score = 0;
+  if (name.includes('gemini')) score += 10;
+  if (name.includes('flash-lite')) score += 70;
+  else if (name.includes('flash')) score += 60;
+  else if (name.includes('pro')) score += 45;
+  if (name.includes('preview') || name.includes('experimental')) score -= 10;
+  if (name.includes('latest')) score += 5;
+  return score;
+};
+
+/**
+ * Programmatically discovers and prioritizes the best available Gemini models.
+ */
+async function refreshModelRegistry() {
+  try {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) throw new Error('Gemini API_KEY is missing.');
+    const response = await axios.get('https://generativelanguage.googleapis.com/v1beta/models', {
+      headers: { 'x-goog-api-key': apiKey },
+      params: { pageSize: 1000 },
+      timeout: 5000,
+    });
+    const available = response.data?.models || [];
+    
+    if (available.length > 0) {
+      const validModels = available
+        .filter((m: any) => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+        .map((m: any) => normalizeGeminiModelName(String(m.name || '')))
+        .filter(Boolean)
+        .sort((a: string, b: string) => rankGeminiModel(b) - rankGeminiModel(a) || b.localeCompare(a));
+      
+      activeModels = Array.from(new Set([
+        ...validModels,
+        ...STABLE_GEMINI_FALLBACK_MODELS,
+      ]));
+      modelRegistrySource = 'api';
+      console.log('[AI Registry] Discovered models:', activeModels);
+    } else {
+      activeModels = [...STABLE_GEMINI_FALLBACK_MODELS];
+      modelRegistrySource = 'fallback';
+      console.log('[AI Registry] Using curated fallback list:', activeModels);
+    }
+    lastModelUpdate = Date.now();
+  } catch (err) {
+    console.error('[AI Registry] Discovery failed, using current list:', err);
+    activeModels = activeModels.length ? activeModels : [...STABLE_GEMINI_FALLBACK_MODELS];
+    modelRegistrySource = 'fallback';
+    lastModelUpdate = Date.now();
+  }
+}
+
+const getBestModel = () => activeModels[0] || DEFAULT_GEMINI_MODEL;
+
+/**
+ * Executes a Gemini operation with automatic model fallback on 503/429 errors.
+ */
+async function withAiFallback<T>(
+  operation: (modelName: string) => Promise<T>,
+  preferredModel?: string
+): Promise<T> {
+  // Check available models up front on first use, then refresh daily.
+  if (Date.now() - lastModelUpdate > 24 * 60 * 60 * 1000) {
+    await refreshModelRegistry();
+  }
+
+  const modelsToTry = Array.from(new Set([
+    ...(preferredModel && (modelRegistrySource === 'fallback' || activeModels.includes(preferredModel)) ? [preferredModel] : []),
+    ...activeModels,
+    ...STABLE_GEMINI_FALLBACK_MODELS,
+  ]));
+  
+  let lastError: any;
+  for (const modelName of modelsToTry) {
+    try {
+      return await operation(modelName);
+    } catch (err: any) {
+      const isModelUnavailable =
+        err.message?.includes('404') ||
+        err.message?.includes('not found') ||
+        err.message?.includes('not supported for generateContent');
+      const isTransient =
+        err.message?.includes('503') || 
+        err.message?.includes('429') || 
+        err.message?.includes('high demand') ||
+        err.message?.includes('overloaded') ||
+        err.message?.includes('timed out');
+      
+      if ((isTransient || isModelUnavailable) && modelName !== modelsToTry[modelsToTry.length - 1]) {
+        console.warn(`[AI Fallback] Model ${modelName} failed (${err.message}). Trying next model...`);
+        if (isModelUnavailable) activeModels = activeModels.filter(model => model !== modelName);
+        continue;
+      }
+      lastError = err;
+      break;
+    }
+  }
+  throw lastError;
+}
 
 // Prisma singleton helper
 let prismaInstance: PrismaClient;
@@ -166,8 +302,59 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
   return res.status(401).json({ error: 'Unauthorized' });
 };
 
+const requireDriveAccess = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const sessionUser = (req as any).session?.user;
+  if (canAccessDriveRoutes({ sessionUser, demoModeHeader: req.get('x-coophub-demo-mode') })) {
+    if (sessionUser) (req as any).user = sessionUser;
+    return next();
+  }
+
+  return res.status(401).json({ error: 'Unauthorized' });
+};
+
 const getDashboardRole = (req: express.Request): DashboardRole =>
   ((req as any).user?.isAdmin || (req as any).session?.user?.isAdmin) ? 'admin' : 'resident';
+
+const requireAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const user = (req as any).user || (req as any).session?.user;
+  if (!user?.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+  next();
+};
+
+const normalizeNotification = (notification: any) => ({
+  ...notification,
+  isRead: Boolean(notification.readAt),
+  timestamp: notification.createdAt,
+});
+
+const createSystemNotification = async (
+  p: PrismaClient,
+  data: {
+    cooperativeId: string;
+    audience: string;
+    recipientUserEmail?: string | null;
+    type: string;
+    severity?: string;
+    title: string;
+    body: string;
+    entityType?: string | null;
+    entityId?: string | null;
+    actionUrl?: string | null;
+  },
+) => p.notification.create({
+  data: {
+    cooperativeId: data.cooperativeId,
+    audience: data.audience,
+    recipientUserEmail: data.recipientUserEmail?.toLowerCase() || null,
+    type: data.type,
+    severity: data.severity || 'info',
+    title: data.title,
+    body: data.body,
+    entityType: data.entityType || null,
+    entityId: data.entityId || null,
+    actionUrl: data.actionUrl || null,
+  },
+});
 
 // Robust Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
@@ -192,8 +379,8 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// App Configuration Route
-app.get('/api/config', requireAuth, (req, res) => {
+// Browser-safe configuration for Google Picker/OAuth client setup.
+app.get('/api/config', (req, res) => {
   res.json({
     googleClientId: process.env.GOOGLE_CLIENT_ID,
     googleApiKey: process.env.PICKER_API_KEY,
@@ -232,6 +419,95 @@ app.put('/api/dashboard/preferences', requireAuth, async (req, res, next) => {
     });
 
     res.json(preference);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/notifications', requireAuth, async (req, res, next) => {
+  try {
+    const p = getPrisma();
+    const user = (req as any).user || (req as any).session?.user;
+    const coopId = await getCoopId(req, p);
+    const userEmail = user?.email?.toLowerCase();
+    const where: any = {
+      cooperativeId: coopId,
+      OR: [
+        { audience: 'all' },
+        { audience: 'member' },
+        ...(user?.isAdmin ? [{ audience: 'admin' }] : []),
+        ...(userEmail ? [{ audience: 'user', recipientUserEmail: userEmail }] : []),
+      ],
+    };
+    const notifications = await p.notification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    res.json(notifications.map(normalizeNotification));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/notifications', requireAuth, requireAdmin, async (req, res, next) => {
+  try {
+    const p = getPrisma();
+    const notification = await createSystemNotification(p, {
+      cooperativeId: await getCoopId(req, p),
+      audience: req.body.audience || 'admin',
+      recipientUserEmail: req.body.recipientUserEmail,
+      type: req.body.type || 'system',
+      severity: req.body.severity || 'info',
+      title: sanitizeUtf8(req.body.title || 'Notification'),
+      body: sanitizeUtf8(req.body.body || ''),
+      entityType: req.body.entityType,
+      entityId: req.body.entityId,
+      actionUrl: req.body.actionUrl,
+    });
+    res.json(normalizeNotification(notification));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/notifications/:id/read', requireAuth, async (req, res, next) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const notificationId = getParam(req.params.id);
+    const existing = await p.notification.findFirst({ where: { id: notificationId, cooperativeId: coopId } });
+    if (!existing) return res.status(404).json({ error: 'Notification not found' });
+    const notification = await p.notification.update({
+      where: { id: notificationId },
+      data: { readAt: new Date() },
+    });
+    res.json(normalizeNotification(notification));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/notifications/read-all', requireAuth, async (req, res, next) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const user = (req as any).user || (req as any).session?.user;
+    const userEmail = user?.email?.toLowerCase();
+    await p.notification.updateMany({
+      where: {
+        cooperativeId: coopId,
+        readAt: null,
+        OR: [
+          { audience: 'all' },
+          { audience: 'member' },
+          ...(user?.isAdmin ? [{ audience: 'admin' }] : []),
+          ...(userEmail ? [{ audience: 'user', recipientUserEmail: userEmail }] : []),
+        ],
+      },
+      data: { readAt: new Date() },
+    });
+    res.json({ success: true });
   } catch (error) {
     next(error);
   }
@@ -357,7 +633,7 @@ app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
 });
 
 
-app.use('/api/drive', requireAuth, driveRoutes);
+app.use('/api/drive', requireDriveAccess, driveRoutes);
 
 // --- Database API Routes ---
 
@@ -368,6 +644,7 @@ app.get('/api/units', requireAuth, async (req, res) => {
     const units = await p.unit.findMany({
       where: { cooperativeId: coopId },
       include: {
+        building: true,
         currentTenant: true,
         occupancyHistory: {
           include: { tenant: true },
@@ -381,12 +658,109 @@ app.get('/api/units', requireAuth, async (req, res) => {
   }
 });
 
+app.get('/api/buildings', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const buildings = await p.building.findMany({
+      where: { cooperativeId: coopId },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+    res.json(buildings);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/buildings', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const building = await p.building.create({
+      data: {
+        cooperativeId: await getCoopId(req, p),
+        name: sanitizeUtf8(req.body.name || 'Building'),
+        code: sanitizeUtf8(req.body.code || null),
+        address: sanitizeUtf8(req.body.address || null),
+        sortOrder: Number(req.body.sortOrder || 1),
+      },
+    });
+    res.json(building);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/units', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const unit = await p.unit.create({
+      data: {
+        cooperativeId: coopId,
+        number: sanitizeUtf8(req.body.number),
+        type: sanitizeUtf8(req.body.type || '2BR'),
+        floor: Number(req.body.floor || 1),
+        status: sanitizeUtf8(req.body.status || 'Vacant'),
+        buildingId: req.body.buildingId || null,
+      },
+      include: {
+        building: true,
+        currentTenant: true,
+        occupancyHistory: {
+          include: { tenant: true },
+          orderBy: { startDate: 'desc' }
+        }
+      }
+    });
+    res.json(unit);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.put('/api/units/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const unitId = getParam(req.params.id);
+    const unit = await p.unit.update({
+      where: { id: unitId },
+      data: {
+        ...(req.body.number !== undefined ? { number: sanitizeUtf8(req.body.number) } : {}),
+        ...(req.body.type !== undefined ? { type: sanitizeUtf8(req.body.type) } : {}),
+        ...(req.body.floor !== undefined ? { floor: Number(req.body.floor) } : {}),
+        ...(req.body.status !== undefined ? { status: sanitizeUtf8(req.body.status) } : {}),
+        ...(req.body.buildingId !== undefined ? { buildingId: req.body.buildingId || null } : {}),
+      },
+      include: { building: true, currentTenant: true },
+    });
+    if (unit.cooperativeId !== coopId) return res.status(403).json({ error: 'Forbidden' });
+    res.json(unit);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) => {
   try {
     const unitId = getParam(req.params.id);
     const tasks = await getPrisma().scheduledMaintenance.findMany({
       where: { unitId },
       orderBy: { dueDate: 'asc' }
+    });
+    res.json(tasks);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/scheduled-maintenance', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const tasks = await p.scheduledMaintenance.findMany({
+      where: { cooperativeId: coopId, isActive: true },
+      orderBy: { dueDate: 'asc' },
     });
     res.json(tasks);
   } catch (error: any) {
@@ -618,7 +992,7 @@ app.get('/api/maintenance', requireAuth, async (req, res) => {
 });
 
 app.post('/api/maintenance', requireAuth, async (req, res) => {
-  const { title, description, status, priority, category, unitId, requestedBy, notes } = req.body;
+  const { title, description, status, priority, category, unitId, requestedBy, notes, attachments, aiTriage, visualDescription, residentTip } = req.body;
   const categoryString = Array.isArray(category) ? category.join(', ') : (category || 'General');
   
   try {
@@ -631,9 +1005,10 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
       tenantId = t?.id || null;
     }
 
+    const coopId = await getCoopId(req, p);
     const request = await p.maintenanceRequest.create({
       data: {
-        cooperativeId: await getCoopId(req, p),
+        cooperativeId: coopId,
         title,
         description,
         status: status || 'Pending',
@@ -642,10 +1017,29 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
         unitId,
         tenantId: tenantId,
         requestedBy: requestedBy || user?.email,
-        notes: notes || []
+        notes: notes || [],
+        attachments: attachments || [],
+        aiTriage: aiTriage || null,
+        visualDescription: visualDescription || null,
+        residentTip: residentTip || aiTriage?.residentTip || null,
       }
     });
-    res.json(request);
+    await createSystemNotification(p, {
+      cooperativeId: coopId,
+      audience: 'admin',
+      type: 'maintenance',
+      severity: request.priority === 'Emergency' ? 'urgent' : request.priority === 'High' ? 'high' : 'info',
+      title: `New ${request.priority} maintenance request`,
+      body: request.title || request.description,
+      entityType: 'maintenance',
+      entityId: request.id,
+      actionUrl: `/admin/maintenance/${request.id}`,
+    }).catch(error => console.error('Failed to create maintenance notification:', error));
+
+    res.json({
+      ...request,
+      category: request.category ? request.category.split(', ') : [],
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -666,14 +1060,39 @@ app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
   if (body.requestedBy !== undefined) data.requestedBy = body.requestedBy;
   if (body.notes !== undefined) data.notes = body.notes;
   if (body.expenses !== undefined) data.expenses = body.expenses;
+  if (body.attachments !== undefined) data.attachments = body.attachments;
+  if (body.aiTriage !== undefined) data.aiTriage = body.aiTriage;
+  if (body.visualDescription !== undefined) data.visualDescription = body.visualDescription;
+  if (body.residentTip !== undefined) data.residentTip = body.residentTip;
+  if (body.triageReviewedBy !== undefined) data.triageReviewedBy = body.triageReviewedBy;
+  if (body.triageReviewedAt !== undefined) data.triageReviewedAt = body.triageReviewedAt ? new Date(body.triageReviewedAt) : null;
 
   try {
     const maintenanceId = getParam(req.params.id);
-    const request = await getPrisma().maintenanceRequest.update({
+    const p = getPrisma();
+    const previous = await p.maintenanceRequest.findUnique({ where: { id: maintenanceId } });
+    const request = await p.maintenanceRequest.update({
       where: { id: maintenanceId },
       data
     });
-    res.json(request);
+    if (previous?.status !== request.status) {
+      await createSystemNotification(p, {
+        cooperativeId: request.cooperativeId,
+        audience: 'user',
+        recipientUserEmail: request.requestedBy,
+        type: 'maintenance',
+        severity: request.status === 'Completed' ? 'info' : 'medium',
+        title: 'Maintenance request updated',
+        body: `${request.title} is now ${request.status}.`,
+        entityType: 'maintenance',
+        entityId: request.id,
+        actionUrl: `/maintenance/${request.id}`,
+      }).catch(error => console.error('Failed to create maintenance status notification:', error));
+    }
+    res.json({
+      ...request,
+      category: request.category ? request.category.split(', ') : [],
+    });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -1201,33 +1620,279 @@ const getAI = () => {
   return new GoogleGenerativeAI(apiKey || '');
 };
 
+const parseJsonResponse = (text: string, fallback: any = {}) => {
+  try {
+    return JSON.parse(text || JSON.stringify(fallback));
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : fallback;
+  }
+};
+
+const asArray = (value: any) => Array.isArray(value) ? value : [];
+
+const extractCitationsFromToolResults = (toolResponses: any[]) => {
+  const results = toolResponses
+    .map(item => item?.functionResponse?.response?.result)
+    .filter(Boolean);
+  
+  const docs = results.flatMap(result => [
+    ...asArray(result.documents),
+    ...asArray(result.knowledge?.documents),
+    ...(Array.isArray(result) ? result.filter((item: any) => item?.documentId || item?.id) : []),
+  ]);
+  
+  const citations = docs.map((doc: any) => ({
+    title: doc.documentTitle || doc.title,
+    documentId: doc.documentId || doc.id,
+    pageNumber: doc.pageNumber
+  })).filter(c => c.title);
+  
+  const seen = new Set();
+  return citations.filter(c => {
+    const key = c.documentId || c.title;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const createOracleAnswerFromToolResults = (question: string, toolResponses: any[], fallbackAnswer: string) => {
+  const normalizedQuestion = String(question || '').toLowerCase();
+  const results = toolResponses
+    .map(item => item?.functionResponse?.response?.result)
+    .filter(Boolean);
+  const committees = results.flatMap(result => asArray(result.committees || result)).filter(c => c.name);
+  const announcements = results.flatMap(result => [
+    ...asArray(result.announcements),
+    ...asArray(result.documentAnnouncements),
+    ...(Array.isArray(result) ? result.filter((item: any) => item?.title && item?.content) : []),
+  ]);
+  const documents = results.flatMap(result => [
+    ...asArray(result.documents),
+    ...(Array.isArray(result) ? result.filter((item: any) => item?.documentTitle || item?.title) : []),
+  ]);
+
+  if (normalizedQuestion.includes('committee')) {
+    const target = committees.find((committee: any) => {
+      const name = String(committee?.name || '').toLowerCase();
+      return normalizedQuestion.split(/\s+/).some(word => word.length > 3 && name.includes(word));
+    }) || (normalizedQuestion.includes('all') ? null : committees[0]);
+
+    if (normalizedQuestion.includes('all')) {
+      const list = committees.map((c: any) => `- ${c.name} (Chair: ${c.chairName || c.chair || 'Unknown'})`).join('\n');
+      if (list) return `Here are the co-op committees:\n${list}`;
+    }
+
+    if (target?.name) {
+      const chair = target.chairName || target.chair;
+      if (normalizedQuestion.includes('chair')) {
+        return chair ? `${chair} is the chair of the ${target.name}.` : `The chair of the ${target.name} is not listed.`;
+      }
+      return `${target.name} is led by ${chair || 'an unlisted chair'}. ${target.description || ''}`;
+    }
+  }
+
+  const policyMatches = [...announcements, ...documents].filter((item: any) => {
+    const searchable = `${item?.title || item?.documentTitle || ''} ${item?.content || item?.text || ''}`.toLowerCase();
+    return normalizedQuestion.split(/\s+/).some(word => word.length > 3 && searchable.includes(word));
+  });
+  const bestPolicyMatch = policyMatches[0];
+  if (bestPolicyMatch) {
+    const title = bestPolicyMatch.title || bestPolicyMatch.documentTitle || 'A matching co-op record';
+    const content = String(bestPolicyMatch.content || bestPolicyMatch.text || '').trim();
+    const sentence = content.split(/(?<=[.!?])\s+/)[0] || content.slice(0, 180);
+    return sentence ? `${title}: ${sentence}` : `${title} appears to be the most relevant co-op record.`;
+  }
+
+  return fallbackAnswer;
+};
+
 app.post('/api/ai/triage', requireAuth, async (req, res) => {
   try {
+    const { description, visualDescription } = req.body;
+    if (!description || String(description).trim().length < 10) {
+      return res.status(400).json({ error: 'A detailed description is required.' });
+    }
     const genAI = getAI();
     const user = (req as any).user || (req as any).session?.user;
     const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
-    const model = genAI.getGenerativeModel({
-      model: resolvedModel,
+    const triage = await withAiFallback(async (modelName) => {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              priority: { type: SchemaType.STRING },
+              urgency: { type: SchemaType.STRING },
+              category: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+              residentTip: { type: SchemaType.STRING },
+              confidence: { type: SchemaType.NUMBER },
+              safetyWarning: { type: SchemaType.STRING },
+              reasoning: { type: SchemaType.STRING },
+            },
+            required: ['priority', 'urgency', 'category', 'residentTip', 'confidence']
+          }
+        }
+      });
+      const result = await model.generateContent(`Evaluate this BC housing co-op maintenance request. Return JSON only. Categories must be from Plumbing, Electrical, Structural, Appliance, HVAC, Exterior, Safety, Other. Priority and urgency must be Low, Medium, High, or Emergency. Provide a short residentTip that is helpful but does not diagnose beyond the evidence. Description: "${description}"${visualDescription ? `\nPhoto description: "${visualDescription}"` : ''}`);
+      const response = await result.response;
+      return createMaintenanceTriage(parseJsonResponse(response.text(), {}));
+    }, resolvedModel);
+    res.json(triage);
+  } catch (e: any) {
+    res.status(500).json({ error: `Gemini maintenance triage failed: ${e.message}` });
+  }
+});
+
+app.post('/api/ai/triage-demo', async (req, res) => {
+  try {
+    const { description, visualDescription } = req.body;
+    if (!description || String(description).trim().length < 10) {
+      return res.status(400).json({ error: 'A detailed description is required.' });
+    }
+    const model = getAI().getGenerativeModel({
+      model: DEFAULT_GEMINI_MODEL,
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: {
           type: SchemaType.OBJECT,
           properties: {
             priority: { type: SchemaType.STRING },
-            category: { type: SchemaType.STRING },
-            reasoning: { type: SchemaType.STRING }
+            urgency: { type: SchemaType.STRING },
+            category: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+            residentTip: { type: SchemaType.STRING },
+            confidence: { type: SchemaType.NUMBER },
+            safetyWarning: { type: SchemaType.STRING },
+            reasoning: { type: SchemaType.STRING },
           },
-          required: ['priority', 'category']
+          required: ['priority', 'urgency', 'category', 'residentTip', 'confidence']
         }
       }
     });
-
-    const { description } = req.body;
-    const result = await model.generateContent(`Evaluate the following maintenance request for a BC housing co-op and return a suggested urgency level (Low, Medium, High, Emergency) and a category (Plumbing, Electrical, Structural, Appliance, Other). Request: "${description}"`);
+    const result = await model.generateContent(`Evaluate this BC housing co-op maintenance request. Return JSON only. Categories must be from Plumbing, Electrical, Structural, Appliance, HVAC, Exterior, Safety, Other. Priority and urgency must be Low, Medium, High, or Emergency. Provide a short residentTip that is helpful but does not diagnose beyond the evidence. Description: "${description}"${visualDescription ? `\nPhoto description: "${visualDescription}"` : ''}`);
     const response = await result.response;
-    res.json(JSON.parse(response.text() || '{}'));
+    res.json(createMaintenanceTriage(parseJsonResponse(response.text(), {})));
   } catch (e: any) {
-    res.status(500).json({ priority: 'Medium', category: 'Other', error: e.message });
+    res.status(500).json({ error: `Gemini maintenance triage failed: ${e.message}` });
+  }
+});
+
+app.post('/api/ai/maintenance-image-description', requireAuth, upload.single('image'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'An image upload is required.' });
+    const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const token = getBlobToken();
+    const storageKey = `coops/${coopId}/maintenance/${Date.now()}-${getSafeBlobFileName(file.originalname || 'maintenance-photo')}`;
+    const blob = token
+      ? await put(storageKey, file.buffer, {
+        access: process.env.BLOB_ACCESS === 'public' ? 'public' : 'private',
+        token,
+        contentType: file.mimetype,
+        addRandomSuffix: false,
+      })
+      : null;
+    const genAI = getAI();
+    const user = (req as any).user || (req as any).session?.user;
+    const resolvedModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
+    const imageAnalysis = await withAiFallback(async (modelName) => {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: { responseMimeType: 'application/json' },
+      });
+      const result = await model.generateContent([
+        {
+          text: `Describe this maintenance photo for a visually impaired resident. Use the resident's written problem description as context when it helps interpret the image, but do not claim visual details unless they are visible. Return JSON with visualDescription, observedDamage, likelyCategory, safetyConcerns, confidence. Do not identify people or private documents.${description ? `\n\nResident problem description: ${description}` : ''}`,
+        },
+        {
+          inlineData: {
+            data: file.buffer.toString('base64'),
+            mimeType: file.mimetype,
+          },
+        },
+      ]);
+      const response = await result.response;
+      return parseJsonResponse(response.text(), {
+        visualDescription: 'The image could not be analyzed.',
+        observedDamage: '',
+        likelyCategory: 'Other',
+        safetyConcerns: '',
+        confidence: 0,
+      });
+    }, resolvedModel);
+    res.json({
+      ...imageAnalysis,
+      attachment: blob ? {
+        id: `maintenance-attachment-${Date.now()}`,
+        fileName: file.originalname || 'maintenance-photo',
+        url: blob.url,
+        storageUrl: blob.url,
+        storageKey: blob.pathname || storageKey,
+        contentType: file.mimetype,
+        size: file.size,
+        visualDescription: imageAnalysis.visualDescription || '',
+        uploadedAt: new Date().toISOString(),
+      } : undefined,
+      attachmentUploadError: token ? undefined : 'Blob storage is not configured for maintenance image uploads.',
+    });
+  } catch (e: any) {
+    res.status(500).json({
+      visualDescription: 'The image could not be analyzed at this time.',
+      observedDamage: '',
+      likelyCategory: 'Other',
+      safetyConcerns: '',
+      confidence: 0,
+      error: e.message,
+    });
+  }
+});
+
+app.post('/api/ai/maintenance-image-description-demo', upload.single('image'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'An image upload is required.' });
+    const description = typeof req.body?.description === 'string' ? req.body.description.trim() : '';
+    const model = getAI().getGenerativeModel({
+      model: DEFAULT_GEMINI_MODEL,
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const result = await model.generateContent([
+      {
+        text: `Describe this maintenance photo for a visually impaired resident. Use the resident's written problem description as context when it helps interpret the image, but do not claim visual details unless they are visible. Return JSON with visualDescription, observedDamage, likelyCategory, safetyConcerns, confidence. Do not identify people or private documents.${description ? `\n\nResident problem description: ${description}` : ''}`,
+      },
+      {
+        inlineData: {
+          data: file.buffer.toString('base64'),
+          mimeType: file.mimetype,
+        },
+      },
+    ]);
+    const response = await result.response;
+    const imageAnalysis = parseJsonResponse(response.text(), {
+      visualDescription: '',
+      observedDamage: '',
+      likelyCategory: 'Other',
+      safetyConcerns: '',
+      confidence: 0,
+    });
+    res.json({
+      ...imageAnalysis,
+      attachment: {
+        id: `demo-maintenance-attachment-${Date.now()}`,
+        fileName: file.originalname || 'maintenance-photo',
+        contentType: file.mimetype,
+        size: file.size,
+        visualDescription: imageAnalysis.visualDescription || '',
+        uploadedAt: new Date().toISOString(),
+      },
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: `Gemini maintenance image analysis failed: ${e.message}` });
   }
 });
 
@@ -1251,6 +1916,543 @@ app.post('/api/ai/policy', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/api/oracle/query-demo', async (req, res) => {
+  const startedAt = Date.now();
+  const { question, language, pageContext, demoUser } = req.body;
+  if (!question || String(question).trim().length < 2) return res.status(400).json({ error: 'Question is required.' });
+  const normalizedLanguage = normalizeOracleLanguage(language);
+  const intent = detectOracleIntent(question);
+  const p = getPrisma();
+
+  try {
+    // In demo mode, we use the first cooperative we find
+    const firstCoop = await p.cooperative.findFirst();
+    const coopId = firstCoop?.id || 'demo-coop-id';
+
+    const isDemoAdmin = demoUser?.isAdmin !== false;
+    const demoEmail = typeof demoUser?.email === 'string' && demoUser.email.includes('@')
+      ? demoUser.email
+      : 'margaret.chen@email.com';
+    const demoRole = isDemoAdmin ? 'ADMIN' : 'MEMBER';
+
+    // Demo Tool Context
+    const toolContext: ToolContext = {
+      prisma: p,
+      cooperativeId: coopId,
+      userId: demoUser?.tenantId || demoUser?.id || 'demo-user-id',
+      userEmail: demoEmail,
+      role: demoRole,
+      isAdmin: isDemoAdmin
+    };
+
+    const genAI = getAI();
+    
+    const oracleResponse = await withAiFallback(async (modelName) => {
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        tools: [{ functionDeclarations: oracleToolDeclarations as any }]
+      });
+
+      const chat = model.startChat();
+      
+      const prompt = `You are the Co-op Oracle for a BC housing co-op DEMO environment. Answer in ${normalizedLanguage}. 
+You have access to tools that query the demo database. Use them to provide accurate answers.
+
+Database coverage:
+- Use get_database_schema when you need to see the complete tool and model map.
+- You can retrieve co-op profile, buildings, units, tenants, maintenance, scheduled maintenance, notifications, announcements, documents, document chunks, document ingestion status, document access logs, events, committees, meeting minutes, meeting analyses, Oracle query history, and dashboard preferences.
+- All tools enforce cooperative scoping and user permissions. If a tool returns an access error, explain that the information is not available to this user.
+- 'open' maintenance requests = status 'Pending' or 'In Progress'.
+
+Reasoning:
+- Use tools before answering factual questions about co-op records, policies, members, units, meetings, or maintenance.
+- For broad factual questions, use search_coop_database first so the whole permission-accessible database can inform the answer.
+- For policy questions, use search_coop_knowledge first; it searches document text and announcements together.
+- Chain tools when needed, for example committee -> chair/member -> tenant -> unit.
+- Prefer specific filtered calls over broad calls (e.g., if asked for a specific date like "April 28th", use 'get_events' with 'startDate' and 'endDate' as '2026-04-28').
+- If a tool returns usable records plus errors, answer from the usable records and do not say the tool failed.
+- Only mention a failed lookup when no usable records were returned for the member's question.
+
+Deep Linking:
+- Use 'view_maintenance_request' to show a specific maintenance record if you are discussing one.
+- Use 'navigate_to_page' to pull up helpful co-op pages (e.g., /maintenance, /tenants, /committees, /calendar, /resource-library, /announcements).
+
+Role: ${demoRole} (Demo Mode, isAdmin: ${isDemoAdmin}).
+Page context: ${pageContext || 'none'}.
+
+Answer style:
+- Use plain, resident-friendly language by default.
+- Be concise: usually 2-4 short sentences.
+- Use bullets only when they make the answer easier to scan.
+- Avoid legal jargon and long policy explanations unless the member asks for detail.
+- If the question is urgent, safety-related, or legal, say what to do next and advise checking with the board or emergency services as appropriate.
+
+Return JSON:
+{
+  "answer": "...",
+  "confidence": 0.9,
+  "intent": "maintenance" | "governance" | "policy" | "general",
+  "suggestedAction": { "type": "...", "label": "...", "href": "..." } (optional)
+}
+
+Member Question: ${question}`;
+
+
+      let result = await withTimeout(chat.sendMessage(prompt), AI_INITIAL_TIMEOUT_MS, 'Demo Initial sendMessage');
+      let response = result.response;
+      
+      let callCount = 0;
+      const MAX_CALLS = 2; // Strict limit for speed
+      const allToolResponses: any[] = [];
+
+      while (response.functionCalls()?.length && callCount < MAX_CALLS) {
+        callCount++;
+        const toolCalls = response.functionCalls() || [];
+        
+        // Execute all tool calls in this turn in parallel
+        const toolResponses = await Promise.all(toolCalls.map(async (call) => {
+          const toolName = call.name as keyof typeof oracleTools;
+          const toolHandler = oracleTools[toolName];
+          
+          if (toolHandler) {
+            try {
+              const toolResult = await (toolHandler as any)(toolContext, call.args || {});
+              return {
+                functionResponse: {
+                  name: toolName,
+                  response: { result: toolResult }
+                }
+              };
+            } catch (err: any) {
+              return {
+                functionResponse: {
+                  name: toolName,
+                  response: { error: err.message, toolName }
+                }
+              };
+            }
+          }
+          return {
+            functionResponse: {
+              name: toolName,
+              response: { error: "Tool not found" }
+            }
+          };
+        }));
+
+        if (toolResponses.length > 0) {
+          allToolResponses.push(...toolResponses);
+          result = await withTimeout(chat.sendMessage(toolResponses), AI_TOOL_TIMEOUT_MS, `Demo ToolResponse turn ${callCount}`);
+          response = result.response;
+        } else {
+          break;
+        }
+      }
+
+      const responseText = response.text();
+      const fallbackAnswer = createOracleAnswerFromToolResults(
+        question,
+        allToolResponses,
+        'I found some co-op records, but Gemini did not return a finished answer. Please try a more specific question.',
+      );
+      const parsed = parseJsonResponse(responseText, { answer: responseText || fallbackAnswer, confidence: responseText ? 0.85 : 0.65 });
+      return {
+        answer: parsed.answer || responseText || fallbackAnswer,
+        citations: [],
+        language: normalizedLanguage,
+        confidence: parsed.confidence || 0.85,
+        intent: parsed.intent || intent.intent,
+        suggestedAction: parsed.suggestedAction || (intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined),
+      };
+    });
+
+    res.json(oracleResponse);
+  } catch (e: any) {
+    console.error(`[Oracle Demo Query Failure]: ${e.message}`, e);
+    res.status(500).json({ error: `Gemini Oracle demo query failed: ${e.message}` });
+  }
+});
+
+app.post('/api/oracle/query', requireAuth, async (req, res) => {
+  const startedAt = Date.now();
+  const { question, language, pageContext } = req.body;
+  if (!question || String(question).trim().length < 2) return res.status(400).json({ error: 'Question is required.' });
+  const normalizedLanguage = normalizeOracleLanguage(language);
+  const intent = detectOracleIntent(question);
+  const p = getPrisma();
+  const user = (req as any).user || (req as any).session?.user;
+  let coopId = '';
+
+  try {
+    coopId = await getCoopId(req, p);
+
+    // Tool Context for checking permissions and scoping queries
+    const toolContext: ToolContext = {
+      prisma: p,
+      cooperativeId: coopId,
+      userId: user?.tenantId || 'unknown',
+      userEmail: user?.email || '',
+      role: user?.role || 'MEMBER',
+      isAdmin: !!user?.isAdmin
+    };
+
+    const genAI = getAI();
+    const primaryModel = user?.geminiModel || DEFAULT_GEMINI_MODEL;
+    
+    const oracleResponse = await withAiFallback(async (modelName) => {
+      // Initialize model with tools
+      const model = genAI.getGenerativeModel({
+        model: modelName,
+        tools: [{ functionDeclarations: oracleToolDeclarations as any }]
+      });
+
+      const chat = model.startChat();
+      
+      const prompt = `You are the Co-op Oracle for a BC housing co-op. Answer in ${normalizedLanguage}. 
+You have access to tools that query the live database. Always use them to verify facts before answering.
+If a member asks about a specific committee, unit, person, or record, search for it using the tools.
+NEVER say something doesn't exist unless you have searched and found no matching records.
+
+Database Overview:
+- Unit: number, type, floor, status
+- MaintenanceRequest: title, status, priority, category, unit (with number/floor)
+- Tenant: firstName, lastName, email, role, unit
+- Committee: name, chairName, description, memberNames
+- CoopEvent, Announcement, Building
+
+Database coverage:
+- Use 'get_database_schema' to see the complete model map.
+- You can retrieve co-op profile, buildings, units, tenants, maintenance, scheduled maintenance, announcements, documents, events, committees, and meeting minutes.
+- 'open' maintenance requests = status 'Pending' or 'In Progress'.
+
+Reasoning & Strategy:
+- Use tools before answering factual questions about co-op records, policies, members, units, or maintenance.
+- For broad factual searches, use 'search_coop_database'. For policy text, use 'search_coop_knowledge'.
+- Chain tools when needed (e.g. committee -> chair -> tenant).
+- Prefer specific filtered calls (e.g. filter by 'floor' in 'get_maintenance_requests') to reduce latency.
+- If a tool returns errors but also usable data, answer from the data and don't mention the error.
+
+Deep Linking:
+- Use 'view_maintenance_request' to show a specific maintenance record.
+- Use 'view_event' to show a specific event/meeting. Set view='minutes' to jump straight to the minutes/decisions for that meeting.
+- Use 'view_committee' to show a specific committee page.
+- Use 'view_document' to pull up a specific document (ID is best, Title is fallback).
+- Use 'view_tenant' or 'view_unit' for admin-only deep links to records.
+- Use 'navigate_to_page' for general pages (e.g., /maintenance, /tenants, /committees, /calendar, /resource-library, /announcements, /directory).
+
+If a user asks about something specific (like "last social committee meeting") but you find multiple options or are unsure, ASK for clarifying details first, then use the tool once you are certain.
+
+Answer style:
+- Use plain, resident-friendly language. Be concise (2-4 sentences).
+- Use bullets only for lists. Avoid legal jargon.
+- If urgent (leaks, safety), provide immediate next steps and advise checking with the board/emergency services.
+- If citing a document, providing the ID or Title is sufficient; the system will show a citation button.
+
+Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
+Page context: ${pageContext || 'none'}.
+
+Return JSON:
+{
+  "answer": "...",
+  "confidence": 0.95,
+  "intent": "maintenance" | "governance" | "policy" | "general",
+  "suggestedAction": {
+    "type": "start-maintenance-request" | "view-event" | "contact-board",
+    "label": "Button Label",
+    "href": "/target-page"
+  } (optional)
+}
+
+Member Question: ${question}`;
+
+
+      let result = await withTimeout(chat.sendMessage(prompt), AI_INITIAL_TIMEOUT_MS, 'Initial sendMessage');
+      let response = result.response;
+      
+      // Loop to handle tool calls - optimized for parallel execution
+      let callCount = 0;
+      const MAX_CALLS = 2; // Strict limit for speed
+      const allToolResponses: any[] = [];
+
+      while (response.functionCalls()?.length && callCount < MAX_CALLS) {
+        callCount++;
+        const toolCalls = response.functionCalls() || [];
+        
+        // Execute all tool calls in this turn in parallel
+        const toolResponses = await Promise.all(toolCalls.map(async (call) => {
+          const toolName = call.name as keyof typeof oracleTools;
+          const toolHandler = oracleTools[toolName];
+          
+          if (toolHandler) {
+            console.log(`[Oracle] Executing tool (Parallel): ${toolName}`, call.args);
+            try {
+              const toolResult = await (toolHandler as any)(toolContext, call.args || {});
+              return {
+                functionResponse: {
+                  name: toolName,
+                  response: { result: toolResult }
+                }
+              };
+            } catch (err: any) {
+              console.error(`[Oracle] Tool execution error (${toolName}):`, err);
+              return {
+                functionResponse: {
+                  name: toolName,
+                  response: { error: err.message, toolName }
+                }
+              };
+            }
+          } else {
+            console.warn(`[Oracle] Unknown tool called: ${toolName}`);
+            return {
+              functionResponse: {
+                name: toolName,
+                response: { error: "Tool not found" }
+              }
+            };
+          }
+        }));
+
+        if (toolResponses.length > 0) {
+          allToolResponses.push(...toolResponses);
+          result = await withTimeout(chat.sendMessage(toolResponses), AI_TOOL_TIMEOUT_MS, `ToolResponse turn ${callCount}`);
+          response = result.response;
+        } else {
+          break;
+        }
+      }
+
+      // Safety check for empty text (e.g. if loop hit limit and model didn't provide final text)
+      const responseText = response.text();
+      const citations = extractCitationsFromToolResults(allToolResponses);
+
+      if (!responseText) {
+        const fallbackAnswer = createOracleAnswerFromToolResults(
+          question,
+          allToolResponses,
+          'I gathered some data but was unable to formulate a complete answer in time. Please try a more specific question.',
+        );
+        return {
+          answer: fallbackAnswer,
+          citations,
+          confidence: 0.5,
+          intent: "general"
+        };
+      }
+
+      const parsed = parseJsonResponse(responseText, { answer: responseText, confidence: 0.9 });
+      return {
+        answer: parsed.answer || responseText,
+        citations, 
+        language: normalizedLanguage,
+        confidence: parsed.confidence || 0.9,
+        intent: parsed.intent || intent.intent,
+        suggestedAction: parsed.suggestedAction || (intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined),
+      };
+    }, primaryModel);
+
+    // Log the query
+    await p.policyAssistantQuery.create({
+      data: {
+        cooperativeId: coopId,
+        userId: user?.email || 'unknown',
+        question,
+        retrievedChunks: [], // We used direct DB tools
+        answer: oracleResponse.answer,
+        citations: [],
+        language: normalizedLanguage,
+        intent: intent.intent,
+        suggestedAction: intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined,
+        latencyMs: Date.now() - startedAt,
+      },
+    });
+
+    res.json(oracleResponse);
+  } catch (e: any) {
+    console.error(`[Oracle Query Failure]: ${e.message}`, e);
+    if (coopId) {
+      await p.policyAssistantQuery.create({
+        data: {
+          cooperativeId: coopId,
+          userId: user?.email || 'unknown',
+          question,
+          retrievedChunks: [],
+          answer: `Error occurred during processing: ${e.message}`,
+          citations: [],
+          language: normalizedLanguage,
+          intent: intent.intent,
+          suggestedAction: intent.suggestedAction ? JSON.parse(JSON.stringify(intent.suggestedAction)) : undefined,
+          latencyMs: Date.now() - startedAt,
+        },
+      }).catch(() => undefined);
+    }
+    res.status(500).json({ error: `Gemini Oracle query failed: ${e.message}` });
+  }
+});
+
+const getMeetingTypeGuidance = (meetingType?: string) => {
+  switch (meetingType) {
+    case 'quick':
+      return 'Meeting type: Quick Meeting. Use professionalSummary as a concise overview of the discussion. Put only clear decisions or resolutions in decisions, and keep action items separate. Avoid board-report style narrative.';
+    case 'agm':
+      return 'Meeting type: Annual General Meeting. Organize output around AGM business such as reports, nominations/elections, motions, decisions, and statutory follow-up. Do not invent election results or auditor details.';
+    case 'special':
+      return 'Meeting type: Special Meeting. Focus on the stated special business, any motion or resolution, decision status, and required follow-up. Avoid unrelated regular meeting sections.';
+    case 'regular':
+    default:
+      return 'Meeting type: Regular Board Meeting. Organize output for board minutes, including board/committee report narrative, motions, decisions, follow-up, and action items.';
+  }
+};
+
+const buildMeetingAnalysisPrompt = (rawNotes: string, meetingType?: string) => `You are an experienced secretary for a BC housing co-operative board or committee.
+
+${getMeetingTypeGuidance(meetingType)}
+
+Transform rough, incomplete meeting notes into polished meeting minutes. Do not merely restate or lightly paraphrase the notes. Convert terse bullets into clear, professional minutes language while preserving only the facts that are actually present. Do not invent votes, approvals, names, dollar amounts, deadlines, or legal conclusions. If something is implied but uncertain, flag it in confidenceNotes.
+
+Tone and structure:
+- Neutral, concise, board-ready minutes language.
+- Use complete sentences and coherent paragraphs.
+- Summarize discussion by topic, not by transcript order when possible.
+- Separate discussion, decisions, motions, action items, and unresolved follow-up.
+- For each topic, produce final minutes text. Avoid meta labels such as "context", "discussion", or "implications" inside recommendedMinuteText.
+
+Return valid JSON only with this shape:
+{
+  "professionalSummary": "1-3 concise professional paragraphs suitable for meeting minutes.",
+  "topicBriefings": [
+    {
+      "topic": "Short topic heading",
+      "context": "What prompted or framed the topic.",
+      "discussionSummary": "A polished discussion summary expanding terse notes into board-ready language.",
+      "implications": "Operational, governance, resident, budget, timing, or accountability implications if present.",
+      "recommendedMinuteText": "A concise final paragraph suitable to paste directly into meeting minutes, with no labels or commentary."
+    }
+  ],
+  "decisions": ["Clear decisions or resolutions. Use professional wording. Do not list undecided discussion here."],
+  "motionsMentioned": ["Motion or resolution text rewritten clearly where the notes support it."],
+  "actionItems": [
+    {
+      "id": "short-stable-id",
+      "description": "Specific action to be completed.",
+      "ownerName": "Named owner if present, otherwise omit",
+      "committee": "Committee if present, otherwise omit",
+      "dueDate": "YYYY-MM-DD if explicit, otherwise omit",
+      "priority": "Low | Medium | High",
+      "sourceSnippet": "Short source phrase from the notes"
+    }
+  ],
+  "risksOrFollowUps": ["Open questions, dependencies, missing approvals, or items to carry forward."],
+  "confidenceNotes": ["Any assumptions, ambiguity, or missing source details that an admin should review."]
+}
+
+Rough notes:
+${rawNotes}`;
+
+const normalizeMeetingAnalysis = (parsed: any) => {
+  const asStringArray = (value: any) => Array.isArray(value) ? value.filter(Boolean).map(item => String(item)) : [];
+  const topicBriefings = Array.isArray(parsed.topicBriefings)
+    ? parsed.topicBriefings.map((item: any) => ({
+      topic: String(item?.topic || 'Meeting Topic'),
+      context: String(item?.context || ''),
+      discussionSummary: String(item?.discussionSummary || ''),
+      implications: String(item?.implications || ''),
+      recommendedMinuteText: String(item?.recommendedMinuteText || ''),
+    }))
+    : [];
+  const actionItems = Array.isArray(parsed.actionItems)
+    ? parsed.actionItems.map((item: any, index: number) => ({
+      id: String(item?.id || `ai-action-${index + 1}`),
+      description: String(item?.description || '').trim(),
+      ownerName: item?.ownerName ? String(item.ownerName) : undefined,
+      committee: item?.committee ? String(item.committee) : undefined,
+      dueDate: item?.dueDate ? String(item.dueDate) : undefined,
+      priority: ['Low', 'Medium', 'High'].includes(String(item?.priority)) ? String(item.priority) : 'Medium',
+      sourceSnippet: item?.sourceSnippet ? String(item.sourceSnippet) : undefined,
+    })).filter((item: any) => item.description)
+    : [];
+
+  return {
+    professionalSummary: String(parsed.professionalSummary || 'Meeting summary could not be generated.'),
+    topicBriefings,
+    decisions: asStringArray(parsed.decisions),
+    motionsMentioned: asStringArray(parsed.motionsMentioned),
+    actionItems,
+    risksOrFollowUps: asStringArray(parsed.risksOrFollowUps),
+    confidenceNotes: asStringArray(parsed.confidenceNotes),
+  };
+};
+
+const generateMeetingAnalysis = async (rawNotes: string, meetingType?: string, modelName = DEFAULT_GEMINI_MODEL) => {
+  const model = getAI().getGenerativeModel({
+    model: modelName,
+    generationConfig: { responseMimeType: 'application/json' },
+  });
+  const result = await model.generateContent(buildMeetingAnalysisPrompt(rawNotes, meetingType));
+  const response = await result.response;
+  return normalizeMeetingAnalysis(parseJsonResponse(response.text(), {}));
+};
+
+app.post('/api/ai/meeting-analysis-demo', async (req, res) => {
+  const { rawNotes, meetingId, meetingType } = req.body;
+  if (!rawNotes || String(rawNotes).trim().length < 20) return res.status(400).json({ error: 'Meeting notes must be at least 20 characters.' });
+  try {
+    const analysis = await generateMeetingAnalysis(rawNotes, meetingType);
+    res.json({
+      id: `demo-meeting-analysis-${Date.now()}`,
+      meetingId: meetingId || null,
+      rawNotes,
+      ...analysis,
+      createdBy: 'demo-gemini',
+      createdAt: new Date().toISOString(),
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: `Gemini meeting analysis failed: ${e.message}` });
+  }
+});
+
+app.post('/api/ai/meeting-analysis', requireAuth, requireAdmin, async (req, res) => {
+  const { rawNotes, meetingId, meetingType } = req.body;
+  if (!rawNotes || String(rawNotes).trim().length < 20) return res.status(400).json({ error: 'Meeting notes must be at least 20 characters.' });
+  const p = getPrisma();
+  try {
+    const user = (req as any).user || (req as any).session?.user;
+    const coopId = await getCoopId(req, p);
+    const generated = await generateMeetingAnalysis(rawNotes, meetingType, user?.geminiModel || DEFAULT_GEMINI_MODEL);
+    const analysis = await p.meetingAnalysis.create({
+      data: {
+        cooperativeId: coopId,
+        meetingId: meetingId || null,
+        rawNotes,
+        professionalSummary: generated.professionalSummary,
+        decisions: generated.decisions,
+        motionsMentioned: generated.motionsMentioned,
+        actionItems: generated.actionItems,
+        risksOrFollowUps: generated.risksOrFollowUps,
+        createdBy: user?.email || 'unknown',
+      },
+    });
+    const notifications = mapMeetingActionsToNotifications({ cooperativeId: coopId, meetingId, actions: generated.actionItems });
+    for (const notification of notifications) {
+      await createSystemNotification(p, {
+        cooperativeId: coopId,
+        audience: notification.audience,
+        recipientUserEmail: notification.recipientUserEmail,
+        type: notification.type,
+        severity: notification.severity,
+        title: notification.title,
+        body: notification.body,
+        entityType: notification.entityType,
+        entityId: notification.entityId,
+        actionUrl: notification.actionUrl,
+      }).catch(error => console.error('Failed to notify action item:', error));
+    }
+    res.json({ ...analysis, topicBriefings: generated.topicBriefings, confidenceNotes: generated.confidenceNotes });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/ai/summarize', requireAuth, async (req, res) => {
   try {
     const genAI = getAI();
@@ -1264,6 +2466,135 @@ app.post('/api/ai/summarize', requireAuth, async (req, res) => {
     res.json(JSON.parse(response.text() || '{"summary": "", "tags": []}'));
   } catch (e: any) {
     res.status(500).json({ summary: '', tags: [], error: e.message });
+  }
+});
+
+const FALLBACK_GEMINI_TTS_MODEL = 'gemini-2.5-pro-preview-tts';
+
+app.post('/api/ai/demo-tour-tts', async (req, res) => {
+  try {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) return res.status(503).json({ error: 'Gemini API key is not configured.' });
+
+    const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+    if (text.length < 8) return res.status(400).json({ error: 'Narration text is required.' });
+    if (text.length > 1600) return res.status(400).json({ error: 'Narration text is too long.' });
+
+    // 1. Check persistent cache (Vercel Blob)
+    const textHash = crypto.createHash('sha256').update(text).digest('hex');
+    const cachePath = `tts-cache/${textHash}.wav`;
+    const token = getBlobToken();
+
+    if (token && token.length > 10) {
+      try {
+        const { blobs } = await list({ prefix: cachePath, token, limit: 1 });
+        const existing = blobs.find(b => b.pathname === cachePath);
+        if (existing) {
+          console.log(`[TTS Cache] Hit: ${cachePath}`);
+          return res.redirect(existing.url);
+        }
+      } catch (cacheErr) {
+        console.warn('[TTS Cache] Error checking cache:', cacheErr);
+      }
+    }
+
+    // 2. Cache miss: Generate narration
+    const generateSpeech = async (modelName: string) => {
+      console.log(`[TTS] Requesting generation from ${modelName}...`);
+      return axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
+        {
+          contents: [{
+            parts: [{
+              text: `Read this guided tour narration in a warm, clear, welcoming voice at a calm pace:\n\n${text}`,
+            }],
+          }],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Kore' },
+              },
+            },
+          },
+          model: modelName,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
+          timeout: 25000,
+        },
+      );
+    };
+
+    let response;
+    try {
+      response = await generateSpeech(DEFAULT_GEMINI_TTS_MODEL);
+    } catch (e: any) {
+      const status = e.response?.status;
+      const isRateLimit = status === 429;
+      const isModelNotFound = status === 404 || status === 400;
+      
+      if (isRateLimit || isModelNotFound) {
+        console.log(`TTS model ${DEFAULT_GEMINI_TTS_MODEL} failed (status ${status}), trying fallback ${FALLBACK_GEMINI_TTS_MODEL}...`);
+        try {
+          response = await generateSpeech(FALLBACK_GEMINI_TTS_MODEL);
+        } catch (e2: any) {
+          console.error(`TTS fallback model ${FALLBACK_GEMINI_TTS_MODEL} also failed:`, e2.response?.data || e2.message);
+          throw e2;
+        }
+      } else {
+        console.error(`TTS primary model ${DEFAULT_GEMINI_TTS_MODEL} failed with unhandled status ${status}:`, e.response?.data || e.message);
+        throw e;
+      }
+    }
+
+    const inlineData = response.data?.candidates?.[0]?.content?.parts?.find((part: any) => part.inlineData || part.inline_data);
+    const audioBase64 = inlineData?.inlineData?.data || inlineData?.inline_data?.data;
+    if (!audioBase64) {
+      console.error('Gemini response missing audio data:', JSON.stringify(response.data, null, 2));
+      throw new Error('Gemini did not return audio data.');
+    }
+
+    const wav = pcm16ToWavBuffer(Buffer.from(audioBase64, 'base64'), 24000, 1);
+
+    // 3. Save to persistent cache asynchronously
+    if (token && token.length > 10) {
+      put(cachePath, wav, {
+        access: 'public',
+        contentType: 'audio/wav',
+        token,
+        addRandomSuffix: false,
+      }).then(blob => {
+        console.log(`[TTS Cache] Saved: ${blob.url}`);
+      }).catch(err => {
+        console.error('[TTS Cache] Failed to save:', err);
+      });
+    }
+
+    res.setHeader('Content-Type', 'audio/wav');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(wav);
+  } catch (e: any) {
+    const message = e.response?.data?.error?.message || e.message || 'Unknown Gemini TTS error';
+    res.status(500).json({ error: `Gemini tour narration failed: ${message}` });
+  }
+});
+
+app.post('/api/ai/summarize-demo', async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content || String(content).trim().length < 20) {
+      return res.status(400).json({ error: 'Document content is required.' });
+    }
+    const model = getAI().getGenerativeModel({ model: DEFAULT_GEMINI_MODEL });
+    const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm"). Return JSON only with summary and tags.\n\nContent: ${String(content).substring(0, 5000)}`);
+    const response = await result.response;
+    res.json(parseJsonResponse(response.text(), { summary: '', tags: [] }));
+  } catch (e: any) {
+    res.status(500).json({ error: `Gemini document summary failed: ${e.message}` });
   }
 });
 
@@ -1290,6 +2621,80 @@ app.get('/api/migrate', async (req, res) => {
       );
     `);
     await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Cooperative_slug_key" ON "Cooperative"("slug");`);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Building" (
+        "id" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "code" TEXT,
+        "address" TEXT,
+        "sortOrder" INTEGER NOT NULL DEFAULT 1,
+        "cooperativeId" TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Building_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Building_cooperativeId_idx" ON "Building"("cooperativeId");`);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Building_cooperativeId_name_key" ON "Building"("cooperativeId", "name");`);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Notification" (
+        "id" TEXT NOT NULL,
+        "cooperativeId" TEXT NOT NULL,
+        "audience" TEXT NOT NULL,
+        "recipientUserEmail" TEXT,
+        "type" TEXT NOT NULL,
+        "severity" TEXT NOT NULL DEFAULT 'info',
+        "title" TEXT NOT NULL,
+        "body" TEXT NOT NULL,
+        "entityType" TEXT,
+        "entityId" TEXT,
+        "actionUrl" TEXT,
+        "readAt" TIMESTAMP(3),
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_cooperativeId_idx" ON "Notification"("cooperativeId");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_recipientUserEmail_idx" ON "Notification"("recipientUserEmail");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_readAt_idx" ON "Notification"("readAt");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_createdAt_idx" ON "Notification"("createdAt");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Notification_type_idx" ON "Notification"("type");`);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "MeetingAnalysis" (
+        "id" TEXT NOT NULL,
+        "meetingId" TEXT,
+        "cooperativeId" TEXT NOT NULL,
+        "rawNotes" TEXT NOT NULL,
+        "professionalSummary" TEXT NOT NULL,
+        "decisions" JSONB NOT NULL,
+        "motionsMentioned" JSONB NOT NULL,
+        "actionItems" JSONB NOT NULL,
+        "risksOrFollowUps" JSONB NOT NULL,
+        "createdBy" TEXT NOT NULL,
+        "approvedAt" TIMESTAMP(3),
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "MeetingAnalysis_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "MeetingAnalysis_cooperativeId_idx" ON "MeetingAnalysis"("cooperativeId");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "MeetingAnalysis_meetingId_idx" ON "MeetingAnalysis"("meetingId");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "MeetingAnalysis_createdAt_idx" ON "MeetingAnalysis"("createdAt");`);
+
+    await p.$executeRawUnsafe(`ALTER TABLE "Unit" ADD COLUMN IF NOT EXISTS "buildingId" TEXT;`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Unit_buildingId_idx" ON "Unit"("buildingId");`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "attachments" JSONB;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "aiTriage" JSONB;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "visualDescription" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "residentTip" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "triageReviewedBy" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "triageReviewedAt" TIMESTAMP(3);`);
+    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "language" TEXT NOT NULL DEFAULT 'English';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "intent" TEXT NOT NULL DEFAULT 'policy';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "suggestedAction" JSONB;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "feedback" TEXT;`);
 
     // 2. Add cooperativeId to all models
     const tables = [
@@ -1555,7 +2960,7 @@ app.get('/api/seed', async (req, res) => {
       { firstName: 'Isaiah', lastName: 'Campbell', email: 'isaiah.campbell@email.com', phone: '250-555-0156', startDate: '2025-01-15', status: 'Current', unit: '406' },
       { firstName: 'Natasha', lastName: 'Ivanova', email: 'natasha.ivanova@email.com', phone: '250-555-0157', startDate: '2025-02-01', status: 'Current', unit: '407' },
       { firstName: 'Dmitri', lastName: 'Ivanov', email: 'dmitri.ivanov@email.com', phone: '250-555-0158', startDate: '2025-02-01', status: 'Current', unit: '407' },
-      { firstName: 'Joe', lastName: 'Wansbrough', email: 'joewansbrough@gmail.com', phone: '250-555-9999', startDate: '2025-05-01', status: 'Current', unit: '210' },
+      { firstName: 'Maya', lastName: 'Ellison', email: 'maya.ellison@email.com', phone: '250-555-9999', startDate: '2025-05-01', status: 'Current', unit: '210' },
       // Waitlist
       { firstName: 'Alice', lastName: 'Waites', email: 'alice.wait@email.com', phone: '250-555-1001', startDate: '2026-01-01', status: 'Waitlist', unit: null },
       { firstName: 'Bob', lastName: 'Waites', email: 'bob.wait@email.com', phone: '250-555-1002', startDate: '2026-01-01', status: 'Waitlist', unit: null },
@@ -1591,13 +2996,13 @@ app.get('/api/seed', async (req, res) => {
     ];
 
     const eventData = [
-      { title: 'Co-op AGM', description: 'Official annual meeting and board elections.', date: '2026-04-12T19:00:00Z', location: 'Common Room' },
-      { title: 'Block Party Prep', description: 'Planning meeting for the Cook Street Block Party.', date: '2026-04-20T18:30:00Z', location: 'Unit 210' },
-      { title: 'Community Garden Kickoff', description: 'First planting session of the year.', date: '2026-05-02T10:00:00Z', location: 'Back Courtyard' },
-      { title: 'Coffee & Conversation', description: 'Casual meetup for new and old members.', date: '2026-05-15T11:00:00Z', location: 'Common Room' },
-      { title: 'Board Meeting', description: 'Monthly oversight meeting.', date: '2026-04-28T19:30:00Z', location: 'Zoom' },
-      { title: 'Summer BBQ', description: 'Annual summer social.', date: '2026-07-04T16:00:00Z', location: 'Front Lawn' },
-      { title: 'Emergency Drill', description: 'Fire safety walkthrough for all residents.', date: '2026-05-10T14:00:00Z', location: 'Main Entrance' },
+      { title: 'Co-op AGM', description: 'Official annual meeting and board elections.', date: '2026-04-12T19:00:00Z', location: 'Common Room', category: 'Meeting' },
+      { title: 'Block Party Prep', description: 'Planning meeting for the Cook Street Block Party.', date: '2026-04-20T18:30:00Z', location: 'Unit 210', category: 'Social' },
+      { title: 'Community Garden Kickoff', description: 'First planting session of the year.', date: '2026-05-02T10:00:00Z', location: 'Back Courtyard', category: 'Social' },
+      { title: 'Coffee & Conversation', description: 'Casual meetup for new and old members.', date: '2026-05-15T11:00:00Z', location: 'Common Room', category: 'Social' },
+      { title: 'Board Meeting', description: 'Monthly oversight meeting.', date: '2026-04-28T19:30:00Z', location: 'Zoom', category: 'Board' },
+      { title: 'Summer BBQ', description: 'Annual summer social.', date: '2026-07-04T16:00:00Z', location: 'Front Lawn', category: 'Social' },
+      { title: 'Emergency Drill', description: 'Fire safety walkthrough for all residents.', date: '2026-05-10T14:00:00Z', location: 'Main Entrance', category: 'Maintenance' },
     ];
 
     const documentData = [
@@ -1609,12 +3014,20 @@ app.get('/api/seed', async (req, res) => {
     ];
 
     const committeeData = [
-      { name: 'Board of Directors', chair: 'George Papadopoulos', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com', 'margaret.chen@email.com', 'joewansbrough@gmail.com'] },
+      { name: 'Board of Directors', chair: 'George Papadopoulos', members: ['george.papadopoulos@email.com', 'thomas.bergstrom@email.com', 'margaret.chen@email.com', 'maya.ellison@email.com'] },
       { name: 'Maintenance Committee', chair: 'Thomas Bergstrom', members: ['thomas.bergstrom@email.com', 'carlos.rivera@email.com', 'patricia.macleod@email.com'] },
       { name: 'Finance Committee', chair: 'Patricia MacLeod', members: ['patricia.macleod@email.com', 'margaret.chen@email.com', 'ahmed.patel@email.com'] },
       { name: 'Membership Committee', chair: 'Linda Nakamura', members: ['linda.nakamura@email.com', 'priya.sharma@email.com', 'yuki.tanaka@email.com'] },
-      { name: 'Social Committee', chair: 'Wei Liu', members: ['wei.liu@email.com', 'joewansbrough@gmail.com', 'fatima.alhassan@email.com'] },
+      { name: 'Social Committee', chair: 'Wei Liu', members: ['wei.liu@email.com', 'maya.ellison@email.com', 'fatima.alhassan@email.com'] },
       { name: 'Landscape Committee', chair: 'Michael Johansson', members: ['michael.johansson@email.com', 'wei.liu@email.com', 'james.nakamura@email.com'] },
+    ];
+    const committeeEventData = [
+      { committeeName: 'Board of Directors', title: 'Board Package Review', description: 'Directors review agenda materials, resident correspondence, and follow-up items before the next board meeting.', date: '2026-06-02T18:30:00Z', location: 'Common Room', category: 'Meeting' },
+      { committeeName: 'Maintenance Committee', title: 'Maintenance Committee Triage', description: 'Review open repair requests, contractor follow-ups, and preventive maintenance priorities.', date: '2026-06-12T17:30:00Z', location: 'Workshop', category: 'Meeting' },
+      { committeeName: 'Finance Committee', title: 'Finance Committee Budget Review', description: 'Review operating budget assumptions, arrears reporting, and reserve planning updates.', date: '2026-06-16T18:00:00Z', location: 'Common Room', category: 'Meeting' },
+      { committeeName: 'Membership Committee', title: 'Membership Orientation Planning', description: 'Prepare the next orientation package and review waitlist interview scheduling.', date: '2026-06-20T11:00:00Z', location: 'Library Room', category: 'Meeting' },
+      { committeeName: 'Social Committee', title: 'Social Committee Summer Planning', description: 'Coordinate volunteers, supplies, and notices for summer community events.', date: '2026-06-27T14:00:00Z', location: 'Courtyard', category: 'Meeting' },
+      { committeeName: 'Landscape Committee', title: 'Landscape Committee Garden Walk', description: 'Walk the exterior areas and confirm seasonal planting and cleanup tasks.', date: '2026-06-29T09:30:00Z', location: 'Garden Shed', category: 'Meeting' },
     ];
 
     // 2. ENSURE COOPERATIVE EXISTS
@@ -1654,7 +3067,7 @@ app.get('/api/seed', async (req, res) => {
     units.forEach(u => { unitMap[u.number] = u.id; });
 
     console.log('Seeding tenants...');
-    const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
+    const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'maya.ellison@email.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
     const tenants: Record<string, any> = {};
 
     for (const t of tenantData) {
@@ -1709,6 +3122,28 @@ app.get('/api/seed', async (req, res) => {
       });
     }
 
+    console.log('Seeding scheduled preventative maintenance...');
+    const preventativeTaskTemplates = [
+      { task: 'Smoke and CO Alarm Test', frequency: MaintenanceFrequency.ANNUAL, assignedTo: 'Maintenance Committee', category: MaintenanceCategory.SAFETY },
+      { task: 'Bathroom Fan and Vent Cleaning', frequency: MaintenanceFrequency.QUARTERLY, assignedTo: 'Maintenance Committee', category: MaintenanceCategory.HVAC },
+      { task: 'Plumbing Shutoff and Leak Check', frequency: MaintenanceFrequency.ANNUAL, assignedTo: 'Maintenance Committee', category: MaintenanceCategory.PLUMBING },
+    ];
+    const unitEntries = Object.entries(unitMap);
+    for (const [unitNumber, unitId] of unitEntries) {
+      const unitIndex = unitEntries.findIndex(([number]) => number === unitNumber);
+      for (const [taskIndex, template] of preventativeTaskTemplates.entries()) {
+        await p.scheduledMaintenance.create({
+          data: {
+            cooperative: { connect: { id: coopId } },
+            unit: { connect: { id: unitId } },
+            ...template,
+            dueDate: new Date(Date.UTC(2026, 4 + ((unitIndex + taskIndex) % 6), 8 + ((unitIndex * 3 + taskIndex * 5) % 18))),
+            isCompleted: false,
+          },
+        });
+      }
+    }
+
     console.log('Seeding events...');
     for (const e of eventData) {
       const dt = new Date(e.date);
@@ -1720,7 +3155,7 @@ app.get('/api/seed', async (req, res) => {
           date: dt,
           time: dt.toISOString().split('T')[1].substring(0, 5),
           location: sanitizeUtf8(e.location).trim(),
-          category: "General",
+          category: e.category || "General",
         }
       });
     }
@@ -1758,8 +3193,9 @@ app.get('/api/seed', async (req, res) => {
     }
 
     console.log('Seeding committees...');
+    const committeesByName: Record<string, any> = {};
     for (const c of committeeData) {
-      await p.committee.create({
+      const committee = await p.committee.create({
         data: {
           name: sanitizeUtf8(c.name),
           chair: sanitizeUtf8(c.chair),
@@ -1772,6 +3208,26 @@ app.get('/api/seed', async (req, res) => {
           }
         }
       });
+      committeesByName[c.name] = committee;
+    }
+
+    console.log('Seeding committee events...');
+    for (const e of committeeEventData) {
+      const committee = committeesByName[e.committeeName];
+      if (!committee) continue;
+      const dt = new Date(e.date);
+      await p.coopEvent.create({
+        data: {
+          cooperativeId: coopId,
+          committeeId: committee.id,
+          title: sanitizeUtf8(e.title).trim(),
+          description: sanitizeUtf8(e.description).trim(),
+          date: dt,
+          time: dt.toISOString().split('T')[1].substring(0, 5),
+          location: sanitizeUtf8(e.location).trim(),
+          category: e.category,
+        }
+      });
     }
 
     res.json({ success: true, message: "Multi-tenant data seeded and sanitized successfully." });
@@ -1780,9 +3236,6 @@ app.get('/api/seed', async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
-
-
-   app.use('/api/drive', driveRoutes);
 
 app.get(['/api/debug/config', '/debug/config'], (req, res) => {
   res.json({

@@ -6,11 +6,15 @@ import RichTextEditor from './RichTextEditor';
 import { MinutesPDF } from '../services/export/pdfGenerator';
 import { demoStorage } from '../utils/demoStorage';
 import { recordTutorialEvent } from '../utils/demoTutorial';
+import { applyMinutesEventDetails, getMinutesEventDetails, type MinutesEventDetails } from '../utils/minutesEventDetails';
+import { buildMeetingAnalysisFormPatch } from '../utils/meetingAnalysisFormMapping';
+import { geminiService } from '../services/geminiService';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
 
 interface MinutesBuilderProps {
   meetingId: string;
+  event?: CoopEvent;
   initialData?: any;
   documents?: CoopDocument[];
   setDocuments?: React.Dispatch<React.SetStateAction<CoopDocument[]>>;
@@ -47,7 +51,7 @@ interface LinkedDocument {
   fileType: string;
 }
 
-const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData, documents = [], setDocuments, onSave }) => {
+const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, event, initialData, documents = [], setDocuments, onSave }) => {
   const [step, setStep] = useState<'select' | 'build'>('select');
   const [meetingType, setMeetingType] = useState<MeetingType>('regular');
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -63,7 +67,8 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
   const { data: committees = [] } = useCommittees();
   const { data: events = [] } = useEvents();
 
-  const currentEvent = events.find(e => e.id === meetingId);
+  const currentEvent = event || events.find(e => e.id === meetingId);
+  const eventDetails = React.useMemo(() => getMinutesEventDetails(currentEvent), [currentEvent]);
   const committeeMembers = React.useMemo(() => {
     if (!currentEvent?.committeeId) return tenants;
     const committee = committees.find(c => c.id === currentEvent.committeeId);
@@ -106,6 +111,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     additionalNotes: '',
     actionItemsList: [] as ActionItem[],
     // Quick meeting specific
+    discussionOverview: '',
     keyDecisions: '',
     nextSteps: '',
     // AGM specific
@@ -154,7 +160,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
       if (!Array.isArray(data.actionItemsList)) data.actionItemsList = [];
       if (!Array.isArray(data.linkedDocuments)) data.linkedDocuments = data.linkedDocument ? [data.linkedDocument] : [];
       
-      setFormData(prev => ({ ...prev, ...data }));
+      setFormData(prev => applyMinutesEventDetails({ ...prev, ...data }, currentEvent));
       setAttendees(initialData.attendees || attendees);
       setMotions(initialData.motions || motions);
       setMeetingType(initialData.meetingType || 'regular');
@@ -172,7 +178,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
         if (!Array.isArray(fData.actionItemsList)) fData.actionItemsList = [];
         if (!Array.isArray(fData.linkedDocuments)) fData.linkedDocuments = fData.linkedDocument ? [fData.linkedDocument] : [];
         
-        setFormData(prev => ({ ...prev, ...fData }));
+        setFormData(prev => applyMinutesEventDetails({ ...prev, ...fData }, currentEvent));
         setAttendees(data.attendees || attendees);
         setMotions(data.motions || motions);
         setMeetingType(data.meetingType || 'regular');
@@ -183,10 +189,15 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     }
   }, [meetingId, initialData]);
 
+  useEffect(() => {
+    if (!currentEvent) return;
+    setFormData(prev => applyMinutesEventDetails(prev, currentEvent));
+  }, [currentEvent]);
+
   const sanitizeFormData = (data: typeof formData) => {
     const richTextFields = [
       'boardReport', 'financeReport', 'committeeReports', 'actionItems', 
-      'newBusiness', 'keyDecisions', 'nextSteps', 'auditorReport', 
+      'newBusiness', 'discussionOverview', 'keyDecisions', 'nextSteps', 'auditorReport',
       'nominations', 'electionResults'
     ];
     
@@ -199,7 +210,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
     return sanitized;
   };
 
-  const getMinutesFileName = () => `Minutes_${formData.meetingDate || currentEvent?.date?.split('T')[0]}.pdf`;
+  const getMinutesFileName = () => `Minutes_${eventDetails.meetingDate || formData.meetingDate || currentEvent?.date?.split('T')[0]}.pdf`;
 
   const getMinutesDocumentTitle = () => `${currentEvent?.title || 'Meeting'} Minutes`;
 
@@ -209,7 +220,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
   };
 
   const createMinutesPdfBlob = () => {
-    const pdfFormData = sanitizeFormData(formData);
+    const pdfFormData = sanitizeFormData(applyMinutesEventDetails(formData, currentEvent));
     return pdf(
       <MinutesPDF data={{ formData: pdfFormData, attendees, motions, meetingType }} event={currentEvent} />
     ).toBlob();
@@ -235,7 +246,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
       url: pdfDataUrl,
       fileType: 'pdf',
       author: user?.name || user?.email || 'Secretary',
-      date: formData.meetingDate || currentEvent?.date?.split('T')[0] || new Date().toISOString(),
+      date: eventDetails.meetingDate || new Date().toISOString(),
       committee: committeeName || undefined,
       tags: Array.from(new Set([...(existingDocument?.tags || []), new Date().getFullYear().toString(), 'Minutes', 'Meeting Minutes', ...(committeeName ? [committeeName] : []), stableTag])),
       content: `PDF archive for meeting ${meetingId}. Replaced automatically when minutes are re-saved.`,
@@ -272,7 +283,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
       credentials: 'include',
       body: JSON.stringify({
         title: getMinutesDocumentTitle(),
-        date: formData.meetingDate || currentEvent.date,
+        date: eventDetails.meetingDate || currentEvent.date,
         pdfDataUrl,
       }),
     });
@@ -295,7 +306,7 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, initialData,
 
   const autoSave = () => {
     const data = {
-      formData: sanitizeFormData(formData),
+      formData: sanitizeFormData(applyMinutesEventDetails(formData, currentEvent)),
       attendees,
       motions,
       meetingType,
@@ -534,7 +545,7 @@ const handleSave = async () => {
 
   const payload = {
     meetingType,
-    formData: sanitizeFormData(formData),
+    formData: sanitizeFormData(applyMinutesEventDetails(formData, currentEvent)),
     attendees,
     motions,
   };
@@ -615,6 +626,9 @@ const handleSave = async () => {
 
 
   const [isExporting, setIsExporting] = useState(false);
+  const [rawAnalysisNotes, setRawAnalysisNotes] = useState('');
+  const [meetingAnalysis, setMeetingAnalysis] = useState<any>(null);
+  const [isAnalyzingNotes, setIsAnalyzingNotes] = useState(false);
 
   const handleExportPDF = async () => {
     setIsExporting(true);
@@ -631,6 +645,63 @@ const handleSave = async () => {
   const selectMeetingType = (type: MeetingType) => {
     setMeetingType(type);
     setStep('build');
+  };
+
+  const handleAnalyzeNotes = async () => {
+    if (!user) {
+      alert('Please sign in again before using AI meeting analysis.');
+      return;
+    }
+    if (!user.isAdmin) {
+      alert('AI meeting analysis is available to admins only.');
+      return;
+    }
+    if (rawAnalysisNotes.trim().length < 20) {
+      alert('Paste at least 20 characters of rough notes for analysis.');
+      return;
+    }
+    setIsAnalyzingNotes(true);
+    try {
+      const analysis = await geminiService.analyzeMeetingNotes(rawAnalysisNotes, meetingId, meetingType);
+      setMeetingAnalysis(analysis);
+
+      setFormData(prev => {
+        return {
+          ...prev,
+          ...buildMeetingAnalysisFormPatch({
+            meetingType,
+            analysis,
+            previousFormData: prev,
+          }),
+        };
+      });
+
+      if (Array.isArray(analysis.motionsMentioned) && analysis.motionsMentioned.length > 0) {
+        setMotions(analysis.motionsMentioned.map((motion: string, index: number) => ({
+          id: `ai-motion-${Date.now()}-${index}`,
+          description: motion,
+          mover: '',
+          seconder: '',
+          result: '',
+        })));
+      }
+
+      if (Array.isArray(analysis.actionItems)) {
+        const actionItems = analysis.actionItems.map((item: any, index: number) => ({
+          id: item.id || `ai-action-${Date.now()}-${index}`,
+          description: item.description,
+          responsible: item.ownerName ? [item.ownerName] : item.committee ? [item.committee] : [],
+          dueDate: item.dueDate || '',
+        }));
+        handleInputChange('actionItemsList', actionItems);
+      }
+      setIsDirty(true);
+      setSaveStatus('idle');
+    } catch (error: any) {
+      alert(`AI meeting analysis failed: ${error.message}`);
+    } finally {
+      setIsAnalyzingNotes(false);
+    }
   };
 
   if (step === 'select') {
@@ -837,6 +908,15 @@ const handleSave = async () => {
         <div className="flex gap-2 relative">
           <button
             type="button"
+            onClick={handleAnalyzeNotes}
+            disabled={isAnalyzingNotes}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-teal-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <i className={`fa-solid ${isAnalyzingNotes ? 'fa-spinner fa-spin' : 'fa-wand-magic-sparkles'}`}></i>
+            {isAnalyzingNotes ? 'Analyzing...' : 'Analyze Notes'}
+          </button>
+          <button
+            type="button"
             onClick={handleExportPDF}
             disabled={isExporting}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed border border-slate-200 dark:border-white/5"
@@ -869,10 +949,30 @@ const handleSave = async () => {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/5 p-8">
-        {meetingType === 'quick' && <QuickMeetingTemplate formData={formData} handleInputChange={handleInputChange} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
-        {meetingType === 'regular' && <RegularMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
-        {meetingType === 'agm' && <AGMMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
-        {meetingType === 'special' && <SpecialMeetingTemplate formData={formData} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
+        <div className="mb-8 rounded-2xl border border-teal-100 bg-teal-50 p-5 dark:border-teal-900/30 dark:bg-teal-950/20">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">AI Meeting Analysis</p>
+              <textarea
+                value={rawAnalysisNotes}
+                onChange={event => setRawAnalysisNotes(event.target.value)}
+                placeholder="Paste rough meeting notes here, then use Analyze Notes to generate a professional summary and action items."
+                className="mt-3 min-h-[110px] w-full rounded-2xl border border-teal-100 bg-white p-4 text-sm font-medium text-slate-800 outline-none focus:ring-2 focus:ring-teal-500 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200"
+              />
+            </div>
+            {meetingAnalysis && (
+              <div className="lg:w-80 rounded-2xl bg-white p-4 dark:bg-slate-900">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Latest analysis</p>
+                <p className="mt-2 line-clamp-4 text-xs font-semibold leading-relaxed text-slate-600 dark:text-slate-300">{meetingAnalysis.professionalSummary}</p>
+                <p className="mt-3 text-[10px] font-black uppercase text-teal-700 dark:text-teal-300">{meetingAnalysis.actionItems?.length || 0} action items extracted</p>
+              </div>
+            )}
+          </div>
+        </div>
+        {meetingType === 'quick' && <QuickMeetingTemplate formData={formData} eventDetails={eventDetails} handleInputChange={handleInputChange} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
+        {meetingType === 'regular' && <RegularMeetingTemplate formData={formData} eventDetails={eventDetails} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
+        {meetingType === 'agm' && <AGMMeetingTemplate formData={formData} eventDetails={eventDetails} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
+        {meetingType === 'special' && <SpecialMeetingTemplate formData={formData} eventDetails={eventDetails} handleInputChange={handleInputChange} attendees={attendees} addAttendee={addAttendee} removeAttendee={removeAttendee} updateAttendee={updateAttendee} motions={motions} addMotion={addMotion} removeMotion={removeMotion} updateMotion={updateMotion} members={committeeMembers} actionItems={formData.actionItemsList || []} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />}
 
         <div className="mt-8">
           <LinkDocumentSection
@@ -1209,17 +1309,27 @@ const LinkDocumentSection: React.FC<{
 };
 
 // Quick Meeting Template
-const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
+const EventDetailDisplay: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <FormField label={label}>
+    <div className="min-h-[44px] rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 dark:border-white/10 dark:bg-slate-800/60 dark:text-slate-200">
+      {value || 'Not set'}
+    </div>
+  </FormField>
+);
+
+const EventMeetingDetailsGrid: React.FC<{ details: MinutesEventDetails; includeLocation?: boolean; includeEndTime?: React.ReactNode }> = ({ details, includeLocation = true, includeEndTime }) => (
+  <div className={`grid grid-cols-1 ${includeEndTime ? 'md:grid-cols-4' : includeLocation ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
+    <EventDetailDisplay label="Date" value={details.meetingDate} />
+    <EventDetailDisplay label="Start Time" value={details.startTime} />
+    {includeLocation && <EventDetailDisplay label="Location" value={details.location} />}
+    {includeEndTime}
+  </div>
+);
+
+const QuickMeetingTemplate: React.FC<any> = ({ formData, eventDetails, handleInputChange, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
   <div className="space-y-8">
     <FormSection title="Meeting Info" icon="fa-info-circle">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Date" required>
-          <input type="date" value={formData.meetingDate} onChange={(e) => handleInputChange('meetingDate', e.target.value)} className="form-input" required />
-        </FormField>
-        <FormField label="Start Time">
-          <input type="time" value={formData.startTime} onChange={(e) => handleInputChange('startTime', e.target.value)} className="form-input" />
-        </FormField>
-      </div>
+      <EventMeetingDetailsGrid details={eventDetails} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField label="Chairperson" required>
           <NameSelector
@@ -1250,8 +1360,15 @@ const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, memb
     </FormSection>
 
     <FormSection title="Key Points" icon="fa-list-check">
+      <FormField label="Discussion Overview">
+        <RichTextEditor
+          value={formData.discussionOverview}
+          onChange={(val) => handleInputChange('discussionOverview', val)}
+          placeholder="Summarize the main discussion, context, and considerations."
+        />
+      </FormField>
       <FormField label="Decisions Made">
-        <RichTextEditor value={formData.keyDecisions} onChange={(val) => handleInputChange('keyDecisions', val)} placeholder="What was decided or discussed?" />
+        <RichTextEditor value={formData.keyDecisions} onChange={(val) => handleInputChange('keyDecisions', val)} placeholder="Record only clear decisions or resolutions." />
       </FormField>
     </FormSection>
     <ActionItemsEditor actionItems={actionItems} members={members} addActionItem={addActionItem} removeActionItem={removeActionItem} updateActionItem={updateActionItem} />
@@ -1259,24 +1376,18 @@ const QuickMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, memb
 );
 
 // Regular Meeting Template (streamlined version)
-const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
+const RegularMeetingTemplate: React.FC<any> = ({ formData, eventDetails, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
   <div className="space-y-8">
     <FormSection title="Meeting Information" icon="fa-calendar-check">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FormField label="Date" required>
-          <input type="date" value={formData.meetingDate} onChange={(e) => handleInputChange('meetingDate', e.target.value)} className="form-input" required />
-        </FormField>
-        <FormField label="Start Time" required>
-          <input type="time" value={formData.startTime} onChange={(e) => handleInputChange('startTime', e.target.value)} className="form-input" required />
-        </FormField>
-        <FormField label="End Time">
+      <EventMeetingDetailsGrid
+        details={eventDetails}
+        includeEndTime={(
+          <FormField label="End Time">
           <input type="time" value={formData.endTime} onChange={(e) => handleInputChange('endTime', e.target.value)} className="form-input" />
-        </FormField>
-      </div>
+          </FormField>
+        )}
+      />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Location" required>
-          <input type="text" value={formData.location} onChange={(e) => handleInputChange('location', e.target.value)} placeholder="e.g., Common Room" className="form-input" required />
-        </FormField>
         <FormField label="Chairperson" required>
           <NameSelector 
             value={formData.chair} 
@@ -1450,10 +1561,11 @@ const RegularMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, at
 );
 
 // AGM Meeting Template (comprehensive)
-const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
+const AGMMeetingTemplate: React.FC<any> = ({ formData, eventDetails, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
   <div className="space-y-8">
     <RegularMeetingTemplate 
       formData={formData} 
+      eventDetails={eventDetails}
       handleInputChange={handleInputChange}
       attendees={attendees}
       addAttendee={addAttendee}
@@ -1532,20 +1644,10 @@ const AGMMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attend
 );
 
 // Special Meeting Template
-const SpecialMeetingTemplate: React.FC<any> = ({ formData, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
+const SpecialMeetingTemplate: React.FC<any> = ({ formData, eventDetails, handleInputChange, attendees, addAttendee, removeAttendee, updateAttendee, motions, addMotion, removeMotion, updateMotion, members, actionItems, addActionItem, removeActionItem, updateActionItem }) => (
   <div className="space-y-8">
     <FormSection title="Meeting Information" icon="fa-calendar-check">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FormField label="Date" required>
-          <input type="date" value={formData.meetingDate} onChange={(e) => handleInputChange('meetingDate', e.target.value)} className="form-input" required />
-        </FormField>
-        <FormField label="Start Time" required>
-          <input type="time" value={formData.startTime} onChange={(e) => handleInputChange('startTime', e.target.value)} className="form-input" required />
-        </FormField>
-        <FormField label="Location" required>
-          <input type="text" value={formData.location} onChange={(e) => handleInputChange('location', e.target.value)} className="form-input" required />
-        </FormField>
-      </div>
+      <EventMeetingDetailsGrid details={eventDetails} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField label="Chairperson" required>
           <NameSelector 

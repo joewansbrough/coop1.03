@@ -7,7 +7,7 @@
 import * as demoData from './demoData';
 
 const PREFIX = 'demo_v1_';
-export const DEMO_DATA_SEED_VERSION = '2026-04-28-rich-site-seed';
+export const DEMO_DATA_SEED_VERSION = '2026-05-13-preventative-unit-schedules';
 
 const seededCollections: Record<string, any[]> = {
   events: demoData.MOCK_EVENTS,
@@ -15,6 +15,8 @@ const seededCollections: Record<string, any[]> = {
   announcements: demoData.MOCK_ANNOUNCEMENTS,
   tenants: demoData.MOCK_TENANTS,
   units: demoData.MOCK_UNITS,
+  buildings: demoData.MOCK_BUILDINGS,
+  notifications: demoData.MOCK_NOTIFICATIONS,
   documents: demoData.MOCK_DOCUMENTS,
   minutes: demoData.MOCK_MINUTES,
 };
@@ -108,7 +110,16 @@ export const demoStorage = {
   deleteTenant: (id: string) => demoStorage.deleteItem('tenants', demoData.MOCK_TENANTS, id),
 
   getUnits: () => demoStorage.getAll('units', demoData.MOCK_UNITS),
+  addUnit: (unit: any) => demoStorage.addItem('units', demoData.MOCK_UNITS, unit),
   updateUnit: (unit: any) => demoStorage.updateItem('units', demoData.MOCK_UNITS, unit),
+
+  getBuildings: () => demoStorage.getAll('buildings', demoData.MOCK_BUILDINGS),
+  addBuilding: (building: any) => demoStorage.addItem('buildings', demoData.MOCK_BUILDINGS, building),
+  updateBuilding: (building: any) => demoStorage.updateItem('buildings', demoData.MOCK_BUILDINGS, building),
+
+  getNotifications: () => demoStorage.getAll('notifications', demoData.MOCK_NOTIFICATIONS),
+  addNotification: (notification: any) => demoStorage.addItem('notifications', demoData.MOCK_NOTIFICATIONS, notification),
+  updateNotification: (notification: any) => demoStorage.updateItem('notifications', demoData.MOCK_NOTIFICATIONS, notification),
 
   getMinutes: () => demoStorage.getAll('minutes', demoData.MOCK_MINUTES),
   addMinutes: (min: any) => demoStorage.addItem('minutes', demoData.MOCK_MINUTES, min),

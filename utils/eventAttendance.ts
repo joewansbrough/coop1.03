@@ -1,4 +1,4 @@
-import { CoopEvent, Tenant } from '../types';
+import type { CoopEvent, Tenant } from '../types';
 
 type AttendanceUser = {
   id?: string;

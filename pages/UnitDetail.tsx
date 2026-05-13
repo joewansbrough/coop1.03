@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { RequestStatus, Unit, Tenant, MaintenanceRequest, Document, ScheduledMaintenance } from '../types';
-import { useRefreshData, useUser } from '../hooks/useCoopData';
+import { RequestStatus, Unit, Tenant, MaintenanceRequest, Document } from '../types';
+import { useRefreshData, useScheduledMaintenance, useUser } from '../hooks/useCoopData';
 import { formatDate } from '../utils/dateUtils';
 import AppAlert from '../components/AppAlert';
 
@@ -57,7 +57,10 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   const activeRequests = requests.filter(r => r.status === RequestStatus.PENDING || r.status === RequestStatus.IN_PROGRESS);
   const historicalRequests = requests.filter(r => r.status === RequestStatus.COMPLETED || r.status === RequestStatus.CANCELLED);
   
-  const [scheduledTasks, setScheduledTasks] = useState<ScheduledMaintenance[]>([]);
+  const { data: allScheduledTasks = [] } = useScheduledMaintenance();
+  const scheduledTasks = allScheduledTasks
+    .filter(task => task.unitId === unitId)
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   
   const unitDocs = documents.filter(doc => doc.tags?.includes(`Unit ${unit?.number}`));
   
@@ -87,15 +90,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
 
     return () => clearInterval(checkScripts);
   }, []);
-
-  useEffect(() => {
-    if (unitId) {
-      fetch(`/api/units/${unitId}/scheduled-maintenance`)
-        .then(res => res.ok ? res.json() : [])
-        .then(data => setScheduledTasks(data))
-        .catch(err => console.error('Failed to load scheduled tasks:', err));
-    }
-  }, [unitId]);
 
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {
@@ -340,26 +334,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
     }
   };
 
-  const handleSeedPreventative = async () => {
-    try {
-      const res = await fetch('/api/seed/preventative');
-      if (res.ok) {
-        showNotification('Preventative maintenance tasks seeded for all units.', 'success');
-        // Reload tasks for current unit
-        const tasksRes = await fetch(`/api/units/${unitId}/scheduled-maintenance`);
-        if (tasksRes.ok) {
-          const freshTasks = await tasksRes.json();
-          setScheduledTasks(freshTasks);
-        }
-      } else {
-        throw new Error('Failed to seed tasks');
-      }
-    } catch (err) {
-      console.error(err);
-      showNotification('Failed to seed preventative tasks.', 'error');
-    }
-  };
-
   const handleTransfer = async () => {
     console.log("handleTransfer triggered", { unit, primaryResident, selectedTargetUnitId });
     if (!unit || !selectedTargetUnitId) return;
@@ -524,7 +498,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
   );
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto pb-12 transition-all animate-in fade-in duration-500" data-demo-target="unit-intelligence">
       <div className="flex items-center gap-4 text-slate-500 text-sm mb-2">
         {isAdmin ? (
           <Link to="/admin/units" className="hover:text-brand-600 transition-colors flex items-center gap-1 font-bold">
@@ -563,7 +537,9 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 {unit.status}
               </span>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 text-sm md:text-base">{unit.type} Residence • Floor {unit.floor} • Wing A</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 text-sm md:text-base">
+              {unit.type} Residence • {unit.building?.name ? `${unit.building.name} • ` : ''}Floor {unit.floor}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 md:gap-3 w-full lg:w-auto relative z-20 justify-start lg:justify-end">
@@ -689,6 +665,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
         ].map(tab => (
           <button 
             key={tab.id}
+            data-demo-target={`unit-tab-${tab.id}`}
             onClick={() => {
               setActiveTab(tab.id as any);
               navigate(`/admin/units/${unitId}?tab=${tab.id}`, { replace: true });
@@ -963,14 +940,6 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Scheduled Preventative Maintenance</h3>
                 <p className="text-[10px] text-slate-500 font-medium">Routine system inspections and recurring unit safety checks.</p>
               </div>
-              {isAdmin && (
-                <button 
-                  onClick={handleSeedPreventative}
-                  className="bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-100 transition-all border border-brand-100 dark:border-brand-900/30 active:scale-95 flex items-center gap-2"
-                >
-                  <i className="fa-solid fa-seedling"></i> Seed Unit Tasks
-                </button>
-              )}
             </div>
             <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm">
               <table className="w-full text-left">
@@ -1024,7 +993,7 @@ const UnitDetail: React.FC<UnitDetailProps> = ({ isAdmin = false, units, setUnit
                            </div>
                            <h4 className="text-slate-400 font-bold mb-2">No preventative tasks found for this unit</h4>
                            <p className="text-[10px] text-slate-400/60 uppercase tracking-widest max-w-[240px] leading-relaxed mx-auto">
-                             Click the seed button above to generate a standard schedule based on building protocols.
+                             No recurring safety or inspection tasks are currently scheduled for this unit.
                            </p>
                         </div>
                       </td>

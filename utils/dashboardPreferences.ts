@@ -16,7 +16,12 @@ export type DashboardTileId =
   | 'my-requests'
   | 'community-updates'
   | 'useful-documents'
-  | 'participation-prompts';
+  | 'participation-prompts'
+  | 'notifications-hub'
+  | 'triage-review'
+  | 'oracle-activity'
+  | 'meeting-actions'
+  | 'building-health';
 
 export interface DashboardTilePreference {
   id: DashboardTileId;
@@ -72,7 +77,7 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
   'announcement-digest': {
     id: 'announcement-digest',
     title: 'Community Announcements',
-    description: 'Urgent and recent community notices.',
+    description: 'High-priority and recent community notices.',
     roles: ['admin'],
     defaultSize: 'large',
     allowedSizes: ['small', 'wide', 'large'],
@@ -157,6 +162,51 @@ export const DASHBOARD_TILE_REGISTRY: Record<DashboardTileId, DashboardTileDefin
     roles: ['resident'],
     defaultSize: 'wide',
     allowedSizes: ['small', 'wide'],
+    defaultOrder: { admin: null, resident: null },
+  },
+  'notifications-hub': {
+    id: 'notifications-hub',
+    title: 'Notifications Hub',
+    description: 'Unread requests, governance follow-ups, and system notices.',
+    roles: ['admin', 'resident'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: null, resident: null },
+  },
+  'triage-review': {
+    id: 'triage-review',
+    title: 'AI Triage Review',
+    description: 'Maintenance requests where AI confidence or urgency needs review.',
+    roles: ['admin'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: null, resident: null },
+  },
+  'oracle-activity': {
+    id: 'oracle-activity',
+    title: 'Oracle Activity',
+    description: 'Recent policy assistant questions and maintenance nudges.',
+    roles: ['admin'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: null, resident: null },
+  },
+  'meeting-actions': {
+    id: 'meeting-actions',
+    title: 'Meeting Actions',
+    description: 'AI-extracted meeting follow-ups awaiting completion.',
+    roles: ['admin'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
+    defaultOrder: { admin: null, resident: null },
+  },
+  'building-health': {
+    id: 'building-health',
+    title: 'Building Health',
+    description: 'Building and floor-level maintenance load.',
+    roles: ['admin'],
+    defaultSize: 'wide',
+    allowedSizes: ['small', 'wide', 'large'],
     defaultOrder: { admin: null, resident: null },
   },
 };

@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { MaintenanceRequest, RequestStatus, MaintenanceCategory, Unit, MaintenancePriority } from '../types';
 import { geminiService } from '../services/geminiService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
-import { useCreateMaintenance, useUpdateMaintenance } from '../hooks/useCoopData';
+import { isDemoMode, useCreateMaintenance, useUpdateMaintenance, useUser } from '../hooks/useCoopData';
 import { recordTutorialEvent } from '../utils/demoTutorial';
 
 interface MaintenanceProps {
@@ -19,6 +19,7 @@ interface MaintenanceProps {
 const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, setRequests, units, isRequestsLoading, isRequestsError }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { data: user } = useUser();
   const userUnitId = units.length > 0 ? units[0].id : 'u1';
   const statusParam = searchParams.get('status');
   const priorityParam = searchParams.get('priority') as MaintenancePriority | null;
@@ -30,7 +31,13 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<{id: string, status: RequestStatus} | null>(null);
   const [urgency, setUrgency] = useState<string>('Medium');
+  const [aiTriage, setAiTriage] = useState<any>(null);
+  const [residentTip, setResidentTip] = useState('');
+  const [visualDescription, setVisualDescription] = useState('');
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [imageAnalysisLoading, setImageAnalysisLoading] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const lastTriageKey = useRef('');
 
   const createMaintenanceMutation = useCreateMaintenance();
   const updateMaintenanceMutation = useUpdateMaintenance();
@@ -70,22 +77,89 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   useEffect(() => {
     if (searchParams.get('action') === 'new-request') {
       setShowForm(true);
+      const issue = searchParams.get('issue');
+      if (issue) setDescription(issue);
     }
   }, [searchParams]);
 
-  const handleTriage = async () => {
-    if (!description || description.length < 10) return;
+  const handleTriage = async (nextDescription = description, nextVisualDescription = visualDescription) => {
+    const trimmedDescription = nextDescription.trim();
+    const trimmedVisualDescription = nextVisualDescription.trim();
+    if (trimmedDescription.length < 10 && trimmedVisualDescription.length < 10) return;
+    const triageKey = `${trimmedDescription}::${trimmedVisualDescription}`;
+    if (triageKey === lastTriageKey.current) return;
+    lastTriageKey.current = triageKey;
+    const triageDescription = trimmedDescription || 'Resident uploaded a maintenance photo for AI triage. No written description was provided.';
     setLoading(true);
     try {
-      const result = await geminiService.triageMaintenanceRequest(description);
-    if (result.category) setCategory([result.category as MaintenanceCategory]);
-    if (result.priority) setPriority(result.priority as MaintenancePriority);
-    if (result.urgency) setUrgency(result.urgency);
+      const result = await geminiService.triageMaintenanceRequest(triageDescription, trimmedVisualDescription);
+      setAiTriage(result);
+      if (result.category) setCategory(Array.isArray(result.category) ? result.category as MaintenanceCategory[] : [result.category as MaintenanceCategory]);
+      if (result.priority) setPriority(result.priority as MaintenancePriority);
+      if (result.urgency) setUrgency(result.urgency);
+      if (result.residentTip) setResidentTip(result.residentTip);
     } catch (err) {
+      lastTriageKey.current = '';
       console.error(err);
+      showAlert('Gemini could not triage this request. You can still submit it manually.', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (!showForm) return;
+    const trimmedDescription = description.trim();
+    const trimmedVisualDescription = visualDescription.trim();
+    if (trimmedDescription.length < 10 && trimmedVisualDescription.length < 10) return;
+
+    const timeout = window.setTimeout(() => {
+      handleTriage(trimmedDescription, trimmedVisualDescription);
+    }, 800);
+
+    return () => window.clearTimeout(timeout);
+  }, [description, visualDescription, showForm]);
+
+  const fileToDataUrl = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Failed to read image file.'));
+    reader.readAsDataURL(file);
+  });
+
+  const handleImageUpload = async (file?: File) => {
+    if (!file) return;
+    setImageAnalysisLoading(true);
+    try {
+      const result = await geminiService.describeMaintenanceImage(file, description);
+      const nextVisualDescription = result.visualDescription || '';
+      setVisualDescription(nextVisualDescription);
+      let nextAttachment = result.attachment;
+      if (isDemoMode() && nextAttachment && !nextAttachment.url) {
+        nextAttachment = {
+          ...nextAttachment,
+          url: await fileToDataUrl(file),
+          storageUrl: '',
+          storageKey: '',
+        };
+      }
+      if (nextAttachment?.url) {
+        setAttachments(prev => [...prev, nextAttachment]);
+      }
+      if (result.likelyCategory) setCategory([result.likelyCategory as MaintenanceCategory]);
+      await handleTriage(description, nextVisualDescription);
+      showAlert(nextAttachment?.url ? 'Image saved and analyzed. Review it before submitting.' : 'Image analyzed, but no stored attachment was returned.', nextAttachment?.url ? 'success' : 'info');
+    } catch (err: any) {
+      showAlert(err.message || 'Failed to analyze image.', 'error');
+    } finally {
+      setImageAnalysisLoading(false);
+    }
+  };
+
+  const hearVisualDescription = () => {
+    if (!visualDescription || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(visualDescription));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -99,7 +173,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
     const payload: Omit<MaintenanceRequest, 'id'> = {
       title: description.substring(0, 30) + (description.length > 30 ? '...' : ''),
       unitId,
-      tenantId: 't1', 
+      tenantId: user?.tenantId || user?.id || 't1',
       category: category,
       description,
       priority: priority as MaintenancePriority,
@@ -108,7 +182,10 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
       updatedAt: new Date().toISOString(),
       notes: [],
       expenses: [],
-      attachments: [],
+      attachments,
+      aiTriage,
+      visualDescription,
+      residentTip,
       urgency,
     };
     
@@ -119,6 +196,10 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
         setDescription('');
         setCategory(['Other']);
         setUrgency('Medium');
+        setAiTriage(null);
+        setResidentTip('');
+        setVisualDescription('');
+        setAttachments([]);
         if (isAdmin) setUnitId('');
         recordTutorialEvent('maintenance_submitted');
         showAlert('Maintenance request submitted successfully. The maintenance committee will review it shortly.', 'success');
@@ -159,7 +240,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   };
 
   return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all">
+    <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all" data-demo-target="maintenance-operations">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -222,7 +303,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                 placeholder="Where is it? What happened? When did it start?"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                onBlur={handleTriage}
+                onBlur={() => handleTriage()}
                 required
               />
               {loading && <p className="text-[10px] text-brand-600 mt-2 font-black animate-pulse flex items-center gap-2"><i className="fa-solid fa-sparkles"></i> AI TRIAGING IN PROGRESS...</p>}
@@ -272,6 +353,62 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
               </div>
             </div>
 
+            <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/5 dark:bg-slate-950/40">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Photo Documentation</label>
+                  <p className="text-[11px] font-semibold leading-relaxed text-slate-500 dark:text-slate-400">Only upload the issue area. Avoid people, personal papers, or private details.</p>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={event => handleImageUpload(event.target.files?.[0])}
+                  className="text-xs font-bold text-slate-500 file:mr-3 file:rounded-xl file:border-0 file:bg-teal-600 file:px-4 file:py-2 file:text-[10px] file:font-black file:uppercase file:text-white"
+                />
+              </div>
+              {imageAnalysisLoading && <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-teal-600">AI visual sight is analyzing...</p>}
+              {visualDescription && (
+                <div className="mt-4 rounded-2xl bg-white p-4 dark:bg-slate-900">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">AI visual description</p>
+                    <button type="button" onClick={hearVisualDescription} className="rounded-xl bg-slate-100 px-3 py-2 text-[10px] font-black uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      Hear Audio Description
+                    </button>
+                  </div>
+                  <p className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">{visualDescription}</p>
+                </div>
+              )}
+              {attachments.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {attachments.map((attachment) => (
+                    <a
+                      key={attachment.id || attachment.url}
+                      href={attachment.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-xl border border-teal-100 bg-white px-3 py-2 text-[10px] font-black uppercase text-teal-700 dark:border-teal-900/40 dark:bg-slate-900 dark:text-teal-300"
+                    >
+                      <i className="fa-solid fa-image"></i>
+                      {attachment.fileName || 'Maintenance photo'}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {aiTriage && (
+              <div className="md:col-span-2 rounded-2xl border border-teal-100 bg-teal-50 p-4 dark:border-teal-900/30 dark:bg-teal-950/20">
+                <p className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">AI triage suggestion</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase text-teal-700 dark:bg-slate-900 dark:text-teal-300">Priority: {aiTriage.priority}</span>
+                  <span className="rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase text-teal-700 dark:bg-slate-900 dark:text-teal-300">Urgency: {aiTriage.urgency}</span>
+                  <span className="rounded-lg bg-white px-3 py-2 text-[10px] font-black uppercase text-teal-700 dark:bg-slate-900 dark:text-teal-300">Confidence: {Math.round((aiTriage.confidence || 0) * 100)}%</span>
+                </div>
+                {residentTip && <p className="mt-3 text-sm font-semibold leading-relaxed text-teal-800 dark:text-teal-200">{residentTip}</p>}
+                {aiTriage.safetyWarning && <p className="mt-2 text-sm font-black text-rose-700 dark:text-rose-300">{aiTriage.safetyWarning}</p>}
+              </div>
+            )}
+
             <div className="md:col-span-2 flex flex-col-reverse sm:flex-row justify-end gap-3 mt-4 border-t border-slate-50 dark:border-white/5 pt-6">
               <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 text-slate-500 font-black text-xs uppercase hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition-colors">Dismiss</button>
               <button type="submit" className="px-10 py-3 bg-slate-900 dark:bg-brand-600 text-white font-black text-xs uppercase tracking-widest rounded-xl hover:bg-black dark:hover:bg-brand-700 active:scale-95 transition-all flex items-center justify-center gap-2">
@@ -303,7 +440,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                     {openRequests.length > 0 ? openRequests.map(req => (
-                      <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance/${req.id}`)}>
+                      <tr key={req.id} data-demo-target={req.id === 'm1' ? 'maintenance-first-request' : undefined} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors group cursor-pointer" onClick={() => navigate(isAdmin ? `/admin/maintenance/${req.id}` : `/maintenance/${req.id}`)}>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
                             <span className="text-xs font-black text-brand-600 dark:text-brand-400 uppercase">Unit {units.find(u => u.id === req.unitId)?.number || 'N/A'}</span>
@@ -317,6 +454,11 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                         <td className="px-6 py-4">
                           <p className="text-sm font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{req.description}</p>
                           <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Filed: {new Date(req.createdAt).toLocaleDateString()}</span>
+                          {isAdmin && req.aiTriage && (
+                            <span className="mt-1 inline-flex rounded bg-teal-50 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-teal-700 dark:bg-teal-950/30 dark:text-teal-300">
+                              AI suggested {req.aiTriage.priority} {req.aiTriage.category?.join(', ')}
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className={`text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tighter ${

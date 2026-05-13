@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { pdf } from '@react-pdf/renderer';
 import { saveAs } from 'file-saver';
@@ -30,23 +30,11 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   user
 }) => {
   const { requestId } = useParams<{ requestId: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   
   const request = requests.find(r => r.id === requestId);
   const unit = units.find(u => u.id === request?.unitId);
   const tenant = tenants.find(t => t.id === request?.tenantId);
-  
-  if (request && !isAdmin && !isCurrentTenantForMaintenanceRequest(request, unit, tenants, user)) {
-    return (
-      <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5">
-        <i className="fa-solid fa-shield-halved text-5xl text-rose-500 mb-4 opacity-20"></i>
-        <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Access Restricted</h2>
-        <p className="text-slate-500 dark:text-slate-400 font-medium">You are only authorized to view service records for your assigned unit.</p>
-        <Link to="/maintenance" className="mt-8 inline-block bg-slate-900 dark:bg-brand-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Return to Queue</Link>
-      </div>
-    );
-  }
 
   const [newNote, setNewNote] = useState('');
   const [showReopenModal, setShowReopenModal] = useState(false);
@@ -66,9 +54,21 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
 
   if (!request) return <div className="p-12 text-center text-slate-500 font-bold">Ticket not found in archive.</div>;
 
+  if (!isAdmin && !isCurrentTenantForMaintenanceRequest(request, unit, tenants, user)) {
+    return (
+      <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5">
+        <i className="fa-solid fa-shield-halved text-5xl text-rose-500 mb-4 opacity-20"></i>
+        <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Access Restricted</h2>
+        <p className="text-slate-500 dark:text-slate-400 font-medium">You are only authorized to view service records for your assigned unit.</p>
+        <Link to="/maintenance" className="mt-8 inline-block bg-slate-900 dark:bg-brand-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Return to Queue</Link>
+      </div>
+    );
+  }
+
   const isLocked = request.status === RequestStatus.COMPLETED || request.status === RequestStatus.CANCELLED;
   const canModifyRequest = isAdmin || isCurrentTenantForMaintenanceRequest(request, unit, tenants, user);
   const canExportPdf = canExportMaintenanceRequest(request, unit, tenants, user, isAdmin);
+  const attachments = Array.isArray(request.attachments) ? request.attachments.filter((item: any) => item?.url || item?.storageUrl) : [];
   const normalizeRequest = (data: MaintenanceRequest) => ({
     ...data,
     category: (Array.isArray(data.category) ? data.category : (data.category ? String(data.category).split(', ') : [])) as MaintenanceCategory[],
@@ -236,7 +236,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
   const availableCategories: MaintenanceCategory[] = ['Plumbing', 'Electrical', 'Structural', 'Appliance', 'HVAC', 'Exterior', 'Safety', 'Other'];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-500">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-500" data-demo-target="maintenance-detail-record">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex items-center justify-between gap-4 text-slate-500 text-sm mb-2">
         <Link to="/maintenance" className="hover:text-brand-600 transition-colors flex items-center gap-1 font-bold">
@@ -262,6 +262,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 return (
                   <button
                     key={status}
+                    data-demo-target={status === RequestStatus.IN_PROGRESS ? 'maintenance-status-in-progress' : status === RequestStatus.PENDING ? 'maintenance-status-pending' : undefined}
                     disabled={savingField === 'status' || ((isLocked || !isAdmin) && !isActive)}
                     onClick={() => isAdmin && handleStatusChange(status)}
                     className={`py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -322,7 +323,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <section className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-2 mb-6" data-demo-target="maintenance-category-tags">
               {availableCategories.map(cat => {
                 const isActive = request.category.includes(cat);
                 return (
@@ -346,7 +347,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
             <h1 className="text-4xl font-black text-slate-900 dark:text-white leading-tight mb-8">{request.description}</h1>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-8 border-t border-slate-50 dark:border-white/5">
-              <Link to={`/admin/units/${unit?.id}`} className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent hover:border-brand-500/50 transition-all">
+              <Link to={`/admin/units/${unit?.id}`} data-demo-target="maintenance-unit-link" className="flex items-center gap-4 group p-5 bg-slate-50 dark:bg-slate-950/30 rounded-2xl border border-transparent hover:border-brand-500/50 transition-all">
                 <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-brand-500 transition-colors">
                   <i className="fa-solid fa-door-open text-2xl"></i>
                 </div>
@@ -378,6 +379,42 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
               )}
             </div>
           </section>
+
+          {attachments.length > 0 && (
+            <section className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
+              <div className="mb-6 flex items-center justify-between gap-3">
+                <h3 className="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Photo Documentation</h3>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{attachments.length} file{attachments.length === 1 ? '' : 's'}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {attachments.map((attachment: any, index: number) => {
+                  const href = attachment.url || attachment.storageUrl;
+                  const isImage = String(attachment.contentType || '').startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(String(attachment.fileName || href));
+                  return (
+                    <a
+                      key={attachment.id || href || index}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 transition-all hover:border-brand-400 dark:border-white/5 dark:bg-slate-950/30"
+                    >
+                      {isImage && (
+                        <div className="aspect-video bg-slate-100 dark:bg-slate-800">
+                          <img src={href} alt={attachment.visualDescription || attachment.fileName || 'Maintenance request attachment'} className="h-full w-full object-cover" />
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-brand-600 dark:text-brand-400 group-hover:underline">{attachment.fileName || `Attachment ${index + 1}`}</p>
+                        {attachment.visualDescription && (
+                          <p className="mt-2 line-clamp-3 text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">{attachment.visualDescription}</p>
+                        )}
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50">
@@ -443,7 +480,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                 </div>
               </div>
               {!isLocked && (
-                <form onSubmit={addNote} className="pt-4">
+                <form onSubmit={addNote} className="pt-4" data-demo-target="maintenance-update-log">
                   <textarea
                     className="w-full bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-white/10 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-brand-500 outline-none text-slate-800 dark:text-slate-200"
                     placeholder={isAdmin ? "Log a new update or member contact..." : "Add a comment for the maintenance committee..."}
@@ -472,6 +509,7 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
              <div className="space-y-3">
                 {canExportPdf && (
                   <button
+                    data-demo-target="maintenance-export-pdf"
                     onClick={handleExportPdf}
                     disabled={isExportingPdf}
                     className="w-full p-4 bg-brand-600 text-white rounded-2xl flex items-center justify-center gap-3 hover:bg-brand-700 transition-all active:scale-95 group disabled:opacity-60 disabled:cursor-not-allowed"

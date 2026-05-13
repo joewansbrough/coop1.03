@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  getDocumentLibraryDestination,
   getDashboardDocumentLink,
   getDocumentLibraryOriginalUrl,
 } from '../utils/dashboardDocumentLinks.ts';
@@ -20,6 +21,19 @@ test('links minutes documents to the meeting minutes page before the file URL', 
   assert.deepEqual(getDashboardDocumentLink(minutesDocument), {
     type: 'route',
     href: '/calendar/e5?tab=minutes',
+  });
+});
+
+test('documents page sends tenant minutes clicks to the meeting minutes tab', () => {
+  assert.deepEqual(getDocumentLibraryDestination(minutesDocument, { isAdmin: false }), {
+    type: 'route',
+    href: '/calendar/e5?tab=minutes',
+  });
+});
+
+test('documents page keeps admin document clicks in the review portal', () => {
+  assert.deepEqual(getDocumentLibraryDestination(minutesDocument, { isAdmin: true }), {
+    type: 'review',
   });
 });
 

@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { MaintenanceCategory, MaintenanceFrequency, PrismaClient } from '@prisma/client';
 import 'dotenv/config';
 
 const prisma = new PrismaClient();
@@ -139,7 +139,7 @@ async function main() {
   ];
 
   const tenants: Record<string, any> = {};
-  const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'joewansbrough@gmail.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
+  const adminEmails = ['joewcoupons@gmail.com', 'wwansbro@gmail.com', 'maya.ellison@email.com', 'samisaeed123@gmail.com', 'margaret.chen@email.com'];
   for (const t of tenantData) {
     const tenant = await prisma.tenant.create({
       data: {
@@ -247,15 +247,37 @@ async function main() {
     });
   }
 
+  console.log('Seeding scheduled preventative maintenance...');
+  const preventativeTaskTemplates = [
+    { task: 'Smoke and CO Alarm Test', frequency: MaintenanceFrequency.ANNUAL, assignedTo: 'Maintenance Committee', category: MaintenanceCategory.SAFETY },
+    { task: 'Bathroom Fan and Vent Cleaning', frequency: MaintenanceFrequency.QUARTERLY, assignedTo: 'Maintenance Committee', category: MaintenanceCategory.HVAC },
+    { task: 'Plumbing Shutoff and Leak Check', frequency: MaintenanceFrequency.ANNUAL, assignedTo: 'Maintenance Committee', category: MaintenanceCategory.PLUMBING },
+  ];
+  const unitEntries = Object.entries(unitMap);
+  for (const [unitNumber, unitId] of unitEntries) {
+    const unitIndex = unitEntries.findIndex(([number]) => number === unitNumber);
+    for (const [taskIndex, template] of preventativeTaskTemplates.entries()) {
+      await prisma.scheduledMaintenance.create({
+        data: {
+          cooperative: { connect: { id: cooperativeId } },
+          unit: { connect: { id: unitId } },
+          ...template,
+          dueDate: new Date(Date.UTC(2026, 4 + ((unitIndex + taskIndex) % 6), 8 + ((unitIndex * 3 + taskIndex * 5) % 18))),
+          isCompleted: false,
+        },
+      });
+    }
+  }
+
   console.log('Seeding announcements...');
   const announcementData = [
     { title: 'Annual General Meeting — April 12th', content: 'The Oak Bay Housing Co-operative Annual General Meeting will be held on Saturday, April 12th at 2:00 PM in the Community Room. Agenda items include the 2025 financial review, election of board members, and proposed bylaw amendments. All members are encouraged to attend. Light refreshments will be provided. Please RSVP to admin@oakbaycoop.bc.ca by April 5th.', type: 'General', priority: 'High', author: 'Board Administration', date: '2026-03-08', createdAt: new Date('2026-03-08') },
-    { title: 'Water Shutoff — March 18th 9AM–1PM', content: 'A scheduled water shutoff is required to complete repairs to the main building supply line. The shutoff will affect all units and will take place on Tuesday March 18th from 9:00 AM to approximately 1:00 PM. Please store sufficient water in advance. We apologize for the inconvenience and thank you for your patience.', type: 'Maintenance', priority: 'Urgent', author: 'Maintenance Committee', date: '2026-03-06', createdAt: new Date('2026-03-06') },
-    { title: 'New Recycling Guidelines Effective April 1st', content: 'The City of Victoria has updated its recycling program. Starting April 1st, soft plastics must be deposited in the dedicated soft plastics bin in the recycling room rather than the blue bin. Glass bottles and jars should be rinsed before recycling. Updated sorting guides have been posted in the recycling room and laundry room.', type: 'General', priority: 'Normal', author: 'Board Administration', date: '2026-03-01', createdAt: new Date('2026-03-01') },
+    { title: 'Water Shutoff — March 18th 9AM–1PM', content: 'A scheduled water shutoff is required to complete repairs to the main building supply line. The shutoff will affect all units and will take place on Tuesday March 18th from 9:00 AM to approximately 1:00 PM. Please store sufficient water in advance. We apologize for the inconvenience and thank you for your patience.', type: 'Maintenance', priority: 'High', author: 'Maintenance Committee', date: '2026-03-06', createdAt: new Date('2026-03-06') },
+    { title: 'New Recycling Guidelines Effective April 1st', content: 'The City of Victoria has updated its recycling program. Starting April 1st, soft plastics must be deposited in the dedicated soft plastics bin in the recycling room rather than the blue bin. Glass bottles and jars should be rinsed before recycling. Updated sorting guides have been posted in the recycling room and laundry room.', type: 'General', priority: 'Medium', author: 'Board Administration', date: '2026-03-01', createdAt: new Date('2026-03-01') },
     { title: 'Parking Lot Repaving — Weekend of March 22nd', content: 'The parking lot will be repaved over the weekend of March 22nd–23rd. All vehicles must be removed from the lot by 7:00 AM Saturday. Street parking is available on Foul Bay Road and Granite Street. Vehicles left in the lot may be towed at the owner\'s expense. The lot will reopen by Sunday evening.', type: 'Maintenance', priority: 'High', author: 'Maintenance Committee', date: '2026-02-28', createdAt: new Date('2026-02-28') },
-    { title: 'Spring Garden Volunteer Day — April 5th', content: 'Join your neighbours for the annual spring garden cleanup on Saturday April 5th starting at 10:00 AM. We\'ll be pruning, planting, and refreshing the communal garden beds. Tools and gloves provided. Lunch will be served at noon. This counts toward your annual participation hours.', type: 'General', priority: 'Normal', author: 'Garden Committee', date: '2026-02-20', createdAt: new Date('2026-02-20') },
+    { title: 'Spring Garden Volunteer Day — April 5th', content: 'Join your neighbours for the annual spring garden cleanup on Saturday April 5th starting at 10:00 AM. We\'ll be pruning, planting, and refreshing the communal garden beds. Tools and gloves provided. Lunch will be served at noon. This counts toward your annual participation hours.', type: 'General', priority: 'Low', author: 'Garden Committee', date: '2026-02-20', createdAt: new Date('2026-02-20') },
     { title: 'Housing Charge Increase — Effective July 1st', content: 'Following the board\'s annual financial review, housing charges will increase by 3.2% effective July 1st, 2026. This increase reflects rising municipal taxes, insurance premiums, and maintenance costs. Individual notice letters will be mailed to all members by April 15th.', type: 'General', priority: 'High', author: 'Finance Committee', date: '2026-02-15', createdAt: new Date('2026-02-15') },
-    { title: 'Fire Alarm System Test — March 14th', content: 'The building\'s fire alarm system will undergo its mandatory annual inspection on Friday March 14th between 10:00 AM and 3:00 PM. Expect brief alarm activations throughout the day. Please do not call 911 during testing periods.', type: 'Maintenance', priority: 'Normal', author: 'Board Administration', date: '2026-03-04', createdAt: new Date('2026-03-04') },
+    { title: 'Fire Alarm System Test — March 14th', content: 'The building\'s fire alarm system will undergo its mandatory annual inspection on Friday March 14th between 10:00 AM and 3:00 PM. Expect brief alarm activations throughout the day. Please do not call 911 during testing periods.', type: 'Maintenance', priority: 'Medium', author: 'Board Administration', date: '2026-03-04', createdAt: new Date('2026-03-04') },
   ];
   for (const a of announcementData) {
     await prisma.announcement.create({ data: { ...a, cooperativeId, date: new Date(a.date) } });
@@ -272,6 +294,10 @@ async function main() {
     { title: 'AGM Minutes — April 2025', category: 'Minutes', url: 'https://storage.example.com/docs/agm-minutes-2025.pdf', fileType: 'pdf', author: 'Secretary', date: '2025-04-20', createdAt: new Date('2025-04-20'), tags: ['minutes', 'agm'] },
     { title: 'Board Meeting Minutes — February 2026', category: 'Minutes', url: 'https://storage.example.com/docs/board-minutes-feb-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-02-18', createdAt: new Date('2026-02-18'), tags: ['minutes', 'board'] },
     { title: 'Board Meeting Minutes — January 2026', category: 'Minutes', url: 'https://storage.example.com/docs/board-minutes-jan-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-01-21', createdAt: new Date('2026-01-21'), tags: ['minutes', 'board'] },
+    { title: 'May Board Meeting Minutes', category: 'Minutes', url: 'https://storage.example.com/docs/board-minutes-may-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-05-04', createdAt: new Date('2026-05-04'), tags: ['minutes', 'board'] },
+    { title: 'Finance Committee Check-in Minutes - May 2026', category: 'Minutes', url: 'https://storage.example.com/docs/finance-minutes-may-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-05-06', createdAt: new Date('2026-05-06'), tags: ['minutes', 'finance'] },
+    { title: 'Maintenance Committee Review Minutes - May 2026', category: 'Minutes', url: 'https://storage.example.com/docs/maintenance-minutes-may-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-05-08', createdAt: new Date('2026-05-08'), tags: ['minutes', 'maintenance'] },
+    { title: 'Membership Committee Debrief Minutes - May 2026', category: 'Minutes', url: 'https://storage.example.com/docs/membership-minutes-may-2026.pdf', fileType: 'pdf', author: 'Secretary', date: '2026-05-12', createdAt: new Date('2026-05-12'), tags: ['minutes', 'membership'] },
     { title: '2025 Annual Financial Statements', category: 'Financials', url: 'https://storage.example.com/docs/financials-2025.pdf', fileType: 'pdf', author: 'Finance Committee', date: '2026-02-01', createdAt: new Date('2026-02-01'), tags: ['financial', 'audit'] },
     { title: '2026 Operating Budget', category: 'Financials', url: 'https://storage.example.com/docs/budget-2026.xls', fileType: 'xls', author: 'Finance Committee', date: '2026-01-10', createdAt: new Date('2026-01-10'), tags: ['budget', 'financial'] },
     { title: 'Reserve Fund Study 2024', category: 'Financials', url: 'https://storage.example.com/docs/reserve-fund-2024.pdf', fileType: 'pdf', author: 'Board Administration', date: '2024-06-15', createdAt: new Date('2024-06-15'), tags: ['reserve', 'future-planning'] },
@@ -290,8 +316,9 @@ async function main() {
     { name: 'Social Committee', description: 'Organizes community events, potlucks, seasonal celebrations, and fosters neighbourly connections among members.', chair: 'Susan Tremblay', icon: 'fa-calendar', members: ['susan.tremblay@email.com', 'priya.sharma@email.com', 'nadia.patel@email.com', 'david.okafor@email.com'] },
   ];
 
+  const committeesByName: Record<string, { id: string }> = {};
   for (const c of committeeData) {
-    await prisma.committee.create({
+    const committee = await prisma.committee.create({
       data: {
         name: c.name,
         description: c.description,
@@ -303,9 +330,40 @@ async function main() {
         },
       },
     });
+    committeesByName[c.name] = committee;
   }
 
   console.log('Seeding calendar events...');
+  const committeeEvents = [
+    { committeeName: 'Board of Directors', title: 'May Board Meeting', category: 'Meeting', location: 'Community Room', time: '19:00', description: 'Monthly board review of maintenance priorities, member communications, and policy follow-up.', date: new Date('2026-05-04T19:00:00') },
+    { committeeName: 'Finance Committee', title: 'Finance Committee Check-in', category: 'Meeting', location: 'Library Room', time: '18:00', description: 'Review arrears reporting, insurance renewal assumptions, and reserve contribution timing.', date: new Date('2026-05-06T18:00:00') },
+    { committeeName: 'Maintenance Committee', title: 'Maintenance Committee Review', category: 'Meeting', location: 'Workshop', time: '17:30', description: 'Triage spring repair requests and confirm contractor follow-up for shared areas.', date: new Date('2026-05-08T17:30:00') },
+    { committeeName: 'Membership Committee', title: 'Membership Committee Debrief', category: 'Meeting', location: 'Library Room', time: '18:30', description: 'Review orientation feedback, waitlist communication, and upcoming interview scheduling.', date: new Date('2026-05-12T18:30:00') },
+    { committeeName: 'Board of Directors', title: 'Board Package Review', category: 'Meeting', location: 'Community Room', time: '18:30', description: 'Directors review agenda materials, resident correspondence, and follow-up items.', date: new Date('2026-06-02T18:30:00') },
+    { committeeName: 'Maintenance Committee', title: 'Maintenance Committee Triage', category: 'Meeting', location: 'Workshop', time: '17:30', description: 'Review open repair requests, contractor follow-ups, and preventive maintenance priorities.', date: new Date('2026-06-12T17:30:00') },
+    { committeeName: 'Finance Committee', title: 'Finance Committee Budget Review', category: 'Meeting', location: 'Community Room', time: '18:00', description: 'Review operating budget assumptions, arrears reporting, and reserve planning updates.', date: new Date('2026-06-16T18:00:00') },
+    { committeeName: 'Membership Committee', title: 'Membership Orientation Planning', category: 'Meeting', location: 'Library Room', time: '11:00', description: 'Prepare the next orientation package and review waitlist interview scheduling.', date: new Date('2026-06-20T11:00:00') },
+    { committeeName: 'Garden Committee', title: 'Garden Committee Seasonal Walk', category: 'Meeting', location: 'Garden Beds', time: '09:30', description: 'Walk the exterior areas and confirm seasonal planting and cleanup tasks.', date: new Date('2026-06-24T09:30:00') },
+    { committeeName: 'Social Committee', title: 'Social Committee Summer Planning', category: 'Meeting', location: 'Courtyard', time: '14:00', description: 'Coordinate volunteers, supplies, and notices for summer community events.', date: new Date('2026-06-27T14:00:00') },
+  ];
+
+  for (const event of committeeEvents) {
+    const committee = committeesByName[event.committeeName];
+    if (!committee) continue;
+    await prisma.coopEvent.create({
+      data: {
+        cooperativeId,
+        committeeId: committee.id,
+        title: event.title,
+        category: event.category,
+        location: event.location,
+        time: event.time,
+        description: event.description,
+        date: event.date,
+      },
+    });
+  }
+
   const baseEvents = [
     { title: 'Board of Directors Meeting', category: 'Board', location: 'Community Room', time: '19:00', description: 'Monthly governance review and policy discussion.' },
     { title: 'Community Potluck', category: 'Social', location: 'Courtyard', time: '17:30', description: 'Bring a dish to share and meet your neighbours!' },
@@ -345,7 +403,7 @@ async function main() {
   console.log(`  - ${Object.keys(tenants).length} tenants`);
   console.log('  - 12 maintenance requests');
   console.log('  - 7 announcements');
-  console.log('  - 12 documents');
+  console.log('  - 16 documents');
   console.log('  - 6 committees');
   console.log('  - Monthly calendar events through end of 2026');
 }

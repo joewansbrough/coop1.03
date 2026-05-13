@@ -59,7 +59,7 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
   };
 
   return (
-    <div className="space-y-6 pb-12 transition-colors duration-200">
+    <div className="space-y-6 pb-12 transition-colors duration-200" data-demo-target="waitlist-page">
       {alertMessage && <AppAlert message={alertMessage.message} type={alertMessage.type} onClose={() => setAlertMessage(null)} />}
       <div className="flex justify-between items-center">
         <div>
@@ -68,6 +68,7 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
+          data-demo-target="waitlist-add-application"
           className="bg-brand-600 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 active:scale-95 transition-all flex items-center justify-center gap-2"
         >
           <i className="fa-solid fa-plus"></i> Add New Application
@@ -128,7 +129,7 @@ const Waitlist: React.FC<{ tenants: Tenant[], setTenants: React.Dispatch<React.S
         filterOptions={['All', '1BR', '2BR', '3BR+']}
       />
 
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden" data-demo-target="waitlist-applications">
         <div className="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/50 flex flex-col sm:flex-row justify-between items-center gap-4">
           <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Sorted by Application Date</span>
         </div>

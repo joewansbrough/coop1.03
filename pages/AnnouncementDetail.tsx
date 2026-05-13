@@ -2,6 +2,7 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Announcement } from '../types';
+import { getAnnouncementPriorityBadgeClass, getAnnouncementPriorityHeaderClass } from '../utils/announcementPriorityStyles';
 
 const AnnouncementDetail: React.FC<{
   announcements: Announcement[];
@@ -24,11 +25,9 @@ const AnnouncementDetail: React.FC<{
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-white/5 overflow-hidden">
-        <div className={`p-8 lg:p-12 border-b border-slate-50 dark:border-white/5 ${announcement.priority === 'Urgent' ? 'bg-rose-50/30 dark:bg-rose-950/20' : 'bg-slate-50/50 dark:bg-slate-950/30'}`}>
+        <div className={`p-8 lg:p-12 border-b border-slate-50 dark:border-white/5 ${getAnnouncementPriorityHeaderClass(announcement.priority)}`}>
           <div className="flex items-center gap-3 mb-6">
-            <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
-              announcement.priority === 'Urgent' ? 'bg-rose-600 text-white' : 'bg-blue-600 text-white'
-            }`}>
+            <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${getAnnouncementPriorityBadgeClass(announcement.priority)}`}>
               {announcement.priority} Update
             </span>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{announcement.date}</span>

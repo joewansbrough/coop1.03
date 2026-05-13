@@ -1,12 +1,16 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home } from 'lucide-react';
 import ProfileModal from './ProfileModal';
 import HelpModal from './HelpModal';
 import OnboardingTour from './OnboardingTour';
 import DemoTutorialPanel from './DemoTutorialPanel';
+import AutoDemoTour from './AutoDemoTour';
+import OracleAssistant from './OracleAssistant';
 import { AnimatePresence } from 'motion/react';
+import { useAnnouncements, useDocuments, useEvents, useMaintenance, useMarkNotificationRead, useNotifications } from '../hooks/useCoopData';
+import { buildGlobalSearchResults, type GlobalSearchResult } from '../utils/globalSearch';
 import {
   readTutorialState,
   saveTutorialState,
@@ -14,6 +18,7 @@ import {
   type DemoTutorialState,
   type DemoTutorialEvent,
 } from '../utils/demoTutorial';
+import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -28,12 +33,80 @@ interface LayoutProps {
   coopName: string;
 }
 
+export const FloatingOracleAssistant: React.FC<{ isAutoDemoOpen: boolean }> = ({ isAutoDemoOpen }) => {
+  const location = useLocation();
+  if (isAutoDemoOpen || location.pathname === '/policy-assistant') return null;
+  return <OracleAssistant />;
+};
+
 interface NavItem {
   label: string;
   path: string;
   icon: string;
   isAdmin?: boolean;
 }
+
+interface ProfileDropdownProps {
+  isAdmin: boolean;
+  user: {
+    email: string;
+    name: string;
+    picture: string;
+  };
+  unreadCount: number;
+  onOpenProfile: () => void;
+  onOpenHelp: () => void;
+  onNavigate: (path: string) => void;
+  onLogout: () => void;
+}
+
+export const desktopNotificationButtonClassName = "relative hidden h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 transition-colors hover:text-teal-600 dark:bg-slate-800 dark:text-slate-300 lg:flex";
+
+export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
+  isAdmin,
+  user,
+  unreadCount,
+  onOpenProfile,
+  onOpenHelp,
+  onNavigate,
+  onLogout,
+}) => (
+  <div className="absolute right-0 z-[140] mt-3 w-64 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 py-2 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
+    <div className="px-4 py-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-white/5 mb-1">
+      <p className="text-xs font-black text-slate-900 dark:text-slate-100">{user.name}</p>
+      <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>
+      <div className="mt-3 flex gap-1">
+        <span className="text-[8px] font-black px-1.5 py-0.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded uppercase">Certified</span>
+        {isAdmin && <span className="text-[8px] font-black px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded uppercase">Administrator</span>}
+      </div>
+    </div>
+    <button onClick={() => onNavigate('/notifications')} className="flex w-full items-center justify-between px-4 py-3 text-left text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5 lg:hidden">
+      <span className="flex items-center gap-3">
+        <i className="fa-solid fa-bell text-slate-400"></i>
+        Notifications Hub
+      </span>
+      {unreadCount > 0 && (
+        <span className="rounded-full bg-rose-50 px-2 py-1 text-[9px] font-black uppercase text-rose-600 dark:bg-rose-950/40 dark:text-rose-300">
+          {unreadCount > 9 ? '9+' : unreadCount} unread
+        </span>
+      )}
+    </button>
+    <button onClick={onOpenProfile} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
+      <i className="fa-solid fa-gear text-slate-400"></i> Account Configuration
+    </button>
+    <button onClick={() => onNavigate('/documents')} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
+      <i className="fa-solid fa-circle-info text-slate-400"></i> Association Protocols
+    </button>
+    <button onClick={onOpenHelp} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
+      <i className="fa-solid fa-circle-question text-slate-400"></i> Help & Support
+    </button>
+    <div className="border-t border-slate-100 dark:border-white/5 mt-1">
+      <button onClick={onLogout} className="w-full text-left px-4 py-3 text-xs font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-3 transition-colors uppercase tracking-widest">
+        <i className="fa-solid fa-power-off"></i> Log Out
+      </button>
+    </div>
+  </div>
+);
 
 const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onToggleAdminView, user, coopName }) => {
   const location = useLocation();
@@ -44,8 +117,12 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [tutorialState, setTutorialState] = useState<DemoTutorialState | null>(() => readTutorialState());
+  const [isAutoDemoOpen, setIsAutoDemoOpen] = useState(() =>
+    typeof window !== 'undefined' && localStorage.getItem(AUTO_DEMO_STORAGE_KEY) === 'true'
+  );
   const isDemo = typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -76,11 +153,26 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     }
   }, [isDarkMode]);
   const profileRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+  const { data: notifications = [] } = useNotifications();
+  const { data: documents = [] } = useDocuments();
+  const { data: events = [] } = useEvents();
+  const { data: announcements = [] } = useAnnouncements();
+  const { data: maintenance = [] } = useMaintenance();
+  const markNotificationRead = useMarkNotificationRead();
+  const unreadCount = notifications.filter(notification => !notification.isRead).length;
+  const globalSearchResults = useMemo(
+    () => buildGlobalSearchResults(searchQuery, { documents, events, announcements, maintenance }),
+    [announcements, documents, events, maintenance, searchQuery],
+  );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setIsNotificationsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -109,7 +201,10 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   }, [isDemo, location.pathname, tutorialState]);
 
   useEffect(() => {
-    const handleStorage = () => setTutorialState(readTutorialState());
+    const handleStorage = () => {
+      setTutorialState(readTutorialState());
+      setIsAutoDemoOpen(localStorage.getItem(AUTO_DEMO_STORAGE_KEY) === 'true');
+    };
     const handleTutorialEvent = (event: Event) => {
       if (!isDemo) return;
       const customEvent = event as CustomEvent<DemoTutorialEvent>;
@@ -128,6 +223,22 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     };
   }, [isDemo]);
 
+  useEffect(() => {
+    const openSidebarForAutoDemo = () => setIsSidebarOpen(true);
+    const closeSidebarForAutoDemo = () => setIsSidebarOpen(false);
+    window.addEventListener('auto-demo-open-sidebar', openSidebarForAutoDemo);
+    window.addEventListener('auto-demo-close-sidebar', closeSidebarForAutoDemo);
+    return () => {
+      window.removeEventListener('auto-demo-open-sidebar', openSidebarForAutoDemo);
+      window.removeEventListener('auto-demo-close-sidebar', closeSidebarForAutoDemo);
+    };
+  }, []);
+
+  const closeAutoDemo = () => {
+    localStorage.removeItem(AUTO_DEMO_STORAGE_KEY);
+    setIsAutoDemoOpen(false);
+  };
+
   const toggleDarkMode = () => {
     const newMode = !isDarkMode;
     setIsDarkMode(newMode);
@@ -144,11 +255,10 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     { label: 'Dashboard', path: '/', icon: 'fa-chart-line' },
     { label: 'Calendar', path: '/calendar', icon: 'fa-calendar-days' },
     { label: 'Committees', path: '/committees', icon: 'fa-users-gear' },
+    { label: 'Communications', path: '/communications', icon: 'fa-comments' },
     { label: 'Maintenance', path: '/maintenance', icon: 'fa-tools' },
     { label: 'Documents', path: '/documents', icon: 'fa-file-lines' },
     { label: 'Policy Assistant', path: '/policy-assistant', icon: 'fa-robot' },
-    { label: 'Communications', path: '/communications', icon: 'fa-comments' },
-    { label: 'Directory', path: '/directory', icon: 'fa-address-book' },
   ];
 
   const effectiveIsAdmin = isAdmin;
@@ -157,6 +267,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     navItems.push(
       { label: 'Units', path: '/admin/units', icon: 'fa-house-chimney', isAdmin: true },
       { label: 'Tenants', path: '/admin/tenants', icon: 'fa-users', isAdmin: true },
+      { label: 'Directory', path: '/directory', icon: 'fa-address-book', isAdmin: true },
       { label: 'Waitlist', path: '/admin/waitlist', icon: 'fa-list-check', isAdmin: true }
     );
   }
@@ -174,6 +285,21 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       window.location.reload();
     }
   };
+
+  const closeSearch = () => {
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleSearchResultOpen = (result: GlobalSearchResult) => {
+    if (result.external) {
+      window.open(result.href, '_blank', 'noopener,noreferrer');
+    } else {
+      navigate(result.href);
+    }
+    closeSearch();
+  };
+
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans transition-colors duration-200">
       {/* Sidebar Backdrop */}
@@ -206,6 +332,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               <Link
                 to={item.path}
                 onClick={() => setIsSidebarOpen(false)}
+                data-demo-target={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-[20px] transition-all group active:scale-95 ${
                   location.pathname === item.path 
                     ? 'bg-teal-accent text-white' 
@@ -231,6 +358,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
         {isActualAdmin ? (
           <button 
             onClick={onToggleAdminView} 
+            data-demo-target="role-switcher"
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[20px] text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 ${
               isAdmin 
                 ? 'bg-amber-500 text-white hover:bg-amber-600' 
@@ -252,7 +380,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       <main className="flex-1 flex flex-col overflow-hidden w-full relative">
         <header className={`h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-4 lg:px-8 shrink-0 transition-colors duration-200 relative ${isProfileOpen ? 'z-[130]' : 'z-30'}`}>
           <div className="flex items-center gap-3 z-10">
-            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 text-slate-500 hover:text-brand-600 active:scale-95">
+            <button onClick={() => setIsSidebarOpen(true)} data-demo-target="mobile-sidebar-toggle" className="lg:hidden p-2 text-slate-500 hover:text-brand-600 active:scale-95">
               <i className="fa-solid fa-bars-staggered text-xl"></i>
             </button>
             <div className="hidden lg:flex flex-col">
@@ -291,9 +419,55 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             <button 
               onClick={() => setIsSearchOpen(true)}
               className="p-2 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors hidden sm:block active:scale-95"
+              aria-label="Open global search"
+              title="Search"
             >
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
+
+            <div className="relative" ref={notificationsRef}>
+              <button
+                type="button"
+                onClick={() => setIsNotificationsOpen(value => !value)}
+                className={desktopNotificationButtonClassName}
+                aria-label="Open notifications"
+                title="Notifications"
+              >
+                <i className="fa-solid fa-bell"></i>
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[9px] font-black text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {isNotificationsOpen && (
+                <div className="absolute right-0 z-[140] mt-3 w-80 overflow-hidden rounded-2xl border border-slate-100 bg-white py-2 shadow-xl dark:border-white/5 dark:bg-slate-800">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-white/5">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">Notifications</p>
+                    <button onClick={() => { navigate('/notifications'); setIsNotificationsOpen(false); }} className="text-[10px] font-black uppercase text-teal-600">Hub</button>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.slice(0, 5).length === 0 ? (
+                      <p className="px-4 py-8 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">No notices</p>
+                    ) : notifications.slice(0, 5).map(notification => (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() => {
+                          if (!notification.isRead) markNotificationRead.mutate(notification);
+                          if (notification.actionUrl) navigate(notification.actionUrl);
+                          setIsNotificationsOpen(false);
+                        }}
+                        className="w-full border-b border-slate-50 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5"
+                      >
+                        <p className="line-clamp-1 text-xs font-black text-slate-900 dark:text-white">{notification.title}</p>
+                        <p className="mt-1 line-clamp-2 text-[10px] font-semibold text-slate-500 dark:text-slate-400">{notification.body}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             
             <div className="relative" ref={profileRef}>
               <button 
@@ -311,30 +485,15 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               </button>
 
               {isProfileOpen && (
-                <div className="absolute right-0 z-[140] mt-3 w-64 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-white/5 py-2 animate-in fade-in zoom-in-95 duration-100 overflow-hidden">
-                  <div className="px-4 py-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-white/5 mb-1">
-                    <p className="text-xs font-black text-slate-900 dark:text-slate-100">{user.name}</p>
-                    <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>
-                    <div className="mt-3 flex gap-1">
-                       <span className="text-[8px] font-black px-1.5 py-0.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 rounded uppercase">Certified</span>
-                       {isAdmin && <span className="text-[8px] font-black px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded uppercase">Administrator</span>}
-                    </div>
-                  </div>
-                  <button onClick={() => { setIsProfileModalOpen(true); setIsProfileOpen(false); }} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
-                    <i className="fa-solid fa-gear text-slate-400"></i> Account Configuration
-                  </button>
-                  <button onClick={() => { navigate('/documents'); setIsProfileOpen(false); }} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
-                    <i className="fa-solid fa-circle-info text-slate-400"></i> Association Protocols
-                  </button>
-                  <button onClick={() => { setIsHelpModalOpen(true); setIsProfileOpen(false); }} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
-                    <i className="fa-solid fa-circle-question text-slate-400"></i> Help & Support
-                  </button>
-                  <div className="border-t border-slate-100 dark:border-white/5 mt-1">
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-3 text-xs font-black text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-3 transition-colors uppercase tracking-widest">
-                      <i className="fa-solid fa-power-off"></i> Log Out
-                    </button>
-                  </div>
-                </div>
+                <ProfileDropdown
+                  isAdmin={isAdmin}
+                  user={user}
+                  unreadCount={unreadCount}
+                  onOpenProfile={() => { setIsProfileModalOpen(true); setIsProfileOpen(false); }}
+                  onOpenHelp={() => { setIsHelpModalOpen(true); setIsProfileOpen(false); }}
+                  onNavigate={(path) => { navigate(path); setIsProfileOpen(false); }}
+                  onLogout={handleLogout}
+                />
               )}
             </div>
           </div>
@@ -354,21 +513,44 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <button onClick={() => setIsSearchOpen(false)} className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600">Esc</button>
+                <button onClick={closeSearch} className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600">Esc</button>
               </div>
-              <div className="p-8 text-center">
+              <div className="p-4 sm:p-6">
                 {searchQuery ? (
-                  <div className="space-y-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No results found for "{searchQuery}"</p>
-                    <p className="text-[10px] text-slate-500">Try searching for "Bylaws", "AGM", or "Maintenance"</p>
-                  </div>
+                  globalSearchResults.length > 0 ? (
+                    <div className="max-h-[55vh] overflow-y-auto">
+                      {globalSearchResults.map(result => (
+                        <button
+                          key={result.id}
+                          type="button"
+                          onClick={() => handleSearchResultOpen(result)}
+                          className="group flex w-full items-center gap-4 border-b border-slate-100 px-2 py-4 text-left transition-colors last:border-b-0 hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5 sm:px-3"
+                        >
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition-colors group-hover:bg-brand-50 group-hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:bg-brand-950/40 dark:group-hover:text-brand-300">
+                            <i className={`fa-solid ${result.icon}`}></i>
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[10px] font-black uppercase tracking-widest text-brand-500">{result.label}</span>
+                            <span className="mt-0.5 block truncate text-sm font-black text-slate-800 dark:text-white">{result.title}</span>
+                            <span className="mt-1 block truncate text-xs font-medium text-slate-500 dark:text-slate-400">{result.description}</span>
+                          </span>
+                          <i className={`fa-solid ${result.external ? 'fa-arrow-up-right-from-square' : 'fa-arrow-right'} text-xs text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500`}></i>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-4 py-4 text-center">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No results found for "{searchQuery}"</p>
+                      <p className="text-[10px] text-slate-500">Try searching for "Bylaws", "AGM", or "Maintenance"</p>
+                    </div>
+                  )
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => { navigate('/documents'); setIsSearchOpen(false); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-brand-500 transition-all">
+                    <button onClick={() => { navigate('/documents'); closeSearch(); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-brand-500 transition-all">
                       <p className="text-[10px] font-black text-brand-500 uppercase mb-1">Quick Link</p>
                       <p className="text-sm font-bold text-slate-800 dark:text-white">Policy Library</p>
                     </button>
-                    <button onClick={() => { navigate('/calendar'); setIsSearchOpen(false); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-brand-500 transition-all">
+                    <button onClick={() => { navigate('/calendar'); closeSearch(); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-brand-500 transition-all">
                       <p className="text-[10px] font-black text-blue-500 uppercase mb-1">Quick Link</p>
                       <p className="text-sm font-bold text-slate-800 dark:text-white">Event Calendar</p>
                     </button>
@@ -404,12 +586,21 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             onStateChange={setTutorialState}
           />
         )}
+        {isDemo && isAutoDemoOpen && (
+          <AutoDemoTour
+            isOpen={isAutoDemoOpen}
+            onClose={closeAutoDemo}
+            onRoleSwitch={onToggleAdminView}
+            isAdmin={isAdmin}
+          />
+        )}
 
         <section key={theme} className="flex-1 overflow-y-auto p-4 lg:p-12 bg-slate-50/50 dark:bg-slate-950/20 relative transition-colors duration-200 animate-in fade-in duration-1000">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
         </section>
+        <FloatingOracleAssistant isAutoDemoOpen={isAutoDemoOpen} />
       </main>
     </div>
   );

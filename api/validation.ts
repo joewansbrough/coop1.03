@@ -20,8 +20,8 @@ export const documentSchema = z.object({
 export const announcementSchema = z.object({
   title: z.string().min(1, "Title is required"),
   content: z.string().min(1, "Content is required"),
-  type: z.enum(['General', 'Urgent', 'Maintenance']),
-  priority: z.enum(['Low', 'Normal', 'High']),
+  type: z.enum(['General', 'Maintenance', 'Policy', 'Event', 'Alert']),
+  priority: z.enum(['Low', 'Medium', 'High']),
   author: z.string().email("Invalid email"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
 });

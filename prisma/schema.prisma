@@ -57,15 +57,34 @@ model Cooperative {
 
   // Relations
   announcements        Announcement[]
+  buildings            Building[]
   committees           Committee[]
   events               CoopEvent[]
   documents            Document[]
   maintenanceRequests  MaintenanceRequest[]
   scheduledMaintenance ScheduledMaintenance[]
   dashboardPreferences  DashboardPreference[]
+  notifications        Notification[]
+  meetingAnalyses      MeetingAnalysis[]
   tenants              Tenant[]
   tenantHistories      TenantHistory[]
   units                Unit[]
+}
+
+model Building {
+  id            String @id @default(uuid())
+  name          String
+  code          String?
+  address       String?
+  sortOrder     Int @default(1)
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  units         Unit[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([cooperativeId])
+  @@unique([cooperativeId, name])
 }
 
 model DashboardPreference {
@@ -91,6 +110,8 @@ model Unit {
   // Multi-tenancy
   cooperativeId String
   cooperative   Cooperative @relation(fields: [cooperativeId], references: [id])
+  buildingId    String?
+  building      Building? @relation(fields: [buildingId], references: [id], onDelete: SetNull)
 
   currentTenantId String? @unique
   currentTenant   Tenant? @relation("CurrentResident", fields: [currentTenantId], references: [id])
@@ -101,6 +122,9 @@ model Unit {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([cooperativeId])
+  @@index([buildingId])
 }
 
 model Tenant {
@@ -164,9 +188,38 @@ model MaintenanceRequest {
   requestedBy String? // Email of the tenant who requested
   notes       Json?
   expenses    Json?
+  attachments Json?
+  aiTriage    Json?
+  visualDescription String?
+  residentTip String?
+  triageReviewedBy String?
+  triageReviewedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id                 String   @id @default(uuid())
+  cooperativeId      String
+  cooperative        Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  audience           String
+  recipientUserEmail String?
+  type               String
+  severity           String   @default("info")
+  title              String
+  body               String
+  entityType         String?
+  entityId           String?
+  actionUrl          String?
+  readAt             DateTime?
+  createdAt          DateTime @default(now())
+
+  @@index([cooperativeId])
+  @@index([recipientUserEmail])
+  @@index([readAt])
+  @@index([createdAt])
+  @@index([type])
 }
 
 model Announcement {
@@ -174,7 +227,7 @@ model Announcement {
   title    String
   content  String
   type     String
-  priority String   @default("Normal")
+  priority String   @default("Medium")
   author   String
   date     DateTime // Changed from String to DateTime
 
@@ -330,7 +383,11 @@ model PolicyAssistantQuery {
   retrievedChunks Json
   answer          String
   citations       Json
+  language        String @default("English")
+  intent          String @default("policy")
+  suggestedAction Json?
   userFeedback    String?
+  feedback        String?
   feedbackReason  String?
   latencyMs       Int
   createdAt       DateTime @default(now())
@@ -371,6 +428,7 @@ model CoopEvent {
 
   attendees Tenant[]        @relation("EventAttendees")
   minutes   MeetingMinutes?
+  meetingAnalyses MeetingAnalysis[]
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 }
@@ -409,6 +467,27 @@ model MeetingMinutes {
   meeting CoopEvent @relation(fields: [meetingId], references: [id])
 
   @@index([meetingId])
+}
+
+model MeetingAnalysis {
+  id                  String   @id @default(cuid())
+  meetingId           String?
+  meeting             CoopEvent? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  cooperativeId       String
+  cooperative         Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  rawNotes            String
+  professionalSummary String
+  decisions           Json
+  motionsMentioned    Json
+  actionItems         Json
+  risksOrFollowUps    Json
+  createdBy           String
+  approvedAt          DateTime?
+  createdAt           DateTime @default(now())
+
+  @@index([cooperativeId])
+  @@index([meetingId])
+  @@index([createdAt])
 }
 
 model ScheduledMaintenance {

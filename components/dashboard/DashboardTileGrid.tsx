@@ -82,6 +82,7 @@ const SortableTile: React.FC<{
     <section
       ref={sortable.setNodeRef}
       style={style}
+      data-demo-target={`dashboard-tile-${tile.id}`}
       className={`${sizeClasses[tile.size]} ${minHeightClasses[tile.size]} ${sortable.isDragging ? 'z-20 opacity-80' : ''}`}
     >
       <div className="h-full overflow-hidden rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm transition-all dark:border-white/5 dark:bg-slate-900 sm:p-5">
