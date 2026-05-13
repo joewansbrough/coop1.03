@@ -3,7 +3,7 @@ import { Bot, Sparkles, X, Mic, Volume2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { geminiService } from '../services/geminiService';
-import { ORACLE_LANGUAGES } from '../utils/oracle';
+import { createMaintenanceRequestHref, ORACLE_LANGUAGES } from '../utils/oracle';
 import type { OracleLanguage, OracleResponse } from '../types';
 
 interface OracleAssistantProps {
@@ -23,6 +23,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const [language, setLanguage] = useState<OracleLanguage>('English');
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [maintenanceDraftIssue, setMaintenanceDraftIssue] = useState<string | null>(null);
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; response?: OracleResponse }>>([
     { role: 'assistant', content: 'Ask me about co-op policies, meetings, documents, or maintenance steps.' },
   ]);
@@ -311,7 +312,11 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         language: 'English',
         intent: 'maintenance',
         confidence: 0.94,
-        suggestedAction: { type: 'start-maintenance-request', label: 'Open Maintenance', href: '/maintenance' },
+        suggestedAction: {
+          type: 'start-maintenance-request',
+          label: 'Start request with this issue',
+          href: createMaintenanceRequestHref('A resident has a leaking sink. What should we do first?'),
+        },
       };
       setIsLoading(false);
       setMessages([
@@ -328,6 +333,30 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const ask = async (question: string) => {
     if (!question.trim() || isLoading) return;
     setInput('');
+
+    if (maintenanceDraftIssue) {
+      const combinedIssue = `${maintenanceDraftIssue}\n\nAdditional details for triage: ${question.trim()}`;
+      const response: OracleResponse = {
+        answer: 'Thanks. I can prefill a maintenance request with the issue and these extra details so the AI triage has more context.',
+        citations: [],
+        language,
+        intent: 'maintenance',
+        confidence: 0.9,
+        suggestedAction: {
+          type: 'start-maintenance-request',
+          label: 'Open prefilled request',
+          href: createMaintenanceRequestHref(combinedIssue),
+        },
+      };
+      setMessages(prev => [
+        ...prev,
+        { role: 'user', content: question },
+        { role: 'assistant', content: response.answer, response },
+      ]);
+      setMaintenanceDraftIssue(null);
+      return;
+    }
+
     setMessages(prev => [...prev, { role: 'user', content: question }]);
     setIsLoading(true);
     try {
@@ -341,6 +370,31 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getIssueFromMaintenanceHref = (href: string) => {
+    const query = href.split('?')[1] || '';
+    return new URLSearchParams(query).get('issue') || '';
+  };
+
+  const handleSuggestedAction = (action: OracleResponse['suggestedAction']) => {
+    if (!action) return;
+    if (action.type === 'start-maintenance-request') {
+      const issue = getIssueFromMaintenanceHref(action.href);
+      setMaintenanceDraftIssue(issue);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: [
+            'Yes, I can help prepare the request.',
+            'Please add any details you know: exact location, when it started, whether it is active right now, what you already tried, safety concerns, and whether you can upload a photo.',
+          ].join('\n\n'),
+        },
+      ]);
+      return;
+    }
+    navigate(action.href || '/maintenance');
   };
 
   const renderContent = (content: string, response?: OracleResponse) => {
@@ -434,9 +488,10 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
               {message.response?.suggestedAction && (
                 <button
                   type="button"
-                  onClick={() => navigate(message.response?.suggestedAction?.href || '/maintenance')}
-                  className="mt-3 block rounded-xl bg-white px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest text-teal-700"
+                  onClick={() => handleSuggestedAction(message.response?.suggestedAction)}
+                  className="mt-3 block rounded-xl bg-white px-3 py-2 text-left text-[10px] font-black uppercase tracking-widest text-teal-700 shadow-sm ring-1 ring-teal-100 transition-colors hover:bg-teal-50 dark:bg-slate-900 dark:text-teal-300 dark:ring-teal-900/40 dark:hover:bg-slate-800"
                 >
+                  <span className="block text-[8px] text-slate-400 dark:text-slate-500">Smart Nudge</span>
                   {message.response.suggestedAction.label}
                 </button>
               )}

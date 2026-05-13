@@ -15,17 +15,44 @@ export const normalizeOracleLanguage = (language?: string | null): OracleLanguag
   return normalized || 'English';
 };
 
-const maintenanceTerms = /\b(leak|sink|toilet|mold|electrical|heat|hot water|damage|flood|drain)\b/i;
+const maintenanceTerms = /\b(leak|leaking|drip|sink|toilet|mold|electrical|outlet|heat|heating|hot water|damage|flood|flooding|drain|clog|clogged|broken|repair|water|plumbing)\b/i;
+
+export const createMaintenanceRequestHref = (question: string) => {
+  const issue = String(question || '').trim().replace(/\s+/g, ' ').slice(0, 600);
+  const params = new URLSearchParams({ action: 'new-request' });
+  if (issue) params.set('issue', issue);
+  return `/maintenance?${params.toString()}`;
+};
+
+export const createMaintenanceSuggestedAction = (question: string, label = 'Yes, help me submit a request'): OracleSuggestedAction => ({
+  type: 'start-maintenance-request',
+  label,
+  href: createMaintenanceRequestHref(question),
+});
+
+export const mergeOracleSuggestedAction = (
+  question: string,
+  suggestedAction?: Partial<OracleSuggestedAction> | null,
+): OracleSuggestedAction | undefined => {
+  const detected = detectOracleIntent(question);
+  if (detected.intent !== 'maintenance') {
+    return suggestedAction?.type === 'start-maintenance-request'
+      ? createMaintenanceSuggestedAction(question, suggestedAction.label || 'Start maintenance request')
+      : suggestedAction as OracleSuggestedAction | undefined;
+  }
+
+  return createMaintenanceSuggestedAction(
+    question,
+    suggestedAction?.type === 'start-maintenance-request' && suggestedAction.label
+      ? suggestedAction.label
+      : 'Yes, help me submit a request',
+  );
+};
 
 export const detectOracleIntent = (question: string): Pick<OracleResponse, 'intent' | 'suggestedAction'> => {
   // Check for specific actionable maintenance issues (leaks, etc.) rather than just the word "maintenance"
-  if (maintenanceTerms.test(question) && !/\b(committee|chair|meeting|policy|who is)\b/i.test(question)) {
-    const suggestedAction: OracleSuggestedAction = {
-      type: 'start-maintenance-request',
-      label: 'Start maintenance request',
-      href: '/maintenance?action=new-request',
-    };
-    return { intent: 'maintenance', suggestedAction };
+  if (maintenanceTerms.test(question) && !/\b(committee|chair|meeting|who is)\b/i.test(question)) {
+    return { intent: 'maintenance', suggestedAction: createMaintenanceSuggestedAction(question) };
   }
   if (/\b(board|committee|meeting|agm|vote|motion|minutes)\b/i.test(question)) return { intent: 'governance' };
   if (/\b(policy|rule|bylaw|agreement|guest|pet|parking|clutter)\b/i.test(question)) return { intent: 'policy' };

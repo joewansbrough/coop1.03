@@ -19,6 +19,9 @@ const styles = StyleSheet.create({
   tag: { backgroundColor: '#ccfbf1', color: '#0f766e', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, fontSize: 8, fontWeight: 'bold', textTransform: 'uppercase' },
   note: { borderLeftWidth: 3, borderLeftColor: '#14b8a6', backgroundColor: '#f8fafc', padding: 10, marginBottom: 8 },
   noteMeta: { fontSize: 8, color: '#64748b', marginBottom: 4, fontWeight: 'bold' },
+  attachment: { borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 8, backgroundColor: '#f8fafc', padding: 10, marginBottom: 8 },
+  attachmentName: { fontSize: 9, color: '#0f766e', fontWeight: 'bold', marginBottom: 4 },
+  muted: { color: '#64748b' },
   footer: { position: 'absolute', bottom: 28, left: 40, right: 40, borderTopWidth: 1, borderTopColor: '#e2e8f0', paddingTop: 8, fontSize: 8, color: '#94a3b8', flexDirection: 'row', justifyContent: 'space-between' },
 });
 
@@ -41,9 +44,20 @@ type MaintenanceRequestPDFProps = {
   exportedBy?: string;
 };
 
-export const MaintenanceRequestPDF: React.FC<MaintenanceRequestPDFProps> = ({ request, unit, tenant, exportedBy }) => (
-  <Document>
-    <Page size="LETTER" style={styles.page}>
+const getAttachmentFileName = (attachment: any, index: number) =>
+  String(attachment?.fileName || attachment?.storageKey || attachment?.url || attachment?.storageUrl || `Photo ${index + 1}`);
+
+const getAttachmentVisualDescription = (request: MaintenanceRequest, attachment: any, attachmentCount: number) =>
+  String(attachment?.visualDescription || (attachmentCount === 1 ? request.visualDescription || '' : '')).trim();
+
+export const MaintenanceRequestPDF: React.FC<MaintenanceRequestPDFProps> = ({ request, unit, tenant, exportedBy }) => {
+  const attachments = Array.isArray(request.attachments)
+    ? request.attachments.filter((item: any) => item?.fileName || item?.url || item?.storageUrl || item?.visualDescription)
+    : [];
+
+  return (
+    <Document>
+      <Page size="LETTER" style={styles.page}>
       <View style={styles.header}>
         <Text style={styles.eyebrow}>Maintenance Work Order</Text>
         <Text style={styles.title}>{request.title || 'Maintenance Request'}</Text>
@@ -91,6 +105,24 @@ export const MaintenanceRequestPDF: React.FC<MaintenanceRequestPDFProps> = ({ re
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Photo Documentation</Text>
+        {attachments.length > 0 ? attachments.map((attachment: any, index: number) => {
+          const visualDescription = getAttachmentVisualDescription(request, attachment, attachments.length);
+          return (
+            <View key={attachment.id || getAttachmentFileName(attachment, index)} style={styles.attachment}>
+              <Text style={styles.attachmentName}>{getAttachmentFileName(attachment, index)}</Text>
+              <Text style={styles.body}>
+                <Text style={styles.muted}>Image description: </Text>
+                {visualDescription || 'No AI visual description was saved for this photo.'}
+              </Text>
+            </View>
+          );
+        }) : (
+          <Text style={styles.body}>No photos are attached to this request.</Text>
+        )}
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Activity Log</Text>
         {(request.notes || []).length > 0 ? (request.notes || []).map((note) => (
           <View key={note.id} style={styles.note}>
@@ -106,6 +138,7 @@ export const MaintenanceRequestPDF: React.FC<MaintenanceRequestPDFProps> = ({ re
         <Text>coopHUB BC maintenance record</Text>
         <Text>{exportedBy ? `Exported by ${exportedBy}` : 'Authorized export'}</Text>
       </View>
-    </Page>
-  </Document>
-);
+      </Page>
+    </Document>
+  );
+};

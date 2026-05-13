@@ -452,26 +452,38 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
                       )}
                       <div className="p-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <a
-                            href={href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] font-black uppercase tracking-widest text-brand-600 hover:underline dark:text-brand-400"
-                          >
-                            {attachment.fileName || `Attachment ${index + 1}`}
-                          </a>
-                          {attachmentVisualDescription && (
-                            <button
-                              type="button"
-                              onClick={() => playAttachmentVisualDescription(attachmentVisualDescription, audioKey)}
-                              disabled={Boolean(visualDescriptionAudioKey)}
-                              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70 dark:bg-slate-900 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-800"
-                              aria-label={`Play audio description for ${attachment.fileName || `attachment ${index + 1}`}`}
+                          <div className="min-w-0">
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="break-words text-[10px] font-black uppercase tracking-widest text-brand-600 hover:underline dark:text-brand-400"
                             >
-                              <i className={`fa-solid ${visualDescriptionAudioKey === audioKey ? 'fa-spinner fa-spin' : 'fa-volume-high'} text-[10px]`}></i>
-                              {visualDescriptionAudioKey === audioKey ? 'Preparing' : 'Play Audio'}
-                            </button>
-                          )}
+                              {attachment.fileName || `Attachment ${index + 1}`}
+                            </a>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap gap-2">
+                            <a
+                              href={href}
+                              download={attachment.fileName || `maintenance-photo-${index + 1}`}
+                              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-800"
+                            >
+                              <i className="fa-solid fa-download text-[10px]"></i>
+                              Download
+                            </a>
+                            {attachmentVisualDescription && (
+                              <button
+                                type="button"
+                                onClick={() => playAttachmentVisualDescription(attachmentVisualDescription, audioKey)}
+                                disabled={Boolean(visualDescriptionAudioKey)}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-100 disabled:cursor-wait disabled:opacity-70 dark:bg-slate-900 dark:text-slate-300 dark:ring-white/10 dark:hover:bg-slate-800"
+                                aria-label={`Play audio description for ${attachment.fileName || `attachment ${index + 1}`}`}
+                              >
+                                <i className={`fa-solid ${visualDescriptionAudioKey === audioKey ? 'fa-spinner fa-spin' : 'fa-volume-high'} text-[10px]`}></i>
+                                {visualDescriptionAudioKey === audioKey ? 'Preparing' : 'Play Audio'}
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {attachmentVisualDescription && (
                           <p className="mt-2 line-clamp-3 text-xs font-medium leading-relaxed text-slate-500 dark:text-slate-400">{attachmentVisualDescription}</p>
