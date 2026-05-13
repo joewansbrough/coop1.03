@@ -4,6 +4,7 @@ import { Committee, CoopEvent } from '../types';
 import AppAlert from '../components/AppAlert';
 import { useCreateEvent, useUpdateEvent, useDeleteEvent } from '../hooks/useCoopData';
 import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
+import { formatCalendarDateLabel, getDateOnlyValue, getLocalDateInputValue } from '../utils/dateUtils';
 
 interface CalendarProps {
   isAdmin?: boolean;
@@ -22,7 +23,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [viewDate, setViewDate] = useState(() => isAutoDemoActive() ? new Date(2026, 3, 1) : new Date());
-  const [selectedDate, setSelectedDate] = useState(() => isAutoDemoActive() ? '2026-04-12' : new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => isAutoDemoActive() ? '2026-04-12' : getLocalDateInputValue());
   const [showAddForm, setShowAddForm] = useState(false);
   const [editEvent, setEditEvent] = useState<CoopEvent | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -229,14 +230,8 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const monthName = viewDate.toLocaleString('default', { month: 'long' });
 
   // Robust date parsing to ensure consistent sorting across browsers
-  const formatEventDateOnly = (dateInput: string) => {
-    if (!dateInput) return '';
-    if (dateInput.includes('T')) return dateInput.split('T')[0];
-    return dateInput;
-  };
-
   const parseEventDate = (e: CoopEvent) => {
-    const dateOnly = formatEventDateOnly(e.date);
+    const dateOnly = getDateOnlyValue(e.date);
     if (!dateOnly || !e.time) return new Date(0);
     const [year, month, day] = dateOnly.split('-').map(Number);
     const [hour, minute] = e.time.split(':').map(Number);
@@ -408,7 +403,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
             {[...Array(daysInMonth)].map((_, i) => {
               const day = i + 1;
               const dateStr = `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-              const hasEvents = allEvents.filter(e => formatEventDateOnly(e.date) === dateStr);
+              const hasEvents = allEvents.filter(e => getDateOnlyValue(e.date) === dateStr);
               return (
                 <button
                   key={i}
@@ -565,7 +560,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                          )}
                          <div className="flex flex-col items-end">
                            <span className="text-[10px] font-black text-slate-400 uppercase">{formatTime12h(e.time)}</span>
-                           <span className="text-[8px] font-bold text-slate-400 uppercase">{new Date(e.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                           <span className="text-[8px] font-bold text-slate-400 uppercase">{formatCalendarDateLabel(e.date)}</span>
                          </div>
                        </div>
                     </div>

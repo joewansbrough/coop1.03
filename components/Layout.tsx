@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home } from 'lucide-react';
 import ProfileModal from './ProfileModal';
@@ -9,7 +9,8 @@ import DemoTutorialPanel from './DemoTutorialPanel';
 import AutoDemoTour from './AutoDemoTour';
 import OracleAssistant from './OracleAssistant';
 import { AnimatePresence } from 'motion/react';
-import { useMarkNotificationRead, useNotifications } from '../hooks/useCoopData';
+import { useAnnouncements, useDocuments, useEvents, useMaintenance, useMarkNotificationRead, useNotifications } from '../hooks/useCoopData';
+import { buildGlobalSearchResults, type GlobalSearchResult } from '../utils/globalSearch';
 import {
   readTutorialState,
   saveTutorialState,
@@ -154,8 +155,16 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const { data: notifications = [] } = useNotifications();
+  const { data: documents = [] } = useDocuments();
+  const { data: events = [] } = useEvents();
+  const { data: announcements = [] } = useAnnouncements();
+  const { data: maintenance = [] } = useMaintenance();
   const markNotificationRead = useMarkNotificationRead();
   const unreadCount = notifications.filter(notification => !notification.isRead).length;
+  const globalSearchResults = useMemo(
+    () => buildGlobalSearchResults(searchQuery, { documents, events, announcements, maintenance }),
+    [announcements, documents, events, maintenance, searchQuery],
+  );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -276,6 +285,21 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       window.location.reload();
     }
   };
+
+  const closeSearch = () => {
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const handleSearchResultOpen = (result: GlobalSearchResult) => {
+    if (result.external) {
+      window.open(result.href, '_blank', 'noopener,noreferrer');
+    } else {
+      navigate(result.href);
+    }
+    closeSearch();
+  };
+
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden font-sans transition-colors duration-200">
       {/* Sidebar Backdrop */}
@@ -395,6 +419,8 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
             <button 
               onClick={() => setIsSearchOpen(true)}
               className="p-2 text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors hidden sm:block active:scale-95"
+              aria-label="Open global search"
+              title="Search"
             >
               <i className="fa-solid fa-magnifying-glass"></i>
             </button>
@@ -487,21 +513,44 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <button onClick={() => setIsSearchOpen(false)} className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600">Esc</button>
+                <button onClick={closeSearch} className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600">Esc</button>
               </div>
-              <div className="p-8 text-center">
+              <div className="p-4 sm:p-6">
                 {searchQuery ? (
-                  <div className="space-y-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No results found for "{searchQuery}"</p>
-                    <p className="text-[10px] text-slate-500">Try searching for "Bylaws", "AGM", or "Maintenance"</p>
-                  </div>
+                  globalSearchResults.length > 0 ? (
+                    <div className="max-h-[55vh] overflow-y-auto">
+                      {globalSearchResults.map(result => (
+                        <button
+                          key={result.id}
+                          type="button"
+                          onClick={() => handleSearchResultOpen(result)}
+                          className="group flex w-full items-center gap-4 border-b border-slate-100 px-2 py-4 text-left transition-colors last:border-b-0 hover:bg-slate-50 dark:border-white/5 dark:hover:bg-white/5 sm:px-3"
+                        >
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition-colors group-hover:bg-brand-50 group-hover:text-brand-600 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:bg-brand-950/40 dark:group-hover:text-brand-300">
+                            <i className={`fa-solid ${result.icon}`}></i>
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[10px] font-black uppercase tracking-widest text-brand-500">{result.label}</span>
+                            <span className="mt-0.5 block truncate text-sm font-black text-slate-800 dark:text-white">{result.title}</span>
+                            <span className="mt-1 block truncate text-xs font-medium text-slate-500 dark:text-slate-400">{result.description}</span>
+                          </span>
+                          <i className={`fa-solid ${result.external ? 'fa-arrow-up-right-from-square' : 'fa-arrow-right'} text-xs text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500`}></i>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-4 py-4 text-center">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No results found for "{searchQuery}"</p>
+                      <p className="text-[10px] text-slate-500">Try searching for "Bylaws", "AGM", or "Maintenance"</p>
+                    </div>
+                  )
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => { navigate('/documents'); setIsSearchOpen(false); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-brand-500 transition-all">
+                    <button onClick={() => { navigate('/documents'); closeSearch(); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-brand-500 transition-all">
                       <p className="text-[10px] font-black text-brand-500 uppercase mb-1">Quick Link</p>
                       <p className="text-sm font-bold text-slate-800 dark:text-white">Policy Library</p>
                     </button>
-                    <button onClick={() => { navigate('/calendar'); setIsSearchOpen(false); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-brand-500 transition-all">
+                    <button onClick={() => { navigate('/calendar'); closeSearch(); }} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 text-left hover:border-brand-500 transition-all">
                       <p className="text-[10px] font-black text-blue-500 uppercase mb-1">Quick Link</p>
                       <p className="text-sm font-bold text-slate-800 dark:text-white">Event Calendar</p>
                     </button>
