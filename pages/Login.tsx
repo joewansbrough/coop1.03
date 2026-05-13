@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { LogIn, ShieldCheck, Home, Users, Wrench, Bot, Sparkles } from 'lucide-react';
+import { Home, Users, Wrench, Bot, Sparkles, ArrowRight } from 'lucide-react';
 import AppAlert from '../components/AppAlert';
 import DemoTrackPicker from '../components/DemoTrackPicker';
 
@@ -9,10 +9,17 @@ interface LoginProps {
   onLoginSuccess: () => void;
 }
 
+const DEMO_PASSWORD = 'coophub2026';
+
+export const isValidDemoPassword = (password: string) => password === DEMO_PASSWORD;
+
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDemoPickerOpen, setIsDemoPickerOpen] = useState(false);
+  const [isDemoPasswordOpen, setIsDemoPasswordOpen] = useState(false);
+  const [demoPassword, setDemoPassword] = useState('');
+  const [demoPasswordError, setDemoPasswordError] = useState<string | null>(null);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -31,12 +38,33 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }
   };
 
+  const openDemoPasswordPrompt = () => {
+    setIsDemoPasswordOpen(true);
+    setDemoPassword('');
+    setDemoPasswordError(null);
+  };
+
+  const handleDemoPasswordSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!isValidDemoPassword(demoPassword)) {
+      setDemoPasswordError('Incorrect demo password.');
+      return;
+    }
+
+    setDemoPassword('');
+    setDemoPasswordError(null);
+    setIsDemoPickerOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {isDemoPickerOpen && (
         <DemoTrackPicker
           onStart={onLoginSuccess}
-          onCancel={() => setIsDemoPickerOpen(false)}
+          onCancel={() => {
+            setIsDemoPickerOpen(false);
+            setIsDemoPasswordOpen(false);
+          }}
         />
       )}
       {/* Background Decorative Elements */}
@@ -73,15 +101,47 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               Management.
             </h2>
 
-            <button
-              onClick={() => {
-                setIsDemoPickerOpen(true);
-              }}
-              className="w-full py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 group mb-10"
-            >
-              <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              <span className="text-sm font-black uppercase tracking-widest">Try Demo Mode</span>
-            </button>
+            <div className="w-full mb-10">
+              {isDemoPasswordOpen ? (
+                <form onSubmit={handleDemoPasswordSubmit} className="space-y-2">
+                  <div className="flex min-h-[56px] overflow-hidden rounded-2xl bg-white text-slate-900 shadow-lg shadow-black/10 ring-2 ring-white/10 focus-within:ring-teal-300">
+                    <input
+                      type="password"
+                      value={demoPassword}
+                      onChange={(event) => {
+                        setDemoPassword(event.target.value);
+                        setDemoPasswordError(null);
+                      }}
+                      autoFocus
+                      aria-label="Demo password"
+                      aria-invalid={!!demoPasswordError}
+                      placeholder="Enter demo password"
+                      className="min-w-0 flex-1 bg-transparent px-5 text-sm font-black uppercase tracking-wider outline-none placeholder:text-slate-400"
+                    />
+                    <button
+                      type="submit"
+                      aria-label="Unlock demo mode"
+                      className="flex w-14 items-center justify-center bg-brand-500 text-white transition-colors hover:bg-brand-600 active:bg-brand-700"
+                    >
+                      <ArrowRight className="h-5 w-5" />
+                    </button>
+                  </div>
+                  {demoPasswordError && (
+                    <p className="text-xs font-bold text-rose-200" role="alert">
+                      {demoPasswordError}
+                    </p>
+                  )}
+                </form>
+              ) : (
+                <button
+                  onClick={openDemoPasswordPrompt}
+                  className="w-full py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-3 group"
+                >
+                  <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                  <span className="text-sm font-black uppercase tracking-widest">Try the Demo</span>
+                </button>
+              )}
+            </div>
 
             <div className="mb-5">
               <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-400">Key Features:</h3>
