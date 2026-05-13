@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { pdf } from '@react-pdf/renderer';
 import { geminiService } from '../services/geminiService';
 import { Document, Committee } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,12 +9,13 @@ import DriveExplorer from '../components/DriveExplorer';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
 
-import { isDemoMode, useUser, useRefreshData } from '../hooks/useCoopData';
+import { isDemoMode, useUser, useRefreshData, useEvents, useMinutes } from '../hooks/useCoopData';
 import { formatDate } from '../utils/dateUtils';
 import { recordTutorialEvent } from '../utils/demoTutorial';
-import { getDocumentFileUrl, getDocumentLibraryOriginalUrl } from '../utils/dashboardDocumentLinks';
+import { getDocumentFileUrl, getDocumentLibraryDestination, getDocumentLibraryOriginalUrl, getMinutesEventId } from '../utils/dashboardDocumentLinks';
 import { demoStorage } from '../utils/demoStorage';
 import { sortNewestFirst } from '../utils/contentOrdering';
+import { MinutesPDF } from '../services/export/pdfGenerator';
 
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
@@ -24,8 +26,11 @@ const ResourceLibrary: React.FC<{
   isDocumentsLoading?: boolean,
   isDocumentsError?: boolean
 }> = ({ isAdmin, isGuest = false, documents, setDocuments, committees = [] }) => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { data: user } = useUser();
+  const { data: calendarEvents = [] } = useEvents();
+  const { data: minutesList = [] } = useMinutes();
   const refreshData = useRefreshData();
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
@@ -126,6 +131,56 @@ const ResourceLibrary: React.FC<{
     window.open(launchUrl, '_blank', 'noopener,noreferrer');
     if (launchUrl.startsWith('blob:')) {
       window.setTimeout(() => URL.revokeObjectURL(launchUrl), 30000);
+    }
+  };
+
+  const getMinutesPdfContext = (doc: Document) => {
+    const eventId = getMinutesEventId(doc);
+    const event = calendarEvents.find(item => item.id === eventId);
+    const minutes = minutesList.find(item => item.meetingId === eventId) as any;
+
+    if (!eventId || !event || !minutes) return null;
+
+    return {
+      event,
+      minutesData: {
+        ...minutes,
+        formData: minutes.formData || minutes.data,
+      },
+    };
+  };
+
+  const createMinutesPdfUrl = async (doc: Document) => {
+    const context = getMinutesPdfContext(doc);
+    if (!context) return null;
+
+    const blob = await pdf(<MinutesPDF data={context.minutesData} event={context.event} />).toBlob();
+    return URL.createObjectURL(blob);
+  };
+
+  const handleViewOriginalFile = async (doc: Document, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const launchUrl = getLaunchUrl(doc);
+
+    if (launchUrl) {
+      window.open(launchUrl, '_blank', 'noopener,noreferrer');
+      if (launchUrl.startsWith('blob:')) {
+        window.setTimeout(() => URL.revokeObjectURL(launchUrl), 30000);
+      }
+      return;
+    }
+
+    try {
+      const minutesPdfUrl = await createMinutesPdfUrl(doc);
+      if (!minutesPdfUrl) {
+        showAlert('No original file is attached to this document yet.', 'info');
+        return;
+      }
+      window.open(minutesPdfUrl, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(minutesPdfUrl), 30000);
+    } catch (error) {
+      console.error('Minutes PDF view error:', error);
+      showAlert('Unable to generate the minutes PDF copy.', 'error');
     }
   };
 
@@ -352,15 +407,25 @@ const ResourceLibrary: React.FC<{
     setFilter(cat);
   };
 
-  const handleDownload = (doc: Document, e?: React.MouseEvent) => {
+  const handleDownload = async (doc: Document, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (!getDocumentFileUrl(doc)) {
-      showAlert('This document is stored in the secure association vault. Open it from the viewer instead.', 'info');
+
+    let launchUrl = getLaunchUrl(doc, true);
+    if (!launchUrl) {
+      try {
+        launchUrl = await createMinutesPdfUrl(doc);
+      } catch (error) {
+        console.error('Minutes PDF download error:', error);
+        showAlert('Unable to generate the minutes PDF copy.', 'error');
+        return;
+      }
+    }
+
+    if (!launchUrl) {
+      showAlert('No downloadable file is attached to this document yet.', 'info');
       return;
     }
 
-    const launchUrl = getLaunchUrl(doc, true);
-    if (!launchUrl) return;
     const link = window.document.createElement('a');
     link.href = launchUrl;
     link.download = getDocumentFileName(doc);
@@ -376,11 +441,19 @@ const ResourceLibrary: React.FC<{
 
   const handleViewDoc = (doc: Document) => {
     recordTutorialEvent('document_opened');
-    if (getDocumentFileUrl(doc)) {
-      openDocument(doc);
-    } else {
+    const destination = getDocumentLibraryDestination(doc, { isAdmin: isAdmin && !isGuest });
+
+    if (destination.type === 'review') {
       setReviewingDoc(getDocumentWithInferredCommittee(doc));
+      return;
     }
+
+    if (destination.type === 'route') {
+      navigate(destination.href);
+      return;
+    }
+
+    openDocument(doc);
   };
 
   const handleAskAI = async (e: React.FormEvent) => {
@@ -905,7 +978,7 @@ const ResourceLibrary: React.FC<{
                     <h4 className="text-lg font-black text-slate-800 dark:text-white mb-2 uppercase tracking-tight">Streamlined Metadata View</h4>
                     <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-xs">Association documents are now stored externally. Managing metadata below will update the searchable archive.</p>
                     <button
-                      onClick={() => handleViewDoc(reviewingDoc)}
+                      onClick={(e) => handleViewOriginalFile(reviewingDoc, e)}
                       className={`mt-8 ${getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'bg-blue-600 hover:bg-brand-600' : 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-brand-600 dark:hover:bg-brand-600'} px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all`}
                     >
                       <i className="fa-solid fa-arrow-up-right-from-square"></i>

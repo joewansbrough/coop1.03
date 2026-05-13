@@ -4,6 +4,10 @@ export type DashboardDocumentLink =
   | { type: 'route'; href: string }
   | { type: 'external'; href: string };
 
+export type DocumentLibraryDestination =
+  | DashboardDocumentLink
+  | { type: 'review' };
+
 export const isMinutesDocument = (document: Document) => {
   const searchable = [
     document.category,
@@ -50,4 +54,25 @@ export const getDashboardDocumentLink = (document: Document): DashboardDocumentL
   }
 
   return { type: 'route', href: '/documents' };
+};
+
+export const getDocumentLibraryDestination = (
+  document: Document,
+  { isAdmin }: { isAdmin: boolean },
+): DocumentLibraryDestination => {
+  if (isAdmin) return { type: 'review' };
+
+  if (isMinutesDocument(document)) {
+    const eventId = getMinutesEventId(document);
+    if (eventId) {
+      return { type: 'route', href: `/calendar/${eventId}?tab=minutes` };
+    }
+  }
+
+  const fileUrl = getDocumentLibraryOriginalUrl(document);
+  if (fileUrl) {
+    return { type: 'external', href: fileUrl };
+  }
+
+  return { type: 'review' };
 };
