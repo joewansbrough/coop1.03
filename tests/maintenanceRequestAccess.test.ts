@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canExportMaintenanceRequest } from '../utils/maintenanceRequestAccess.ts';
+import { canExportMaintenanceRequest, getUserMaintenanceUnitId } from '../utils/maintenanceRequestAccess.ts';
 import { MaintenancePriority, RequestStatus, type MaintenanceRequest, type Tenant, type Unit } from '../types.ts';
 
 const request: MaintenanceRequest = {
@@ -44,4 +44,22 @@ test('allows the current tenant of the unit to export their maintenance request'
 
 test('blocks unrelated residents from exporting another unit maintenance request', () => {
   assert.equal(canExportMaintenanceRequest(request, unit, tenants, { tenantId: 't2', email: 'other@example.com' }, false), false);
+});
+
+test('resolves maintenance unit from the selected user tenant id', () => {
+  const units: Unit[] = [
+    { id: 'u1', number: '101', type: 'One Bedroom', floor: 1, status: 'Occupied', currentTenantId: 't1' },
+    { id: 'u2', number: '301', type: 'Three Bedroom', floor: 3, status: 'Occupied', currentTenantId: 't2' },
+  ];
+
+  assert.equal(getUserMaintenanceUnitId(units, tenants, { tenantId: 't2', email: 'george@example.com' }), 'u2');
+});
+
+test('resolves maintenance unit from the selected user unit number', () => {
+  const units: Unit[] = [
+    { id: 'u1', number: '101', type: 'One Bedroom', floor: 1, status: 'Occupied', currentTenantId: 't1' },
+    { id: 'u2', number: '301', type: 'Three Bedroom', floor: 3, status: 'Occupied', currentTenantId: 't2' },
+  ];
+
+  assert.equal(getUserMaintenanceUnitId(units, tenants, { email: 'george@example.com', unitNumber: '301' }), 'u2');
 });

@@ -6,6 +6,7 @@ import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
 import { isDemoMode, useCreateMaintenance, useUpdateMaintenance, useUser } from '../hooks/useCoopData';
 import { recordTutorialEvent } from '../utils/demoTutorial';
+import { getUserMaintenanceUnitId } from '../utils/maintenanceRequestAccess';
 
 interface MaintenanceProps {
   isAdmin?: boolean;
@@ -20,7 +21,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { data: user } = useUser();
-  const userUnitId = units.length > 0 ? units[0].id : 'u1';
+  const userUnitId = getUserMaintenanceUnitId(units, [], user);
   const statusParam = searchParams.get('status');
   const priorityParam = searchParams.get('priority') as MaintenancePriority | null;
   
@@ -78,13 +79,17 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   
   // Form State
   const [description, setDescription] = useState('');
-  const [unitId, setUnitId] = isAdmin ? useState('') : useState(userUnitId);
+  const [unitId, setUnitId] = useState(isAdmin ? '' : userUnitId);
   const [category, setCategory] = useState<MaintenanceCategory[]>(['Other']);
   const [priority, setPriority] = useState<MaintenancePriority>(MaintenancePriority.LOW);
 
   useEffect(() => {
     setFilter(statusParam === 'open' ? 'Open' : 'All');
   }, [statusParam]);
+
+  useEffect(() => {
+    if (!isAdmin) setUnitId(userUnitId);
+  }, [isAdmin, userUnitId]);
 
   useEffect(() => {
     if (searchParams.get('action') === 'new-request') {
