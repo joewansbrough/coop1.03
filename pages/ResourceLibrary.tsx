@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { pdf } from '@react-pdf/renderer';
 import { geminiService } from '../services/geminiService';
-import { Document, Committee } from '../types';
+import { Document, Committee, RagCitation } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import DriveExplorer from '../components/DriveExplorer';
 import FilterBar from '../components/FilterBar';
@@ -37,6 +37,12 @@ const ResourceLibrary: React.FC<{
   const [question, setQuestion] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [loading, setLoading] = useState(false);
+  const [ragQuestion, setRagQuestion] = useState('');
+  const [ragAnswer, setRagAnswer] = useState('');
+  const [ragCitations, setRagCitations] = useState<RagCitation[]>([]);
+  const [ragStoreNames, setRagStoreNames] = useState<string[]>([]);
+  const [isRagAsking, setIsRagAsking] = useState(false);
+  const [indexingDocumentId, setIndexingDocumentId] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -137,6 +143,28 @@ const ResourceLibrary: React.FC<{
       window.setTimeout(() => URL.revokeObjectURL(launchUrl), 30000);
     }
   };
+
+  const getRagDisplay = (doc: Document) => {
+    const status = doc.currentVersion?.ragStatus || 'not_indexed';
+    switch (status) {
+      case 'indexing':
+        return { label: 'AI indexing', className: 'bg-amber-500/10 text-amber-600 border-amber-500/20' };
+      case 'indexed':
+        return { label: 'AI indexed', className: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' };
+      case 'failed':
+        return { label: 'AI failed', className: 'bg-rose-500/10 text-rose-600 border-rose-500/20' };
+      case 'stale':
+        return { label: 'AI stale', className: 'bg-orange-500/10 text-orange-600 border-orange-500/20' };
+      case 'deleted':
+        return { label: 'AI deleted', className: 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-white/5' };
+      default:
+        return { label: 'Not AI indexed', className: 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-white/5' };
+    }
+  };
+
+  const hasDriveFileIdForIndexing = (doc: Document) =>
+    Boolean(doc.sourceExternalId) ||
+    Boolean((doc.currentVersion as any)?.sourceExternalId);
 
   const getMinutesPdfContext = (doc: Document) => {
     const eventId = getMinutesEventId(doc);
@@ -512,6 +540,55 @@ const ResourceLibrary: React.FC<{
     }
   };
 
+  const handleAskRag = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!ragQuestion.trim()) return;
+
+    setIsRagAsking(true);
+    setRagAnswer('');
+    setRagCitations([]);
+    setRagStoreNames([]);
+
+    try {
+      const res = await fetch('/api/rag/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ question: ragQuestion }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.details || data.error || 'Failed to ask indexed documents');
+      setRagAnswer(data.answer || 'I could not find this in the indexed documents.');
+      setRagCitations(Array.isArray(data.citations) ? data.citations : []);
+      setRagStoreNames(Array.isArray(data.storeNames) ? data.storeNames : []);
+    } catch (error: any) {
+      showAlert(error.message || 'Failed to ask indexed documents.', 'error');
+    } finally {
+      setIsRagAsking(false);
+    }
+  };
+
+  const handleIndexForAi = async (doc: Document, event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    if (!isAdmin || isGuest || !hasDriveFileIdForIndexing(doc)) return;
+
+    setIndexingDocumentId(doc.id);
+    try {
+      const res = await fetch(`/api/rag/documents/${doc.id}/index`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.details || data.error || 'Failed to index document');
+      showAlert('Document indexing started for AI.', 'success');
+    } catch (error: any) {
+      showAlert(error.message || 'Failed to index document for AI.', 'error');
+    } finally {
+      refreshData();
+      setIndexingDocumentId(null);
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -761,6 +838,53 @@ const ResourceLibrary: React.FC<{
           )}
         </div>
 
+        {isAdmin && !isGuest && (
+          <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
+            <div className="flex flex-col gap-1 mb-4">
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Ask coopHUB Docs</h3>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Admin search across indexed co-op Drive documents and shared reference material.
+              </p>
+            </div>
+            <form onSubmit={handleAskRag} className="flex flex-col sm:flex-row gap-3">
+              <input
+                value={ragQuestion}
+                onChange={(event) => setRagQuestion(event.target.value)}
+                placeholder="Ask about indexed documents..."
+                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
+              />
+              <button
+                type="submit"
+                disabled={isRagAsking || !ragQuestion.trim()}
+                className="px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white hover:bg-brand-600 disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-95"
+              >
+                {isRagAsking ? 'Asking...' : 'Ask'}
+              </button>
+            </form>
+            {ragAnswer && (
+              <div className="mt-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-800 p-4">
+                <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-200">{ragAnswer}</p>
+                {ragStoreNames.length > 0 && (
+                  <p className="mt-3 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                    Stores: {ragStoreNames.join(', ')}
+                  </p>
+                )}
+              </div>
+            )}
+            {ragCitations.length > 0 && (
+              <div className="mt-4 grid gap-2">
+                {ragCitations.map((citation, index) => (
+                  <div key={`${citation.title}-${index}`} className="rounded-xl border border-slate-200 dark:border-white/5 p-3 text-sm">
+                    <div className="font-black text-slate-800 dark:text-white">{citation.title}</div>
+                    {citation.pageNumber != null && <div className="text-xs text-slate-500">Page {citation.pageNumber}</div>}
+                    {citation.text && <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-500 dark:text-slate-400">{citation.text}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         <FilterBar
           search={search}
           onSearchChange={setSearch}
@@ -775,6 +899,8 @@ const ResourceLibrary: React.FC<{
             const fileUrl = getDocumentFileUrl(doc);
             const isCloud = fileUrl?.includes('drive.google.com');
             const ingestion = getIngestionDisplay(doc);
+            const rag = getRagDisplay(doc);
+            const canIndexForAi = isAdmin && !isGuest && hasDriveFileIdForIndexing(doc);
             return (
               <div
                 key={doc.id}
@@ -804,6 +930,12 @@ const ResourceLibrary: React.FC<{
                       <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter border ${ingestion.className}`}>
                         {ingestion.label}
                       </span>
+                      <span
+                        className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter border ${rag.className}`}
+                        title={doc.currentVersion?.ragIndexError || undefined}
+                      >
+                        {rag.label}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -825,7 +957,7 @@ const ResourceLibrary: React.FC<{
                   </div>
                 )}
 
-                <div className="mt-auto flex items-center justify-between pt-4 border-t border-slate-50 dark:border-white/5">
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-50 dark:border-white/5">
                   <button
                     onClick={(e) => handleCategoryClick(doc.category, e)}
                     className={`text-[9px] font-black px-2 py-1 rounded uppercase tracking-widest border transition-all ${filter === doc.category
@@ -835,7 +967,21 @@ const ResourceLibrary: React.FC<{
                   >
                     {doc.category}
                   </button>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {canIndexForAi && (
+                      <button
+                        onClick={(event) => handleIndexForAi(doc, event)}
+                        disabled={indexingDocumentId === doc.id || doc.currentVersion?.ragStatus === 'indexing'}
+                        className="px-3 py-2 rounded-xl bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-brand-600 disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-95"
+                        title={doc.currentVersion?.ragIndexError || 'Index for AI search'}
+                      >
+                        {indexingDocumentId === doc.id || doc.currentVersion?.ragStatus === 'indexing'
+                          ? 'Indexing...'
+                          : doc.currentVersion?.ragStatus === 'failed'
+                            ? 'Retry AI'
+                            : 'Index AI'}
+                      </button>
+                    )}
                     {isAdmin && !isGuest && (
                       <>
                         <button
@@ -1162,24 +1308,24 @@ const ResourceLibrary: React.FC<{
                 </div>
               </div>
 
-              <div className="p-8 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-white/5 flex justify-end gap-4">
+              <div className="p-8 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-white/5 flex flex-col sm:flex-row sm:flex-wrap sm:justify-end gap-4">
                 <button
                   onClick={() => setReviewingDoc(null)}
-                  className="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
+                  className="w-full sm:w-auto px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
                 >
                   {(isAdmin && !isGuest) ? 'Discard Changes' : 'Close Viewer'}
                 </button>
                 {isAdmin && !isGuest && (
                   <button
                     onClick={handleSaveReview}
-                    className="px-12 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-brand-600 text-white hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95"
+                    className="w-full sm:w-auto px-12 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-brand-600 text-white hover:bg-brand-700 transition-all shadow-lg shadow-brand-500/20 active:scale-95"
                   >
                     Save
                   </button>
                 )}
                 <button
                   onClick={(e) => handleDownload(reviewingDoc, e)}
-                  className={`px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest ${getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'bg-blue-600' : 'bg-slate-900'} text-white hover:bg-brand-600 transition-all active:scale-95 flex items-center gap-2`}
+                  className={`w-full sm:w-auto px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest ${getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'bg-blue-600' : 'bg-slate-900'} text-white hover:bg-brand-600 transition-all active:scale-95 flex items-center justify-center gap-2`}
                 >
                   <i className={`fa-solid ${getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'fa-arrow-up-right-from-square' : 'fa-download'}`}></i>
                   {getDocumentFileUrl(reviewingDoc)?.includes('drive.google.com') ? 'Open' : 'Download'}

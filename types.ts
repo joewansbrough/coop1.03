@@ -168,6 +168,11 @@ export interface Document {
     storageKey?: string | null;
     ingestionStatus: 'pending' | 'processing' | 'ready' | 'failed' | string;
     ingestionError?: string | null;
+    ragStatus?: 'not_indexed' | 'indexing' | 'indexed' | 'failed' | 'stale' | 'deleted' | string;
+    ragStoreName?: string | null;
+    ragDocumentName?: string | null;
+    ragIndexedAt?: string | null;
+    ragIndexError?: string | null;
     createdAt?: string;
   } | null;
   createdAt?: string;
@@ -303,6 +308,23 @@ export interface OracleResponse {
   intent: 'policy' | 'maintenance' | 'governance' | 'general';
   suggestedAction?: OracleSuggestedAction;
   confidence: number;
+}
+
+export interface RagCitation {
+  title: string;
+  text?: string;
+  uri?: string;
+  pageNumber?: number | null;
+  documentId?: string | null;
+  documentVersionId?: string | null;
+  scope?: string | null;
+  sourceSystem?: string | null;
+}
+
+export interface RagAskResponse {
+  answer: string;
+  citations: RagCitation[];
+  storeNames: string[];
 }
 
 export interface MeetingAnalysisActionItem {
