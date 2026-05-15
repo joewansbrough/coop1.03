@@ -49,6 +49,7 @@ const ResourceLibrary: React.FC<{
   // Review state
   const [reviewingDoc, setReviewingDoc] = useState<Document | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [accessSummary, setAccessSummary] = useState<{ summary: string; groups: { id: string; name: string; memberCount: number }[] } | null>(null);
 
   // New document form state
   const [newDocTitle, setNewDocTitle] = useState('');
@@ -78,6 +79,9 @@ const ResourceLibrary: React.FC<{
   };
 
   const getStorageLabel = (doc: Document) => {
+    if (doc.storageProvider === 'GOOGLE_DRIVE') return 'Drive';
+    if (doc.storageProvider === 'VERCEL_BLOB') return 'Blob';
+    if (doc.storageProvider === 'LOCAL') return 'Local';
     if (doc.currentVersion?.storageUrl) return 'Blob';
     if (doc.url?.includes('drive.google.com')) return 'Drive';
     if (doc.url?.startsWith('data:')) return 'Legacy';
@@ -236,6 +240,27 @@ const ResourceLibrary: React.FC<{
     }
   }, [searchParams, isAdmin, isGuest, documents]);
 
+  useEffect(() => {
+    if (!reviewingDoc || !isAdmin || isGuest) {
+      setAccessSummary(null);
+      return;
+    }
+
+    let cancelled = false;
+    fetch(`/api/documents/${reviewingDoc.id}/access`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!cancelled) setAccessSummary(data);
+      })
+      .catch(() => {
+        if (!cancelled) setAccessSummary(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reviewingDoc?.id, isAdmin, isGuest]);
+
   const handleOpenPicker = () => {
     if (!config?.googleClientId || !config?.googleApiKey) {
       showAlert('Missing Google configuration. Please check your environment variables.', 'error');
@@ -330,7 +355,13 @@ const ResourceLibrary: React.FC<{
               author: 'Google Drive',
               date: new Date().toISOString(),
               tags: ['Google Drive', 'Linked'],
-              content: extractedContent || ''
+              content: extractedContent || '',
+              visibility: reviewingDoc?.visibility || 'MEMBERS',
+              committeeAccess: reviewingDoc?.committeeAccess || reviewingDoc?.committee || null,
+              storageProvider: 'GOOGLE_DRIVE',
+              sourceExternalId: driveDoc.id,
+              sourceWebUrl: driveDoc.url,
+              sourceMimeType: driveDoc.mimeType,
             };
 
             try {
@@ -582,6 +613,8 @@ const ResourceLibrary: React.FC<{
       formData.append('title', newDocTitle);
       formData.append('category', newDocCategory);
       formData.append('committee', newDocCommittee);
+      formData.append('visibility', newDocCommittee ? 'COMMITTEE' : 'MEMBERS');
+      formData.append('committeeAccess', newDocCommittee);
 
       const res = await fetch('/api/upload-to-blob', {
         method: 'POST',
@@ -643,6 +676,8 @@ const ResourceLibrary: React.FC<{
           tags: reviewingDoc.tags,
           committee: reviewingDoc.committee ?? '',
           content: reviewingDoc.content ?? null,
+          visibility: reviewingDoc.visibility || 'MEMBERS',
+          committeeAccess: reviewingDoc.committeeAccess ?? reviewingDoc.committee ?? null,
         }),
       });
 
@@ -1040,6 +1075,40 @@ const ResourceLibrary: React.FC<{
                           {committees.map(c => <option key={c.id} value={c.name} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">{c.name}</option>)}
                         </select>
                       </div>
+                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600 hover:border-brand-400 dark:hover:border-brand-500 transition-colors">
+                          <p className="text-[8px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1">
+                            <i className="fa-solid fa-shield-halved text-brand-500"></i> Visibility
+                          </p>
+                          <select
+                            value={reviewingDoc.visibility || 'MEMBERS'}
+                            disabled={!isAdmin || isGuest}
+                            onChange={(e) => isAdmin && !isGuest && setReviewingDoc({ ...reviewingDoc, visibility: e.target.value as Document['visibility'] })}
+                            className="w-full bg-white dark:bg-slate-700 text-xs font-black text-slate-800 dark:text-white outline-none appearance-none cursor-pointer"
+                          >
+                            {['PUBLIC', 'MEMBERS', 'COMMITTEE', 'BOARD', 'ADMIN', 'CUSTOM', 'PRIVATE'].map(value => (
+                              <option key={value} value={value} className="bg-white text-slate-900 dark:bg-slate-800 dark:text-white">{value}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="p-4 bg-white dark:bg-slate-700 rounded-2xl border-2 border-slate-200 dark:border-slate-600">
+                          <p className="text-[8px] font-black text-slate-400 uppercase mb-1 flex items-center gap-1">
+                            <i className="fa-solid fa-database text-brand-500"></i> Storage
+                          </p>
+                          <p className="text-xs font-black text-slate-800 dark:text-white">{reviewingDoc.storageProvider || getStorageLabel(reviewingDoc)}</p>
+                        </div>
+                      </div>
+                      {isAdmin && !isGuest && accessSummary && (
+                        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/5 dark:bg-slate-800">
+                          <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Who can see this?</p>
+                          <p className="mt-1 text-xs font-bold text-slate-700 dark:text-slate-200">{accessSummary.summary}</p>
+                          {accessSummary.groups.length > 0 && (
+                            <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                              {accessSummary.groups.slice(0, 3).map(group => `${group.name} (${group.memberCount})`).join(' / ')}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div>

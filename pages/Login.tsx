@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Home, Users, Wrench, Bot, Sparkles, ArrowRight } from 'lucide-react';
+import { Home, Users, Wrench, Bot, Sparkles, ArrowRight, Mail } from 'lucide-react';
 import AppAlert from '../components/AppAlert';
 import DemoTrackPicker from '../components/DemoTrackPicker';
 
@@ -20,6 +20,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [isDemoPasswordOpen, setIsDemoPasswordOpen] = useState(false);
   const [demoPassword, setDemoPassword] = useState('');
   const [demoPasswordError, setDemoPasswordError] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
+  const [magicLinkMessage, setMagicLinkMessage] = useState<string | null>(null);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -34,6 +36,31 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     } catch (error: any) {
       console.error('Login error:', error);
       setErrorMessage(`Login error: ${error.message}`);
+      setIsLoading(false);
+    }
+  };
+
+  const handleMagicLinkRequest = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setErrorMessage(null);
+    setMagicLinkMessage(null);
+    try {
+      const response = await fetch('/api/auth/magic-link/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not create magic link');
+      if (data.loginUrl) {
+        window.location.href = data.loginUrl;
+        return;
+      }
+      setMagicLinkMessage('Check your email for a secure sign-in link.');
+    } catch (error: any) {
+      setErrorMessage(`Login error: ${error.message}`);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -178,7 +205,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <div className="text-center mb-10">
               <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-4">Welcome Back</h3>
               <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
-                Please sign in with your registered Google account to access your co-op portal.
+                Sign in with the email registered to your co-op account.
               </p>
             </div>
 
@@ -187,6 +214,47 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 <AppAlert message={errorMessage} type="error" onClose={() => setErrorMessage(null)} />
               </div>
             )}
+
+            {magicLinkMessage && (
+              <div className="mb-5">
+                <AppAlert message={magicLinkMessage} type="success" onClose={() => setMagicLinkMessage(null)} />
+              </div>
+            )}
+
+            <form onSubmit={handleMagicLinkRequest} className="space-y-3">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Email address
+              </label>
+              <div className="flex min-h-[56px] overflow-hidden rounded-2xl border-2 border-slate-100 bg-white dark:border-white/5 dark:bg-slate-800 focus-within:border-brand-500">
+                <div className="flex w-14 items-center justify-center text-slate-400">
+                  <Mail className="h-5 w-5" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="member@example.com"
+                  className="min-w-0 flex-1 bg-transparent pr-4 text-sm font-bold text-slate-900 outline-none placeholder:text-slate-400 dark:text-white"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-3 bg-brand-500 py-4 rounded-2xl text-white hover:bg-brand-600 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <span className="text-sm font-black uppercase tracking-widest">
+                  {isLoading ? 'Sending...' : 'Send Magic Link'}
+                </span>
+                <ArrowRight className="h-5 w-5" />
+              </button>
+            </form>
+
+            <div className="my-6 flex items-center gap-3">
+              <div className="h-px flex-1 bg-slate-100 dark:bg-white/10"></div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">or</span>
+              <div className="h-px flex-1 bg-slate-100 dark:bg-white/10"></div>
+            </div>
 
             <button
               onClick={handleGoogleLogin}

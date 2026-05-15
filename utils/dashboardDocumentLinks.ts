@@ -33,6 +33,10 @@ export const isBlobBackedDocument = (document: Document) =>
   Boolean(document.currentVersion?.storageUrl || document.url?.includes('blob.vercel-storage.com'));
 
 export const getDocumentLibraryOriginalUrl = (document: Document) => {
+  if (document.storageProvider === 'GOOGLE_DRIVE' || document.sourceExternalId) {
+    return `/api/documents/${encodeURIComponent(document.id)}/original`;
+  }
+
   if (isBlobBackedDocument(document)) {
     return `/api/documents/${encodeURIComponent(document.id)}/original`;
   }

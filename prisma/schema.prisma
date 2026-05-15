@@ -34,12 +34,51 @@ enum DocumentVisibility {
   COMMITTEE
   BOARD
   ADMIN
+  CUSTOM
+  PRIVATE
 }
 
 enum DocumentStatus {
   ACTIVE
   ARCHIVED
   SUPERSEDED
+}
+
+enum GroupType {
+  SYSTEM
+  BOARD
+  COMMITTEE
+  CHAIR
+  ADMIN
+  MEMBER
+  CONTRACTOR
+  CUSTOM
+}
+
+enum MembershipSource {
+  MANUAL
+  GOOGLE_SYNC
+  SYSTEM
+  IMPORT
+}
+
+enum PermissionEffect {
+  ALLOW
+  DENY
+}
+
+enum DocumentAccessLevel {
+  VIEW
+  COMMENT
+  EDIT
+  MANAGE
+}
+
+enum StorageProvider {
+  LOCAL
+  VERCEL_BLOB
+  GOOGLE_DRIVE
+  EXTERNAL_LINK
 }
 
 // --- MODELS ---
@@ -69,6 +108,125 @@ model Cooperative {
   tenants              Tenant[]
   tenantHistories      TenantHistory[]
   units                Unit[]
+  users                User[]
+  groups               Group[]
+  auditLogs            AuditLog[]
+  documentAccessRules  DocumentAccessRule[]
+}
+
+model User {
+  id              String   @id @default(uuid())
+  cooperativeId   String
+  cooperative     Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  email           String
+  name            String?
+  firstName       String?
+  lastName        String?
+  isActive        Boolean  @default(true)
+  isSystemAdmin   Boolean  @default(false)
+  lastLoginAt     DateTime?
+  tenantId        String?  @unique
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  googleSubjectId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  memberships     Membership[]
+  accessOverrides UserPermissionOverride[]
+  auditLogs        AuditLog[]
+  documentRules    DocumentAccessRule[]
+
+  @@unique([cooperativeId, email])
+  @@index([cooperativeId])
+  @@index([email])
+}
+
+model Group {
+  id               String   @id @default(uuid())
+  cooperativeId    String
+  cooperative      Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  name             String
+  slug             String
+  description      String?
+  type             GroupType
+  isSystem         Boolean  @default(false)
+  committeeId      String?
+  committee        Committee? @relation(fields: [committeeId], references: [id], onDelete: SetNull)
+  googleGroupId    String?
+  googleGroupEmail String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  memberships      Membership[]
+  permissions      GroupPermission[]
+  documentRules    DocumentAccessRule[]
+
+  @@unique([cooperativeId, slug])
+  @@index([cooperativeId])
+  @@index([committeeId])
+}
+
+model Membership {
+  id            String   @id @default(uuid())
+  cooperativeId String
+  userId        String
+  groupId       String
+  source        MembershipSource @default(MANUAL)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  isActive      Boolean @default(true)
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group         Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([cooperativeId])
+  @@index([groupId])
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  category    String
+  isSystem    Boolean @default(true)
+
+  groups      GroupPermission[]
+  overrides   UserPermissionOverride[]
+}
+
+model GroupPermission {
+  id            String @id @default(uuid())
+  groupId       String
+  permissionId  String
+  createdAt     DateTime @default(now())
+
+  group         Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, permissionId])
+}
+
+model UserPermissionOverride {
+  id            String @id @default(uuid())
+  cooperativeId String
+  userId        String
+  permissionId  String
+  effect        PermissionEffect
+  reason        String?
+  expiresAt     DateTime?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@index([cooperativeId])
+  @@index([userId])
 }
 
 model Building {
@@ -147,6 +305,7 @@ model Tenant {
   committees Committee[]     @relation("CommitteeMembers")
   events     CoopEvent[]     @relation("EventAttendees")
   history    TenantHistory[]
+  user        User?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -274,6 +433,13 @@ model Document {
   relatedDocs   String[] @default([])
   keywords      String[] @default([])
   fullTextSearch String?
+  ownerUserId   String?
+  storageProvider StorageProvider @default(EXTERNAL_LINK)
+  sourceExternalId String?
+  sourceFolderId   String?
+  sourceWebUrl     String?
+  sourceMimeType   String?
+  sourceModifiedAt DateTime?
   currentVersionId String? @unique
   currentVersion   DocumentVersion? @relation("CurrentDocumentVersion", fields: [currentVersionId], references: [id])
 
@@ -284,6 +450,7 @@ model Document {
   chunks        DocumentChunk[]
   ingestionJobs DocumentIngestionJob[]
   accessLogs    DocumentAccessLog[]
+  accessRules   DocumentAccessRule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -297,6 +464,10 @@ model DocumentVersion {
   cooperativeId String
   version       Int
   source        String
+  storageProvider StorageProvider @default(EXTERNAL_LINK)
+  sourceExternalId String?
+  sourceFolderId   String?
+  sourceWebUrl     String?
   storageUrl    String
   storageKey    String?
   fileType      String
@@ -328,6 +499,26 @@ model DocumentVersion {
   @@index([cooperativeId])
   @@index([documentId])
   @@index([ingestionStatus])
+}
+
+model DocumentAccessRule {
+  id            String @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  groupId       String?
+  group         Group?   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission    DocumentAccessLevel
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  @@index([cooperativeId])
+  @@index([documentId])
+  @@index([groupId])
+  @@index([userId])
 }
 
 model DocumentChunk {
@@ -459,6 +650,7 @@ model Committee {
 
   events    CoopEvent[]
   members   Tenant[]    @relation("CommitteeMembers")
+  groups    Group[]
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 }
@@ -523,4 +715,39 @@ model ScheduledMaintenance {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id            String @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  actorUserId   String?
+  actor         User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  action        String
+  entityType    String
+  entityId      String?
+  before        Json?
+  after         Json?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  @@index([cooperativeId])
+  @@index([actorUserId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model MagicLinkToken {
+  id            String   @id @default(uuid())
+  cooperativeId String
+  email         String
+  tokenHash     String   @unique
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([cooperativeId])
+  @@index([email])
+  @@index([expiresAt])
 }

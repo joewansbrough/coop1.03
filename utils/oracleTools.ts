@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { getVisibleDocumentWhere } from './rbac.js';
 
 export interface ToolContext {
   prisma: PrismaClient;
@@ -7,6 +8,9 @@ export interface ToolContext {
   userEmail: string;
   role: string;
   isAdmin: boolean;
+  groupIds?: string[];
+  permissionKeys?: string[];
+  committeeIds?: string[];
 }
 
 type ToolDeclaration = {
@@ -41,13 +45,15 @@ export const canUsePrivilegedOracleTools = (context: Pick<ToolContext, 'isAdmin'
 const deny = (message = 'Access denied. This Oracle tool is limited to board or admin users.') => ({ error: message });
 
 const documentVisibilityWhere = (context: ToolContext) => {
-  if (canUsePrivilegedOracleTools(context)) return {};
-  return {
-    OR: [
-      { visibility: 'PUBLIC' },
-      { visibility: 'MEMBERS' },
-    ],
-  };
+  return getVisibleDocumentWhere({
+    userId: context.userId,
+    email: context.userEmail,
+    cooperativeId: context.cooperativeId,
+    groupIds: context.groupIds || [],
+    permissionKeys: context.permissionKeys || (context.isAdmin ? ['documents.view.admin', 'documents.view.board', 'documents.view.members'] : ['documents.view.members']),
+    committeeIds: context.committeeIds || [],
+    isAdmin: context.isAdmin,
+  });
 };
 
 const memberScopedUnitIds = async (context: ToolContext) => {

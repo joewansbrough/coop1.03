@@ -144,7 +144,21 @@ export interface Document {
   date: string;
   tags?: string[];
   status?: 'ACTIVE' | 'ARCHIVED' | 'SUPERSEDED';
-  visibility?: 'PUBLIC' | 'MEMBERS' | 'COMMITTEE' | 'BOARD' | 'ADMIN';
+  visibility?: 'PUBLIC' | 'MEMBERS' | 'COMMITTEE' | 'BOARD' | 'ADMIN' | 'CUSTOM' | 'PRIVATE';
+  committeeAccess?: string | null;
+  ownerUserId?: string | null;
+  storageProvider?: 'LOCAL' | 'VERCEL_BLOB' | 'GOOGLE_DRIVE' | 'EXTERNAL_LINK';
+  sourceExternalId?: string | null;
+  sourceFolderId?: string | null;
+  sourceWebUrl?: string | null;
+  sourceMimeType?: string | null;
+  sourceModifiedAt?: string | null;
+  accessRules?: {
+    id: string;
+    groupId?: string | null;
+    userId?: string | null;
+    permission: 'VIEW' | 'COMMENT' | 'EDIT' | 'MANAGE' | string;
+  }[];
   currentVersionId?: string;
   currentVersion?: {
     id: string;

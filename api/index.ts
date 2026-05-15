@@ -22,6 +22,8 @@ import { detectOracleIntent, mergeOracleSuggestedAction, normalizeOracleLanguage
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
+import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
+import { buildAccessSubject, ensureUserForEmail, makeSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
 
 
 
@@ -33,6 +35,7 @@ const upload = multer({
 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
+const LEGACY_ADMIN_EMAILS = ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'];
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 const DEFAULT_GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts';
 const STABLE_GEMINI_FALLBACK_MODELS = [
@@ -293,13 +296,91 @@ app.get('/api/health', (req, res) => {
 });
 
 // Authentication Middleware
+const hydrateSessionPermissions = async (req: express.Request) => {
+  const sessionUser = (req as any).session?.user;
+  if (!sessionUser?.email) return null;
+  const p = getPrisma();
+  const coopId = sessionUser.cooperativeId || await getCoopId(req, p);
+  const effectiveUser = await ensureUserForEmail(p, coopId, sessionUser.email, {
+    name: sessionUser.name,
+    googleSubjectId: sessionUser.googleSubjectId,
+  });
+  const subject = buildAccessSubject(effectiveUser, coopId);
+  const hydrated = {
+    ...sessionUser,
+    ...makeSessionUser(effectiveUser, subject),
+    geminiModel: sessionUser.geminiModel,
+    picture: sessionUser.picture,
+  };
+  (req as any).session.user = hydrated;
+  (req as any).user = hydrated;
+  return { effectiveUser, subject, user: hydrated };
+};
+
 const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   if ((req as any).session?.user) {
-    (req as any).user = (req as any).session.user;
-    return next();
+    try {
+      await hydrateSessionPermissions(req);
+      return next();
+    } catch (error) {
+      console.error('Failed to hydrate session permissions:', error);
+      (req as any).user = (req as any).session.user;
+      return next();
+    }
   }
 
   return res.status(401).json({ error: 'Unauthorized' });
+};
+
+const getRequestSubject = async (req: express.Request) => {
+  const hydrated = await hydrateSessionPermissions(req);
+  if (hydrated?.subject) return hydrated.subject;
+  const user = (req as any).user || (req as any).session?.user;
+  const coopId = await getCoopId(req, getPrisma());
+  return {
+    userId: user?.userId || user?.id || user?.tenantId || null,
+    email: user?.email || null,
+    cooperativeId: coopId,
+    groupIds: user?.groupIds || [],
+    permissionKeys: user?.permissionKeys || (user?.isAdmin ? ['settings.update', 'users.manage_groups', 'documents.view.admin', 'documents.view.board', 'documents.view.members'] : ['documents.view.members']),
+    committeeIds: user?.committeeIds || [],
+    isAdmin: Boolean(user?.isAdmin),
+  };
+};
+
+const requirePermission = (permissionKey: string) => async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const subject = await getRequestSubject(req);
+  if (!hasPermission(subject, permissionKey)) return res.status(403).json({ error: 'Permission denied', permission: permissionKey });
+  next();
+};
+
+const logAudit = async (
+  p: PrismaClient,
+  req: express.Request,
+  action: string,
+  entityType: string,
+  entityId?: string | null,
+  before?: unknown,
+  after?: unknown,
+) => {
+  try {
+    const subject = await getRequestSubject(req);
+    await (p as any).auditLog.create({
+      data: {
+        cooperativeId: subject.cooperativeId,
+        actorUserId: subject.userId || null,
+        action,
+        entityType,
+        entityId: entityId || null,
+        before: before || undefined,
+        after: after || undefined,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent') || null,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to write audit log:', error);
+  }
 };
 
 const requireDriveAccess = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -550,6 +631,65 @@ app.put('/api/notifications/read-all', requireAuth, async (req, res, next) => {
 // Auth Routes
 const authRouter = express.Router();
 
+const createMagicLoginLink = async (req: express.Request, email: string) => {
+  const p = getPrisma();
+  const coopId = await getCoopId(req, p);
+  await seedRbacDefaults(p, coopId);
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  await (p as any).magicLinkToken.create({
+    data: {
+      id: crypto.randomUUID(),
+      cooperativeId: coopId,
+      email: email.trim().toLowerCase(),
+      tokenHash,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+    },
+  });
+  return `${getBaseUrl(req)}/auth/magic/verify?token=${rawToken}`;
+};
+
+authRouter.post('/magic-link/request', async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) return res.status(400).json({ error: 'A valid email is required.' });
+    const loginUrl = await createMagicLoginLink(req, email);
+    res.json({
+      success: true,
+      message: 'Magic link created.',
+      loginUrl: process.env.NODE_ENV === 'production' ? undefined : loginUrl,
+    });
+  } catch (error: any) {
+    console.error('Magic link request failed:', error);
+    res.status(500).json({ error: 'Failed to create magic link.', details: error.message });
+  }
+});
+
+authRouter.get('/magic/verify', async (req, res) => {
+  try {
+    const rawToken = String(req.query.token || '');
+    if (!rawToken) return res.status(400).send('Missing token');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const p = getPrisma();
+    const token = await (p as any).magicLinkToken.findUnique({ where: { tokenHash } });
+    if (!token || token.consumedAt || new Date(token.expiresAt).getTime() < Date.now()) {
+      return res.status(401).send('Magic link expired or invalid');
+    }
+
+    await (p as any).magicLinkToken.update({ where: { id: token.id }, data: { consumedAt: new Date() } });
+    const user = await ensureUserForEmail(p, token.cooperativeId, token.email);
+    if (!user?.isActive) return res.status(403).send('User is inactive');
+    const subject = buildAccessSubject(user, token.cooperativeId);
+    (req as any).session = (req as any).session || {};
+    (req as any).session.user = makeSessionUser(user, subject);
+    await logAudit(p, req, 'auth.magic_link.login', 'User', user.id, undefined, { email: user.email });
+    res.redirect('/');
+  } catch (error: any) {
+    console.error('Magic link verify failed:', error);
+    res.status(500).send('Magic link verification failed');
+  }
+});
+
 authRouter.get('/url', (req, res) => {
   try {
     const baseUrl = getBaseUrl(req);
@@ -607,31 +747,41 @@ app.get('/auth/callback', async (req, res) => {
 
     const userData = userResponse.data;
     const email = userData.email.toLowerCase();
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
 
-    // Find or create user in database
-    let user = await getPrisma().tenant.findUnique({
-      where: { email },
-      include: { unit: true }
+    let effectiveUser = await ensureUserForEmail(p, coopId, email, {
+      name: userData.name,
+      googleSubjectId: userData.sub,
     });
-
-    // Check both DB role and legacy list for now
-    const isAdmin = user?.role === 'ADMIN' || ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'].includes(email);
+    if (LEGACY_ADMIN_EMAILS.includes(email) && !effectiveUser?.isSystemAdmin) {
+      effectiveUser = await (p as any).user.update({
+        where: { id: effectiveUser.id },
+        data: { isSystemAdmin: true },
+        include: {
+          memberships: {
+            where: { isActive: true },
+            include: { group: { include: { permissions: { include: { permission: true } } } } },
+          },
+          accessOverrides: { include: { permission: true } },
+          tenant: { include: { committees: true, unit: true } },
+        },
+      });
+    }
+    if (!effectiveUser?.isActive) return res.status(403).send('User is inactive');
+    const subject = buildAccessSubject(effectiveUser, coopId);
 
     // Dynamically resolve the best available Gemini model once at login
     const resolvedModel = DEFAULT_GEMINI_MODEL;
 
     (req as any).session = (req as any).session || {};
     (req as any).session.user = {
-      email,
-      name: userData.name,
+      ...makeSessionUser(effectiveUser, subject),
       picture: userData.picture,
-      isAdmin,
-      tenantId: user?.id || null,
-      unitNumber: user?.unit?.number || null,
-      cooperativeId: user?.cooperativeId || null,
-      role: user?.role || 'MEMBER',
+      googleSubjectId: userData.sub,
       geminiModel: resolvedModel,
     };
+    await logAudit(p, req, 'auth.google.login', 'User', effectiveUser.id, undefined, { email });
 
     res.send(`
       <html>
@@ -1186,17 +1336,42 @@ app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
 app.get('/api/documents', requireAuth, async (req, res) => {
   try {
     const p = getPrisma();
-    const coopId = await getCoopId(req, p);
+    const subject = await getRequestSubject(req);
     const documents = await p.document.findMany({
-      where: { cooperativeId: coopId },
+      where: getVisibleDocumentWhere(subject) as any,
       orderBy: { createdAt: 'desc' },
-      include: { currentVersion: true }
+      include: { currentVersion: true, accessRules: true }
     });
     res.json(documents);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/upload-to-blob', requireAuth, handleSingleDocumentUpload, async (req, res) => {
+app.get('/api/documents/:id', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const subject = await getRequestSubject(req);
+    const documentId = getParam(req.params.id);
+    const document = await p.document.findFirst({
+      where: { id: documentId, cooperativeId: coopId },
+      include: { currentVersion: true, accessRules: true },
+    });
+    if (!document) return res.status(404).json({ error: 'Document not found' });
+    if (!canAccessDocument(subject, document as any)) return res.status(403).json({ error: 'Document access denied' });
+    await (p as any).documentAccessLog.create({
+      data: {
+        documentId: document.id,
+        userId: subject.userId || subject.email || 'unknown',
+        action: 'view',
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent') || null,
+      },
+    }).catch((error: any) => console.error('Failed to log document view:', error));
+    res.json({ ...document, accessExplanation: explainDocumentAccess(subject, document as any) });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/upload-to-blob', requireAuth, requirePermission('documents.create'), handleSingleDocumentUpload, async (req, res) => {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'No file was uploaded.' });
@@ -1208,6 +1383,7 @@ app.post('/api/upload-to-blob', requireAuth, handleSingleDocumentUpload, async (
 
     const p = getPrisma();
     const coopId = await getCoopId(req, p);
+    const subject = await getRequestSubject(req);
     const title = sanitizeUtf8(req.body.title) || file.originalname || 'Untitled Document';
     const category = sanitizeUtf8(req.body.category) || 'General';
     const committee = sanitizeUtf8(req.body.committee) || '';
@@ -1239,6 +1415,10 @@ app.post('/api/upload-to-blob', requireAuth, handleSingleDocumentUpload, async (
           tags,
           committee,
           content: null,
+          visibility: req.body.visibility || 'MEMBERS',
+          committeeAccess: req.body.committeeAccess || committee || null,
+          ownerUserId: subject.userId || null,
+          storageProvider: 'VERCEL_BLOB',
         } as any,
       });
 
@@ -1248,6 +1428,7 @@ app.post('/api/upload-to-blob', requireAuth, handleSingleDocumentUpload, async (
           cooperativeId: coopId,
           version: 1,
           source: 'upload',
+          storageProvider: 'VERCEL_BLOB',
           storageUrl: blob.url,
           storageKey: blob.pathname || storageKey,
           fileType,
@@ -1279,31 +1460,54 @@ app.post('/api/upload-to-blob', requireAuth, handleSingleDocumentUpload, async (
   }
 });
 
-app.post('/api/documents', requireAuth, async (req, res) => {
-  const { title, category, url, fileType, author, date, tags, committee, content } = req.body;
+app.post('/api/documents', requireAuth, requirePermission('documents.create'), async (req, res) => {
+  const { title, category, url, fileType, author, date, tags, committee, content, visibility, committeeAccess, storageProvider, sourceExternalId, sourceFolderId, sourceWebUrl, sourceMimeType, sourceModifiedAt } = req.body;
 
   try {
     const p = getPrisma();
+    const subject = await getRequestSubject(req);
     // Tag generation temporarily disabled for basic metadata sync
     const currentYear = new Date().getFullYear().toString();
     const committeeTags = committee ? [committee] : [];
     const providedTags = Array.isArray(tags) ? tags : [];
     const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
 
+    const coopId = await getCoopId(req, p);
     const document = await p.document.create({
       data: {
-        cooperativeId: await getCoopId(req, p),
+        cooperativeId: coopId,
         title: title || 'Untitled Document',
         category: category || 'General',
-        url: url || '#',
+        url: url || sourceWebUrl || '#',
         fileType: fileType || 'txt',
         author: author || ((req as any).user?.name || 'System'),
-        date: date || new Date().toISOString(),
+        date: date ? new Date(date) : new Date(),
         tags: finalTags,
         committee: committee || null,
         content: content || null,
-      } as any
+        visibility: visibility || 'MEMBERS',
+        committeeAccess: committeeAccess || committee || null,
+        ownerUserId: subject.userId || null,
+        storageProvider: storageProvider || (sourceExternalId ? 'GOOGLE_DRIVE' : 'EXTERNAL_LINK'),
+        sourceExternalId: sourceExternalId || null,
+        sourceFolderId: sourceFolderId || null,
+        sourceWebUrl: sourceWebUrl || url || null,
+        sourceMimeType: sourceMimeType || null,
+        sourceModifiedAt: sourceModifiedAt ? new Date(sourceModifiedAt) : null,
+        accessRules: Array.isArray(req.body.accessRules) ? {
+          create: req.body.accessRules.map((rule: any) => ({
+            id: crypto.randomUUID(),
+            cooperativeId: coopId,
+            groupId: rule.groupId || null,
+            userId: rule.userId || null,
+            permission: rule.permission || 'VIEW',
+            createdBy: subject.userId || null,
+          })),
+        } : undefined,
+      } as any,
+      include: { accessRules: true, currentVersion: true },
     });
+    await logAudit(p, req, 'document.create', 'Document', document.id, undefined, document);
     res.json(document);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -1315,10 +1519,25 @@ app.get('/api/documents/:id/original', requireAuth, async (req, res) => {
     const documentId = getParam(req.params.id);
     const document = await p.document.findFirst({
       where: { id: documentId, cooperativeId: coopId },
-      include: { currentVersion: true },
+      include: { currentVersion: true, accessRules: true },
     });
 
     if (!document) return res.status(404).json({ error: 'Document not found' });
+    const subject = await getRequestSubject(req);
+    if (!canAccessDocument(subject, document as any)) return res.status(403).json({ error: 'Document access denied' });
+    await (p as any).documentAccessLog.create({
+      data: {
+        documentId: document.id,
+        userId: subject.userId || subject.email || 'unknown',
+        action: req.query.download === '1' ? 'download' : 'view_original',
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent') || null,
+      },
+    }).catch((error: any) => console.error('Failed to log document original access:', error));
+
+    if ((document as any).storageProvider === 'GOOGLE_DRIVE' && (document as any).sourceExternalId) {
+      return res.redirect(`/api/drive/files/${(document as any).sourceExternalId}/download?documentId=${document.id}`);
+    }
 
     const blobReference = document.currentVersion?.storageKey || document.currentVersion?.storageUrl || (isBlobStorageUrl(document.url) ? document.url : null);
     if (!blobReference && document.url && document.url !== '#') {
@@ -1352,30 +1571,136 @@ app.get('/api/documents/:id/original', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/documents/:id', requireAuth, async (req, res) => {
-  const { title, category, tags, committee, content } = req.body;
+app.put('/api/documents/:id', requireAuth, requirePermission('documents.update'), async (req, res) => {
+  const { title, category, tags, committee, content, visibility, committeeAccess, accessRules } = req.body;
   try {
+    const p = getPrisma();
     const documentId = getParam(req.params.id);
-    const document = await getPrisma().document.update({
+    const before = await p.document.findUnique({ where: { id: documentId }, include: { accessRules: true } });
+    const document = await p.document.update({
       where: { id: documentId },
       data: { 
         title, 
         category, 
         tags: tags ? { set: tags } : undefined, 
         committee: committee !== undefined ? (committee || '') : undefined,
-        content 
+        content,
+        visibility,
+        committeeAccess,
+        ...(Array.isArray(accessRules) ? {
+          accessRules: {
+            deleteMany: {},
+            create: accessRules.map((rule: any) => ({
+              id: crypto.randomUUID(),
+              cooperativeId: before?.cooperativeId,
+              groupId: rule.groupId || null,
+              userId: rule.userId || null,
+              permission: rule.permission || 'VIEW',
+              createdBy: ((req as any).user?.userId || (req as any).user?.id || null),
+            })),
+          },
+        } : {}),
       } as any,
-      include: { currentVersion: true }
+      include: { currentVersion: true, accessRules: true }
     });
+    await logAudit(p, req, 'document.update', 'Document', document.id, before, document);
     res.json(document);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/documents/:id', requireAuth, async (req, res) => {
+app.delete('/api/documents/:id', requireAuth, requirePermission('documents.delete'), async (req, res) => {
   try {
+    const p = getPrisma();
     const documentId = getParam(req.params.id);
-    await getPrisma().document.delete({ where: { id: documentId } });
+    const before = await p.document.findUnique({ where: { id: documentId } });
+    await p.document.delete({ where: { id: documentId } });
+    await logAudit(p, req, 'document.delete', 'Document', documentId, before, undefined);
     res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/documents/:id/access', requireAuth, requirePermission('documents.manage_visibility'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const documentId = getParam(req.params.id);
+    const document = await p.document.findFirst({
+      where: { id: documentId, cooperativeId: coopId },
+      include: {
+        accessRules: {
+          include: {
+            group: { select: { id: true, name: true, slug: true } },
+            user: { select: { id: true, email: true, name: true } },
+          },
+        },
+      },
+    });
+    if (!document) return res.status(404).json({ error: 'Document not found' });
+    const groups = await (p as any).group.findMany({
+      where: { cooperativeId: coopId },
+      include: {
+        memberships: {
+          where: { isActive: true },
+          include: { user: { select: { id: true, email: true, name: true } } },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+    const visibleGroups = groups.filter((group: any) => {
+      const subject = {
+        userId: null,
+        email: null,
+        cooperativeId: coopId,
+        groupIds: [group.id],
+        permissionKeys: (group.permissions || []).map((link: any) => link.permission?.key).filter(Boolean),
+        committeeIds: group.committeeId ? [group.committeeId] : [],
+        isAdmin: group.slug === 'admin',
+      };
+      return document.visibility === 'CUSTOM'
+        ? document.accessRules.some((rule: any) => rule.groupId === group.id)
+        : true;
+    });
+    res.json({
+      documentId: document.id,
+      visibility: document.visibility,
+      committeeAccess: document.committeeAccess,
+      accessRules: document.accessRules,
+      summary: document.visibility === 'CUSTOM'
+        ? `Visible to ${document.accessRules.length} explicit rule(s).`
+        : `Visible by ${document.visibility} visibility.`,
+      groups: visibleGroups.map((group: any) => ({
+        id: group.id,
+        name: group.name,
+        slug: group.slug,
+        memberCount: group.memberships.length,
+      })),
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/rbac/effective-permissions', requireAuth, requirePermission('users.view'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const email = String(req.query.email || (req as any).user?.email || '').trim().toLowerCase();
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const effectiveUser = await ensureUserForEmail(p, coopId, email);
+    const subject = buildAccessSubject(effectiveUser, coopId);
+    res.json({
+      user: {
+        id: effectiveUser.id,
+        email: effectiveUser.email,
+        name: effectiveUser.name,
+        isActive: effectiveUser.isActive,
+      },
+      groups: (effectiveUser.memberships || []).map((membership: any) => ({
+        id: membership.group.id,
+        name: membership.group.name,
+        slug: membership.group.slug,
+        type: membership.group.type,
+      })),
+      permissionKeys: subject.permissionKeys,
+    });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -2128,7 +2453,10 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
       userId: user?.tenantId || 'unknown',
       userEmail: user?.email || '',
       role: user?.role || 'MEMBER',
-      isAdmin: !!user?.isAdmin
+      isAdmin: !!user?.isAdmin,
+      groupIds: user?.groupIds || [],
+      permissionKeys: user?.permissionKeys || [],
+      committeeIds: user?.committeeIds || [],
     };
 
     const genAI = getAI();
@@ -3099,6 +3427,17 @@ app.get('/api/seed', async (req, res) => {
     const coopId = coop.id;
 
     console.log('Clearing existing data...');
+    const tryDeleteMany = async (delegate: any) => {
+      if (delegate?.deleteMany) await delegate.deleteMany().catch(() => undefined);
+    };
+    await tryDeleteMany((p as any).documentAccessRule);
+    await tryDeleteMany((p as any).userPermissionOverride);
+    await tryDeleteMany((p as any).groupPermission);
+    await tryDeleteMany((p as any).membership);
+    await tryDeleteMany((p as any).auditLog);
+    await tryDeleteMany((p as any).magicLinkToken);
+    await tryDeleteMany((p as any).group);
+    await tryDeleteMany((p as any).user);
     await p.tenantHistory.deleteMany();
     await p.maintenanceRequest.deleteMany();
     await p.announcement.deleteMany();
@@ -3281,6 +3620,12 @@ app.get('/api/seed', async (req, res) => {
           category: e.category,
         }
       });
+    }
+
+    console.log('Seeding native users, groups, and permissions...');
+    await seedRbacDefaults(p, coopId);
+    for (const tenant of Object.values(tenants)) {
+      await ensureUserForEmail(p, coopId, (tenant as any).email);
     }
 
     res.json({ success: true, message: "Multi-tenant data seeded and sanitized successfully." });

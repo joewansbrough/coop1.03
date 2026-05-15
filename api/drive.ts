@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { Readable } from 'stream';
+import { prisma } from '../lib/prisma.js';
 import { driveClient } from '../services/googleDrive.js';
+import { canAccessDocument, hasPermission } from '../utils/rbac.js';
 
 const router = Router();
 const ROOT_FOLDER_IDS_STR = process.env.GOOGLE_DRIVE_ROOT_FOLDER_IDS;
@@ -227,6 +229,48 @@ router.get('/files/:fileId/download', async (req: Request, res: Response) => {
     try {
         const fileId = getParam(req.params.fileId);
         const drive = driveClient();
+        const sessionUser = (req as any).user || (req as any).session?.user;
+        const documentId = getParam(req.query.documentId as string | string[] | undefined);
+
+        if (documentId) {
+            const document = await (prisma as any).document.findUnique({
+                where: { id: documentId },
+                include: { accessRules: true },
+            });
+            if (!document || document.sourceExternalId !== fileId) {
+                return res.status(404).json({ error: 'Drive-backed document not found' });
+            }
+            const subject = {
+                userId: sessionUser?.userId || sessionUser?.id || sessionUser?.tenantId || null,
+                email: sessionUser?.email || null,
+                cooperativeId: sessionUser?.cooperativeId || document.cooperativeId,
+                groupIds: sessionUser?.groupIds || [],
+                permissionKeys: sessionUser?.permissionKeys || (sessionUser?.isAdmin ? ['documents.view.admin', 'documents.view.board', 'documents.view.members'] : ['documents.view.members']),
+                committeeIds: sessionUser?.committeeIds || [],
+                isAdmin: Boolean(sessionUser?.isAdmin),
+            };
+            if (!canAccessDocument(subject, document)) {
+                return res.status(403).json({ error: 'Document access denied' });
+            }
+            await (prisma as any).documentAccessLog.create({
+                data: {
+                    documentId: document.id,
+                    userId: subject.userId || subject.email || 'unknown',
+                    action: 'drive_download',
+                    ipAddress: req.ip,
+                    userAgent: req.get('user-agent') || null,
+                },
+            }).catch((error: any) => console.error('Failed to log Drive document access:', error));
+        } else if (!hasPermission({
+            userId: sessionUser?.userId || sessionUser?.id || null,
+            email: sessionUser?.email || null,
+            cooperativeId: sessionUser?.cooperativeId || '',
+            groupIds: sessionUser?.groupIds || [],
+            permissionKeys: sessionUser?.permissionKeys || [],
+            isAdmin: Boolean(sessionUser?.isAdmin),
+        }, 'documents.create')) {
+            return res.status(403).json({ error: 'Drive downloads require a coopHUB document context' });
+        }
 
         const meta = await drive.files.get({
             fileId,
