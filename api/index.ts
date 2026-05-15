@@ -23,7 +23,7 @@ import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
-import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
+import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
 
 
 
@@ -883,17 +883,7 @@ app.post('/api/testing/impersonation', requireAuth, requireTestingAdmin, async (
     const p = getPrisma();
     const originalSessionUser = getActualSessionUser(req);
     const coopId = originalSessionUser.cooperativeId || await getCoopId(req, p);
-    const targetUser = await (p as any).user.findFirst({
-      where: { id: targetUserId, cooperativeId: coopId, isActive: true },
-      include: {
-        memberships: {
-          where: { isActive: true },
-          include: { group: { include: { permissions: { include: { permission: true } } } } },
-        },
-        accessOverrides: { include: { permission: true } },
-        tenant: { include: { committees: true, unit: true } },
-      },
-    });
+    const targetUser = await resolveTestingTargetUser(p, coopId, targetUserId);
     if (!targetUser) return res.status(404).json({ error: 'Target user not found' });
 
     const targetSubject = buildAccessSubject(targetUser, coopId);

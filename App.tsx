@@ -190,6 +190,7 @@ const AppContent: React.FC = () => {
           }
         }}
         user={user}
+        testingMembers={tenants}
         coopName={coopName}
       >
         <Routes>

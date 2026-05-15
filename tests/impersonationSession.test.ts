@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   makeImpersonatedSessionUser,
   makeSessionUser,
+  resolveTestingTargetUser,
   restoreImpersonatedSessionUser,
 } from '../utils/rbacDb.ts';
 
@@ -64,4 +65,43 @@ test('restores original admin session from impersonated session', () => {
   }, memberSubject);
 
   assert.deepEqual(restoreImpersonatedSessionUser(memberSession), adminSession);
+});
+
+test('resolves an impersonation target from a member directory tenant id', async () => {
+  const calls: string[] = [];
+  const fakeUser = { id: 'user-from-tenant', email: 'member@example.com' };
+  const fakePrisma = {
+    user: {
+      findFirst: async () => null,
+      upsert: async () => fakeUser,
+      findUnique: async () => fakeUser,
+    },
+    tenant: {
+      findFirst: async ({ where }: any) => {
+        if (where.id) calls.push(where.id);
+        return { id: 'tenant-1', email: 'member@example.com', cooperativeId: 'coop-1' };
+      },
+    },
+    permission: {
+      upsert: async ({ create }: any) => create,
+    },
+    group: {
+      upsert: async ({ create }: any) => create,
+      findUnique: async () => ({ id: 'member-group' }),
+    },
+    groupPermission: {
+      upsert: async () => ({}),
+    },
+    committee: {
+      findMany: async () => [],
+    },
+    membership: {
+      upsert: async () => ({}),
+    },
+  };
+
+  const target = await resolveTestingTargetUser(fakePrisma, 'coop-1', 'tenant-1');
+
+  assert.equal(target.id, 'user-from-tenant');
+  assert.deepEqual(calls, ['tenant-1']);
 });

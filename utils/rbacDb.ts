@@ -199,6 +199,34 @@ export const ensureUserForEmail = async (
 export const getEffectiveUser = async (p: PrismaLike, cooperativeId: string, email: string) =>
   ensureUserForEmail(p, cooperativeId, email);
 
+export const getEffectiveUserInclude = {
+  memberships: {
+    where: { isActive: true },
+    include: { group: { include: { permissions: { include: { permission: true } } } } },
+  },
+  accessOverrides: { include: { permission: true } },
+  tenant: { include: { committees: true, unit: true } },
+};
+
+export const resolveTestingTargetUser = async (p: PrismaLike, cooperativeId: string, targetId: string) => {
+  const existingUser = await p.user.findFirst({
+    where: { id: targetId, cooperativeId, isActive: true },
+    include: getEffectiveUserInclude,
+  });
+  if (existingUser) return existingUser;
+
+  const tenant = await p.tenant.findFirst({
+    where: { id: targetId, cooperativeId },
+  });
+  if (!tenant) return null;
+
+  const ensuredUser = await ensureUserForEmail(p, cooperativeId, tenant.email);
+  return p.user.findUnique({
+    where: { id: ensuredUser.id },
+    include: getEffectiveUserInclude,
+  });
+};
+
 export const buildAccessSubject = (user: any, cooperativeId?: string): DocumentAccessSubject => {
   const memberships = (user?.memberships || []).filter((membership: any) => membership.isActive !== false);
   const groupIds = memberships.map((membership: any) => membership.groupId);

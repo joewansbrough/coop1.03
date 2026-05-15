@@ -10,6 +10,7 @@ import AutoDemoTour from './AutoDemoTour';
 import OracleAssistant from './OracleAssistant';
 import { AnimatePresence } from 'motion/react';
 import { useAnnouncements, useDocuments, useEvents, useMaintenance, useMarkNotificationRead, useNotifications, useStartImpersonation, useStopImpersonation, useTestingUsers } from '../hooks/useCoopData';
+import type { Tenant } from '../types';
 import { buildGlobalSearchResults, type GlobalSearchResult } from '../utils/globalSearch';
 import {
   readTutorialState,
@@ -37,6 +38,7 @@ interface LayoutProps {
       name?: string;
     };
   };
+  testingMembers?: Tenant[];
   coopName: string;
 }
 
@@ -122,7 +124,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
   </div>
 );
 
-const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onToggleAdminView, user, coopName }) => {
+const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onToggleAdminView, user, testingMembers = [], coopName }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -183,6 +185,20 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     () => buildGlobalSearchResults(searchQuery, { documents, events, announcements, maintenance }),
     [announcements, documents, events, maintenance, searchQuery],
   );
+  const testingUserOptions = useMemo(() => {
+    if (testingUsersData?.users?.length) return testingUsersData.users;
+    return testingMembers
+      .filter(member => member.status !== 'Inactive')
+      .map(member => ({
+        id: member.id,
+        email: member.email,
+        name: `${member.firstName} ${member.lastName}`.trim() || member.email,
+        unitNumber: member.unit?.number || undefined,
+        isAdmin: String(member.role || '').toUpperCase() === 'ADMIN',
+        groups: [],
+      }))
+      .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
+  }, [testingMembers, testingUsersData?.users]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -397,7 +413,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
               title="View the site using another user's backend permissions"
             >
               <option value="">Select user</option>
-              {(testingUsersData?.users || []).map(option => (
+              {testingUserOptions.map(option => (
                 <option key={option.id} value={option.id}>
                   {option.name || option.email}{option.unitNumber ? ` / Unit ${option.unitNumber}` : ''}{option.isAdmin ? ' / Admin' : ''}
                 </option>
