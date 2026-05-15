@@ -29,3 +29,4 @@ dev.db
 
 /generated/prisma
 graphify-out/cache/
+.worktrees/
