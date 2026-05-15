@@ -172,6 +172,7 @@ const AppContent: React.FC = () => {
   }
 
   const effectiveIsAdmin = user.isAdmin && !isAdminOverride;
+  const canUseTestingSwitcher = Boolean(user.isAdmin || user.isImpersonating);
   const isGuest = !!user.isGuest;
 
   return (
@@ -179,7 +180,7 @@ const AppContent: React.FC = () => {
       <ScrollToTop />
       <Layout
         isAdmin={effectiveIsAdmin}
-        isActualAdmin={user.isAdmin}
+        isActualAdmin={canUseTestingSwitcher}
         onToggleAdminView={() => {
           const nextOverride = !isAdminOverride;
           setIsAdminOverride(nextOverride);

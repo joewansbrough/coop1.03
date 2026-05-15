@@ -9,7 +9,7 @@ import DemoTutorialPanel from './DemoTutorialPanel';
 import AutoDemoTour from './AutoDemoTour';
 import OracleAssistant from './OracleAssistant';
 import { AnimatePresence } from 'motion/react';
-import { useAnnouncements, useDocuments, useEvents, useMaintenance, useMarkNotificationRead, useNotifications } from '../hooks/useCoopData';
+import { useAnnouncements, useDocuments, useEvents, useMaintenance, useMarkNotificationRead, useNotifications, useStartImpersonation, useStopImpersonation, useTestingUsers } from '../hooks/useCoopData';
 import { buildGlobalSearchResults, type GlobalSearchResult } from '../utils/globalSearch';
 import {
   readTutorialState,
@@ -29,6 +29,13 @@ interface LayoutProps {
     email: string;
     name: string;
     picture: string;
+    userId?: string;
+    id?: string;
+    isImpersonating?: boolean;
+    impersonator?: {
+      email: string;
+      name?: string;
+    };
   };
   coopName: string;
 }
@@ -52,6 +59,13 @@ interface ProfileDropdownProps {
     email: string;
     name: string;
     picture: string;
+    userId?: string;
+    id?: string;
+    isImpersonating?: boolean;
+    impersonator?: {
+      email: string;
+      name?: string;
+    };
   };
   unreadCount: number;
   onOpenProfile: () => void;
@@ -160,6 +174,10 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   const { data: announcements = [] } = useAnnouncements();
   const { data: maintenance = [] } = useMaintenance();
   const markNotificationRead = useMarkNotificationRead();
+  const canUseUserSwitcher = Boolean(isActualAdmin || user.isImpersonating);
+  const { data: testingUsersData } = useTestingUsers({ enabled: canUseUserSwitcher });
+  const startImpersonation = useStartImpersonation();
+  const stopImpersonation = useStopImpersonation();
   const unreadCount = notifications.filter(notification => !notification.isRead).length;
   const globalSearchResults = useMemo(
     () => buildGlobalSearchResults(searchQuery, { documents, events, announcements, maintenance }),
@@ -286,6 +304,14 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
     }
   };
 
+  const activeUserId = user.userId || user.id;
+
+  const handleTestingUserChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextUserId = event.target.value;
+    if (!nextUserId || nextUserId === activeUserId) return;
+    startImpersonation.mutate(nextUserId);
+  };
+
   const closeSearch = () => {
     setIsSearchOpen(false);
     setSearchQuery('');
@@ -348,6 +374,42 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
       </nav>
 
       <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+        {canUseUserSwitcher && (
+          <div className="rounded-[20px] border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/20 dark:bg-amber-950/20">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-[9px] font-black uppercase tracking-widest text-amber-700 dark:text-amber-300">Test as user</p>
+              {user.isImpersonating && (
+                <button
+                  type="button"
+                  onClick={() => stopImpersonation.mutate()}
+                  disabled={stopImpersonation.isPending}
+                  className="text-[9px] font-black uppercase tracking-widest text-rose-600 hover:text-rose-700 disabled:opacity-50"
+                >
+                  Stop
+                </button>
+              )}
+            </div>
+            <select
+              value={activeUserId || ''}
+              onChange={handleTestingUserChange}
+              disabled={startImpersonation.isPending || stopImpersonation.isPending}
+              className="w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-800 outline-none disabled:opacity-50 dark:border-amber-500/20 dark:bg-slate-900 dark:text-white"
+              title="View the site using another user's backend permissions"
+            >
+              <option value="">Select user</option>
+              {(testingUsersData?.users || []).map(option => (
+                <option key={option.id} value={option.id}>
+                  {option.name || option.email}{option.unitNumber ? ` / Unit ${option.unitNumber}` : ''}{option.isAdmin ? ' / Admin' : ''}
+                </option>
+              ))}
+            </select>
+            {user.isImpersonating && (
+              <p className="mt-2 text-[10px] font-bold leading-snug text-amber-800 dark:text-amber-200">
+                Viewing as {user.name || user.email}. Original admin: {user.impersonator?.name || user.impersonator?.email}.
+              </p>
+            )}
+          </div>
+        )}
         <button 
           onClick={toggleDarkMode}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[20px] text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-teal-accent transition-all active:scale-95"
@@ -355,7 +417,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
           <i className={`fa-solid ${isDarkMode ? 'fa-sun' : 'fa-moon'}`}></i>
           {isDarkMode ? 'Light Mode' : 'Dark Mode'}
         </button>
-        {isActualAdmin ? (
+        {isActualAdmin && !user.isImpersonating ? (
           <button 
             onClick={onToggleAdminView} 
             data-demo-target="role-switcher"

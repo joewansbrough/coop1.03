@@ -23,7 +23,7 @@ import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
-import { buildAccessSubject, ensureUserForEmail, makeSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
+import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
 
 
 
@@ -351,6 +351,17 @@ const getRequestSubject = async (req: express.Request) => {
 const requirePermission = (permissionKey: string) => async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const subject = await getRequestSubject(req);
   if (!hasPermission(subject, permissionKey)) return res.status(403).json({ error: 'Permission denied', permission: permissionKey });
+  next();
+};
+
+const getActualSessionUser = (req: express.Request) => {
+  const sessionUser = (req as any).session?.user;
+  return restoreImpersonatedSessionUser(sessionUser);
+};
+
+const requireTestingAdmin = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const actualUser = getActualSessionUser(req);
+  if (!actualUser?.isAdmin) return res.status(403).json({ error: 'Testing user switcher requires an admin session' });
   next();
 };
 
@@ -814,6 +825,117 @@ app.get(['/api/auth/me', '/auth/me'], (req, res) => {
 app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
   (req as any).session = null;
   res.json({ success: true });
+});
+
+app.get('/api/testing/users', requireAuth, requireTestingAdmin, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const actualUser = getActualSessionUser(req);
+    const coopId = actualUser?.cooperativeId || await getCoopId(req, p);
+    await seedRbacDefaults(p, coopId);
+
+    const tenants = await p.tenant.findMany({
+      where: { cooperativeId: coopId },
+      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+    });
+    await Promise.all(tenants.map(tenant => ensureUserForEmail(p, coopId, tenant.email)));
+
+    const users = await (p as any).user.findMany({
+      where: { cooperativeId: coopId, isActive: true },
+      orderBy: [{ name: 'asc' }, { email: 'asc' }],
+      include: {
+        memberships: {
+          where: { isActive: true },
+          include: { group: true },
+        },
+        tenant: { include: { unit: true } },
+      },
+    });
+
+    res.json({
+      users: users.map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        unitNumber: user.tenant?.unit?.number || null,
+        isAdmin: user.isSystemAdmin || user.memberships.some((membership: any) => membership.group?.slug === 'admin'),
+        groups: user.memberships.map((membership: any) => ({
+          id: membership.group.id,
+          name: membership.group.name,
+          slug: membership.group.slug,
+          type: membership.group.type,
+        })),
+      })),
+      activeUserId: (req as any).session?.user?.userId || (req as any).session?.user?.id || null,
+      isImpersonating: Boolean((req as any).session?.user?.isImpersonating),
+    });
+  } catch (error: any) {
+    console.error('Failed to list testing users:', error);
+    res.status(500).json({ error: 'Failed to list users for testing', details: error.message });
+  }
+});
+
+app.post('/api/testing/impersonation', requireAuth, requireTestingAdmin, async (req, res) => {
+  try {
+    const targetUserId = String(req.body?.userId || '').trim();
+    if (!targetUserId) return res.status(400).json({ error: 'userId is required' });
+
+    const p = getPrisma();
+    const originalSessionUser = getActualSessionUser(req);
+    const coopId = originalSessionUser.cooperativeId || await getCoopId(req, p);
+    const targetUser = await (p as any).user.findFirst({
+      where: { id: targetUserId, cooperativeId: coopId, isActive: true },
+      include: {
+        memberships: {
+          where: { isActive: true },
+          include: { group: { include: { permissions: { include: { permission: true } } } } },
+        },
+        accessOverrides: { include: { permission: true } },
+        tenant: { include: { committees: true, unit: true } },
+      },
+    });
+    if (!targetUser) return res.status(404).json({ error: 'Target user not found' });
+
+    const targetSubject = buildAccessSubject(targetUser, coopId);
+    (req as any).session.user = makeImpersonatedSessionUser(originalSessionUser, targetUser, targetSubject);
+    await (p as any).auditLog.create({
+      data: {
+        cooperativeId: coopId,
+        actorUserId: originalSessionUser.userId || originalSessionUser.id || null,
+        action: 'testing.impersonation.start',
+        entityType: 'User',
+        entityId: targetUser.id,
+        after: {
+          impersonatorEmail: originalSessionUser.email,
+          targetEmail: targetUser.email,
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent') || null,
+      },
+    }).catch((error: any) => console.error('Failed to write impersonation audit log:', error));
+    res.json({ user: (req as any).session.user });
+  } catch (error: any) {
+    console.error('Failed to start impersonation:', error);
+    res.status(500).json({ error: 'Failed to start user view test', details: error.message });
+  }
+});
+
+app.post('/api/testing/impersonation/stop', requireAuth, async (req, res) => {
+  try {
+    const sessionUser = (req as any).session?.user;
+    if (!sessionUser?.isImpersonating) return res.json({ user: sessionUser || null });
+
+    const restoredUser = restoreImpersonatedSessionUser(sessionUser);
+    (req as any).session.user = restoredUser;
+    await logAudit(getPrisma(), req, 'testing.impersonation.stop', 'User', sessionUser.userId || sessionUser.id, undefined, {
+      restoredEmail: restoredUser.email,
+      previousEmail: sessionUser.email,
+    });
+    res.json({ user: restoredUser });
+  } catch (error: any) {
+    console.error('Failed to stop impersonation:', error);
+    res.status(500).json({ error: 'Failed to stop user view test', details: error.message });
+  }
 });
 
 

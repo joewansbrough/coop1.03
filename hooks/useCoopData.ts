@@ -44,6 +44,47 @@ export const useUser = (options?: DataQueryOptions<any>) => useQuery({
   ...options,
 });
 
+export type TestingUserOption = {
+  id: string;
+  email: string;
+  name?: string | null;
+  unitNumber?: string | null;
+  isAdmin: boolean;
+  groups: { id: string; name: string; slug: string; type: string }[];
+};
+
+const invalidateSessionScopedQueries = (queryClient: ReturnType<typeof useQueryClient>) => {
+  queryClient.invalidateQueries();
+};
+
+export const useTestingUsers = (options?: DataQueryOptions<{ users: TestingUserOption[]; activeUserId: string | null; isImpersonating: boolean }>) => useQuery({
+  queryKey: ['testing-users'],
+  queryFn: () => fetchJson('/api/testing/users'),
+  staleTime: 30 * 1000,
+  retry: 1,
+  ...options,
+});
+
+export const useStartImpersonation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => fetchJson('/api/testing/impersonation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    }),
+    onSuccess: () => invalidateSessionScopedQueries(queryClient),
+  });
+};
+
+export const useStopImpersonation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => fetchJson('/api/testing/impersonation/stop', { method: 'POST' }),
+    onSuccess: () => invalidateSessionScopedQueries(queryClient),
+  });
+};
+
 // Generic CRUD factory for Hooks
 const createDataHooks = <T extends { id: string }>(
   key: string, 

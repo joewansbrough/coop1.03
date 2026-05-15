@@ -246,3 +246,35 @@ export const makeSessionUser = (user: any, subject: DocumentAccessSubject) => ({
   permissionKeys: subject.permissionKeys,
   committeeIds: subject.committeeIds,
 });
+
+export const makeImpersonatedSessionUser = (
+  originalSessionUser: any,
+  targetUser: any,
+  targetSubject: DocumentAccessSubject,
+) => {
+  const impersonator: any = {
+    id: originalSessionUser.userId || originalSessionUser.id,
+    userId: originalSessionUser.userId || originalSessionUser.id,
+    email: originalSessionUser.email,
+    name: originalSessionUser.name,
+    isAdmin: originalSessionUser.isAdmin,
+    tenantId: originalSessionUser.tenantId || null,
+    unitNumber: originalSessionUser.unitNumber || null,
+    cooperativeId: originalSessionUser.cooperativeId,
+    role: originalSessionUser.role,
+    groupIds: originalSessionUser.groupIds || [],
+    permissionKeys: originalSessionUser.permissionKeys || [],
+    committeeIds: originalSessionUser.committeeIds || [],
+  };
+  if (originalSessionUser.picture !== undefined) impersonator.picture = originalSessionUser.picture;
+  if (originalSessionUser.geminiModel !== undefined) impersonator.geminiModel = originalSessionUser.geminiModel;
+
+  return {
+    ...makeSessionUser(targetUser, targetSubject),
+    isImpersonating: true,
+    impersonator,
+  };
+};
+
+export const restoreImpersonatedSessionUser = (sessionUser: any) =>
+  sessionUser?.isImpersonating && sessionUser.impersonator ? sessionUser.impersonator : sessionUser;
