@@ -12,6 +12,8 @@ import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } f
 import driveRoutes from './drive.js';
 import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
+import { indexDocumentVersionIntoGemini } from '../services/ragIndexing.js';
+import { RAG_STATUSES } from '../services/ragTypes.js';
 import {
   getStoredDashboardPreference,
   saveStoredDashboardPreference,
@@ -1788,6 +1790,53 @@ app.get('/api/documents/:id/access', requireAuth, requirePermission('documents.m
       })),
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/rag/documents/:id/index', requireAuth, requirePermission('documents.manage_visibility'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    const cooperativeId = await getCoopId(req, p);
+    const documentId = getParam(req.params.id);
+    const result = await indexDocumentVersionIntoGemini(p, { cooperativeId, documentId });
+
+    res.json({
+      success: true,
+      documentId,
+      versionId: result.version.id,
+      ragStatus: (result.version as any).ragStatus,
+      storeName: result.storeName,
+      ragDocumentName: result.ragDocumentName,
+    });
+  } catch (error: any) {
+    console.error('RAG index failed:', error);
+    res.status(500).json({ error: 'Failed to index document for AI.', details: error.message });
+  }
+});
+
+app.get('/api/rag/documents/:id/status', requireAuth, requirePermission('documents.manage_visibility'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    const cooperativeId = await getCoopId(req, p);
+    const documentId = getParam(req.params.id);
+    const document = await p.document.findFirst({
+      where: { id: documentId, cooperativeId },
+      include: { currentVersion: true },
+    });
+
+    if (!document) return res.status(404).json({ error: 'Document not found' });
+
+    res.json({
+      documentId,
+      versionId: document.currentVersion?.id || null,
+      ragStatus: (document.currentVersion as any)?.ragStatus || RAG_STATUSES.NOT_INDEXED,
+      ragStoreName: (document.currentVersion as any)?.ragStoreName || null,
+      ragDocumentName: (document.currentVersion as any)?.ragDocumentName || null,
+      ragIndexedAt: (document.currentVersion as any)?.ragIndexedAt || null,
+      ragIndexError: (document.currentVersion as any)?.ragIndexError || null,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to load AI index status.', details: error.message });
+  }
 });
 
 app.get('/api/rbac/effective-permissions', requireAuth, requirePermission('users.view'), async (req, res) => {
