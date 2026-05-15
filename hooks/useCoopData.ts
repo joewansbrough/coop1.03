@@ -6,6 +6,47 @@ import { demoStorage } from '../utils/demoStorage';
 type DataQueryOptions<T> = Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, 'queryKey' | 'queryFn'>;
 
 export const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
+const DEMO_IMPERSONATED_USER_KEY = 'demo_impersonated_user';
+
+const getDemoImpersonatedUser = () => {
+  if (typeof window === 'undefined') return null;
+  const stored = localStorage.getItem(DEMO_IMPERSONATED_USER_KEY);
+  if (!stored) return null;
+  try {
+    return JSON.parse(stored);
+  } catch {
+    localStorage.removeItem(DEMO_IMPERSONATED_USER_KEY);
+    return null;
+  }
+};
+
+const makeDemoUserFromTenant = (tenant: Tenant) => {
+  const isAdmin = String(tenant.role || '').toUpperCase() === 'ADMIN';
+  return {
+    id: tenant.id,
+    userId: tenant.id,
+    tenantId: tenant.id,
+    firstName: tenant.firstName,
+    lastName: tenant.lastName,
+    name: `${tenant.firstName} ${tenant.lastName}`.trim() || tenant.email,
+    email: tenant.email,
+    role: isAdmin ? 'ADMIN' : 'MEMBER',
+    isAdmin,
+    isGuest: false,
+    unitNumber: tenant.unit?.number || undefined,
+    cooperativeId: demoData.MOCK_USER.cooperativeId,
+    isImpersonating: true,
+    impersonator: {
+      id: demoData.MOCK_USER.id,
+      userId: demoData.MOCK_USER.id,
+      email: demoData.MOCK_USER.email,
+      name: demoData.MOCK_USER.name,
+      isAdmin: demoData.MOCK_USER.isAdmin,
+      role: demoData.MOCK_USER.role,
+      cooperativeId: demoData.MOCK_USER.cooperativeId,
+    },
+  };
+};
 
 const fetchJson = async (url: string, options?: RequestInit) => {
   const res = await fetch(url, options);
@@ -27,7 +68,7 @@ const dataQueryConfig = {
 export const useUser = (options?: DataQueryOptions<any>) => useQuery({
   queryKey: ['user'],
   queryFn: async () => {
-    if (isDemoMode()) return demoData.MOCK_USER;
+    if (isDemoMode()) return getDemoImpersonatedUser() || demoData.MOCK_USER;
     try {
       const res = await fetch('/api/auth/me', { credentials: 'include', cache: 'no-cache' });
       if (res.ok) {
@@ -59,7 +100,10 @@ const invalidateSessionScopedQueries = (queryClient: ReturnType<typeof useQueryC
 
 export const useTestingUsers = (options?: DataQueryOptions<{ users: TestingUserOption[]; activeUserId: string | null; isImpersonating: boolean }>) => useQuery({
   queryKey: ['testing-users'],
-  queryFn: () => fetchJson('/api/testing/users'),
+  queryFn: () => {
+    if (isDemoMode()) return Promise.resolve({ users: [], activeUserId: null, isImpersonating: false });
+    return fetchJson('/api/testing/users');
+  },
   staleTime: 30 * 1000,
   retry: 1,
   ...options,
@@ -68,11 +112,20 @@ export const useTestingUsers = (options?: DataQueryOptions<{ users: TestingUserO
 export const useStartImpersonation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (userId: string) => fetchJson('/api/testing/impersonation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
-    }),
+    mutationFn: async (userId: string) => {
+      if (isDemoMode()) {
+        const tenant = demoStorage.getTenants().find(item => item.id === userId);
+        if (!tenant) throw new Error('Demo member not found.');
+        const demoUser = makeDemoUserFromTenant(tenant);
+        localStorage.setItem(DEMO_IMPERSONATED_USER_KEY, JSON.stringify(demoUser));
+        return { user: demoUser };
+      }
+      return fetchJson('/api/testing/impersonation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+    },
     onSuccess: () => invalidateSessionScopedQueries(queryClient),
   });
 };
@@ -80,7 +133,13 @@ export const useStartImpersonation = () => {
 export const useStopImpersonation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => fetchJson('/api/testing/impersonation/stop', { method: 'POST' }),
+    mutationFn: async () => {
+      if (isDemoMode()) {
+        localStorage.removeItem(DEMO_IMPERSONATED_USER_KEY);
+        return { user: demoData.MOCK_USER };
+      }
+      return fetchJson('/api/testing/impersonation/stop', { method: 'POST' });
+    },
     onSuccess: () => invalidateSessionScopedQueries(queryClient),
   });
 };
