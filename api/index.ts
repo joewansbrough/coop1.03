@@ -12,6 +12,7 @@ import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } f
 import driveRoutes from './drive.js';
 import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
+import { askGeminiFileSearch } from '../services/ragAsk.js';
 import { indexDocumentVersionIntoGemini } from '../services/ragIndexing.js';
 import { RAG_STATUSES } from '../services/ragTypes.js';
 import {
@@ -1836,6 +1837,43 @@ app.get('/api/rag/documents/:id/status', requireAuth, requirePermission('documen
     });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to load AI index status.', details: error.message });
+  }
+});
+
+app.post('/api/rag/ask', requireAuth, requirePermission('documents.manage_visibility'), async (req, res) => {
+  const startedAt = Date.now();
+  const p = getPrisma();
+  const user = (req as any).user || (req as any).session?.user;
+  let cooperativeId = '';
+
+  try {
+    cooperativeId = await getCoopId(req, p);
+    const result = await askGeminiFileSearch(p, {
+      cooperativeId,
+      question: req.body?.question,
+    });
+
+    await p.policyAssistantQuery.create({
+      data: {
+        cooperativeId,
+        userId: user?.email || 'unknown',
+        question: String(req.body?.question || '').trim(),
+        retrievedChunks: [],
+        answer: result.answer.slice(0, 4000),
+        citations: JSON.parse(JSON.stringify(result.citations)),
+        language: 'English',
+        intent: 'policy',
+        suggestedAction: null,
+        latencyMs: Date.now() - startedAt,
+      },
+    }).catch((error: any) => console.error('Failed to log RAG query:', error));
+
+    res.json(result);
+  } catch (error: any) {
+    console.error('RAG ask failed:', error);
+    const message = error?.message || 'Unknown error';
+    const status = /^Question /.test(message) ? 400 : 500;
+    res.status(status).json({ error: 'Failed to ask indexed documents.', details: message });
   }
 });
 
