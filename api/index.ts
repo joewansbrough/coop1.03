@@ -3304,6 +3304,29 @@ app.get('/api/migrate', async (req, res) => {
     await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "DocumentVersion_documentId_version_key" ON "DocumentVersion"("documentId", "version");`);
     await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DocumentVersion_cooperativeId_idx" ON "DocumentVersion"("cooperativeId");`);
     await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DocumentVersion_ingestionStatus_idx" ON "DocumentVersion"("ingestionStatus");`);
+    await p.$executeRawUnsafe(`ALTER TABLE "DocumentVersion" ADD COLUMN IF NOT EXISTS "ragStatus" TEXT NOT NULL DEFAULT 'not_indexed';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "DocumentVersion" ADD COLUMN IF NOT EXISTS "ragStoreName" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "DocumentVersion" ADD COLUMN IF NOT EXISTS "ragDocumentName" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "DocumentVersion" ADD COLUMN IF NOT EXISTS "ragIndexedAt" TIMESTAMP(3);`);
+    await p.$executeRawUnsafe(`ALTER TABLE "DocumentVersion" ADD COLUMN IF NOT EXISTS "ragIndexError" TEXT;`);
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "RagStore" (
+        "id" TEXT NOT NULL,
+        "cooperativeId" TEXT,
+        "scope" TEXT NOT NULL,
+        "displayName" TEXT NOT NULL,
+        "geminiStoreName" TEXT NOT NULL,
+        "embeddingModel" TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "RagStore_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "RagStore_geminiStoreName_key" ON "RagStore"("geminiStoreName");`);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "RagStore_cooperativeId_scope_key" ON "RagStore"("cooperativeId", "scope");`);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "RagStore_shared_scope_key" ON "RagStore"("scope") WHERE "cooperativeId" IS NULL;`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RagStore_cooperativeId_idx" ON "RagStore"("cooperativeId");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RagStore_scope_idx" ON "RagStore"("scope");`);
 
     await p.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "DocumentIngestionJob" (

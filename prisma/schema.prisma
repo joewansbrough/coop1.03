@@ -112,6 +112,7 @@ model Cooperative {
   groups               Group[]
   auditLogs            AuditLog[]
   documentAccessRules  DocumentAccessRule[]
+  ragStores            RagStore[]
 }
 
 model User {
@@ -488,6 +489,11 @@ model DocumentVersion {
 
   extractedText String?
   summary       String?
+  ragStatus       String    @default("not_indexed")
+  ragStoreName    String?
+  ragDocumentName String?
+  ragIndexedAt    DateTime?
+  ragIndexError   String?
 
   currentForDocument Document? @relation("CurrentDocumentVersion")
   chunks             DocumentChunk[]
@@ -598,6 +604,22 @@ model PolicyAssistantQuery {
 
   @@index([cooperativeId, createdAt])
   @@index([userId, createdAt])
+}
+
+model RagStore {
+  id              String   @id @default(uuid())
+  cooperativeId   String?
+  cooperative     Cooperative? @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  scope           String
+  displayName     String
+  geminiStoreName String   @unique
+  embeddingModel  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([cooperativeId, scope])
+  @@index([cooperativeId])
+  @@index([scope])
 }
 
 model DocumentAccessLog {
