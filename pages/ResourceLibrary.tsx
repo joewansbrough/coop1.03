@@ -329,73 +329,33 @@ const ResourceLibrary: React.FC<{
         .setCallback(async (data: any) => {
           if (data.action === (window as any).google.picker.Action.PICKED) {
             const driveDoc = data.docs[0];
-            let extractedContent = '';
-
-            // Attempt to extract text from Google Docs or PDFs
-            if (driveDoc.mimeType === 'application/vnd.google-apps.document' || driveDoc.mimeType === 'application/pdf') {
-              try {
-                const exportUrl = driveDoc.mimeType === 'application/vnd.google-apps.document'
-                  ? `https://www.googleapis.com/drive/v3/files/${driveDoc.id}/export?mimeType=text/plain`
-                  : `https://www.googleapis.com/drive/v3/files/${driveDoc.id}?alt=media`;
-
-                const response = await fetch(exportUrl, {
-                  headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-
-                if (response.ok) {
-                  if (driveDoc.mimeType === 'application/pdf') {
-                    // Extract text from PDF using pdf.js
-                    try {
-                      const pdfBytes = await response.arrayBuffer();
-                      const pdfjsLib = (window as any).pdfjsLib;
-                      if (pdfjsLib) {
-                        pdfjsLib.GlobalWorkerOptions.workerSrc =
-                          'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                        const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
-                        const textPages: string[] = [];
-                        for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
-                          const page = await pdf.getPage(i);
-                          const textContent = await page.getTextContent();
-                          textPages.push(textContent.items.map((item: any) => item.str).join(' '));
-                        }
-                        extractedContent = textPages.join('\n\n');
-                      } else {
-                        extractedContent = '[PDF content could not be extracted: pdf.js not loaded]';
-                      }
-                    } catch (pdfErr) {
-                      console.warn('PDF text extraction failed:', pdfErr);
-                      extractedContent = '[PDF content extraction failed]';
-                    }
-                  } else {
-                    extractedContent = await response.text();
-                  }
-                }
-              } catch (err) {
-                console.warn('Could not extract content from Drive file:', err);
-              }
-            }
+            const driveTitle = driveDoc.name || driveDoc.title || 'Google Drive document';
+            const driveUrl = driveDoc.url || driveDoc.embedUrl || `https://drive.google.com/open?id=${driveDoc.id}`;
+            const driveMimeType = driveDoc.mimeType || driveDoc.type || 'application/octet-stream';
+            showAlert('Linking Google Drive document...', 'info');
 
             const newDoc = {
-              title: driveDoc.name,
+              title: driveTitle,
               category: reviewingDoc?.category || 'Cloud', // Favor user-selected category if available
-              url: driveDoc.url,
-              fileType: driveDoc.type || 'gdoc',
+              url: driveUrl,
+              fileType: driveDoc.type || driveMimeType.split('/').pop() || 'gdoc',
               author: 'Google Drive',
               date: new Date().toISOString(),
               tags: ['Google Drive', 'Linked'],
-              content: extractedContent || '',
+              content: '',
               visibility: reviewingDoc?.visibility || 'MEMBERS',
               committeeAccess: reviewingDoc?.committeeAccess || reviewingDoc?.committee || null,
               storageProvider: 'GOOGLE_DRIVE',
               sourceExternalId: driveDoc.id,
-              sourceWebUrl: driveDoc.url,
-              sourceMimeType: driveDoc.mimeType,
+              sourceWebUrl: driveUrl,
+              sourceMimeType: driveMimeType,
             };
 
             try {
               const res = await fetch('/api/documents', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify(newDoc)
               });
 
@@ -410,8 +370,50 @@ const ResourceLibrary: React.FC<{
               setShowUpload(false);
               setUploadMode(null);
               setReviewingDoc(saved);
+              showAlert('Google Drive document linked.', 'success');
 
-              // Auto-extract: if we have content, summarize + generate tags and persist them
+              let extractedContent = '';
+              // Optional extraction runs after the document is visible in the library.
+              if (driveMimeType === 'application/vnd.google-apps.document' || driveMimeType === 'application/pdf') {
+                try {
+                  const exportUrl = driveMimeType === 'application/vnd.google-apps.document'
+                    ? `https://www.googleapis.com/drive/v3/files/${driveDoc.id}/export?mimeType=text/plain`
+                    : `https://www.googleapis.com/drive/v3/files/${driveDoc.id}?alt=media`;
+
+                  const response = await fetch(exportUrl, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                  });
+
+                  if (response.ok) {
+                    if (driveMimeType === 'application/pdf') {
+                      try {
+                        const pdfBytes = await response.arrayBuffer();
+                        const pdfjsLib = (window as any).pdfjsLib;
+                        if (pdfjsLib) {
+                          pdfjsLib.GlobalWorkerOptions.workerSrc =
+                            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                          const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+                          const textPages: string[] = [];
+                          for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            textPages.push(textContent.items.map((item: any) => item.str).join(' '));
+                          }
+                          extractedContent = textPages.join('\n\n');
+                        }
+                      } catch (pdfErr) {
+                        console.warn('PDF text extraction failed:', pdfErr);
+                      }
+                    } else {
+                      extractedContent = await response.text();
+                    }
+                  }
+                } catch (err) {
+                  console.warn('Could not extract content from Drive file:', err);
+                }
+              }
+
+              // Auto-extract: if we have content, summarize + generate tags and persist them.
               if (extractedContent && extractedContent.trim().length > 0 &&
                 !extractedContent.includes('[Content is in a Cloud PDF')) {
                 try {
