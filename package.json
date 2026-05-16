@@ -8,7 +8,7 @@
     "build": "prisma generate && vite build",
     "postinstall": "prisma generate",
     "lint": "tsc --noEmit",
-    "db:migrate:baseline": "prisma migrate resolve --rolled-back 20260326000000_add_document_fields || true && prisma migrate resolve --applied 20260326000000_add_document_fields && prisma migrate resolve --applied 20260429000000_add_dashboard_preferences",
+    "db:migrate:baseline": "prisma migrate resolve --rolled-back 20260326000000_add_document_fields || true && prisma migrate resolve --applied 20260326000000_add_document_fields || true && prisma migrate resolve --applied 20260429000000_add_dashboard_preferences || true",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:status": "prisma migrate status",
     "build:with-baseline": "npm run db:migrate:baseline && npm run db:migrate:deploy && npm run build",
