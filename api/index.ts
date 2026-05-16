@@ -780,18 +780,22 @@ app.get('/auth/callback', async (req, res) => {
       googleSubjectId: userData.sub,
     });
     if (LEGACY_ADMIN_EMAILS.includes(email) && !effectiveUser?.isSystemAdmin) {
-      effectiveUser = await (p as any).user.update({
-        where: { id: effectiveUser.id },
-        data: { isSystemAdmin: true },
-        include: {
-          memberships: {
-            where: { isActive: true },
-            include: { group: { include: { permissions: { include: { permission: true } } } } },
+      if ((effectiveUser as any).__legacyTenantFallback) {
+        effectiveUser = { ...effectiveUser, isSystemAdmin: true };
+      } else {
+        effectiveUser = await (p as any).user.update({
+          where: { id: effectiveUser.id },
+          data: { isSystemAdmin: true },
+          include: {
+            memberships: {
+              where: { isActive: true },
+              include: { group: { include: { permissions: { include: { permission: true } } } } },
+            },
+            accessOverrides: { include: { permission: true } },
+            tenant: { include: { committees: true, unit: true } },
           },
-          accessOverrides: { include: { permission: true } },
-          tenant: { include: { committees: true, unit: true } },
-        },
-      });
+        });
+      }
     }
     if (!effectiveUser?.isActive) return res.status(403).send('User is inactive');
     const subject = buildAccessSubject(effectiveUser, coopId);

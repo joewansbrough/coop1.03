@@ -17,6 +17,32 @@ export const slugifyGroupName = (value: string) =>
 const permissionLabel = (key: string) =>
   key.split('.').map(part => part.replace(/_/g, ' ')).join(' / ');
 
+const isMissingUserTableError = (error: any) =>
+  error?.code === 'P2021' && String(error?.meta?.table || '').includes('User');
+
+const makeLegacyTenantUser = (
+  cooperativeId: string,
+  normalizedEmail: string,
+  displayName: string,
+  tenant: any,
+  profile: { firstName?: string | null; lastName?: string | null; googleSubjectId?: string | null },
+) => ({
+  id: tenant?.id || normalizedEmail,
+  cooperativeId: tenant?.cooperativeId || cooperativeId,
+  email: normalizedEmail,
+  name: displayName,
+  firstName: profile.firstName || tenant?.firstName || null,
+  lastName: profile.lastName || tenant?.lastName || null,
+  tenantId: tenant?.id || null,
+  tenant: tenant || null,
+  googleSubjectId: profile.googleSubjectId || null,
+  isActive: tenant?.status ? tenant.status !== 'Inactive' : true,
+  isSystemAdmin: String(tenant?.role || '').toUpperCase() === 'ADMIN',
+  memberships: [],
+  accessOverrides: [],
+  __legacyTenantFallback: true,
+});
+
 export const seedRbacDefaults = async (p: PrismaLike, cooperativeId: string) => {
   const permissionsByKey = new Map<string, any>();
   for (const key of DEFAULT_PERMISSION_KEYS) {
@@ -126,33 +152,42 @@ export const ensureUserForEmail = async (
   const normalizedEmail = email.trim().toLowerCase();
   const tenant = await p.tenant.findFirst({
     where: { cooperativeId, email: normalizedEmail },
+    include: { unit: true, committees: true },
   });
   const [firstNameFromEmail] = normalizedEmail.split('@');
   const displayName = profile.name || (tenant ? `${tenant.firstName} ${tenant.lastName}`.trim() : firstNameFromEmail);
-  const user = await p.user.upsert({
-    where: { cooperativeId_email: { cooperativeId, email: normalizedEmail } },
-    update: {
-      name: displayName,
-      firstName: profile.firstName || tenant?.firstName || null,
-      lastName: profile.lastName || tenant?.lastName || null,
-      tenantId: tenant?.id || undefined,
-      googleSubjectId: profile.googleSubjectId || undefined,
-      isActive: tenant?.status ? tenant.status !== 'Inactive' : true,
-      lastLoginAt: new Date(),
-    },
-    create: {
-      id: crypto.randomUUID(),
-      cooperativeId,
-      email: normalizedEmail,
-      name: displayName,
-      firstName: profile.firstName || tenant?.firstName || null,
-      lastName: profile.lastName || tenant?.lastName || null,
-      tenantId: tenant?.id || null,
-      googleSubjectId: profile.googleSubjectId || null,
-      isActive: tenant?.status ? tenant.status !== 'Inactive' : true,
-      lastLoginAt: new Date(),
-    },
-  });
+  let user;
+  try {
+    user = await p.user.upsert({
+      where: { cooperativeId_email: { cooperativeId, email: normalizedEmail } },
+      update: {
+        name: displayName,
+        firstName: profile.firstName || tenant?.firstName || null,
+        lastName: profile.lastName || tenant?.lastName || null,
+        tenantId: tenant?.id || undefined,
+        googleSubjectId: profile.googleSubjectId || undefined,
+        isActive: tenant?.status ? tenant.status !== 'Inactive' : true,
+        lastLoginAt: new Date(),
+      },
+      create: {
+        id: crypto.randomUUID(),
+        cooperativeId,
+        email: normalizedEmail,
+        name: displayName,
+        firstName: profile.firstName || tenant?.firstName || null,
+        lastName: profile.lastName || tenant?.lastName || null,
+        tenantId: tenant?.id || null,
+        googleSubjectId: profile.googleSubjectId || null,
+        isActive: tenant?.status ? tenant.status !== 'Inactive' : true,
+        lastLoginAt: new Date(),
+      },
+    });
+  } catch (error) {
+    if (isMissingUserTableError(error)) {
+      return makeLegacyTenantUser(cooperativeId, normalizedEmail, displayName, tenant, profile);
+    }
+    throw error;
+  }
 
   await seedRbacDefaults(p, cooperativeId);
   const memberGroup = await p.group.findUnique({ where: { cooperativeId_slug: { cooperativeId, slug: 'member' } } });

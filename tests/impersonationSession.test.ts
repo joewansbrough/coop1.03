@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  ensureUserForEmail,
   makeImpersonatedSessionUser,
   makeSessionUser,
   resolveTestingTargetUser,
@@ -104,4 +105,51 @@ test('resolves an impersonation target from a member directory tenant id', async
 
   assert.equal(target.id, 'user-from-tenant');
   assert.deepEqual(calls, ['tenant-1']);
+});
+
+test('falls back to legacy tenant session shape when the User table is missing', async () => {
+  const fakePrisma = {
+    user: {
+      upsert: async () => {
+        const error: any = new Error('The table `public.User` does not exist in the current database.');
+        error.code = 'P2021';
+        error.meta = { table: 'public.User' };
+        throw error;
+      },
+    },
+    tenant: {
+      findFirst: async () => ({
+        id: 'tenant-1',
+        cooperativeId: 'coop-1',
+        email: 'admin@example.com',
+        firstName: 'Ada',
+        lastName: 'Admin',
+        status: 'Current',
+        role: 'ADMIN',
+        unit: { number: '101' },
+        committees: [],
+      }),
+    },
+  };
+
+  const user = await ensureUserForEmail(fakePrisma, 'coop-1', 'admin@example.com', {
+    name: 'Ada Admin',
+    googleSubjectId: 'google-subject',
+  });
+  const subject = {
+    userId: user.id,
+    email: user.email,
+    cooperativeId: user.cooperativeId,
+    groupIds: [],
+    permissionKeys: [],
+    committeeIds: [],
+    isAdmin: user.isSystemAdmin,
+  };
+  const sessionUser = makeSessionUser(user, subject);
+
+  assert.equal(sessionUser.email, 'admin@example.com');
+  assert.equal(sessionUser.tenantId, 'tenant-1');
+  assert.equal(sessionUser.unitNumber, '101');
+  assert.equal(sessionUser.isAdmin, true);
+  assert.equal(user.__legacyTenantFallback, true);
 });
