@@ -27,6 +27,7 @@ import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracl
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
+import { GOOGLE_TOKEN_URL, buildGoogleTokenRequestBody, getOAuthErrorSummary } from '../utils/googleOAuth.js';
 
 
 
@@ -746,13 +747,23 @@ app.get('/auth/callback', async (req, res) => {
     const baseUrl = getBaseUrl(req);
     const redirectUri = `${baseUrl}/auth/callback`;
 
-    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
-      code,
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code',
-    });
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      console.error('CRITICAL: Google OAuth client credentials are missing from env');
+      return res.status(500).send('Google authentication is not configured');
+    }
+
+    const tokenResponse = await axios.post(
+      GOOGLE_TOKEN_URL,
+      buildGoogleTokenRequestBody({
+        code: String(code),
+        clientId,
+        clientSecret,
+        redirectUri,
+      }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } },
+    );
 
     const { access_token } = tokenResponse.data;
     const userResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -816,7 +827,7 @@ app.get('/auth/callback', async (req, res) => {
       </html>
     `);
   } catch (error) {
-    console.error('OAuth callback error:', error);
+    console.error('OAuth callback error:', getOAuthErrorSummary(error));
     res.status(500).send('Authentication failed');
   }
 });

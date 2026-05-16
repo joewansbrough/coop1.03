@@ -8,6 +8,8 @@
     "build": "prisma generate && vite build",
     "postinstall": "prisma generate",
     "lint": "tsc --noEmit",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:status": "prisma migrate status",
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
