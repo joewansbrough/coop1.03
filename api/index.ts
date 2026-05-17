@@ -36,6 +36,7 @@ import { parseGeminiJson } from '../utils/geminiJson.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
 import { GOOGLE_TOKEN_URL, buildGoogleTokenRequestBody, getOAuthErrorSummary } from '../utils/googleOAuth.js';
+import { hasFreshSessionPermissions } from '../utils/sessionPermissions.js';
 
 
 
@@ -312,6 +313,22 @@ app.get('/api/health', (req, res) => {
 const hydrateSessionPermissions = async (req: express.Request) => {
   const sessionUser = (req as any).session?.user;
   if (!sessionUser?.email) return null;
+  if (hasFreshSessionPermissions(sessionUser)) {
+    (req as any).user = sessionUser;
+    return {
+      effectiveUser: null,
+      subject: {
+        userId: sessionUser.userId || sessionUser.id || sessionUser.tenantId || null,
+        email: sessionUser.email || null,
+        cooperativeId: sessionUser.cooperativeId,
+        groupIds: sessionUser.groupIds || [],
+        permissionKeys: sessionUser.permissionKeys || [],
+        committeeIds: sessionUser.committeeIds || [],
+        isAdmin: Boolean(sessionUser.isAdmin),
+      },
+      user: sessionUser,
+    };
+  }
   const p = getPrisma();
   const coopId = sessionUser.cooperativeId || await getCoopId(req, p);
   const effectiveUser = await ensureUserForEmail(p, coopId, sessionUser.email, {
@@ -324,6 +341,7 @@ const hydrateSessionPermissions = async (req: express.Request) => {
     ...makeSessionUser(effectiveUser, subject),
     geminiModel: sessionUser.geminiModel,
     picture: sessionUser.picture,
+    permissionsHydratedAt: Date.now(),
   };
   (req as any).session.user = hydrated;
   (req as any).user = hydrated;
@@ -847,8 +865,16 @@ app.get('/auth/callback', async (req, res) => {
   }
 });
 
-app.get(['/api/auth/me', '/auth/me'], (req, res) => {
-  res.json({ user: (req as any).session?.user || null });
+app.get(['/api/auth/me', '/auth/me'], async (req, res) => {
+  try {
+    if ((req as any).session?.user) {
+      await hydrateSessionPermissions(req);
+    }
+    res.json({ user: (req as any).session?.user || null });
+  } catch (error) {
+    console.error('Failed to hydrate auth session:', error);
+    res.json({ user: (req as any).session?.user || null });
+  }
 });
 
 app.post(['/api/auth/logout', '/auth/logout'], (req, res) => {
