@@ -15,6 +15,7 @@ import { recordTutorialEvent } from '../utils/demoTutorial';
 import { getDocumentFileUrl, getDocumentLibraryDestination, getDocumentLibraryOriginalUrl, getMinutesEventId } from '../utils/dashboardDocumentLinks';
 import { demoStorage } from '../utils/demoStorage';
 import { sortNewestFirst } from '../utils/contentOrdering';
+import { readApiResponse } from '../utils/apiResponse';
 import { MinutesPDF } from '../services/export/pdfGenerator';
 
 const ResourceLibrary: React.FC<{
@@ -369,7 +370,6 @@ const ResourceLibrary: React.FC<{
               refreshData();
               setShowUpload(false);
               setUploadMode(null);
-              setReviewingDoc(saved);
               showAlert('Google Drive document linked.', 'success');
               startDriveAiIndexing(saved);
 
@@ -436,7 +436,6 @@ const ResourceLibrary: React.FC<{
 
                   const updatedDoc = { ...saved, tags: mergedTags, content: extractedContent };
                   setDocuments(prev => prev.map(d => d.id === saved.id ? updatedDoc : d));
-                  setReviewingDoc(updatedDoc);
                 } catch (aiErr) {
                   console.warn('[AI Extract] Failed to auto-summarize document:', aiErr);
                 }
@@ -602,12 +601,11 @@ const ResourceLibrary: React.FC<{
       credentials: 'include',
     })
       .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
+        const data = await readApiResponse(res).catch(() => ({}));
         if (!res.ok) throw new Error(data.details || data.error || 'Failed to index document');
-        showAlert('Google Drive document linked and indexed for AI search.', 'success');
       })
       .catch((error: any) => {
-        showAlert(error.message || 'Document linked, but AI indexing did not start.', 'error');
+        console.warn('[Drive AI Index] Background indexing did not start:', error);
       })
       .finally(() => {
         refreshData();
@@ -784,7 +782,7 @@ const ResourceLibrary: React.FC<{
         }),
       });
 
-      const data = await res.json();
+      const data = await readApiResponse(res);
 
       if (!res.ok) {
         throw new Error(data.details || data.error || `HTTP error! status: ${res.status}`);

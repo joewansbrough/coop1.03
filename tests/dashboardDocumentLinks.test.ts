@@ -96,3 +96,37 @@ test('links ordinary blob-backed documents through the authenticated original en
     href: '/api/documents/doc-policy-blob/original',
   });
 });
+
+test('opens Google Drive documents with their stored Drive web link', () => {
+  const driveDocument = {
+    ...minutesDocument,
+    id: 'doc-drive',
+    title: 'Shared Drive Policy',
+    category: 'Policy',
+    tags: ['policy'],
+    url: '#',
+    storageProvider: 'GOOGLE_DRIVE' as const,
+    sourceExternalId: 'drive-file-123',
+    sourceWebUrl: 'https://drive.google.com/file/d/drive-file-123/view',
+    currentVersion: {
+      id: 'version-drive',
+      version: 1,
+      source: 'google-drive',
+      storageUrl: 'https://drive.google.com/file/d/drive-file-123/view',
+      ingestionStatus: 'ready',
+    },
+  };
+
+  assert.equal(
+    getDocumentLibraryOriginalUrl(driveDocument),
+    'https://drive.google.com/file/d/drive-file-123/view',
+  );
+  assert.deepEqual(getDocumentLibraryDestination(driveDocument, { isAdmin: true }), {
+    type: 'external',
+    href: 'https://drive.google.com/file/d/drive-file-123/view',
+  });
+  assert.deepEqual(getDashboardDocumentLink(driveDocument), {
+    type: 'external',
+    href: 'https://drive.google.com/file/d/drive-file-123/view',
+  });
+});

@@ -15,6 +15,7 @@ import {
 } from '../utils/demoData';
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
 import { DEMO_TUTORIAL_ROLE_VIEW_KEY } from '../utils/demoTutorial.js';
+import { readApiResponse } from '../utils/apiResponse.js';
 
 const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
 
@@ -399,7 +400,7 @@ export const geminiService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),
     });
-    const data = await res.json();
+    const data = await readApiResponse(res);
     if (!res.ok) throw new Error(data.error || 'Failed to summarize document with Gemini');
     return data;
   },

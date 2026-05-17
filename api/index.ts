@@ -28,6 +28,7 @@ import { detectOracleIntent, mergeOracleSuggestedAction, normalizeOracleLanguage
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
+import { parseGeminiJson } from '../utils/geminiJson.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
 import { GOOGLE_TOKEN_URL, buildGoogleTokenRequestBody, getOAuthErrorSummary } from '../utils/googleOAuth.js';
@@ -2211,12 +2212,7 @@ const getAI = () => {
 };
 
 const parseJsonResponse = (text: string, fallback: any = {}) => {
-  try {
-    return JSON.parse(text || JSON.stringify(fallback));
-  } catch {
-    const match = text.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : fallback;
-  }
+  return parseGeminiJson(text, fallback);
 };
 
 const asArray = (value: any) => Array.isArray(value) ? value : [];
@@ -3056,11 +3052,11 @@ app.post('/api/ai/summarize', requireAuth, async (req, res) => {
     const model = genAI.getGenerativeModel({ model: resolvedModel });
     const { content } = req.body;
 
-    const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Provide a short summary (max 2 sentences) and suggest 3-5 relevant semantic tags for categorization (e.g., "pets", "parking", "agm").\n\nContent: ${content.substring(0, 5000)}`);
+    const result = await model.generateContent(`Analyze the following document content from a BC Housing Co-operative. Return JSON only in this shape: {"summary":"short summary","tags":["tag1","tag2"]}. Use 3-5 concise semantic tags such as "pets", "parking", or "agm".\n\nContent: ${content.substring(0, 5000)}`);
     const response = await result.response;
-    res.json(JSON.parse(response.text() || '{"summary": "", "tags": []}'));
+    res.json(parseJsonResponse(response.text(), { summary: '', tags: [] }));
   } catch (e: any) {
-    res.status(500).json({ summary: '', tags: [], error: e.message });
+    res.json({ summary: '', tags: [], warning: e.message });
   }
 });
 
