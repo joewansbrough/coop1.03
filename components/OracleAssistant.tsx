@@ -397,6 +397,16 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     navigate(action.href || '/maintenance');
   };
 
+  const openCitation = (citation: OracleResponse['citations'][number]) => {
+    const href = citation.href || citation.uri || (citation.documentId ? `/documents?id=${citation.documentId}` : null);
+    if (!href) return;
+    if (href.startsWith('/')) {
+      navigate(href);
+      return;
+    }
+    window.open(href, '_blank', 'noopener,noreferrer');
+  };
+
   const renderContent = (content: string, response?: OracleResponse) => {
     const parts = content.split(/(\[.+?\]\(.+?\))/g);
     
@@ -428,7 +438,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
               {response.citations.map((citation, i) => (
                 <button
                   key={i}
-                  onClick={() => navigate(`/resource-library?id=${citation.documentId}`)}
+                  onClick={() => openCitation(citation)}
                   className="flex items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-slate-600 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:ring-white/10"
                 >
                   <Sparkles className="h-3 w-3 text-teal-500" />

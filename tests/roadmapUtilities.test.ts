@@ -12,6 +12,7 @@ import {
   detectOracleIntent,
   mergeOracleSuggestedAction,
   normalizeOracleLanguage,
+  shouldAnswerOracleWithDocs,
 } from '../utils/oracle.ts';
 import {
   canUsePrivilegedOracleTools,
@@ -135,6 +136,13 @@ test('oracle privileged tools are limited to board and admin roles', () => {
   assert.equal(canUsePrivilegedOracleTools({ isAdmin: false, role: 'ADMIN' }), true);
   assert.equal(canUsePrivilegedOracleTools({ isAdmin: false, role: 'BOARD' }), true);
   assert.equal(canUsePrivilegedOracleTools({ isAdmin: false, role: 'MEMBER' }), false);
+});
+
+test('oracle routes document-grounded questions to indexed docs', () => {
+  assert.equal(shouldAnswerOracleWithDocs('What does the pet policy say?'), true);
+  assert.equal(shouldAnswerOracleWithDocs('Summarize the occupancy agreement'), true);
+  assert.equal(shouldAnswerOracleWithDocs('Who lives in unit 4?'), false);
+  assert.equal(shouldAnswerOracleWithDocs('Show open maintenance requests'), false);
 });
 
 test('oracle record searches preserve member scope while applying text filters', async () => {

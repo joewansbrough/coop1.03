@@ -303,7 +303,7 @@ export interface OracleSuggestedAction {
 
 export interface OracleResponse {
   answer: string;
-  citations: { title: string; documentId?: string; pageNumber?: number }[];
+  citations: RagCitation[];
   language: OracleLanguage;
   intent: 'policy' | 'maintenance' | 'governance' | 'general';
   suggestedAction?: OracleSuggestedAction;

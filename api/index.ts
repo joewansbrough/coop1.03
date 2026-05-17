@@ -28,7 +28,7 @@ import {
 } from '../services/dashboardPreferenceStore.js';
 import { type DashboardRole } from '../utils/dashboardPreferences.js';
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
-import { detectOracleIntent, mergeOracleSuggestedAction, normalizeOracleLanguage } from '../utils/oracle.js';
+import { detectOracleIntent, mergeOracleSuggestedAction, normalizeOracleLanguage, shouldAnswerOracleWithDocs } from '../utils/oracle.js';
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
@@ -2706,6 +2706,42 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
     coopId = await getCoopId(req, p);
     await ensurePolicyAssistantQuerySchema(p);
 
+    if (shouldAnswerOracleWithDocs(question)) {
+      try {
+        const docsResponse = await askGeminiFileSearch(p, {
+          cooperativeId: coopId,
+          question,
+        });
+        const oracleDocsResponse = {
+          answer: docsResponse.answer,
+          citations: docsResponse.citations,
+          language: normalizedLanguage,
+          confidence: docsResponse.citations.length ? 0.9 : 0.65,
+          intent: intent.intent === 'general' ? 'policy' : intent.intent,
+          suggestedAction: mergeOracleSuggestedAction(question, intent.suggestedAction),
+        };
+
+        await p.policyAssistantQuery.create({
+          data: {
+            cooperativeId: coopId,
+            userId: user?.email || 'unknown',
+            question,
+            retrievedChunks: [],
+            answer: oracleDocsResponse.answer,
+            citations: JSON.parse(JSON.stringify(oracleDocsResponse.citations)),
+            language: normalizedLanguage,
+            intent: oracleDocsResponse.intent,
+            suggestedAction: JSON.parse(JSON.stringify(oracleDocsResponse.suggestedAction || null)),
+            latencyMs: Date.now() - startedAt,
+          },
+        }).catch((error: any) => console.error('Failed to log Oracle docs query:', error));
+
+        return res.json(oracleDocsResponse);
+      } catch (error: any) {
+        console.warn('[Oracle Docs] Falling back to database Oracle:', error?.message || error);
+      }
+    }
+
     // Tool Context for checking permissions and scoping queries
     const toolContext: ToolContext = {
       prisma: p,
@@ -2883,10 +2919,10 @@ Member Question: ${question}`;
         question,
         retrievedChunks: [], // We used direct DB tools
         answer: oracleResponse.answer,
-        citations: [],
+        citations: JSON.parse(JSON.stringify(oracleResponse.citations || [])),
         language: normalizedLanguage,
-        intent: intent.intent,
-        suggestedAction: JSON.parse(JSON.stringify(mergeOracleSuggestedAction(question, intent.suggestedAction) || null)),
+        intent: oracleResponse.intent || intent.intent,
+        suggestedAction: JSON.parse(JSON.stringify(oracleResponse.suggestedAction || mergeOracleSuggestedAction(question, intent.suggestedAction) || null)),
         latencyMs: Date.now() - startedAt,
       },
     });

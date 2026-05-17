@@ -59,6 +59,16 @@ export const detectOracleIntent = (question: string): Pick<OracleResponse, 'inte
   return { intent: 'general' };
 };
 
+const docsQuestionTerms = /\b(policy|policies|rule|rules|bylaw|bylaws|agreement|handbook|manual|document|documents|docs|minutes|motion|motions|parking|pet|pets|guest|guests|occupancy|clutter|summarize|summary|what does|what do the)\b/i;
+const liveRecordTerms = /\b(who lives|unit\s+\w+|open maintenance|maintenance requests?|work orders?|tenant|tenants|resident|residents|waitlist|notifications?)\b/i;
+
+export const shouldAnswerOracleWithDocs = (question: string) => {
+  const normalized = String(question || '').trim();
+  if (!normalized) return false;
+  if (liveRecordTerms.test(normalized)) return false;
+  return docsQuestionTerms.test(normalized);
+};
+
 export const createOracleFallbackResponse = (question: string, language?: string): OracleResponse => ({
   answer: 'I could not reach the AI service, but your question has been saved for review. Please verify urgent or legal matters with the board.',
   citations: [],
