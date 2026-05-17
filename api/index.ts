@@ -13,6 +13,7 @@ import driveRoutes from './drive.js';
 import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
 import { createDocumentMetadataRecord } from '../services/documentMetadataStore.js';
+import { ingestConfiguredDriveRoots } from '../services/driveRootIngestion.js';
 import { askGeminiFileSearch } from '../services/ragAsk.js';
 import { indexDocumentVersionIntoGemini } from '../services/ragIndexing.js';
 import { RAG_STATUSES } from '../services/ragTypes.js';
@@ -1836,6 +1837,28 @@ app.get('/api/rag/documents/:id/status', requireAuth, requirePermission('documen
     });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to load AI index status.', details: error.message });
+  }
+});
+
+app.post('/api/rag/drive-roots/index', requireAuth, requirePermission('documents.manage_visibility'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    const cooperativeId = await getCoopId(req, p);
+    const requestedMaxFiles = Number(req.body?.maxFiles || req.query.maxFiles || 0);
+    const maxFiles = Number.isFinite(requestedMaxFiles) && requestedMaxFiles > 0
+      ? Math.floor(requestedMaxFiles)
+      : undefined;
+
+    const result = await ingestConfiguredDriveRoots({
+      prisma: p,
+      cooperativeId,
+      maxFiles,
+    });
+
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('Drive root RAG ingestion failed:', error);
+    res.status(500).json({ error: 'Failed to ingest Google Drive root folders for AI.', details: error.message });
   }
 });
 
