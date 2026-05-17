@@ -371,6 +371,7 @@ const ResourceLibrary: React.FC<{
               setUploadMode(null);
               setReviewingDoc(saved);
               showAlert('Google Drive document linked.', 'success');
+              startDriveAiIndexing(saved);
 
               let extractedContent = '';
               // Optional extraction runs after the document is visible in the library.
@@ -424,6 +425,7 @@ const ResourceLibrary: React.FC<{
                   await fetch(`/api/documents/${saved.id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({
                       title: saved.title,
                       category: saved.category,
@@ -589,6 +591,28 @@ const ResourceLibrary: React.FC<{
       refreshData();
       setIndexingDocumentId(null);
     }
+  };
+
+  const startDriveAiIndexing = (doc: Document) => {
+    if (!isAdmin || isGuest || !hasDriveFileIdForIndexing(doc)) return;
+
+    setIndexingDocumentId(doc.id);
+    fetch(`/api/rag/documents/${doc.id}/index`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.details || data.error || 'Failed to index document');
+        showAlert('Google Drive document linked and indexed for AI search.', 'success');
+      })
+      .catch((error: any) => {
+        showAlert(error.message || 'Document linked, but AI indexing did not start.', 'error');
+      })
+      .finally(() => {
+        refreshData();
+        setIndexingDocumentId(null);
+      });
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

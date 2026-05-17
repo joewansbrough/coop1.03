@@ -12,6 +12,7 @@ import { maintenanceSchema, documentSchema, announcementSchema, tenantSchema } f
 import driveRoutes from './drive.js';
 import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
+import { createDocumentMetadataRecord } from '../services/documentMetadataStore.js';
 import { askGeminiFileSearch } from '../services/ragAsk.js';
 import { indexDocumentVersionIntoGemini } from '../services/ragIndexing.js';
 import { RAG_STATUSES } from '../services/ragTypes.js';
@@ -1596,46 +1597,29 @@ app.post('/api/documents', requireAuth, requirePermission('documents.create'), a
   try {
     const p = getPrisma();
     const subject = await getRequestSubject(req);
-    // Tag generation temporarily disabled for basic metadata sync
-    const currentYear = new Date().getFullYear().toString();
-    const committeeTags = committee ? [committee] : [];
-    const providedTags = Array.isArray(tags) ? tags : [];
-    const finalTags = Array.from(new Set([currentYear, ...committeeTags, ...providedTags]));
-
     const coopId = await getCoopId(req, p);
-    const document = await p.document.create({
-      data: {
-        cooperativeId: coopId,
-        title: title || 'Untitled Document',
-        category: category || 'General',
-        url: url || sourceWebUrl || '#',
-        fileType: fileType || 'txt',
-        author: author || ((req as any).user?.name || 'System'),
-        date: date ? new Date(date) : new Date(),
-        tags: finalTags,
-        committee: committee || null,
-        content: content || null,
-        visibility: visibility || 'MEMBERS',
-        committeeAccess: committeeAccess || committee || null,
-        ownerUserId: subject.userId || null,
-        storageProvider: storageProvider || (sourceExternalId ? 'GOOGLE_DRIVE' : 'EXTERNAL_LINK'),
-        sourceExternalId: sourceExternalId || null,
-        sourceFolderId: sourceFolderId || null,
-        sourceWebUrl: sourceWebUrl || url || null,
-        sourceMimeType: sourceMimeType || null,
-        sourceModifiedAt: sourceModifiedAt ? new Date(sourceModifiedAt) : null,
-        accessRules: Array.isArray(req.body.accessRules) ? {
-          create: req.body.accessRules.map((rule: any) => ({
-            id: crypto.randomUUID(),
-            cooperativeId: coopId,
-            groupId: rule.groupId || null,
-            userId: rule.userId || null,
-            permission: rule.permission || 'VIEW',
-            createdBy: subject.userId || null,
-          })),
-        } : undefined,
-      } as any,
-      include: { accessRules: true, currentVersion: true },
+    const document = await createDocumentMetadataRecord(p, {
+      cooperativeId: coopId,
+      ownerUserId: subject.userId || null,
+      userName: (req as any).user?.name || null,
+      title,
+      category,
+      url,
+      fileType,
+      author,
+      date,
+      tags,
+      committee,
+      content,
+      visibility,
+      committeeAccess,
+      storageProvider,
+      sourceExternalId,
+      sourceFolderId,
+      sourceWebUrl,
+      sourceMimeType,
+      sourceModifiedAt,
+      accessRules: req.body.accessRules,
     });
     await logAudit(p, req, 'document.create', 'Document', document.id, undefined, document);
     res.json(document);
