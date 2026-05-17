@@ -17,6 +17,7 @@ import { ingestConfiguredDriveRoots } from '../services/driveRootIngestion.js';
 import { askGeminiFileSearch } from '../services/ragAsk.js';
 import { indexDocumentVersionIntoGemini } from '../services/ragIndexing.js';
 import { RAG_STATUSES } from '../services/ragTypes.js';
+import { ensureDashboardPreferenceSchema, ensureDocumentRagSchema } from '../services/schemaRepair.js';
 import {
   getStoredDashboardPreference,
   saveStoredDashboardPreference,
@@ -532,6 +533,7 @@ app.get('/api/dashboard/preferences', requireAuth, async (req, res, next) => {
     if (!user?.email) return res.status(401).json({ error: 'User session invalid' });
 
     const p = getPrisma();
+    await ensureDashboardPreferenceSchema(p);
     const preference = await getStoredDashboardPreference(p, {
       cooperativeId: await getCoopId(req, p),
       userEmail: user.email,
@@ -550,6 +552,7 @@ app.put('/api/dashboard/preferences', requireAuth, async (req, res, next) => {
     if (!user?.email) return res.status(401).json({ error: 'User session invalid' });
 
     const p = getPrisma();
+    await ensureDashboardPreferenceSchema(p);
     const preference = await saveStoredDashboardPreference(p, {
       cooperativeId: await getCoopId(req, p),
       userEmail: user.email,
@@ -1468,6 +1471,7 @@ app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
 app.get('/api/documents', requireAuth, async (req, res) => {
   try {
     const p = getPrisma();
+    await ensureDocumentRagSchema(p);
     const subject = await getRequestSubject(req);
     const documents = await p.document.findMany({
       where: getVisibleDocumentWhere(subject) as any,
@@ -1481,6 +1485,7 @@ app.get('/api/documents', requireAuth, async (req, res) => {
 app.get('/api/documents/:id', requireAuth, async (req, res) => {
   try {
     const p = getPrisma();
+    await ensureDocumentRagSchema(p);
     const coopId = await getCoopId(req, p);
     const subject = await getRequestSubject(req);
     const documentId = getParam(req.params.id);
@@ -1514,6 +1519,7 @@ app.post('/api/upload-to-blob', requireAuth, requirePermission('documents.create
     }
 
     const p = getPrisma();
+    await ensureDocumentRagSchema(p);
     const coopId = await getCoopId(req, p);
     const subject = await getRequestSubject(req);
     const title = sanitizeUtf8(req.body.title) || file.originalname || 'Untitled Document';
@@ -1597,6 +1603,7 @@ app.post('/api/documents', requireAuth, requirePermission('documents.create'), a
 
   try {
     const p = getPrisma();
+    await ensureDocumentRagSchema(p);
     const subject = await getRequestSubject(req);
     const coopId = await getCoopId(req, p);
     const document = await createDocumentMetadataRecord(p, {
@@ -1796,6 +1803,7 @@ app.get('/api/documents/:id/access', requireAuth, requirePermission('documents.m
 app.post('/api/rag/documents/:id/index', requireAuth, requirePermission('documents.manage_visibility'), async (req, res) => {
   try {
     const p = getPrisma();
+    await ensureDocumentRagSchema(p);
     const cooperativeId = await getCoopId(req, p);
     const documentId = getParam(req.params.id);
     const result = await indexDocumentVersionIntoGemini(p, { cooperativeId, documentId });
@@ -1817,6 +1825,7 @@ app.post('/api/rag/documents/:id/index', requireAuth, requirePermission('documen
 app.get('/api/rag/documents/:id/status', requireAuth, requirePermission('documents.manage_visibility'), async (req, res) => {
   try {
     const p = getPrisma();
+    await ensureDocumentRagSchema(p);
     const cooperativeId = await getCoopId(req, p);
     const documentId = getParam(req.params.id);
     const document = await p.document.findFirst({
@@ -1843,6 +1852,7 @@ app.get('/api/rag/documents/:id/status', requireAuth, requirePermission('documen
 app.post('/api/rag/drive-roots/index', requireAuth, requirePermission('documents.manage_visibility'), async (req, res) => {
   try {
     const p = getPrisma();
+    await ensureDocumentRagSchema(p);
     const cooperativeId = await getCoopId(req, p);
     const requestedMaxFiles = Number(req.body?.maxFiles || req.query.maxFiles || 0);
     const maxFiles = Number.isFinite(requestedMaxFiles) && requestedMaxFiles > 0
