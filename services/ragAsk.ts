@@ -11,6 +11,8 @@ const SYSTEM_INSTRUCTION = [
   'Keep answers concise and cite source documents when grounding metadata is available.',
 ].join('\n');
 
+export const RAG_GENERATE_TIMEOUT_MS = 45_000;
+
 export const validateRagQuestion = (value: unknown): string => {
   const question = String(value || '').trim();
   if (!question) throw new Error('Question is required');
@@ -42,6 +44,19 @@ const getGeminiResponseText = (response: any): string => {
   return candidateParts || '';
 };
 
+export const buildRagGenerateContentConfig = (storeNames: string[], abortSignal?: AbortSignal) => ({
+  systemInstruction: SYSTEM_INSTRUCTION,
+  httpOptions: {
+    timeout: RAG_GENERATE_TIMEOUT_MS,
+  },
+  abortSignal,
+  tools: [{
+    fileSearch: {
+      fileSearchStoreNames: storeNames,
+    },
+  }],
+});
+
 export const askGeminiFileSearch = async (
   prisma: PrismaClient,
   input: { cooperativeId: string; question: string },
@@ -52,21 +67,16 @@ export const askGeminiFileSearch = async (
   if (!storeNames.length) throw new Error('No Gemini File Search stores are configured');
 
   const ai = createGeminiFileSearchClient();
+  const abortController = new AbortController();
+  const timeout = setTimeout(() => abortController.abort(), RAG_GENERATE_TIMEOUT_MS);
   const response = await ai.models.generateContent({
     model: getGeminiRagModel(),
     contents: [{
       role: 'user',
       parts: [{ text: question }],
     }],
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      tools: [{
-        fileSearch: {
-          fileSearchStoreNames: storeNames,
-        },
-      }],
-    },
-  } as any);
+    config: buildRagGenerateContentConfig(storeNames, abortController.signal),
+  } as any).finally(() => clearTimeout(timeout));
 
   return {
     answer: getGeminiResponseText(response) || 'I could not find this in the indexed documents.',

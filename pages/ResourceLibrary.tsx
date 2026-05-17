@@ -17,6 +17,27 @@ import { demoStorage } from '../utils/demoStorage';
 import { sortNewestFirst } from '../utils/contentOrdering';
 import { readApiResponse } from '../utils/apiResponse';
 import { MinutesPDF } from '../services/export/pdfGenerator';
+import {
+  createErroredRagAskSession,
+  createPendingRagAskSession,
+  createResolvedRagAskSession,
+  parseRagAskSession,
+  type RagAskSession,
+} from '../utils/ragAskSession';
+
+const RAG_ASK_SESSION_KEY = 'coophub_resource_library_rag_ask';
+const RAG_ASK_SESSION_EVENT = 'coophub:resource-library-rag-ask';
+
+const loadStoredRagAskSession = () => {
+  if (typeof window === 'undefined') return null;
+  return parseRagAskSession(window.sessionStorage.getItem(RAG_ASK_SESSION_KEY));
+};
+
+const saveStoredRagAskSession = (session: RagAskSession) => {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(RAG_ASK_SESSION_KEY, JSON.stringify(session));
+  window.dispatchEvent(new CustomEvent(RAG_ASK_SESSION_EVENT, { detail: session }));
+};
 
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
@@ -38,11 +59,12 @@ const ResourceLibrary: React.FC<{
   const [question, setQuestion] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [loading, setLoading] = useState(false);
-  const [ragQuestion, setRagQuestion] = useState('');
-  const [ragAnswer, setRagAnswer] = useState('');
-  const [ragCitations, setRagCitations] = useState<RagCitation[]>([]);
-  const [ragStoreNames, setRagStoreNames] = useState<string[]>([]);
-  const [isRagAsking, setIsRagAsking] = useState(false);
+  const [ragSession, setRagSession] = useState<RagAskSession | null>(() => loadStoredRagAskSession());
+  const [ragQuestion, setRagQuestion] = useState(() => loadStoredRagAskSession()?.question || '');
+  const ragAnswer = ragSession?.answer || '';
+  const ragCitations = ragSession?.citations || [];
+  const ragStoreNames = ragSession?.storeNames || [];
+  const isRagAsking = ragSession?.status === 'pending';
   const [indexingDocumentId, setIndexingDocumentId] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -67,6 +89,19 @@ const ResourceLibrary: React.FC<{
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const categories = ['All', 'Minutes', 'Policy', 'Financial', 'Bylaws', 'Newsletters', 'Cloud'];
+
+  useEffect(() => {
+    const syncRagSession = (event?: Event) => {
+      const nextSession = event instanceof CustomEvent
+        ? event.detail as RagAskSession | null
+        : loadStoredRagAskSession();
+      setRagSession(nextSession);
+      if (nextSession?.question) setRagQuestion(nextSession.question);
+    };
+
+    window.addEventListener(RAG_ASK_SESSION_EVENT, syncRagSession);
+    return () => window.removeEventListener(RAG_ASK_SESSION_EVENT, syncRagSession);
+  }, []);
 
   const getDocumentWithInferredCommittee = (doc: Document) => {
     if (doc.committee) return doc;
@@ -547,10 +582,9 @@ const ResourceLibrary: React.FC<{
     event.preventDefault();
     if (!ragQuestion.trim()) return;
 
-    setIsRagAsking(true);
-    setRagAnswer('');
-    setRagCitations([]);
-    setRagStoreNames([]);
+    const pendingSession = createPendingRagAskSession(ragQuestion);
+    setRagSession(pendingSession);
+    saveStoredRagAskSession(pendingSession);
 
     try {
       const res = await fetch('/api/rag/ask', {
@@ -561,13 +595,14 @@ const ResourceLibrary: React.FC<{
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.details || data.error || 'Failed to ask indexed documents');
-      setRagAnswer(data.answer || 'I could not find this in the indexed documents.');
-      setRagCitations(Array.isArray(data.citations) ? data.citations : []);
-      setRagStoreNames(Array.isArray(data.storeNames) ? data.storeNames : []);
+      const resolvedSession = createResolvedRagAskSession(pendingSession, data);
+      setRagSession(resolvedSession);
+      saveStoredRagAskSession(resolvedSession);
     } catch (error: any) {
-      showAlert(error.message || 'Failed to ask indexed documents.', 'error');
-    } finally {
-      setIsRagAsking(false);
+      const erroredSession = createErroredRagAskSession(pendingSession, error);
+      setRagSession(erroredSession);
+      saveStoredRagAskSession(erroredSession);
+      showAlert(erroredSession.error, 'error');
     }
   };
 
@@ -885,6 +920,16 @@ const ResourceLibrary: React.FC<{
                 {isRagAsking ? 'Asking...' : 'Ask'}
               </button>
             </form>
+            {isRagAsking && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-700 dark:border-amber-500/20 dark:bg-amber-950/30 dark:text-amber-200">
+                Still working on: {ragSession?.question}
+              </div>
+            )}
+            {ragSession?.status === 'error' && ragSession.error && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-700 dark:border-red-500/20 dark:bg-red-950/30 dark:text-red-200">
+                {ragSession.error}
+              </div>
+            )}
             {ragAnswer && (
               <div className="mt-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-800 p-4">
                 <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-200">{ragAnswer}</p>

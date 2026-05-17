@@ -25,6 +25,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { useUser, useUnits, useTenants, useMaintenance, useAnnouncements, useDocuments, useCommittees, useEvents, useScheduledMaintenance, useNotifications, useBuildings } from './hooks/useCoopData';
 import { DEMO_TUTORIAL_ROLE_VIEW_KEY, recordTutorialEvent } from './utils/demoTutorial';
 import { initializeDemoStorage } from './utils/demoStorage';
+import { shouldDelayInitialDataRender } from './utils/appDataLoading';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -156,6 +157,19 @@ const AppContent: React.FC = () => {
     }
   }, [user]);
 
+  const initialDataQueries = [
+    { isLoading: isUnitsLoading, isError: isUnitsError },
+    { isLoading: isTenantsLoading, isError: isTenantsError },
+    { isLoading: isRequestsLoading, isError: isRequestsError },
+    { isLoading: isAnnouncementsLoading, isError: isAnnouncementsError },
+    { isLoading: isDocumentsLoading, isError: isDocumentsError },
+    { isLoading: isCommitteesLoading, isError: isCommitteesError },
+    { isLoading: isEventsLoading, isError: isEventsError },
+    { isLoading: isScheduledMaintenanceLoading, isError: isScheduledMaintenanceError },
+  ];
+  const isInitialDataReady = initialDataQueries.every(query => !query.isLoading);
+  const hasInitialDataError = initialDataQueries.some(query => query.isError);
+
   if (isUserLoading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -169,6 +183,17 @@ const AppContent: React.FC = () => {
 
   if (!user) {
     return <Login onLoginSuccess={() => fetchUser()} />;
+  }
+
+  if (shouldDelayInitialDataRender({ isEnabled, isInitialDataReady, hasInitialDataError })) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Loading co-op data...</p>
+        </div>
+      </div>
+    );
   }
 
   const effectiveIsAdmin = user.isAdmin && !isAdminOverride;

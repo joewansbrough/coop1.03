@@ -20,6 +20,7 @@ import {
   type DemoTutorialEvent,
 } from '../utils/demoTutorial';
 import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
+import { shouldFetchTestingUsers } from '../utils/appDataLoading';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -177,7 +178,9 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
   const { data: maintenance = [] } = useMaintenance();
   const markNotificationRead = useMarkNotificationRead();
   const canUseUserSwitcher = Boolean(isActualAdmin || user.isImpersonating);
-  const { data: testingUsersData } = useTestingUsers({ enabled: canUseUserSwitcher });
+  const { data: testingUsersData } = useTestingUsers({
+    enabled: shouldFetchTestingUsers({ canUseUserSwitcher, isProfileOpen }),
+  });
   const startImpersonation = useStartImpersonation();
   const stopImpersonation = useStopImpersonation();
   const unreadCount = notifications.filter(notification => !notification.isRead).length;
