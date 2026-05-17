@@ -2,10 +2,12 @@ import type { PrismaClient } from '@prisma/client';
 
 let documentRagSchemaPromise: Promise<void> | null = null;
 let dashboardPreferenceSchemaPromise: Promise<void> | null = null;
+let policyAssistantQuerySchemaPromise: Promise<void> | null = null;
 
 export const resetSchemaRepairCacheForTests = () => {
   documentRagSchemaPromise = null;
   dashboardPreferenceSchemaPromise = null;
+  policyAssistantQuerySchemaPromise = null;
 };
 
 export const ensureDashboardPreferenceSchema = async (prisma: PrismaClient) => {
@@ -108,4 +110,39 @@ export const ensureDocumentRagSchema = async (prisma: PrismaClient) => {
   })();
 
   return documentRagSchemaPromise;
+};
+
+export const ensurePolicyAssistantQuerySchema = async (prisma: PrismaClient) => {
+  policyAssistantQuerySchemaPromise ||= (async () => {
+    await (prisma as any).$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PolicyAssistantQuery" (
+        "id" TEXT NOT NULL,
+        "cooperativeId" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
+        "question" TEXT NOT NULL,
+        "retrievedChunks" JSONB NOT NULL,
+        "answer" TEXT NOT NULL,
+        "citations" JSONB NOT NULL,
+        "language" TEXT NOT NULL DEFAULT 'English',
+        "intent" TEXT NOT NULL DEFAULT 'policy',
+        "suggestedAction" JSONB,
+        "userFeedback" TEXT,
+        "feedback" TEXT,
+        "feedbackReason" TEXT,
+        "latencyMs" INTEGER NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "PolicyAssistantQuery_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await (prisma as any).$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "language" TEXT NOT NULL DEFAULT 'English';`);
+    await (prisma as any).$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "intent" TEXT NOT NULL DEFAULT 'policy';`);
+    await (prisma as any).$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "suggestedAction" JSONB;`);
+    await (prisma as any).$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "userFeedback" TEXT;`);
+    await (prisma as any).$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "feedback" TEXT;`);
+    await (prisma as any).$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "feedbackReason" TEXT;`);
+    await (prisma as any).$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PolicyAssistantQuery_cooperativeId_createdAt_idx" ON "PolicyAssistantQuery"("cooperativeId", "createdAt");`);
+    await (prisma as any).$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "PolicyAssistantQuery_userId_createdAt_idx" ON "PolicyAssistantQuery"("userId", "createdAt");`);
+  })();
+
+  return policyAssistantQuerySchemaPromise;
 };

@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   ensureDashboardPreferenceSchema,
   ensureDocumentRagSchema,
+  ensurePolicyAssistantQuerySchema,
   resetSchemaRepairCacheForTests,
 } from '../services/schemaRepair.ts';
 
@@ -36,4 +37,16 @@ test('dashboard schema repair provisions dashboard preferences table', async () 
 
   assert.equal(prisma.queries.some(query => query.includes('CREATE TABLE IF NOT EXISTS "DashboardPreference"')), true);
   assert.equal(prisma.queries.some(query => query.includes('DashboardPreference_cooperativeId_userEmail_key')), true);
+});
+
+test('policy assistant schema repair provisions query logging table', async () => {
+  resetSchemaRepairCacheForTests();
+  const prisma = createPrisma();
+
+  await ensurePolicyAssistantQuerySchema(prisma);
+
+  assert.equal(prisma.queries.some(query => query.includes('CREATE TABLE IF NOT EXISTS "PolicyAssistantQuery"')), true);
+  assert.equal(prisma.queries.some(query => query.includes('"retrievedChunks" JSONB NOT NULL')), true);
+  assert.equal(prisma.queries.some(query => query.includes('PolicyAssistantQuery_cooperativeId_createdAt_idx')), true);
+  assert.equal(prisma.queries.some(query => query.includes('ADD COLUMN IF NOT EXISTS "feedbackReason"')), true);
 });

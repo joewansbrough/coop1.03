@@ -17,7 +17,11 @@ import { ingestConfiguredDriveRoots } from '../services/driveRootIngestion.js';
 import { askGeminiFileSearch } from '../services/ragAsk.js';
 import { indexDocumentVersionIntoGemini } from '../services/ragIndexing.js';
 import { RAG_STATUSES } from '../services/ragTypes.js';
-import { ensureDashboardPreferenceSchema, ensureDocumentRagSchema } from '../services/schemaRepair.js';
+import {
+  ensureDashboardPreferenceSchema,
+  ensureDocumentRagSchema,
+  ensurePolicyAssistantQuerySchema,
+} from '../services/schemaRepair.js';
 import {
   getStoredDashboardPreference,
   saveStoredDashboardPreference,
@@ -55,6 +59,7 @@ const STABLE_GEMINI_FALLBACK_MODELS = [
 
 const AI_INITIAL_TIMEOUT_MS = 4000; // First call should be fast
 const AI_TOOL_TIMEOUT_MS = 3500;    // Tool calls give more room but still capped
+const RAG_ASK_TIMEOUT_MS = 45_000;
 
 /**
  * Helper to run a promise with a timeout
@@ -1881,10 +1886,11 @@ app.post('/api/rag/ask', requireAuth, requirePermission('documents.manage_visibi
 
   try {
     cooperativeId = await getCoopId(req, p);
-    const result = await askGeminiFileSearch(p, {
+    await ensurePolicyAssistantQuerySchema(p);
+    const result = await withTimeout(askGeminiFileSearch(p, {
       cooperativeId,
       question: req.body?.question,
-    });
+    }), RAG_ASK_TIMEOUT_MS, 'RAG answer');
 
     await p.policyAssistantQuery.create({
       data: {
@@ -2672,6 +2678,7 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
 
   try {
     coopId = await getCoopId(req, p);
+    await ensurePolicyAssistantQuerySchema(p);
 
     // Tool Context for checking permissions and scoping queries
     const toolContext: ToolContext = {
@@ -3299,10 +3306,7 @@ app.get('/api/migrate', async (req, res) => {
     await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "residentTip" TEXT;`);
     await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "triageReviewedBy" TEXT;`);
     await p.$executeRawUnsafe(`ALTER TABLE "MaintenanceRequest" ADD COLUMN IF NOT EXISTS "triageReviewedAt" TIMESTAMP(3);`);
-    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "language" TEXT NOT NULL DEFAULT 'English';`);
-    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "intent" TEXT NOT NULL DEFAULT 'policy';`);
-    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "suggestedAction" JSONB;`);
-    await p.$executeRawUnsafe(`ALTER TABLE "PolicyAssistantQuery" ADD COLUMN IF NOT EXISTS "feedback" TEXT;`);
+    await ensurePolicyAssistantQuerySchema(p);
 
     // 2. Add cooperativeId to all models
     const tables = [

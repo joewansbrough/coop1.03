@@ -27,6 +27,7 @@ test('migrations provision Drive document versioning and dashboard preference ta
     'CREATE TABLE IF NOT EXISTS "DocumentIngestionJob"',
     'CREATE TABLE IF NOT EXISTS "RagStore"',
     'CREATE TABLE IF NOT EXISTS "DashboardPreference"',
+    'CREATE TABLE IF NOT EXISTS "PolicyAssistantQuery"',
   ]) {
     assert.match(migrations, new RegExp(requiredSql.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
