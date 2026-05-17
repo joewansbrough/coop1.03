@@ -20,6 +20,7 @@ export type RagCitation = {
   title: string;
   text?: string;
   uri?: string;
+  href?: string;
   pageNumber?: number | null;
   documentId?: string | null;
   documentVersionId?: string | null;

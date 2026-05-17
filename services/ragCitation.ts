@@ -42,3 +42,45 @@ export const normalizeGeminiCitations = (response: any): RagCitation[] => {
     })
     .filter((citation): citation is RagCitation => Boolean(citation));
 };
+
+const getDriveUrl = (document: any) => {
+  if (document?.sourceWebUrl) return document.sourceWebUrl;
+  if (document?.url && document.url !== '#') return document.url;
+  if (document?.sourceExternalId) return `https://drive.google.com/open?id=${encodeURIComponent(document.sourceExternalId)}`;
+  return null;
+};
+
+const getDocumentHref = (document: any) => {
+  if (!document?.id) return null;
+  if (document.storageProvider === 'GOOGLE_DRIVE' || document.sourceExternalId) {
+    return getDriveUrl(document);
+  }
+  return `/api/documents/${encodeURIComponent(document.id)}/original`;
+};
+
+export const resolveRagCitationLinks = async (prisma: any, citations: RagCitation[]): Promise<RagCitation[]> => {
+  const documentIds = Array.from(new Set(citations.map(citation => citation.documentId).filter(Boolean))) as string[];
+  if (!documentIds.length) {
+    return citations.map(citation => ({ ...citation, href: citation.uri }));
+  }
+
+  const documents = await prisma.document.findMany({
+    where: { id: { in: documentIds } },
+    select: {
+      id: true,
+      url: true,
+      storageProvider: true,
+      sourceExternalId: true,
+      sourceWebUrl: true,
+    },
+  });
+  const byId = new Map(documents.map((document: any) => [document.id, document]));
+
+  return citations.map(citation => {
+    const document = citation.documentId ? byId.get(citation.documentId) : null;
+    return {
+      ...citation,
+      href: document ? getDocumentHref(document) || citation.uri : citation.uri,
+    };
+  });
+};

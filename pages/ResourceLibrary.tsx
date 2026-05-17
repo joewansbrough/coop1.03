@@ -606,6 +606,16 @@ const ResourceLibrary: React.FC<{
     }
   };
 
+  const openCitation = (citation: RagCitation) => {
+    const href = citation.href || citation.uri || (citation.documentId ? `/documents?id=${citation.documentId}` : null);
+    if (!href) return;
+    if (href.startsWith('/')) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    window.open(href, '_blank', 'noopener,noreferrer');
+  };
+
   const handleIndexForAi = async (doc: Document, event?: React.MouseEvent) => {
     event?.stopPropagation();
     if (!isAdmin || isGuest || !hasDriveFileIdForIndexing(doc)) return;
@@ -943,11 +953,19 @@ const ResourceLibrary: React.FC<{
             {ragCitations.length > 0 && (
               <div className="mt-4 grid gap-2">
                 {ragCitations.map((citation, index) => (
-                  <div key={`${citation.title}-${index}`} className="rounded-xl border border-slate-200 dark:border-white/5 p-3 text-sm">
-                    <div className="font-black text-slate-800 dark:text-white">{citation.title}</div>
-                    {citation.pageNumber != null && <div className="text-xs text-slate-500">Page {citation.pageNumber}</div>}
+                  <button
+                    type="button"
+                    onClick={() => openCitation(citation)}
+                    key={`${citation.title}-${index}`}
+                    className="rounded-xl border border-slate-200 p-3 text-left text-sm transition-colors hover:border-teal-300 hover:bg-teal-50/50 dark:border-white/5 dark:hover:border-teal-500/40 dark:hover:bg-teal-950/20"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="font-black text-slate-800 dark:text-white">{citation.title}</div>
+                      <i className="fa-solid fa-arrow-up-right-from-square mt-1 text-[10px] text-slate-400"></i>
+                    </div>
+                    {citation.pageNumber != null && <div className="mt-1 text-xs font-bold text-slate-500">Page {citation.pageNumber}</div>}
                     {citation.text && <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-500 dark:text-slate-400">{citation.text}</p>}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

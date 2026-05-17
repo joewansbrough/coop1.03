@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { createGeminiFileSearchClient, getGeminiRagModel } from './geminiFileSearchClient.js';
-import { normalizeGeminiCitations } from './ragCitation.js';
+import { normalizeGeminiCitations, resolveRagCitationLinks } from './ragCitation.js';
 import { getAskRagStores, getAskStoreNamesFromResolvedStores } from './ragStore.js';
 
 const SYSTEM_INSTRUCTION = [
@@ -8,10 +8,25 @@ const SYSTEM_INSTRUCTION = [
   'Answer only from retrieved coopHUB co-op documents and shared BC co-op reference documents.',
   'If the answer is not in the retrieved documents, say you could not find it in the indexed documents.',
   'Do not invent policy, fees, dates, legal requirements, or board decisions.',
-  'Keep answers concise and cite source documents when grounding metadata is available.',
+  'Prioritize succinct and concise responses: answer in 2-4 short sentences unless the user explicitly asks for detail.',
+  'Do not use Markdown formatting. Do not use bold, headings, bullet lists, tables, or decorative separators.',
+  'Do not write citations inline in the answer. The app will render source citations separately.',
 ].join('\n');
 
 export const RAG_GENERATE_TIMEOUT_MS = 45_000;
+
+export const cleanRagAnswer = (value: unknown) => {
+  const text = String(value || '').trim();
+  if (!text) return '';
+
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s*[-*]\s+/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
 
 export const validateRagQuestion = (value: unknown): string => {
   const question = String(value || '').trim();
@@ -78,9 +93,11 @@ export const askGeminiFileSearch = async (
     config: buildRagGenerateContentConfig(storeNames, abortController.signal),
   } as any).finally(() => clearTimeout(timeout));
 
+  const citations = await resolveRagCitationLinks(prisma, normalizeGeminiCitations(response));
+
   return {
-    answer: getGeminiResponseText(response) || 'I could not find this in the indexed documents.',
-    citations: normalizeGeminiCitations(response),
+    answer: cleanRagAnswer(getGeminiResponseText(response)) || 'I could not find this in the indexed documents.',
+    citations,
     storeNames,
   };
 };
