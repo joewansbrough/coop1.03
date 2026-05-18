@@ -18,6 +18,12 @@ import { askGeminiFileSearch } from '../services/ragAsk.js';
 import { indexDocumentVersionIntoGemini } from '../services/ragIndexing.js';
 import { RAG_STATUSES } from '../services/ragTypes.js';
 import {
+  buildAccessRequestEmail,
+  buildMagicLinkEmail,
+  getAccessRequestRecipient,
+  sendResendEmail,
+} from '../services/resendEmail.js';
+import {
   ensureDashboardPreferenceSchema,
   ensureDocumentRagSchema,
   ensurePolicyAssistantQuerySchema,
@@ -530,9 +536,7 @@ const renderAccessDeniedPage = ({
 }) => {
   const safeEmail = escapeHtml(email || '');
   const safeName = escapeHtml(name || '');
-  const contactEmail = escapeHtml(process.env.ACCESS_REQUEST_EMAIL || process.env.SUPPORT_EMAIL || 'joewansbrough@gmail.com');
-  const subject = encodeURIComponent('coopHUB access request');
-  const body = encodeURIComponent(`Hello,\n\nI tried to sign in to coopHUB and need access.\n\nName: ${name || ''}\nEmail: ${email || ''}\nCo-op / unit: \n\nThank you.`);
+  const contactEmail = escapeHtml(getAccessRequestRecipient());
 
   return `<!doctype html>
 <html lang="en">
@@ -658,7 +662,7 @@ const renderAccessDeniedPage = ({
         <h1>Access has not been set up yet.</h1>
         <p>Your Google account authenticated successfully, but it is not connected to an active co-op user, tenant, or system administrator profile.</p>
         <div class="actions">
-          <a class="button primary" href="mailto:${contactEmail}?subject=${subject}&body=${body}">Request access</a>
+          <a class="button primary" href="#request-access">Request access</a>
           <a class="button secondary" href="/">Back to sign in</a>
         </div>
       </section>
@@ -669,6 +673,17 @@ const renderAccessDeniedPage = ({
           <div>Email: <span class="email">${safeEmail || 'Not provided'}</span></div>
         </div>
         <p style="color:#b9cbc5;margin-top:28px">If you belong to a co-op using coopHUB, ask your administrator to add your email to your tenant or user profile before trying again.</p>
+        <form id="request-access" method="post" action="/api/access-request" style="margin-top:32px">
+          <input type="hidden" name="email" value="${safeEmail}" />
+          <input type="hidden" name="firstName" value="${safeName}" />
+          <div class="label">Request access</div>
+          <label style="display:block;margin-top:18px;color:#dce8e4;font-size:13px;font-weight:800">Co-op / unit</label>
+          <input name="coopName" placeholder="Oak Bay Housing Cooperative / Unit 107" style="width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:white;border-radius:10px;padding:12px" />
+          <label style="display:block;margin-top:14px;color:#dce8e4;font-size:13px;font-weight:800">Message</label>
+          <textarea name="message" rows="4" placeholder="Tell us which co-op account you need access to." style="width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:white;border-radius:10px;padding:12px;resize:vertical"></textarea>
+          <button type="submit" style="width:100%;margin-top:16px;border:0;background:#8fd8c4;color:#10231f;border-radius:10px;padding:14px 18px;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase">Send request</button>
+          <p style="color:#b9cbc5;font-size:12px;margin-top:14px">Requests are sent to ${contactEmail}.</p>
+        </form>
       </aside>
     </main>
   </body>
@@ -689,6 +704,50 @@ app.get('/api/config', (req, res) => {
     googleClientId: process.env.GOOGLE_CLIENT_ID,
     googleApiKey: process.env.PICKER_API_KEY,
   });
+});
+
+app.post('/api/access-request', async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) return res.status(400).send('A valid email is required.');
+    const firstName = String(req.body?.firstName || '').trim();
+    const lastName = String(req.body?.lastName || '').trim();
+    const coopName = String(req.body?.coopName || '').trim();
+    const message = String(req.body?.message || '').trim();
+    const accessRequestEmail = buildAccessRequestEmail({ firstName, lastName, email, coopName, message });
+    await sendResendEmail({
+      to: getAccessRequestRecipient(),
+      replyTo: email,
+      ...accessRequestEmail,
+    });
+    res.status(200).send(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access Request Sent | coopHUB</title>
+    <style>
+      body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:Inter,ui-sans-serif,system-ui,sans-serif; background:#f5f2ea; color:#10231f; padding:24px; }
+      main { max-width:620px; background:white; border:1px solid #dbe5e0; border-radius:18px; padding:36px; }
+      .label { color:#1f6f5b; font-size:11px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
+      h1 { font-size:44px; line-height:1; margin:14px 0; letter-spacing:0; }
+      p { color:#4f625d; line-height:1.7; }
+      a { display:inline-flex; margin-top:18px; background:#1f6f5b; color:white; text-decoration:none; border-radius:8px; padding:14px 18px; font-size:13px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="label">coopHUB BC</div>
+      <h1>Request sent.</h1>
+      <p>Thanks. We received your access request for ${escapeHtml(email)} and will follow up after confirming your co-op profile.</p>
+      <a href="/">Back to sign in</a>
+    </main>
+  </body>
+</html>`);
+  } catch (error: any) {
+    console.error('Access request email failed:', error);
+    res.status(500).send('Access request could not be sent. Please email hello@coophub.ca directly.');
+  }
 });
 
 app.get('/api/dashboard/preferences', requireAuth, async (req, res, next) => {
@@ -817,6 +876,7 @@ const authRouter = express.Router();
 
 const createMagicLoginLink = async (req: express.Request, email: string) => {
   const p = getPrisma();
+  const normalizedEmail = email.trim().toLowerCase();
   const coopId = await resolveKnownCooperativeIdForEmail(p as any, email, {
     selectedCooperativeId: (req as any).session?.user?.selectedCooperativeId || (req as any).session?.user?.cooperativeId,
   });
@@ -832,12 +892,18 @@ const createMagicLoginLink = async (req: express.Request, email: string) => {
     data: {
       id: crypto.randomUUID(),
       cooperativeId: coopId,
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       tokenHash,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     },
   });
-  return `${getBaseUrl(req)}/auth/magic/verify?token=${rawToken}`;
+  const loginUrl = `${getBaseUrl(req)}/auth/magic/verify?token=${rawToken}`;
+  const magicEmail = buildMagicLinkEmail({ loginUrl, recipientEmail: normalizedEmail });
+  await sendResendEmail({
+    to: normalizedEmail,
+    ...magicEmail,
+  });
+  return loginUrl;
 };
 
 authRouter.post('/magic-link/request', async (req, res) => {
@@ -847,7 +913,7 @@ authRouter.post('/magic-link/request', async (req, res) => {
     const loginUrl = await createMagicLoginLink(req, email);
     res.json({
       success: true,
-      message: 'Magic link created.',
+      message: 'Magic link sent.',
       loginUrl: process.env.NODE_ENV === 'production' ? undefined : loginUrl,
     });
   } catch (error: any) {
