@@ -1,3 +1,5 @@
+ALTER TABLE "Unit" DROP CONSTRAINT IF EXISTS "Unit_number_key";
+
 DROP INDEX IF EXISTS "Unit_number_key";
 
 CREATE UNIQUE INDEX IF NOT EXISTS "Unit_cooperativeId_number_key"

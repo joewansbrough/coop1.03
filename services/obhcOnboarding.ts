@@ -17,6 +17,7 @@ const now = () => new Date();
 const ensureObhcOnboardingSchema = async (p: PrismaLike) => {
   if (!p.$executeRaw) return;
 
+  await p.$executeRaw(Prisma.sql`ALTER TABLE "Unit" DROP CONSTRAINT IF EXISTS "Unit_number_key"`);
   await p.$executeRaw(Prisma.sql`DROP INDEX IF EXISTS "Unit_number_key"`);
   await p.$executeRaw(Prisma.sql`
     CREATE UNIQUE INDEX IF NOT EXISTS "Unit_cooperativeId_number_key"
