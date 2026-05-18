@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
 import { parseDriveRootFolderIds } from './cooperativeDriveRoots.js';
 import { ensureUserForEmail, seedRbacDefaults } from '../utils/rbacDb.js';
@@ -12,6 +13,50 @@ export const WILLY_EMAIL = 'wwansbro@gmail.com';
 export const JOE_EMAIL = SUPERUSER_EMAILS[0];
 
 const now = () => new Date();
+
+const ensureObhcOnboardingSchema = async (p: PrismaLike) => {
+  if (!p.$executeRaw) return;
+
+  await p.$executeRaw(Prisma.sql`DROP INDEX IF EXISTS "Unit_number_key"`);
+  await p.$executeRaw(Prisma.sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "Unit_cooperativeId_number_key"
+    ON "Unit"("cooperativeId", "number")
+  `);
+  await p.$executeRaw(Prisma.sql`
+    CREATE TABLE IF NOT EXISTS "CooperativeDriveRoot" (
+      "id" TEXT NOT NULL,
+      "cooperativeId" TEXT NOT NULL,
+      "folderId" TEXT NOT NULL,
+      "displayName" TEXT,
+      "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "CooperativeDriveRoot_pkey" PRIMARY KEY ("id")
+    )
+  `);
+  await p.$executeRaw(Prisma.sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "CooperativeDriveRoot_cooperativeId_folderId_key"
+    ON "CooperativeDriveRoot"("cooperativeId", "folderId")
+  `);
+  await p.$executeRaw(Prisma.sql`
+    CREATE INDEX IF NOT EXISTS "CooperativeDriveRoot_cooperativeId_idx"
+    ON "CooperativeDriveRoot"("cooperativeId")
+  `);
+  await p.$executeRaw(Prisma.sql`
+    CREATE INDEX IF NOT EXISTS "CooperativeDriveRoot_folderId_idx"
+    ON "CooperativeDriveRoot"("folderId")
+  `);
+  await p.$executeRaw(Prisma.sql`
+    ALTER TABLE "CooperativeDriveRoot"
+    DROP CONSTRAINT IF EXISTS "CooperativeDriveRoot_cooperativeId_fkey"
+  `);
+  await p.$executeRaw(Prisma.sql`
+    ALTER TABLE "CooperativeDriveRoot"
+    ADD CONSTRAINT "CooperativeDriveRoot_cooperativeId_fkey"
+    FOREIGN KEY ("cooperativeId") REFERENCES "Cooperative"("id")
+    ON DELETE CASCADE ON UPDATE CASCADE
+  `);
+};
 
 const upsertUnit107 = async (p: PrismaLike, cooperativeId: string) => {
   const existing = await p.unit.findFirst({ where: { cooperativeId, number: OBHC_UNIT_NUMBER } });
@@ -78,6 +123,8 @@ export const createObhcOnboardingCoop = async (
   p: PrismaLike,
   options: { driveRootFolderIds?: string[] } = {},
 ) => {
+  await ensureObhcOnboardingSchema(p);
+
   const cooperative = await p.cooperative.upsert({
     where: { slug: OBHC_COOPERATIVE_SLUG },
     update: {
