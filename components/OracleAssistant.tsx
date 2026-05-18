@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Bot, Sparkles, X, Mic, Volume2 } from 'lucide-react';
+import { Bot, Sparkles, X, Mic, Volume2, Send } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { geminiService } from '../services/geminiService';
@@ -511,16 +511,44 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         {isLoading && <p className="text-xs font-black uppercase tracking-widest text-teal-600">Oracle is reading...</p>}
       </div>
 
-      <div className="flex justify-center border-t border-slate-100 p-6 dark:border-white/5">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          ask(input);
+        }}
+        className="flex items-end gap-2 border-t border-slate-100 p-3 dark:border-white/5"
+      >
+        <textarea
+          value={input}
+          onChange={event => setInput(event.target.value)}
+          onKeyDown={event => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              ask(input);
+            }
+          }}
+          rows={1}
+          placeholder="Ask Oracle or search indexed docs..."
+          disabled={isLoading}
+          className="min-h-11 max-h-28 flex-1 resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-500/20 disabled:opacity-60 dark:border-white/10 dark:bg-slate-950 dark:text-slate-100 dark:focus:bg-slate-900"
+        />
+        <button
+          type="submit"
+          disabled={isLoading || !input.trim()}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-sm transition hover:bg-teal-700 disabled:pointer-events-none disabled:opacity-50"
+          aria-label="Send question"
+        >
+          <Send className="h-4 w-4" />
+        </button>
         <button
           type="button"
           onClick={startLiveMode}
-          className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-lg transition-all ${isLiveMode ? 'animate-pulse bg-red-600 text-white' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-sm transition-all ${isLiveMode ? 'animate-pulse bg-red-600 text-white' : 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600'}`}
           aria-label={isLiveMode ? 'Stop Live Mode' : 'Start Live Mode'}
         >
-          <Mic className={`h-7 w-7 ${isLiveMode ? 'animate-bounce' : ''}`} />
+          <Mic className={`h-4 w-4 ${isLiveMode ? 'animate-bounce' : ''}`} />
         </button>
-      </div>
+      </form>
     </div>
   );
 
