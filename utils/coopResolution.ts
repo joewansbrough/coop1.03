@@ -1,5 +1,5 @@
 export const OBHC_COOPERATIVE_SLUG = 'obhc';
-export const SUPERUSER_EMAILS = ['joewansbrough@gmail.com'];
+export const SUPERUSER_EMAILS = ['joewansbrough@gmail.com', 'joewcoupons@gmail.com'];
 
 type PrismaLike = {
   user?: { findFirst: (args: any) => Promise<any> };
@@ -66,6 +66,41 @@ export const resolveCooperativeIdForEmail = async (
 
   if (isSuperuser) return defaultSuperuserCooperativeId(p);
   return firstCooperativeId(p);
+};
+
+export const resolveKnownCooperativeIdForEmail = async (
+  p: PrismaLike,
+  email?: string | null,
+  options: { selectedCooperativeId?: string | null } = {},
+) => {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  const isSuperuser = isSuperuserEmail(normalizedEmail);
+  if (isSuperuser) {
+    const selected = await existingCooperativeId(p, options.selectedCooperativeId);
+    if (selected) return selected;
+  }
+
+  if (p.user?.findFirst) {
+    const user = await p.user.findFirst({
+      where: { email: normalizedEmail, isActive: true },
+      orderBy: [{ isSystemAdmin: 'desc' }, { updatedAt: 'desc' }],
+    });
+    if (user?.isSystemAdmin || isSuperuser) return defaultSuperuserCooperativeId(p);
+    if (user?.cooperativeId) return user.cooperativeId;
+  }
+
+  if (p.tenant?.findFirst) {
+    const tenant = await p.tenant.findFirst({
+      where: { email: normalizedEmail, status: { not: 'Inactive' } },
+      orderBy: [{ status: 'asc' }, { updatedAt: 'desc' }],
+    });
+    if (tenant?.cooperativeId) return tenant.cooperativeId;
+  }
+
+  if (isSuperuser) return defaultSuperuserCooperativeId(p);
+  return null;
 };
 
 export const resolveCooperativeIdForRequest = async (

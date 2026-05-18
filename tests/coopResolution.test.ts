@@ -4,10 +4,12 @@ import {
   OBHC_COOPERATIVE_SLUG,
   isSuperuserEmail,
   resolveCooperativeIdForEmail,
+  resolveKnownCooperativeIdForEmail,
 } from '../utils/coopResolution.ts';
 
 test('recognizes Joe as the formal system superuser without promoting Willy', () => {
   assert.equal(isSuperuserEmail('joewansbrough@gmail.com'), true);
+  assert.equal(isSuperuserEmail('joewcoupons@gmail.com'), true);
   assert.equal(isSuperuserEmail('wwansbro@gmail.com'), false);
 });
 
@@ -58,4 +60,18 @@ test('superuser fallback prefers selected coop, then OBHC, then first coop', asy
   );
   assert.equal(await resolveCooperativeIdForEmail(prisma as any, 'joewansbrough@gmail.com'), 'obhc-coop');
   assert.deepEqual(calls, [`unique:selected-coop`, `unique:${OBHC_COOPERATIVE_SLUG}`]);
+});
+
+test('known auth resolution denies unknown emails instead of falling back to first coop', async () => {
+  const prisma = {
+    user: { findFirst: async () => null },
+    tenant: { findFirst: async () => null },
+    cooperative: {
+      findUnique: async () => null,
+      findFirst: async () => ({ id: 'first-coop' }),
+    },
+  };
+
+  assert.equal(await resolveKnownCooperativeIdForEmail(prisma as any, 'stranger@example.com'), null);
+  assert.equal(await resolveCooperativeIdForEmail(prisma as any, 'stranger@example.com'), 'first-coop');
 });

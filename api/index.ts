@@ -35,7 +35,7 @@ import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { parseGeminiJson } from '../utils/geminiJson.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
-import { isSuperuserEmail, resolveCooperativeIdForEmail, resolveCooperativeIdForRequest } from '../utils/coopResolution.js';
+import { isSuperuserEmail, resolveCooperativeIdForRequest, resolveKnownCooperativeIdForEmail } from '../utils/coopResolution.js';
 import { GOOGLE_TOKEN_URL, buildGoogleTokenRequestBody, getOAuthErrorSummary } from '../utils/googleOAuth.js';
 import { hasFreshSessionPermissions } from '../utils/sessionPermissions.js';
 
@@ -514,6 +514,167 @@ const getBaseUrl = (req: express.Request) => {
   return url.replace(/\/+$/, "");
 };
 
+const escapeHtml = (value: unknown) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const renderAccessDeniedPage = ({
+  email,
+  name,
+}: {
+  email?: string | null;
+  name?: string | null;
+}) => {
+  const safeEmail = escapeHtml(email || '');
+  const safeName = escapeHtml(name || '');
+  const contactEmail = escapeHtml(process.env.ACCESS_REQUEST_EMAIL || process.env.SUPPORT_EMAIL || 'joewansbrough@gmail.com');
+  const subject = encodeURIComponent('coopHUB access request');
+  const body = encodeURIComponent(`Hello,\n\nI tried to sign in to coopHUB and need access.\n\nName: ${name || ''}\nEmail: ${email || ''}\nCo-op / unit: \n\nThank you.`);
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access Request | coopHUB</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #10231f;
+        background: #f5f2ea;
+      }
+      .page {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+      }
+      .panel {
+        padding: 64px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 56px;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+        color: #1f6f5b;
+      }
+      .mark {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: #1f6f5b;
+        display: grid;
+        place-items: center;
+        color: white;
+        font-weight: 900;
+      }
+      h1 {
+        margin: 0;
+        max-width: 680px;
+        font-size: clamp(42px, 7vw, 86px);
+        line-height: .92;
+        letter-spacing: 0;
+      }
+      p {
+        max-width: 620px;
+        color: #4f625d;
+        font-size: 18px;
+        line-height: 1.7;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-top: 24px;
+      }
+      a.button {
+        min-height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 18px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+      }
+      .primary { background: #1f6f5b; color: white; }
+      .secondary { border: 1px solid #c7d4ce; color: #1f3a34; background: white; }
+      .card {
+        background: #10231f;
+        color: white;
+        padding: 64px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .label {
+        color: #8fd8c4;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+      }
+      .detail {
+        margin-top: 18px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(255,255,255,.16);
+        color: #dce8e4;
+        font-size: 15px;
+        line-height: 1.7;
+      }
+      .email {
+        overflow-wrap: anywhere;
+        font-weight: 800;
+        color: white;
+      }
+      @media (max-width: 820px) {
+        .page { grid-template-columns: 1fr; }
+        .panel, .card { padding: 34px 24px; }
+        .brand { margin-bottom: 36px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="panel">
+        <div class="brand"><span class="mark">c</span><span>coopHUB</span></div>
+        <h1>Access has not been set up yet.</h1>
+        <p>Your Google account authenticated successfully, but it is not connected to an active co-op user, tenant, or system administrator profile.</p>
+        <div class="actions">
+          <a class="button primary" href="mailto:${contactEmail}?subject=${subject}&body=${body}">Request access</a>
+          <a class="button secondary" href="/">Back to sign in</a>
+        </div>
+      </section>
+      <aside class="card">
+        <div class="label">Sign-in attempt</div>
+        <div class="detail">
+          <div>Name: <span class="email">${safeName || 'Not provided'}</span></div>
+          <div>Email: <span class="email">${safeEmail || 'Not provided'}</span></div>
+        </div>
+        <p style="color:#b9cbc5;margin-top:28px">If you belong to a co-op using coopHUB, ask your administrator to add your email to your tenant or user profile before trying again.</p>
+      </aside>
+    </main>
+  </body>
+</html>`;
+};
+
 // API Request Logger
 app.use('/api', (req, res, next) => {
   if (req.path !== '/health') {
@@ -656,9 +817,14 @@ const authRouter = express.Router();
 
 const createMagicLoginLink = async (req: express.Request, email: string) => {
   const p = getPrisma();
-  const coopId = await resolveCooperativeIdForEmail(p as any, email, {
+  const coopId = await resolveKnownCooperativeIdForEmail(p as any, email, {
     selectedCooperativeId: (req as any).session?.user?.selectedCooperativeId || (req as any).session?.user?.cooperativeId,
   });
+  if (!coopId) {
+    const error = new Error('Your account has not been invited to this co-op.');
+    (error as any).status = 403;
+    throw error;
+  }
   await seedRbacDefaults(p, coopId);
   const rawToken = crypto.randomBytes(32).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -686,7 +852,7 @@ authRouter.post('/magic-link/request', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Magic link request failed:', error);
-    res.status(500).json({ error: 'Failed to create magic link.', details: error.message });
+    res.status(error?.status || 500).json({ error: error?.status === 403 ? 'Access not configured' : 'Failed to create magic link.', details: error.message });
   }
 });
 
@@ -783,9 +949,15 @@ app.get('/auth/callback', async (req, res) => {
     const userData = userResponse.data;
     const email = userData.email.toLowerCase();
     const p = getPrisma();
-    const coopId = await resolveCooperativeIdForEmail(p as any, email, {
+    const coopId = await resolveKnownCooperativeIdForEmail(p as any, email, {
       selectedCooperativeId: (req as any).session?.user?.selectedCooperativeId || (req as any).session?.user?.cooperativeId,
     });
+    if (!coopId) {
+      return res.status(403).send(renderAccessDeniedPage({
+        email,
+        name: userData.name,
+      }));
+    }
 
     let effectiveUser = await ensureUserForEmail(p, coopId, email, {
       name: userData.name,
