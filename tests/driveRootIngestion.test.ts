@@ -69,3 +69,48 @@ test('crawls configured Drive roots, creates metadata records, and indexes each 
   assert.equal(createdInputs[1].fileType, 'spreadsheet');
   assert.equal(listedQueries.length, 3);
 });
+
+test('resolves Drive root ids from the active cooperative when explicit roots are omitted', async () => {
+  const createdInputs: any[] = [];
+  const prisma = {
+    cooperativeDriveRoot: {
+      findMany: async ({ where }: any) => {
+        assert.deepEqual(where, { cooperativeId: 'coop-db', isActive: true });
+        return [
+          { folderId: 'db-root-a' },
+          { folderId: 'db-root-b' },
+        ];
+      },
+    },
+  };
+  const drive = {
+    files: {
+      list: async ({ q }: any) => {
+        const folderId = String(q).match(/'([^']+)' in parents/)?.[1] || '';
+        return {
+          data: {
+            files: folderId === 'db-root-a'
+              ? [{ id: 'file-a', name: 'Policy', mimeType: 'application/pdf', webViewLink: 'file-a-url', parents: ['db-root-a'] }]
+              : [],
+          },
+        };
+      },
+    },
+  };
+
+  const result = await ingestConfiguredDriveRoots({
+    prisma: prisma as any,
+    cooperativeId: 'coop-db',
+    drive,
+    createDocument: async (_prisma, input) => {
+      createdInputs.push(input);
+      return { id: `doc-${createdInputs.length}`, ...input };
+    },
+    indexDocument: async (_prisma, input) => ({ ragDocumentName: `rag-${input.documentId}` }),
+  });
+
+  assert.deepEqual(result.rootFolderIds, ['db-root-a', 'db-root-b']);
+  assert.equal(result.createdDocuments, 1);
+  assert.equal(createdInputs[0].cooperativeId, 'coop-db');
+  assert.equal(createdInputs[0].sourceFolderId, 'db-root-a');
+});

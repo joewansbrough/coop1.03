@@ -279,7 +279,11 @@ export const buildAccessSubject = (user: any, cooperativeId?: string): DocumentA
   );
   const denied = new Set(overrides.filter((override: any) => override.effect === 'DENY').map((override: any) => override.permission.key));
   const allowed = overrides.filter((override: any) => override.effect === 'ALLOW').map((override: any) => override.permission.key);
-  const permissionKeys = Array.from(new Set([...basePermissions, ...allowed])).filter(key => !denied.has(key)).sort();
+  const permissionKeys = Array.from(new Set([
+    ...(user?.isSystemAdmin ? DEFAULT_PERMISSION_KEYS : []),
+    ...basePermissions,
+    ...allowed,
+  ])).filter(key => !denied.has(key)).sort();
   const committeeIds = memberships
     .map((membership: any) => membership.group?.committeeId)
     .filter(Boolean);
@@ -301,6 +305,7 @@ export const makeSessionUser = (user: any, subject: DocumentAccessSubject) => ({
   email: user.email,
   name: user.name || [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email,
   isAdmin: subject.isAdmin,
+  isSystemAdmin: Boolean(user.isSystemAdmin),
   tenantId: user.tenantId || null,
   unitNumber: user.tenant?.unit?.number || null,
   cooperativeId: user.cooperativeId,

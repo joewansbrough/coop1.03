@@ -113,6 +113,7 @@ model Cooperative {
   auditLogs            AuditLog[]
   documentAccessRules  DocumentAccessRule[]
   ragStores            RagStore[]
+  driveRoots           CooperativeDriveRoot[]
 }
 
 model User {
@@ -261,7 +262,7 @@ model DashboardPreference {
 
 model Unit {
   id     String @id @default(uuid())
-  number String @unique
+  number String
   type   String // e.g., "1BR", "2BR", "3BR"
   floor  Int    @default(1)
   status String // e.g., "Occupied", "Vacant", "Maintenance"
@@ -284,6 +285,22 @@ model Unit {
 
   @@index([cooperativeId])
   @@index([buildingId])
+  @@unique([cooperativeId, number])
+}
+
+model CooperativeDriveRoot {
+  id            String      @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  folderId      String
+  displayName   String?
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([cooperativeId, folderId])
+  @@index([cooperativeId])
+  @@index([folderId])
 }
 
 model Tenant {

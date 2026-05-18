@@ -28,6 +28,9 @@ test('migrations provision Drive document versioning and dashboard preference ta
     'CREATE TABLE IF NOT EXISTS "RagStore"',
     'CREATE TABLE IF NOT EXISTS "DashboardPreference"',
     'CREATE TABLE IF NOT EXISTS "PolicyAssistantQuery"',
+    'CREATE TABLE IF NOT EXISTS "CooperativeDriveRoot"',
+    'DROP INDEX IF EXISTS "Unit_number_key"',
+    'CREATE UNIQUE INDEX IF NOT EXISTS "Unit_cooperativeId_number_key"',
   ]) {
     assert.match(migrations, new RegExp(requiredSql.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }

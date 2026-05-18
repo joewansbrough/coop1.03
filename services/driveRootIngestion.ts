@@ -1,9 +1,15 @@
 import type { PrismaClient } from '@prisma/client';
 import { createDocumentMetadataRecord, type DocumentMetadataInput } from './documentMetadataStore.js';
+import {
+  getCooperativeDriveRootFolderIds,
+  parseDriveRootFolderIds,
+} from './cooperativeDriveRoots.js';
 import { driveClient } from './googleDrive.js';
 import { indexDocumentVersionIntoGemini } from './ragIndexing.js';
 
 const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
+
+export { parseDriveRootFolderIds };
 
 type DriveFile = {
   id?: string | null;
@@ -52,24 +58,6 @@ export type DriveRootIngestionResult = {
     storeName?: string | null;
   }[];
 };
-
-export const parseDriveRootFolderIds = (
-  rootFolderIds?: string | null,
-  singleRootFolderId?: string | null,
-) => {
-  const ids = String(rootFolderIds || '')
-    .split(',')
-    .map(id => id.trim())
-    .filter(Boolean);
-
-  if (ids.length > 0) return ids;
-
-  const fallback = String(singleRootFolderId || '').trim();
-  return fallback ? [fallback] : [];
-};
-
-const getConfiguredRootFolderIds = () =>
-  parseDriveRootFolderIds(process.env.GOOGLE_DRIVE_ROOT_FOLDER_IDS, process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID);
 
 const escapeDriveQueryValue = (value: string) => value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
@@ -188,7 +176,7 @@ const createOrUpdateDriveDocument = async (
 export const ingestConfiguredDriveRoots = async ({
   prisma,
   cooperativeId,
-  rootFolderIds = getConfiguredRootFolderIds(),
+  rootFolderIds,
   drive = driveClient() as DriveClientLike,
   createDocument = createOrUpdateDriveDocument,
   indexDocument = indexDocumentVersionIntoGemini,
@@ -202,7 +190,8 @@ export const ingestConfiguredDriveRoots = async ({
   indexDocument?: IndexDocumentFn;
   maxFiles?: number;
 }): Promise<DriveRootIngestionResult> => {
-  const cleanRootFolderIds = rootFolderIds.map(id => id.trim()).filter(Boolean);
+  const resolvedRootFolderIds = rootFolderIds ?? await getCooperativeDriveRootFolderIds(prisma as any, cooperativeId);
+  const cleanRootFolderIds = resolvedRootFolderIds.map(id => id.trim()).filter(Boolean);
   if (cleanRootFolderIds.length === 0) {
     throw new Error('GOOGLE_DRIVE_ROOT_FOLDER_IDS or GOOGLE_DRIVE_ROOT_FOLDER_ID is not configured');
   }

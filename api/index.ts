@@ -35,6 +35,7 @@ import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { parseGeminiJson } from '../utils/geminiJson.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
+import { isSuperuserEmail, resolveCooperativeIdForEmail, resolveCooperativeIdForRequest } from '../utils/coopResolution.js';
 import { GOOGLE_TOKEN_URL, buildGoogleTokenRequestBody, getOAuthErrorSummary } from '../utils/googleOAuth.js';
 import { hasFreshSessionPermissions } from '../utils/sessionPermissions.js';
 
@@ -48,7 +49,6 @@ const upload = multer({
 });
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-change-me';
-const LEGACY_ADMIN_EMAILS = ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'];
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
 const DEFAULT_GEMINI_TTS_MODEL = process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-preview-tts';
 const STABLE_GEMINI_FALLBACK_MODELS = [
@@ -236,32 +236,11 @@ const handleSingleDocumentUpload = (
 };
 
 const getCoopId = async (req: any, p: any = getPrisma()) => {
-  const user = (req as any).user || (req as any).session?.user;
-  
-  // 1. Direct session lookup (Most efficient)
-  if (user?.cooperativeId) return user.cooperativeId;
-
-  const email = user?.email;
-  if (email) {
-    const t = await p.tenant.findUnique({ where: { email: email.toLowerCase() } });
-    if (t?.cooperativeId) {
-      // Cache it in the session for subsequent requests in this session
-      if ((req as any).session?.user) {
-        (req as any).session.user.cooperativeId = t.cooperativeId;
-      }
-      return t.cooperativeId;
-    }
-  }
-
-  // Fallback to first cooperative if none found
-  const first = await p.cooperative.findFirst();
-  if (!first) throw new Error("No cooperative found in the system.");
-  
-  // Cache the fallback too
+  const cooperativeId = await resolveCooperativeIdForRequest(p, req);
   if ((req as any).session?.user) {
-    (req as any).session.user.cooperativeId = first.id;
+    (req as any).session.user.cooperativeId = cooperativeId;
   }
-  return first.id;
+  return cooperativeId;
 };
 
 const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -677,7 +656,9 @@ const authRouter = express.Router();
 
 const createMagicLoginLink = async (req: express.Request, email: string) => {
   const p = getPrisma();
-  const coopId = await getCoopId(req, p);
+  const coopId = await resolveCooperativeIdForEmail(p as any, email, {
+    selectedCooperativeId: (req as any).session?.user?.selectedCooperativeId || (req as any).session?.user?.cooperativeId,
+  });
   await seedRbacDefaults(p, coopId);
   const rawToken = crypto.randomBytes(32).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
@@ -802,13 +783,15 @@ app.get('/auth/callback', async (req, res) => {
     const userData = userResponse.data;
     const email = userData.email.toLowerCase();
     const p = getPrisma();
-    const coopId = await getCoopId(req, p);
+    const coopId = await resolveCooperativeIdForEmail(p as any, email, {
+      selectedCooperativeId: (req as any).session?.user?.selectedCooperativeId || (req as any).session?.user?.cooperativeId,
+    });
 
     let effectiveUser = await ensureUserForEmail(p, coopId, email, {
       name: userData.name,
       googleSubjectId: userData.sub,
     });
-    if (LEGACY_ADMIN_EMAILS.includes(email) && !effectiveUser?.isSystemAdmin) {
+    if (isSuperuserEmail(email) && !effectiveUser?.isSystemAdmin) {
       if ((effectiveUser as any).__legacyTenantFallback) {
         effectiveUser = { ...effectiveUser, isSystemAdmin: true };
       } else {
@@ -874,6 +857,71 @@ app.get(['/api/auth/me', '/auth/me'], async (req, res) => {
   } catch (error) {
     console.error('Failed to hydrate auth session:', error);
     res.json({ user: (req as any).session?.user || null });
+  }
+});
+
+app.get('/api/cooperatives', requireAuth, async (req, res, next) => {
+  try {
+    const p = getPrisma();
+    const user = (req as any).user || (req as any).session?.user;
+    const isSystemAdmin = Boolean(user?.isSystemAdmin || isSuperuserEmail(user?.email));
+    const cooperatives = isSystemAdmin
+      ? await p.cooperative.findMany({ orderBy: [{ name: 'asc' }] })
+      : await p.cooperative.findMany({ where: { id: await getCoopId(req, p) } });
+    res.json({
+      cooperatives,
+      activeCooperativeId: user?.selectedCooperativeId || user?.cooperativeId || null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/auth/coop-context', requireAuth, async (req, res, next) => {
+  try {
+    const cooperativeId = String(req.body?.cooperativeId || '').trim();
+    if (!cooperativeId) return res.status(400).json({ error: 'cooperativeId is required' });
+
+    const p = getPrisma();
+    const sessionUser = (req as any).session?.user;
+    const isSystemAdmin = Boolean(sessionUser?.isSystemAdmin || isSuperuserEmail(sessionUser?.email));
+    if (!isSystemAdmin && cooperativeId !== sessionUser?.cooperativeId) {
+      return res.status(403).json({ error: 'Only system admins can switch cooperative context' });
+    }
+
+    const cooperative = await p.cooperative.findUnique({ where: { id: cooperativeId } });
+    if (!cooperative) return res.status(404).json({ error: 'Cooperative not found' });
+
+    const effectiveUser = await ensureUserForEmail(p, cooperativeId, sessionUser.email, {
+      name: sessionUser.name,
+      googleSubjectId: sessionUser.googleSubjectId,
+    });
+    const updatedUser = isSystemAdmin && !(effectiveUser as any).__legacyTenantFallback
+      ? await (p as any).user.update({
+        where: { id: effectiveUser.id },
+        data: { isSystemAdmin: true, tenantId: null },
+        include: {
+          memberships: {
+            where: { isActive: true },
+            include: { group: { include: { permissions: { include: { permission: true } } } } },
+          },
+          accessOverrides: { include: { permission: true } },
+          tenant: { include: { committees: true, unit: true } },
+        },
+      })
+      : effectiveUser;
+    const subject = buildAccessSubject(updatedUser, cooperativeId);
+    (req as any).session.user = {
+      ...makeSessionUser(updatedUser, subject),
+      selectedCooperativeId: cooperativeId,
+      picture: sessionUser.picture,
+      googleSubjectId: sessionUser.googleSubjectId,
+      geminiModel: sessionUser.geminiModel,
+      permissionsHydratedAt: Date.now(),
+    };
+    res.json({ user: (req as any).session.user, cooperative });
+  } catch (error) {
+    next(error);
   }
 });
 
