@@ -543,147 +543,92 @@ const renderAccessDeniedPage = ({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Access Request | coopHUB</title>
+    <title>Contact Us | coopHUB BC</title>
     <style>
       :root { color-scheme: light; }
       * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: #10231f;
-        background: #f5f2ea;
-      }
-      .page {
-        min-height: 100vh;
-        display: grid;
-        grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
-      }
-      .panel {
-        padding: 64px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-      }
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 56px;
-        font-size: 13px;
-        font-weight: 900;
-        letter-spacing: .16em;
-        text-transform: uppercase;
-        color: #1f6f5b;
-      }
-      .mark {
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
-        background: #1f6f5b;
-        display: grid;
-        place-items: center;
-        color: white;
-        font-weight: 900;
-      }
-      h1 {
-        margin: 0;
-        max-width: 680px;
-        font-size: clamp(42px, 7vw, 86px);
-        line-height: .92;
-        letter-spacing: 0;
-      }
-      p {
-        max-width: 620px;
-        color: #4f625d;
-        font-size: 18px;
-        line-height: 1.7;
-      }
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 14px;
-        margin-top: 24px;
-      }
-      a.button {
-        min-height: 48px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 18px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 13px;
-        font-weight: 900;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-      }
-      .primary { background: #1f6f5b; color: white; }
-      .secondary { border: 1px solid #c7d4ce; color: #1f3a34; background: white; }
-      .card {
-        background: #10231f;
-        color: white;
-        padding: 64px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-      }
-      .label {
-        color: #8fd8c4;
-        font-size: 11px;
-        font-weight: 900;
-        letter-spacing: .16em;
-        text-transform: uppercase;
-      }
-      .detail {
-        margin-top: 18px;
-        padding-top: 18px;
-        border-top: 1px solid rgba(255,255,255,.16);
-        color: #dce8e4;
-        font-size: 15px;
-        line-height: 1.7;
-      }
-      .email {
-        overflow-wrap: anywhere;
-        font-weight: 800;
-        color: white;
-      }
-      @media (max-width: 820px) {
-        .page { grid-template-columns: 1fr; }
-        .panel, .card { padding: 34px 24px; }
-        .brand { margin-bottom: 36px; }
-      }
+      body { margin: 0; min-height: 100vh; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #0f172a; background: #fff; }
+      .shell { position: relative; min-height: 100vh; overflow: hidden; }
+      .dot-grid { position: absolute; inset: 0; opacity: .1; pointer-events: none; background-image: radial-gradient(circle, #0f172a 1.5px, transparent 1.5px); background-size: 32px 32px; }
+      .main { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; margin-right: 500px; opacity: .22; pointer-events: none; transition: all .5s ease; }
+      .content { width: 100%; max-width: 680px; padding: 64px 32px 128px; }
+      .logo { display: flex; align-items: center; gap: 4px; font-size: 32px; font-weight: 800; letter-spacing: -.05em; }
+      .home-icon { width: 40px; height: 40px; color: #0f766e; display: grid; place-items: center; }
+      .divider { height: 1px; width: 100%; margin: 44px 0; background: #e2e8f0; opacity: .75; }
+      h1 { margin: 0 0 40px; font-size: clamp(54px, 8vw, 96px); line-height: .85; letter-spacing: -.06em; font-weight: 900; }
+      .teal { color: #0f766e; }
+      .cta-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 52px; }
+      .cta { min-height: 78px; display: inline-flex; align-items: center; justify-content: center; border-radius: 24px; background: #0f766e; color: white; text-decoration: none; font-size: 18px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; box-shadow: 0 20px 45px rgba(15, 118, 110, .18); }
+      .features-label { color: #0f766e; font-size: 12px; font-weight: 900; letter-spacing: .28em; text-transform: uppercase; margin-bottom: 18px; }
+      .feature-list { display: grid; gap: 16px; }
+      .feature { display: flex; align-items: center; gap: 22px; color: #475569; font-size: 16px; font-weight: 900; letter-spacing: -.02em; }
+      .feature-icon { width: 48px; height: 48px; border-radius: 18px; border: 1px solid #e2e8f0; background: #f8fafc; display: grid; place-items: center; color: #94a3b8; flex: 0 0 auto; }
+      .fine-print { max-width: 420px; margin-top: 42px; padding-top: 32px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 12px; line-height: 1.7; font-weight: 700; }
+      .backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(15, 23, 42, .6); backdrop-filter: blur(6px); display: none; }
+      .drawer { position: fixed; inset: 0 0 0 auto; z-index: 60; width: 500px; max-width: 100%; background: #fff; border-left: 1px solid #e2e8f0; box-shadow: -32px 0 80px rgba(15, 23, 42, .24); display: flex; flex-direction: column; animation: slide-in .45s cubic-bezier(.2,.85,.25,1); }
+      @keyframes slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+      .drawer-header { min-height: 106px; padding: 28px 32px; border-bottom: 1px solid #e2e8f0; background: rgba(248, 250, 252, .72); display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+      .drawer-title { display: flex; align-items: center; gap: 12px; }
+      .mail-icon { width: 40px; height: 40px; border-radius: 14px; background: rgba(15, 118, 110, .1); color: #0f766e; display: grid; place-items: center; }
+      .drawer-title h2 { margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -.05em; }
+      .close { width: 40px; height: 40px; border-radius: 14px; background: #f1f5f9; color: #475569; text-decoration: none; display: grid; place-items: center; font-size: 22px; line-height: 1; }
+      .drawer-body { flex: 1; overflow-y: auto; padding: 32px; }
+      .alert { margin-bottom: 30px; padding: 18px; border-radius: 20px; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; line-height: 1.65; font-size: 14px; font-weight: 700; }
+      .attempt { margin-top: 14px; color: #0f172a; overflow-wrap: anywhere; }
+      .form { display: grid; gap: 24px; padding-bottom: 48px; }
+      .grid { display: grid; gap: 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      label { display: block; margin: 0 0 8px 4px; color: #64748b; font-size: 14px; font-weight: 800; }
+      input, textarea { width: 100%; border: 1px solid #e2e8f0; background: #f8fafc; color: #0f172a; border-radius: 18px; padding: 16px 20px; font: inherit; font-weight: 700; outline: none; }
+      textarea { resize: vertical; min-height: 132px; }
+      input::placeholder, textarea::placeholder { color: #cbd5e1; }
+      input:focus, textarea:focus { border-color: rgba(15, 118, 110, .4); box-shadow: 0 0 0 4px rgba(15, 118, 110, .12); }
+      .submit { width: 100%; min-height: 72px; border: 0; border-radius: 24px; background: #0f766e; color: white; font-size: 14px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; box-shadow: 0 20px 45px rgba(15, 118, 110, .18); }
+      .direct { padding-top: 28px; border-top: 1px solid #f1f5f9; color: #94a3b8; text-align: center; font-size: 11px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
+      @media (max-width: 1020px) { .main { margin-right: 0; } .backdrop { display: block; } }
+      @media (max-width: 620px) { .content { padding: 34px 24px 96px; } .logo { font-size: 26px; } .home-icon { width: 34px; height: 34px; } h1 { font-size: 56px; } .cta-row, .grid { grid-template-columns: 1fr; } .drawer-header, .drawer-body { padding-left: 22px; padding-right: 22px; } }
     </style>
   </head>
   <body>
-    <main class="page">
-      <section class="panel">
-        <div class="brand"><span class="mark">c</span><span>coopHUB</span></div>
-        <h1>Access has not been set up yet.</h1>
-        <p>Your Google account authenticated successfully, but it is not connected to an active co-op user, tenant, or system administrator profile.</p>
-        <div class="actions">
-          <a class="button primary" href="#request-access">Request access</a>
-          <a class="button secondary" href="/">Back to sign in</a>
+    <main class="shell">
+      <div class="dot-grid"></div>
+      <div class="main" aria-hidden="true">
+        <section class="content">
+          <div class="logo"><span class="home-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>coop<span class="teal">HUB</span> BC</span></div>
+          <div class="divider"></div>
+          <h1>The Future of<br /><span class="teal">Co-op Housing</span><br />Management.</h1>
+          <div class="cta-row"><span class="cta">Try the Demo</span><span class="cta">Contact Us</span></div>
+          <div class="features-label">Key features:</div>
+          <div class="feature-list">
+            <div class="feature"><span class="feature-icon">⌂</span><span>UNIT & TENANT MANAGEMENT</span></div>
+            <div class="feature"><span class="feature-icon">◇</span><span>MAINTENANCE WORKFLOWS</span></div>
+            <div class="feature"><span class="feature-icon">◎</span><span>COMMITTEE COLLABORATION</span></div>
+            <div class="feature"><span class="feature-icon">▣</span><span>DOCUMENT MANAGEMENT</span></div>
+            <div class="feature"><span class="feature-icon">✦</span><span>AI-POWERED POLICY ASSISTANT</span></div>
+          </div>
+          <p class="fine-print"><strong>coop<span class="teal">HUB</span> BC</strong> is a secure platform designed specifically for British Columbia housing co-operatives. Access is restricted to registered members and board administrators.</p>
+        </section>
+      </div>
+      <div class="backdrop"></div>
+      <aside class="drawer" aria-label="Contact us">
+        <header class="drawer-header">
+          <div class="drawer-title"><span class="mail-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><h2>Contact Us</h2></div></div>
+          <a class="close" href="/" aria-label="Back to sign in">×</a>
+        </header>
+        <div class="drawer-body">
+          <div class="alert">Your Google account authenticated successfully, but it is not connected to an active co-op user, tenant, or system administrator profile.<div class="attempt"><strong>Name:</strong> ${safeName || 'Not provided'}</div><div class="attempt"><strong>Email:</strong> ${safeEmail || 'Not provided'}</div></div>
+          <form class="form" method="post" action="/api/access-request">
+            <input type="hidden" name="email" value="${safeEmail}" />
+            <input type="hidden" name="firstName" value="${safeName}" />
+            <div class="grid">
+              <div><label>First Name</label><input name="firstNameDisplay" value="${safeName}" placeholder="Sarah" disabled /></div>
+              <div><label>Email</label><input value="${safeEmail}" placeholder="member@example.com" disabled /></div>
+            </div>
+            <div><label>Co-op Name</label><input name="coopName" required placeholder="Oak Bay Housing Cooperative / Unit 107" /></div>
+            <div><label>How can we help?</label><textarea name="message" required placeholder="I need access to my co-op account..."></textarea></div>
+            <button class="submit" type="submit">Send Request</button>
+            <div class="direct">Direct Email: ${contactEmail}</div>
+          </form>
         </div>
-      </section>
-      <aside class="card">
-        <div class="label">Sign-in attempt</div>
-        <div class="detail">
-          <div>Name: <span class="email">${safeName || 'Not provided'}</span></div>
-          <div>Email: <span class="email">${safeEmail || 'Not provided'}</span></div>
-        </div>
-        <p style="color:#b9cbc5;margin-top:28px">If you belong to a co-op using coopHUB, ask your administrator to add your email to your tenant or user profile before trying again.</p>
-        <form id="request-access" method="post" action="/api/access-request" style="margin-top:32px">
-          <input type="hidden" name="email" value="${safeEmail}" />
-          <input type="hidden" name="firstName" value="${safeName}" />
-          <div class="label">Request access</div>
-          <label style="display:block;margin-top:18px;color:#dce8e4;font-size:13px;font-weight:800">Co-op / unit</label>
-          <input name="coopName" placeholder="Oak Bay Housing Cooperative / Unit 107" style="width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:white;border-radius:10px;padding:12px" />
-          <label style="display:block;margin-top:14px;color:#dce8e4;font-size:13px;font-weight:800">Message</label>
-          <textarea name="message" rows="4" placeholder="Tell us which co-op account you need access to." style="width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:white;border-radius:10px;padding:12px;resize:vertical"></textarea>
-          <button type="submit" style="width:100%;margin-top:16px;border:0;background:#8fd8c4;color:#10231f;border-radius:10px;padding:14px 18px;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase">Send request</button>
-          <p style="color:#b9cbc5;font-size:12px;margin-top:14px">Requests are sent to ${contactEmail}.</p>
-        </form>
       </aside>
     </main>
   </body>
