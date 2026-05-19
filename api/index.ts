@@ -623,7 +623,7 @@ const renderAccessDeniedPage = ({
         </header>
         <div class="drawer-body">
           <div class="alert">Your Google account authenticated successfully, but you are not recognized by the system. Complete the details below so we can confirm your access.</div>
-          <form class="form" method="post" action="/api/access-request">
+          <form class="form" method="post" action="/api/contact">
             <input type="hidden" name="email" value="${safeEmail}" />
             <input type="hidden" name="firstName" value="${safeName}" />
             <div class="grid">
@@ -658,7 +658,7 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-app.post('/api/access-request', async (req, res) => {
+const handleAccessRequestForm = async (req: express.Request, res: express.Response) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
     if (!email || !email.includes('@')) return res.status(400).send('A valid email is required.');
@@ -698,9 +698,15 @@ app.post('/api/access-request', async (req, res) => {
 </html>`);
   } catch (error: any) {
     console.error('Access request email failed:', error);
-    res.status(500).send('Access request could not be sent. Please email hello@coophub.ca directly.');
+    const message = error?.message || 'Access request could not be sent.';
+    const wantsJson = req.accepts(['html', 'json']) === 'json' || req.get('content-type')?.includes('application/json');
+    if (wantsJson) return res.status(500).json({ error: message });
+    res.status(500).send(`Access request could not be sent. ${escapeHtml(message)}`);
   }
-});
+};
+
+app.post('/api/access-request', handleAccessRequestForm);
+app.post('/api/contact', handleAccessRequestForm);
 
 app.get('/api/dashboard/preferences', requireAuth, async (req, res, next) => {
   try {

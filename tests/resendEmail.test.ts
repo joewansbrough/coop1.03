@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildMagicLinkEmail,
+  getAccessRequestRecipient,
   sendResendEmail,
 } from '../services/resendEmail.ts';
 
@@ -40,4 +41,9 @@ test('sends email through Resend REST API', async () => {
   assert.equal(calls[0].url, 'https://api.resend.com/emails');
   assert.equal(calls[0].init.headers.Authorization, 'Bearer test-key');
   assert.deepEqual(JSON.parse(calls[0].init.body).to, ['member@example.com']);
+});
+
+test('access requests default to hello@coophub.ca', () => {
+  assert.equal(getAccessRequestRecipient({} as any), 'hello@coophub.ca');
+  assert.equal(getAccessRequestRecipient({ ACCESS_REQUEST_EMAIL: 'access@example.com' } as any), 'access@example.com');
 });

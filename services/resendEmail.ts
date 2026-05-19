@@ -22,7 +22,7 @@ export const getDefaultEmailFrom = (env: NodeJS.ProcessEnv = process.env) =>
   env.MAGIC_LINK_FROM_EMAIL || env.RESEND_FROM_EMAIL || 'coopHUB BC <onboarding@resend.dev>';
 
 export const getAccessRequestRecipient = (env: NodeJS.ProcessEnv = process.env) =>
-  env.ACCESS_REQUEST_EMAIL || env.SUPPORT_EMAIL || 'hello@coophub.ca';
+  env.ACCESS_REQUEST_EMAIL || 'hello@coophub.ca';
 
 export const sendResendEmail = async (
   input: SendEmailInput,
