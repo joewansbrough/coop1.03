@@ -677,22 +677,33 @@ const handleAccessRequestForm = async (req: express.Request, res: express.Respon
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Access Request Sent | coopHUB</title>
+    <title>Request Sent | coopHUB BC</title>
     <style>
-      body { margin:0; min-height:100vh; display:grid; place-items:center; font-family:Inter,ui-sans-serif,system-ui,sans-serif; background:#f5f2ea; color:#10231f; padding:24px; }
-      main { max-width:620px; background:white; border:1px solid #dbe5e0; border-radius:18px; padding:36px; }
-      .label { color:#1f6f5b; font-size:11px; font-weight:900; letter-spacing:.16em; text-transform:uppercase; }
-      h1 { font-size:44px; line-height:1; margin:14px 0; letter-spacing:0; }
-      p { color:#4f625d; line-height:1.7; }
-      a { display:inline-flex; margin-top:18px; background:#1f6f5b; color:white; text-decoration:none; border-radius:8px; padding:14px 18px; font-size:13px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+      * { box-sizing: border-box; }
+      body { margin:0; min-height:100vh; font-family:"DM Sans",ui-sans-serif,system-ui,sans-serif; background:#fff; color:#0f172a; -webkit-font-smoothing:antialiased; }
+      .shell { min-height:100vh; position:relative; overflow:hidden; display:grid; place-items:center; padding:32px; }
+      .dot-grid { position:absolute; inset:0; opacity:.1; pointer-events:none; background-image:radial-gradient(circle,currentColor 1.5px,transparent 1.5px); background-size:32px 32px; }
+      .card { position:relative; z-index:1; width:min(100%,520px); text-align:center; padding:48px 34px; }
+      .icon { width:96px; height:96px; margin:0 auto 32px; border-radius:32px; background:#10b981; color:white; display:grid; place-items:center; box-shadow:0 24px 55px rgba(16,185,129,.28); }
+      h1 { margin:0 0 16px; font-size:48px; line-height:1; letter-spacing:-.06em; font-weight:900; }
+      p { margin:0 auto; max-width:390px; color:#64748b; font-size:16px; line-height:1.65; font-weight:500; }
+      a { display:inline-flex; align-items:center; justify-content:center; min-height:56px; margin-top:36px; padding:0 24px; border-radius:18px; background:#0D9488; color:white; text-decoration:none; font-size:12px; font-weight:900; letter-spacing:.2em; text-transform:uppercase; box-shadow:0 20px 45px rgba(13,148,136,.18); }
     </style>
   </head>
   <body>
-    <main>
-      <div class="label">coopHUB BC</div>
-      <h1>Request sent.</h1>
-      <p>Thanks. We received your access request for ${escapeHtml(email)} and will follow up after confirming your co-op profile.</p>
-      <a href="/">Back to sign in</a>
+    <main class="shell">
+      <div class="dot-grid"></div>
+      <section class="card">
+        <div class="icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h1>Request Sent!</h1>
+        <p>Thanks. We received your request and will be in touch soon.</p>
+        <a href="/">Back to sign in</a>
+      </section>
     </main>
   </body>
 </html>`);
