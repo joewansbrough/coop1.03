@@ -579,7 +579,7 @@ const renderAccessDeniedPage = ({
       .close { width: 40px; height: 40px; border-radius: 14px; background: #f1f5f9; color: #475569; text-decoration: none; display: grid; place-items: center; font-size: 22px; line-height: 1; }
       .drawer-body { flex: 1; overflow-y: auto; padding: 32px; }
       .alert { margin-bottom: 32px; padding: 16px; border-radius: 18px; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; line-height: 1.55; font-size: 14px; font-weight: 500; }
-      .form { display: grid; gap: 32px; padding-bottom: 48px; }
+      .form { display: grid; gap: 32px; padding-bottom: 24px; }
       .grid { display: grid; gap: 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
       label { display: block; margin: 0 0 8px 4px; color: #64748b; font-size: 14px; font-weight: 700; }
       input, textarea { width: 100%; border: 1px solid #e2e8f0; background: #f8fafc; color: #0f172a; border-radius: 16px; padding: 16px 24px; font: inherit; font-weight: 500; outline: none; }
@@ -587,7 +587,6 @@ const renderAccessDeniedPage = ({
       input::placeholder, textarea::placeholder { color: #cbd5e1; }
       input:focus, textarea:focus { border-color: rgba(15, 118, 110, .4); box-shadow: 0 0 0 4px rgba(15, 118, 110, .12); }
       .submit { width: 100%; min-height: 72px; border: 0; border-radius: 24px; background: #0f766e; color: white; font-size: 14px; font-weight: 900; letter-spacing: .2em; text-transform: uppercase; box-shadow: 0 20px 45px rgba(15, 118, 110, .18); }
-      .direct { padding-top: 32px; border-top: 1px solid #f1f5f9; color: #94a3b8; text-align: center; font-size: 10px; font-weight: 900; letter-spacing: .2em; text-transform: uppercase; }
       @media (max-width: 1020px) { .main { margin-right: 0; } .backdrop { display: block; } }
       @media (max-width: 620px) { .content { padding: 34px 24px 96px; } .logo { font-size: 26px; } .home-icon { width: 34px; height: 34px; } h1 { font-size: 56px; } .cta-row, .grid { grid-template-columns: 1fr; } .drawer-header, .drawer-body { padding-left: 22px; padding-right: 22px; } }
     </style>
@@ -635,7 +634,6 @@ const renderAccessDeniedPage = ({
             <div><label>Co-op Name</label><input name="coopName" required placeholder="Main Street Housing Co-op" /></div>
             <div><label>How can we help?</label><textarea name="message" required placeholder="I'd like to book a demo for our board..."></textarea></div>
             <button class="submit" type="submit">Send Request</button>
-            <div class="direct">Direct Email: ${contactEmail}</div>
           </form>
         </div>
       </aside>
