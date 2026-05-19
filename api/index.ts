@@ -549,41 +549,41 @@ const renderAccessDeniedPage = ({
       * { box-sizing: border-box; }
       body { margin: 0; min-height: 100vh; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #0f172a; background: #fff; }
       .shell { position: relative; min-height: 100vh; overflow: hidden; }
-      .dot-grid { position: absolute; inset: 0; opacity: .1; pointer-events: none; background-image: radial-gradient(circle, #0f172a 1.5px, transparent 1.5px); background-size: 32px 32px; }
-      .main { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; margin-right: 500px; opacity: .22; pointer-events: none; transition: all .5s ease; }
-      .content { width: 100%; max-width: 680px; padding: 64px 32px 128px; }
-      .logo { display: flex; align-items: center; gap: 4px; font-size: 32px; font-weight: 800; letter-spacing: -.05em; }
+      .dot-grid { position: absolute; inset: 0; opacity: .1; pointer-events: none; background-image: radial-gradient(circle, currentColor 1.5px, transparent 1.5px); background-size: 32px 32px; }
+      .main { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; margin-right: 500px; opacity: .2; pointer-events: none; transition: all .5s ease; }
+      .content { width: 100%; max-width: 672px; padding: 80px 32px 128px; }
+      .logo { display: flex; align-items: center; gap: 4px; font-size: 30px; font-weight: 700; letter-spacing: -.05em; }
       .home-icon { width: 40px; height: 40px; color: #0f766e; display: grid; place-items: center; }
-      .divider { height: 1px; width: 100%; margin: 44px 0; background: #e2e8f0; opacity: .75; }
-      h1 { margin: 0 0 40px; font-size: clamp(54px, 8vw, 96px); line-height: .85; letter-spacing: -.06em; font-weight: 900; }
+      .divider { height: 1px; width: 100%; margin: 48px 0; background: #e2e8f0; opacity: .5; }
+      h1 { margin: 0 0 48px; font-size: clamp(56px, 8vw, 96px); line-height: .85; letter-spacing: -.06em; font-weight: 700; }
       .teal { color: #0f766e; }
-      .cta-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 52px; }
-      .cta { min-height: 78px; display: inline-flex; align-items: center; justify-content: center; border-radius: 24px; background: #0f766e; color: white; text-decoration: none; font-size: 18px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; box-shadow: 0 20px 45px rgba(15, 118, 110, .18); }
-      .features-label { color: #0f766e; font-size: 12px; font-weight: 900; letter-spacing: .28em; text-transform: uppercase; margin-bottom: 18px; }
+      .cta-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 56px; }
+      .cta { min-height: 78px; display: inline-flex; align-items: center; justify-content: center; border-radius: 24px; background: #0f766e; color: white; text-decoration: none; font-size: 18px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; box-shadow: 0 20px 45px rgba(15, 118, 110, .18); }
+      .features-label { color: #0f766e; font-size: 12px; font-weight: 800; letter-spacing: .3em; text-transform: uppercase; margin-bottom: 16px; }
       .feature-list { display: grid; gap: 16px; }
-      .feature { display: flex; align-items: center; gap: 22px; color: #475569; font-size: 16px; font-weight: 900; letter-spacing: -.02em; }
+      .feature { display: flex; align-items: center; gap: 24px; color: #475569; font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
       .feature-icon { width: 48px; height: 48px; border-radius: 18px; border: 1px solid #e2e8f0; background: #f8fafc; display: grid; place-items: center; color: #94a3b8; flex: 0 0 auto; }
-      .fine-print { max-width: 420px; margin-top: 42px; padding-top: 32px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 12px; line-height: 1.7; font-weight: 700; }
+      .fine-print { max-width: 420px; margin-top: 42px; padding-top: 32px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 11px; line-height: 1.7; font-weight: 700; }
       .backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(15, 23, 42, .6); backdrop-filter: blur(6px); display: none; }
       .drawer { position: fixed; inset: 0 0 0 auto; z-index: 60; width: 500px; max-width: 100%; background: #fff; border-left: 1px solid #e2e8f0; box-shadow: -32px 0 80px rgba(15, 23, 42, .24); display: flex; flex-direction: column; animation: slide-in .45s cubic-bezier(.2,.85,.25,1); }
       @keyframes slide-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
       .drawer-header { min-height: 106px; padding: 28px 32px; border-bottom: 1px solid #e2e8f0; background: rgba(248, 250, 252, .72); display: flex; align-items: center; justify-content: space-between; gap: 18px; }
       .drawer-title { display: flex; align-items: center; gap: 12px; }
       .mail-icon { width: 40px; height: 40px; border-radius: 14px; background: rgba(15, 118, 110, .1); color: #0f766e; display: grid; place-items: center; }
-      .drawer-title h2 { margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -.05em; }
+      .drawer-title h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.05em; }
       .close { width: 40px; height: 40px; border-radius: 14px; background: #f1f5f9; color: #475569; text-decoration: none; display: grid; place-items: center; font-size: 22px; line-height: 1; }
       .drawer-body { flex: 1; overflow-y: auto; padding: 32px; }
-      .alert { margin-bottom: 30px; padding: 18px; border-radius: 20px; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; line-height: 1.65; font-size: 14px; font-weight: 700; }
+      .alert { margin-bottom: 30px; padding: 18px; border-radius: 20px; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; line-height: 1.65; font-size: 14px; font-weight: 600; }
       .attempt { margin-top: 14px; color: #0f172a; overflow-wrap: anywhere; }
-      .form { display: grid; gap: 24px; padding-bottom: 48px; }
+      .form { display: grid; gap: 32px; padding-bottom: 48px; }
       .grid { display: grid; gap: 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      label { display: block; margin: 0 0 8px 4px; color: #64748b; font-size: 14px; font-weight: 800; }
-      input, textarea { width: 100%; border: 1px solid #e2e8f0; background: #f8fafc; color: #0f172a; border-radius: 18px; padding: 16px 20px; font: inherit; font-weight: 700; outline: none; }
+      label { display: block; margin: 0 0 8px 4px; color: #64748b; font-size: 14px; font-weight: 700; }
+      input, textarea { width: 100%; border: 1px solid #e2e8f0; background: #f8fafc; color: #0f172a; border-radius: 18px; padding: 16px 20px; font: inherit; font-weight: 500; outline: none; }
       textarea { resize: vertical; min-height: 132px; }
       input::placeholder, textarea::placeholder { color: #cbd5e1; }
       input:focus, textarea:focus { border-color: rgba(15, 118, 110, .4); box-shadow: 0 0 0 4px rgba(15, 118, 110, .12); }
-      .submit { width: 100%; min-height: 72px; border: 0; border-radius: 24px; background: #0f766e; color: white; font-size: 14px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; box-shadow: 0 20px 45px rgba(15, 118, 110, .18); }
-      .direct { padding-top: 28px; border-top: 1px solid #f1f5f9; color: #94a3b8; text-align: center; font-size: 11px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
+      .submit { width: 100%; min-height: 72px; border: 0; border-radius: 24px; background: #0f766e; color: white; font-size: 14px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; box-shadow: 0 20px 45px rgba(15, 118, 110, .18); }
+      .direct { padding-top: 28px; border-top: 1px solid #f1f5f9; color: #94a3b8; text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
       @media (max-width: 1020px) { .main { margin-right: 0; } .backdrop { display: block; } }
       @media (max-width: 620px) { .content { padding: 34px 24px 96px; } .logo { font-size: 26px; } .home-icon { width: 34px; height: 34px; } h1 { font-size: 56px; } .cta-row, .grid { grid-template-columns: 1fr; } .drawer-header, .drawer-body { padding-left: 22px; padding-right: 22px; } }
     </style>
@@ -615,16 +615,17 @@ const renderAccessDeniedPage = ({
           <a class="close" href="/" aria-label="Back to sign in">×</a>
         </header>
         <div class="drawer-body">
-          <div class="alert">Your Google account authenticated successfully, but it is not connected to an active co-op user, tenant, or system administrator profile.<div class="attempt"><strong>Name:</strong> ${safeName || 'Not provided'}</div><div class="attempt"><strong>Email:</strong> ${safeEmail || 'Not provided'}</div></div>
+          <div class="alert">Your Google account authenticated successfully, but it is not connected to an active co-op user, tenant, or system administrator profile. Submit this request and we will confirm your co-op access.<div class="attempt"><strong>Name:</strong> ${safeName || 'Not provided'}</div><div class="attempt"><strong>Email:</strong> ${safeEmail || 'Not provided'}</div></div>
           <form class="form" method="post" action="/api/access-request">
             <input type="hidden" name="email" value="${safeEmail}" />
             <input type="hidden" name="firstName" value="${safeName}" />
             <div class="grid">
               <div><label>First Name</label><input name="firstNameDisplay" value="${safeName}" placeholder="Sarah" disabled /></div>
-              <div><label>Email</label><input value="${safeEmail}" placeholder="member@example.com" disabled /></div>
+              <div><label>Last Name</label><input name="lastName" placeholder="Jenkins" /></div>
             </div>
-            <div><label>Co-op Name</label><input name="coopName" required placeholder="Oak Bay Housing Cooperative / Unit 107" /></div>
-            <div><label>How can we help?</label><textarea name="message" required placeholder="I need access to my co-op account..."></textarea></div>
+            <div><label>Email Address</label><input value="${safeEmail}" placeholder="sarah@mainstreetcoop.ca" disabled /></div>
+            <div><label>Co-op Name</label><input name="coopName" required placeholder="Main Street Housing Co-op" /></div>
+            <div><label>How can we help?</label><textarea name="message" required placeholder="I'd like to book a demo for our board..."></textarea></div>
             <button class="submit" type="submit">Send Request</button>
             <div class="direct">Direct Email: ${contactEmail}</div>
           </form>
