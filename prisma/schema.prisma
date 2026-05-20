@@ -45,15 +45,27 @@ enum DocumentStatus {
 // --- MODELS ---
 
 model Cooperative {
-  id         String   @id @default(uuid())
-  name       String
-  slug       String   @unique
-  address    String?
-  city       String?
-  province   String   @default("BC")
-  adminEmail String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                    String   @id @default(uuid())
+  name                  String
+  slug                  String   @unique
+  subdomain             String?  @unique
+  address               String?
+  city                  String?
+  province              String   @default("BC")
+  adminEmail            String?
+  googleWorkspaceDomain String?
+  googleDriveRootFolderIds String[] @default([])
+  plan                  String   @default("starter")
+  status                String   @default("active")
+  onboardingState       String   @default("live")
+  settings              Json     @default("{}")
+  onboardedAt           DateTime?
+  abandonedAt           DateTime?
+  suspendedAt           DateTime?
+  cancelledAt           DateTime?
+  retentionEndsAt       DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   // Relations
   announcements        Announcement[]
@@ -83,7 +95,7 @@ model DashboardPreference {
 
 model Unit {
   id     String @id @default(uuid())
-  number String @unique
+  number String
   type   String // e.g., "1BR", "2BR", "3BR"
   floor  Int    @default(1)
   status String // e.g., "Occupied", "Vacant", "Maintenance"
@@ -101,13 +113,16 @@ model Unit {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([cooperativeId, number])
+  @@index([cooperativeId])
 }
 
 model Tenant {
   id        String   @id @default(uuid())
   firstName String
   lastName  String
-  email     String   @unique
+  email     String
   phone     String?
   startDate DateTime // Changed from String to DateTime
   status    String   @default("Current")
@@ -126,6 +141,9 @@ model Tenant {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([cooperativeId, email])
+  @@index([cooperativeId])
 }
 
 model TenantHistory {

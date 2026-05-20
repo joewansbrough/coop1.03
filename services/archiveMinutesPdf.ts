@@ -80,7 +80,7 @@ export const archiveMinutesPdf = async ({
 
   const latestVersion = existingDocument
     ? await prisma.documentVersion.findFirst({
-        where: { documentId: existingDocument.id },
+        where: { documentId: existingDocument.id, cooperativeId },
         orderBy: { version: 'desc' },
       })
     : null;

@@ -15,6 +15,11 @@ import {
   saveStoredDashboardPreference,
 } from '../services/dashboardPreferenceStore.js';
 import { type DashboardRole } from '../utils/dashboardPreferences.js';
+import {
+  assertCooperativeWhere,
+  resolveCooperativeLookup,
+  resolveWorkspaceAccess,
+} from '../utils/multiTenancy.js';
 
 
 
@@ -29,7 +34,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || 'temporary-secret-key-chang
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-lite';
 
 // Prisma singleton helper
-let prismaInstance: PrismaClient;
+let prismaInstance: any;
 const getPrisma = () => {
   if (!prismaInstance) {
     const dbUrl = process.env.DATABASE_URL || '';
@@ -38,7 +43,24 @@ const getPrisma = () => {
     } else {
       console.error('DATABASE_URL is MISSING');
     }
-    prismaInstance = new PrismaClient();
+    prismaInstance = new PrismaClient().$extends({
+      query: {
+        $allModels: {
+          async $allOperations({ model, operation, args, query }: any) {
+            try {
+              assertCooperativeWhere(model, operation, args);
+            } catch (error: any) {
+              if (process.env.NODE_ENV === 'production') {
+                console.error('[TenantGuard]', error.message, { model, operation });
+              } else {
+                throw error;
+              }
+            }
+            return query(args);
+          },
+        },
+      },
+    });
   }
   return prismaInstance;
 };
@@ -83,32 +105,12 @@ const handleSingleDocumentUpload = (
 };
 
 const getCoopId = async (req: any, p: any = getPrisma()) => {
+  if ((req as any).cooperative?.id) return (req as any).cooperative.id;
+
   const user = (req as any).user || (req as any).session?.user;
-  
-  // 1. Direct session lookup (Most efficient)
-  if (user?.cooperativeId) return user.cooperativeId;
+  if (user?.cooperativeId && !(req as any).cooperative) return user.cooperativeId;
 
-  const email = user?.email;
-  if (email) {
-    const t = await p.tenant.findUnique({ where: { email: email.toLowerCase() } });
-    if (t?.cooperativeId) {
-      // Cache it in the session for subsequent requests in this session
-      if ((req as any).session?.user) {
-        (req as any).session.user.cooperativeId = t.cooperativeId;
-      }
-      return t.cooperativeId;
-    }
-  }
-
-  // Fallback to first cooperative if none found
-  const first = await p.cooperative.findFirst();
-  if (!first) throw new Error("No cooperative found in the system.");
-  
-  // Cache the fallback too
-  if ((req as any).session?.user) {
-    (req as any).session.user.cooperativeId = first.id;
-  }
-  return first.id;
+  throw new Error('No cooperative resolved for this request.');
 };
 
 const validateRequest = (schema: z.ZodSchema) => (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -146,6 +148,34 @@ app.use((req, res, next) => {
   })(req, res, next);
 });
 
+app.use(async (req, res, next) => {
+  try {
+    if (req.path === '/api/health') return next();
+
+    const host = req.get('x-forwarded-host') || req.get('host') || '';
+    const lookup = resolveCooperativeLookup(host, process.env.APP_DEFAULT_COOPERATIVE_SLUG || 'oak-bay');
+    if (!lookup.subdomain) {
+      (req as any).workspaceAccess = resolveWorkspaceAccess(null, null);
+      return next();
+    }
+
+    const p = getPrisma();
+    const cooperative = await p.cooperative.findFirst({
+      where: {
+        OR: [
+          { subdomain: lookup.subdomain },
+          { slug: lookup.subdomain },
+        ],
+      },
+    });
+    (req as any).cooperative = cooperative || null;
+    (req as any).workspaceAccess = resolveWorkspaceAccess(cooperative, null);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Health check route
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -158,16 +188,58 @@ app.get('/api/health', (req, res) => {
 
 // Authentication Middleware
 const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  if ((req as any).session?.user) {
-    (req as any).user = (req as any).session.user;
-    return next();
+  const sessionUser = (req as any).session?.user;
+  if (!sessionUser?.email) {
+    return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  return res.status(401).json({ error: 'Unauthorized' });
+  const cooperative = (req as any).cooperative;
+  if (!cooperative) {
+    const access = (req as any).workspaceAccess || resolveWorkspaceAccess(null, null);
+    return res.status(access.httpStatus).json({ error: access.message, code: access.code });
+  }
+
+  const p = getPrisma();
+  const email = String(sessionUser.email).toLowerCase();
+  const membership = await p.tenant.findFirst({
+    where: {
+      cooperativeId: cooperative.id,
+      email,
+    },
+    include: { unit: true },
+  });
+  const access = resolveWorkspaceAccess(cooperative, membership);
+  if (access.allowed === false) {
+    console.warn('[WorkspaceAccessDenied]', {
+      code: access.code,
+      cooperativeId: cooperative.id,
+      email,
+      path: req.originalUrl,
+    });
+    return res.status(access.httpStatus).json({ error: access.message, code: access.code });
+  }
+
+  (req as any).session.user = {
+    ...sessionUser,
+    email,
+    isAdmin: membership?.role === 'ADMIN',
+    tenantId: membership?.id || null,
+    unitNumber: membership?.unit?.number || null,
+    cooperativeId: cooperative.id,
+    role: membership?.role || 'MEMBER',
+  };
+  (req as any).user = (req as any).session.user;
+  return next();
 };
 
 const getDashboardRole = (req: express.Request): DashboardRole =>
   ((req as any).user?.isAdmin || (req as any).session?.user?.isAdmin) ? 'admin' : 'resident';
+
+const requireRole = (role: 'ADMIN') => (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const user = (req as any).user || (req as any).session?.user;
+  if (role === 'ADMIN' && user?.role === 'ADMIN') return next();
+  return res.status(403).json({ error: 'Admin access required' });
+};
 
 // Robust Helper to get base URL
 const getBaseUrl = (req: express.Request) => {
@@ -242,6 +314,13 @@ const authRouter = express.Router();
 
 authRouter.get('/url', (req, res) => {
   try {
+    const cooperative = (req as any).cooperative;
+    if (!cooperative) {
+      const access = (req as any).workspaceAccess || resolveWorkspaceAccess(null, null);
+      if (access.allowed === true) return res.status(404).json({ error: 'Workspace not found.', code: 'workspace_not_found' });
+      return res.status(access.httpStatus).json({ error: access.message, code: access.code });
+    }
+
     const baseUrl = getBaseUrl(req);
     const redirectUri = `${baseUrl}/auth/callback`;
 
@@ -297,15 +376,24 @@ app.get('/auth/callback', async (req, res) => {
 
     const userData = userResponse.data;
     const email = userData.email.toLowerCase();
+    const cooperative = (req as any).cooperative;
+    if (!cooperative) {
+      const access = (req as any).workspaceAccess || resolveWorkspaceAccess(null, null);
+      if (access.allowed === true) return res.status(404).send('Workspace not found.');
+      return res.status(access.httpStatus).send(access.message);
+    }
 
-    // Find or create user in database
-    let user = await getPrisma().tenant.findUnique({
-      where: { email },
+    const user = await getPrisma().tenant.findFirst({
+      where: { email, cooperativeId: cooperative.id },
       include: { unit: true }
     });
+    const access = resolveWorkspaceAccess(cooperative, user);
+    if (access.allowed === false) {
+      console.warn('[OAuthDenied]', { code: access.code, cooperativeId: cooperative.id, email });
+      return res.status(access.httpStatus).send(access.message);
+    }
 
-    // Check both DB role and legacy list for now
-    const isAdmin = user?.role === 'ADMIN' || ['joewansbrough@gmail.com', 'wwansbro@gmail.com', 'joewcoupons@gmail.com', 'samisaeed123@gmail.com'].includes(email);
+    const isAdmin = user?.role === 'ADMIN';
 
     // Dynamically resolve the best available Gemini model once at login
     const resolvedModel = DEFAULT_GEMINI_MODEL;
@@ -318,7 +406,7 @@ app.get('/auth/callback', async (req, res) => {
       isAdmin,
       tenantId: user?.id || null,
       unitNumber: user?.unit?.number || null,
-      cooperativeId: user?.cooperativeId || null,
+      cooperativeId: cooperative.id,
       role: user?.role || 'MEMBER',
       geminiModel: resolvedModel,
     };
@@ -383,9 +471,11 @@ app.get('/api/units', requireAuth, async (req, res) => {
 
 app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) => {
   try {
+    const p = getPrisma();
     const unitId = getParam(req.params.id);
-    const tasks = await getPrisma().scheduledMaintenance.findMany({
-      where: { unitId },
+    const coopId = await getCoopId(req, p);
+    const tasks = await p.scheduledMaintenance.findMany({
+      where: { unitId, cooperativeId: coopId },
       orderBy: { dueDate: 'asc' }
     });
     res.json(tasks);
@@ -394,7 +484,7 @@ app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) =>
   }
 });
 
-app.post('/api/tenants', requireAuth, validateRequest(tenantSchema), async (req, res) => {
+app.post('/api/tenants', requireAuth, requireRole('ADMIN'), validateRequest(tenantSchema), async (req, res) => {
   try {
     const tenant = await getPrisma().tenant.create({
       data: {
@@ -427,8 +517,10 @@ app.get('/api/tenants', requireAuth, async (req, res) => {
 
 app.get('/api/tenants/:id/history', requireAuth, async (req, res) => {
   const tenantId = getParam(req.params.id);
-  const history = await getPrisma().tenantHistory.findMany({
-    where: { tenantId },
+  const p = getPrisma();
+  const coopId = await getCoopId(req, p);
+  const history = await p.tenantHistory.findMany({
+    where: { tenantId, cooperativeId: coopId },
     include: { unit: true },
     orderBy: { startDate: 'desc' }
   });
@@ -443,7 +535,8 @@ app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
   try {
     await getPrisma().$transaction(async (tx) => {
       // Find all current residents of this unit
-      const residents = await tx.tenant.findMany({ where: { unitId: id, status: 'Current' } });
+      const coopId = await getCoopId(req, tx);
+      const residents = await tx.tenant.findMany({ where: { unitId: id, status: 'Current', cooperativeId: coopId } });
 
       for (const tenant of residents) {
         // Close any open TenantHistory record for this unit
@@ -483,7 +576,8 @@ app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
   const { tenantId, date } = req.body;
   try {
     await getPrisma().$transaction(async (tx) => {
-      const tenant = await tx.tenant.findUnique({ where: { id: tenantId } });
+      const coopId = await getCoopId(req, tx);
+      const tenant = await tx.tenant.findFirst({ where: { id: tenantId, cooperativeId: coopId } });
       if (!tenant) throw new Error('Tenant not found');
 
       // If internal transfer: close open history record on their previous unit
@@ -542,7 +636,8 @@ app.post('/api/units/:id/transfer', requireAuth, async (req, res) => {
   try {
     await getPrisma().$transaction(async (tx) => {
       // Find all residents of the source unit
-      const residents = await tx.tenant.findMany({ where: { unitId: id, status: 'Current' } });
+      const coopId = await getCoopId(req, tx);
+      const residents = await tx.tenant.findMany({ where: { unitId: id, status: 'Current', cooperativeId: coopId } });
 
       if (residents.length === 0) {
         throw new Error('No current residents found in source unit to transfer.');
@@ -627,7 +722,7 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
     let tenantId = null;
     
     if (user?.email) {
-      const t = await p.tenant.findUnique({ where: { email: user.email } });
+      const t = await p.tenant.findFirst({ where: { email: user.email, cooperativeId: await getCoopId(req, p) } });
       tenantId = t?.id || null;
     }
 
@@ -651,7 +746,7 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
+app.put('/api/maintenance/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const body = req.body;
   
   const data: any = {};
@@ -669,7 +764,11 @@ app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
 
   try {
     const maintenanceId = getParam(req.params.id);
-    const request = await getPrisma().maintenanceRequest.update({
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const existing = await p.maintenanceRequest.findFirst({ where: { id: maintenanceId, cooperativeId: coopId } });
+    if (!existing) return res.status(404).json({ error: 'Maintenance request not found' });
+    const request = await p.maintenanceRequest.update({
       where: { id: maintenanceId },
       data
     });
@@ -680,9 +779,13 @@ app.put('/api/maintenance/:id', requireAuth, async (req, res) => {
 });
 
 
-app.delete('/api/maintenance/:id', requireAuth, async (req, res) => {
+app.delete('/api/maintenance/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const maintenanceId = getParam(req.params.id);
-  await getPrisma().maintenanceRequest.delete({ where: { id: maintenanceId } });
+  const p = getPrisma();
+  const coopId = await getCoopId(req, p);
+  const existing = await p.maintenanceRequest.findFirst({ where: { id: maintenanceId, cooperativeId: coopId } });
+  if (!existing) return res.status(404).json({ error: 'Maintenance request not found' });
+  await p.maintenanceRequest.deleteMany({ where: { id: maintenanceId, cooperativeId: coopId } });
   res.json({ success: true });
 });
 
@@ -698,7 +801,7 @@ app.get('/api/announcements', requireAuth, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/announcements', requireAuth, async (req, res) => {
+app.post('/api/announcements', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const { title, content, type, priority, author, date } = req.body;
   try {
     const p = getPrisma();
@@ -710,11 +813,15 @@ app.post('/api/announcements', requireAuth, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/announcements/:id', requireAuth, async (req, res) => {
+app.put('/api/announcements/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const { title, content, type, priority, date } = req.body;
   try {
     const announcementId = getParam(req.params.id);
-    const announcement = await getPrisma().announcement.update({
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const existing = await p.announcement.findFirst({ where: { id: announcementId, cooperativeId: coopId } });
+    if (!existing) return res.status(404).json({ error: 'Announcement not found' });
+    const announcement = await p.announcement.update({
       where: { id: announcementId },
       data: { title, content, type, priority, date }
     });
@@ -722,10 +829,14 @@ app.put('/api/announcements/:id', requireAuth, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/announcements/:id', requireAuth, async (req, res) => {
+app.delete('/api/announcements/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const announcementId = getParam(req.params.id);
-    await getPrisma().announcement.delete({ where: { id: announcementId } });
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const existing = await p.announcement.findFirst({ where: { id: announcementId, cooperativeId: coopId } });
+    if (!existing) return res.status(404).json({ error: 'Announcement not found' });
+    await p.announcement.deleteMany({ where: { id: announcementId, cooperativeId: coopId } });
     res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -743,7 +854,7 @@ app.get('/api/documents', requireAuth, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/upload-to-blob', requireAuth, handleSingleDocumentUpload, async (req, res) => {
+app.post('/api/upload-to-blob', requireAuth, requireRole('ADMIN'), handleSingleDocumentUpload, async (req, res) => {
   try {
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'No file was uploaded.' });
@@ -826,7 +937,7 @@ app.post('/api/upload-to-blob', requireAuth, handleSingleDocumentUpload, async (
   }
 });
 
-app.post('/api/documents', requireAuth, async (req, res) => {
+app.post('/api/documents', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const { title, category, url, fileType, author, date, tags, committee, content } = req.body;
 
   try {
@@ -899,11 +1010,15 @@ app.get('/api/documents/:id/original', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/documents/:id', requireAuth, async (req, res) => {
+app.put('/api/documents/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const { title, category, tags, committee, content } = req.body;
   try {
     const documentId = getParam(req.params.id);
-    const document = await getPrisma().document.update({
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const existing = await p.document.findFirst({ where: { id: documentId, cooperativeId: coopId } });
+    if (!existing) return res.status(404).json({ error: 'Document not found' });
+    const document = await p.document.update({
       where: { id: documentId },
       data: { 
         title, 
@@ -918,10 +1033,14 @@ app.put('/api/documents/:id', requireAuth, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete('/api/documents/:id', requireAuth, async (req, res) => {
+app.delete('/api/documents/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const documentId = getParam(req.params.id);
-    await getPrisma().document.delete({ where: { id: documentId } });
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const existing = await p.document.findFirst({ where: { id: documentId, cooperativeId: coopId } });
+    if (!existing) return res.status(404).json({ error: 'Document not found' });
+    await p.document.deleteMany({ where: { id: documentId, cooperativeId: coopId } });
     res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -959,7 +1078,7 @@ app.get('/api/events', requireAuth, async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/events', requireAuth, async (req, res) => {
+app.post('/api/events', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const { title, description, date, time, location, category, committeeId } = req.body;
   const event = await getPrisma().coopEvent.create({
     data: {
@@ -977,7 +1096,7 @@ app.post('/api/events', requireAuth, async (req, res) => {
   res.json(event);
 });
 
-app.put('/api/events/:id', requireAuth, async (req, res) => {
+app.put('/api/events/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const p = getPrisma();
     const { title, description, date, time, location, category, committeeId } = req.body;
@@ -1051,9 +1170,13 @@ app.post('/api/events/:id/attend', requireAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/events/:id', requireAuth, async (req, res) => {
+app.delete('/api/events/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const eventId = getParam(req.params.id);
-  await getPrisma().coopEvent.delete({ where: { id: eventId } });
+  const p = getPrisma();
+  const coopId = await getCoopId(req, p);
+  const existing = await p.coopEvent.findFirst({ where: { id: eventId, cooperativeId: coopId } });
+  if (!existing) return res.status(404).json({ error: 'Event not found' });
+  await p.coopEvent.deleteMany({ where: { id: eventId, cooperativeId: coopId } });
   res.json({ success: true });
 });
 
@@ -1109,7 +1232,7 @@ app.get('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
+app.post('/api/minutes/:meetingId', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const meetingId = getParam(req.params.meetingId);
     const { meetingType, formData, attendees, motions } = req.body;
@@ -1162,7 +1285,7 @@ app.post('/api/minutes/:meetingId', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) => {
+app.post('/api/minutes/:meetingId/library-pdf', requireAuth, requireRole('ADMIN'), async (req, res) => {
   try {
     const meetingId = getParam(req.params.meetingId);
     const { pdfDataUrl, title, date } = req.body;
@@ -1268,7 +1391,8 @@ app.post('/api/ai/summarize', requireAuth, async (req, res) => {
 });
 
 
-app.get('/api/migrate', async (req, res) => {
+if (process.env.ENABLE_DANGEROUS_DB_TOOLS === 'true') {
+app.post('/api/internal/migrate', async (req, res) => {
   try {
     const p = getPrisma();
 
@@ -1466,7 +1590,7 @@ app.get('/api/migrate', async (req, res) => {
   }
 });
 
-app.get('/api/seed', async (req, res) => {
+app.post('/api/internal/seed', async (req, res) => {
   try {
     const p = getPrisma();
 
@@ -1782,9 +1906,9 @@ app.get('/api/seed', async (req, res) => {
 });
 
 
-   app.use('/api/drive', driveRoutes);
+}
 
-app.get(['/api/debug/config', '/debug/config'], (req, res) => {
+app.get(['/api/internal/debug/config'], requireAuth, requireRole('ADMIN'), (req, res) => {
   res.json({
     hasClientId: !!process.env.GOOGLE_CLIENT_ID,
     hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
