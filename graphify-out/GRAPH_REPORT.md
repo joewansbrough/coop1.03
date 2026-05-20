@@ -1,7 +1,7 @@
 # Graph Report - C:\Users\Joe\Desktop\Coop103\coop1.03  (2026-05-19)
 
 ## Corpus Check
-- 95 files · ~121,539 words
+- 95 files · ~131,901 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -114,12 +114,12 @@
   C:\Users\Joe\Desktop\Coop103\coop1.03\pages\Dashboard.tsx → C:\Users\Joe\Desktop\Coop103\coop1.03\utils\dashboardPreferences.ts
 - `DemoTutorialPanel()` --calls--> `getTutorialTrack()`  [INFERRED]
   C:\Users\Joe\Desktop\Coop103\coop1.03\components\DemoTutorialPanel.tsx → C:\Users\Joe\Desktop\Coop103\coop1.03\utils\demoTutorial.ts
-- `handleAttend()` --calls--> `isDemoMode()`  [INFERRED]
-  C:\Users\Joe\Desktop\Coop103\coop1.03\pages\EventDetail.tsx → C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts
-- `persistUpdate()` --calls--> `isDemoMode()`  [INFERRED]
-  C:\Users\Joe\Desktop\Coop103\coop1.03\pages\MaintenanceDetail.tsx → C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts
-- `handleSimulatedUpload()` --calls--> `isDemoMode()`  [INFERRED]
-  C:\Users\Joe\Desktop\Coop103\coop1.03\pages\ResourceLibrary.tsx → C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts
+- `isDemoMode()` --calls--> `handleAttend()`  [INFERRED]
+  C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts → C:\Users\Joe\Desktop\Coop103\coop1.03\pages\EventDetail.tsx
+- `isDemoMode()` --calls--> `persistUpdate()`  [INFERRED]
+  C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts → C:\Users\Joe\Desktop\Coop103\coop1.03\pages\MaintenanceDetail.tsx
+- `isDemoMode()` --calls--> `handleSimulatedUpload()`  [INFERRED]
+  C:\Users\Joe\Desktop\Coop103\coop1.03\hooks\useCoopData.ts → C:\Users\Joe\Desktop\Coop103\coop1.03\pages\ResourceLibrary.tsx
 
 ## Hyperedges (group relationships)
 - **PIPA Compliance Framework** — 1290_pipa_overview_of_contents_pipa, 1310_ten_principles_of_personal_information_protection_accountability, 1510_pipa_record_keeping_tips_data_retention, 1570_a_guide_to_b_privacy_officer [INFERRED 0.95]
