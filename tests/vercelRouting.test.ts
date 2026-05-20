@@ -12,3 +12,10 @@ test('vercel routing does not rewrite static assets through the SPA fallback', (
     'A broad /(.*) rewrite can make Vercel serve module assets with the wrong MIME type.',
   );
 });
+
+test('vercel deploys the Vite build output instead of raw source files', () => {
+  const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
+
+  assert.equal(config.buildCommand, 'npm run build');
+  assert.equal(config.outputDirectory, 'dist');
+});
