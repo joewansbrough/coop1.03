@@ -78,6 +78,8 @@ model Cooperative {
   tenants              Tenant[]
   tenantHistories      TenantHistory[]
   units                Unit[]
+  meetingMinutes       MeetingMinutes[]
+  documentAccessLogs   DocumentAccessLog[]
 }
 
 model DashboardPreference {
@@ -358,15 +360,18 @@ model PolicyAssistantQuery {
 }
 
 model DocumentAccessLog {
-  id         String @id @default(uuid())
-  documentId String
-  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  userId     String
-  action     String
-  ipAddress  String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
+  id            String   @id @default(uuid())
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId        String
+  action        String
+  ipAddress     String?
+  userAgent     String?
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
 
+  @@index([cooperativeId])
   @@index([documentId, createdAt])
   @@index([userId, createdAt])
 }
@@ -417,7 +422,8 @@ model MeetingMinutes {
   data          Json // Store the entire formData object
   attendees     Json // Array of attendees
   motions       Json // Array of motions
-  cooperativeId String? // Added field
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   createdBy     String
@@ -427,6 +433,7 @@ model MeetingMinutes {
   meeting CoopEvent @relation(fields: [meetingId], references: [id])
 
   @@index([meetingId])
+  @@index([cooperativeId])
 }
 
 model ScheduledMaintenance {

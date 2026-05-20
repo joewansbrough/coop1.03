@@ -21,11 +21,21 @@ if (ROOT_FOLDER_IDS.length === 0) {
 
 const getParam = (value: string | string[] | undefined): string => Array.isArray(value) ? value[0] ?? '' : value ?? '';
 
-// ─── Helper: verify a folder is a descendant of any configured root ──────────
+// ─── Helper: Get root folder IDs for the active request ────────────────────────
 
-async function isFolderWithinRoot(folderId: string, cache?: Map<string, boolean>): Promise<boolean> {
-    if (ROOT_FOLDER_IDS.length === 0) return false;
-    if (ROOT_FOLDER_IDS.includes(folderId)) return true;
+const getRequestRootFolderIds = (req: Request): string[] => {
+    const customRoots = (req as any).cooperative?.googleDriveRootFolderIds;
+    if (customRoots && Array.isArray(customRoots) && customRoots.length > 0) {
+        return customRoots;
+    }
+    return ROOT_FOLDER_IDS;
+};
+
+// ─── Helper: verify a folder is a descendant of any configured roots ──────────
+
+async function isFolderWithinRoot(folderId: string, roots: string[], cache?: Map<string, boolean>): Promise<boolean> {
+    if (!roots || roots.length === 0) return false;
+    if (roots.includes(folderId)) return true;
     if (cache?.has(folderId)) return cache.get(folderId)!;
 
     const drive = driveClient();
@@ -43,7 +53,7 @@ async function isFolderWithinRoot(folderId: string, cache?: Map<string, boolean>
 
             const parents = file.data.parents;
             if (!parents || parents.length === 0) break;
-            if (parents.some(parent => ROOT_FOLDER_IDS.includes(parent))) {
+            if (parents.some(parent => roots.includes(parent))) {
                 if (cache) visited.forEach(id => cache.set(id, true));
                 return true;
             }
@@ -66,14 +76,15 @@ async function isFolderWithinRoot(folderId: string, cache?: Map<string, boolean>
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 // Root folder contents
-router.get('/root', async (_req: Request, res: Response) => {
+router.get('/root', async (req: Request, res: Response) => {
     try {
+        const roots = getRequestRootFolderIds(req);
         const drive = driveClient();
         let allFolders: any[] = [];
         let allFiles: any[] = [];
         const rootDetails: { id: string; name: string }[] = [];
 
-        for (const rootId of ROOT_FOLDER_IDS) {
+        for (const rootId of roots) {
             try {
                 const rootFileMeta = await drive.files.get({
                     fileId: rootId,
@@ -90,7 +101,7 @@ router.get('/root', async (_req: Request, res: Response) => {
             }
         }
 
-        for (const rootId of ROOT_FOLDER_IDS) {
+        for (const rootId of roots) {
             const response = await drive.files.list({
                 q: `'${rootId}' in parents and trashed = false`,
                 fields: 'files(id, name, mimeType, modifiedTime, size, webViewLink)',
@@ -106,7 +117,7 @@ router.get('/root', async (_req: Request, res: Response) => {
         }
 
         res.json({
-            rootIds: ROOT_FOLDER_IDS,
+            rootIds: roots,
             rootDetails,
             folders: allFolders,
             files: allFiles,
@@ -121,8 +132,9 @@ router.get('/root', async (_req: Request, res: Response) => {
 router.get('/folders/:folderId/contents', async (req: Request, res: Response) => {
     try {
         const folderId = getParam(req.params.folderId);
+        const roots = getRequestRootFolderIds(req);
 
-        const isAllowed = await isFolderWithinRoot(folderId); // ✅ fixed: no longer missing ROOT_FOLDER_IDS arg
+        const isAllowed = await isFolderWithinRoot(folderId, roots);
         if (!isAllowed) {
             return res.status(403).json({ error: 'Folder is outside the allowed directory' });
         }
@@ -153,12 +165,13 @@ router.get('/folders/:folderId/contents', async (req: Request, res: Response) =>
 router.get('/folders/:folderId/path', async (req: Request, res: Response) => {
     try {
         const folderId = getParam(req.params.folderId);
+        const roots = getRequestRootFolderIds(req);
         const drive = driveClient();
         const path: { id: string; name: string }[] = [];
         let currentId: string | null = folderId;
         let rootFound = false;
 
-        if (ROOT_FOLDER_IDS.includes(folderId)) {
+        if (roots.includes(folderId)) {
             const rootFile = await drive.files.get({
                 fileId: folderId,
                 fields: 'id, name',
@@ -174,7 +187,7 @@ router.get('/folders/:folderId/path', async (req: Request, res: Response) => {
                 supportsAllDrives: true,
             });
 
-            if (ROOT_FOLDER_IDS.includes(file.data.id!)) {
+            if (roots.includes(file.data.id!)) {
                 path.unshift({ id: file.data.id!, name: file.data.name! });
                 rootFound = true;
                 break;
@@ -201,6 +214,7 @@ router.get('/folders/:folderId/path', async (req: Request, res: Response) => {
 router.get('/files/:fileId', async (req: Request, res: Response) => {
     try {
         const fileId = getParam(req.params.fileId);
+        const roots = getRequestRootFolderIds(req);
         const drive = driveClient();
 
         const file = await drive.files.get({
@@ -210,7 +224,7 @@ router.get('/files/:fileId', async (req: Request, res: Response) => {
         });
 
         const parents = file.data.parents ?? [];
-        const allowed = ROOT_FOLDER_IDS.includes(fileId) || await isFolderWithinRoot(parents[0] ?? '');
+        const allowed = roots.includes(fileId) || await isFolderWithinRoot(parents[0] ?? '', roots);
         if (!allowed) {
             return res.status(403).json({ error: 'File is outside the allowed directory' });
         }
@@ -226,6 +240,7 @@ router.get('/files/:fileId', async (req: Request, res: Response) => {
 router.get('/files/:fileId/download', async (req: Request, res: Response) => {
     try {
         const fileId = getParam(req.params.fileId);
+        const roots = getRequestRootFolderIds(req);
         const drive = driveClient();
 
         const meta = await drive.files.get({
@@ -235,7 +250,7 @@ router.get('/files/:fileId/download', async (req: Request, res: Response) => {
         });
         const { name, mimeType, parents } = meta.data;
 
-        const allowed = ROOT_FOLDER_IDS.includes(fileId) || await isFolderWithinRoot(parents?.[0] ?? '');
+        const allowed = roots.includes(fileId) || await isFolderWithinRoot(parents?.[0] ?? '', roots);
         if (!allowed) {
             return res.status(403).json({ error: 'File is outside the allowed directory' });
         }
@@ -276,6 +291,7 @@ router.get('/search', async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Query param 'q' is required" });
         }
 
+        const roots = getRequestRootFolderIds(req);
         const drive = driveClient();
         const escaped = term.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
@@ -291,23 +307,23 @@ router.get('/search', async (req: Request, res: Response) => {
         const cache = new Map<string, boolean>();
 
         // Pre-populate cache with root files themselves if they show up in results
-        ROOT_FOLDER_IDS.forEach(id => cache.set(id, true));
+        roots.forEach(id => cache.set(id, true));
 
         // Process search results in parallel with ancestry checking
         const filterPromises = allFiles.map(async (file) => {
             if (!file.id) return null;
 
             // Immediate check: is it a root?
-            if (ROOT_FOLDER_IDS.includes(file.id)) return file;
+            if (roots.includes(file.id)) return file;
 
             // Immediate check: is its parent a root? (Already in response)
-            if (file.parents?.some(p => ROOT_FOLDER_IDS.includes(p))) {
+            if (file.parents?.some(p => roots.includes(p))) {
                 cache.set(file.id, true);
                 return file;
             }
 
             // Fallback: full ancestry check with cache
-            const isInside = await isFolderWithinRoot(file.id, cache);
+            const isInside = await isFolderWithinRoot(file.id, roots, cache);
             return isInside ? file : null;
         });
 

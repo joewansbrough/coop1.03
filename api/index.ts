@@ -20,6 +20,8 @@ import {
   resolveCooperativeLookup,
   resolveWorkspaceAccess,
 } from '../utils/multiTenancy.js';
+import { logAuditEvent } from '../utils/auditLogger.js';
+
 
 
 
@@ -485,15 +487,34 @@ app.get('/api/units/:id/scheduled-maintenance', requireAuth, async (req, res) =>
 });
 
 app.post('/api/tenants', requireAuth, requireRole('ADMIN'), validateRequest(tenantSchema), async (req, res) => {
+  const user = (req as any).user;
   try {
-    const tenant = await getPrisma().tenant.create({
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+
+    if (req.body.unitId) {
+      const unit = await p.unit.findFirst({ where: { id: req.body.unitId, cooperativeId: coopId } });
+      if (!unit) {
+        return res.status(403).json({ error: 'Cannot link tenant to a unit from another cooperative.' });
+      }
+    }
+
+    const tenant = await p.tenant.create({
       data: {
         ...req.body,
-        cooperativeId: await getCoopId(req, getPrisma()),
+        cooperativeId: coopId,
         startDate: new Date(req.body.startDate),
       },
       include: { unit: true }
     });
+
+    logAuditEvent({
+      cooperativeId: coopId,
+      userEmail: user?.email || 'unknown',
+      action: 'TENANT_CREATE',
+      details: { tenantId: tenant.id, name: `${tenant.firstName} ${tenant.lastName}`, email: tenant.email, unitId: tenant.unitId }
+    });
+
     res.json(tenant);
   } catch (error: any) {
     console.error('Failed to create tenant:', error);
@@ -532,10 +553,19 @@ app.get('/api/tenants/:id/history', requireAuth, async (req, res) => {
 app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
   const id = getParam(req.params.id);
   const { date, reason } = req.body;
+  const user = (req as any).user;
   try {
-    await getPrisma().$transaction(async (tx) => {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+
+    // Pre-flight check: ensure the unit exists and belongs to this cooperative
+    const unit = await p.unit.findFirst({ where: { id, cooperativeId: coopId } });
+    if (!unit) {
+      return res.status(404).json({ error: 'Unit not found' });
+    }
+
+    await p.$transaction(async (tx) => {
       // Find all current residents of this unit
-      const coopId = await getCoopId(req, tx);
       const residents = await tx.tenant.findMany({ where: { unitId: id, status: 'Current', cooperativeId: coopId } });
 
       for (const tenant of residents) {
@@ -564,6 +594,13 @@ app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
       });
     });
 
+    logAuditEvent({
+      cooperativeId: coopId,
+      userEmail: user?.email || 'unknown',
+      action: 'UNIT_MOVE_OUT',
+      details: { unitId: id, unitNumber: unit.number, date, reason }
+    });
+
     res.json({ success: true });
   } catch (e: any) { 
     console.error('Move-out error:', e);
@@ -574,9 +611,24 @@ app.post('/api/units/:id/move-out', requireAuth, async (req, res) => {
 app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
   const id = getParam(req.params.id);
   const { tenantId, date } = req.body;
+  const user = (req as any).user;
   try {
-    await getPrisma().$transaction(async (tx) => {
-      const coopId = await getCoopId(req, tx);
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+
+    // Pre-flight check: ensure the unit exists and belongs to this cooperative
+    const unit = await p.unit.findFirst({ where: { id, cooperativeId: coopId } });
+    if (!unit) {
+      return res.status(404).json({ error: 'Unit not found' });
+    }
+
+    // Pre-flight check: ensure the tenant exists and belongs to this cooperative
+    const tenantCheck = await p.tenant.findFirst({ where: { id: tenantId, cooperativeId: coopId } });
+    if (!tenantCheck) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    await p.$transaction(async (tx) => {
       const tenant = await tx.tenant.findFirst({ where: { id: tenantId, cooperativeId: coopId } });
       if (!tenant) throw new Error('Tenant not found');
 
@@ -623,6 +675,13 @@ app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
       });
     });
 
+    logAuditEvent({
+      cooperativeId: coopId,
+      userEmail: user?.email || 'unknown',
+      action: 'UNIT_MOVE_IN',
+      details: { unitId: id, unitNumber: unit.number, tenantId, tenantName: `${tenantCheck.firstName} ${tenantCheck.lastName}`, date }
+    });
+
     res.json({ success: true });
   } catch (e: any) { 
     console.error('Move-in error:', e);
@@ -633,10 +692,25 @@ app.post('/api/units/:id/move-in', requireAuth, async (req, res) => {
 app.post('/api/units/:id/transfer', requireAuth, async (req, res) => {
   const id = getParam(req.params.id);
   const { toUnitId, date } = req.body;
+  const user = (req as any).user;
   try {
-    await getPrisma().$transaction(async (tx) => {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+
+    // Pre-flight check: ensure the source unit exists and belongs to this cooperative
+    const unit = await p.unit.findFirst({ where: { id, cooperativeId: coopId } });
+    if (!unit) {
+      return res.status(404).json({ error: 'Source unit not found' });
+    }
+
+    // Pre-flight check: ensure the destination unit exists and belongs to this cooperative
+    const destUnit = await p.unit.findFirst({ where: { id: toUnitId, cooperativeId: coopId } });
+    if (!destUnit) {
+      return res.status(404).json({ error: 'Destination unit not found' });
+    }
+
+    await p.$transaction(async (tx) => {
       // Find all residents of the source unit
-      const coopId = await getCoopId(req, tx);
       const residents = await tx.tenant.findMany({ where: { unitId: id, status: 'Current', cooperativeId: coopId } });
 
       if (residents.length === 0) {
@@ -687,6 +761,13 @@ app.post('/api/units/:id/transfer', requireAuth, async (req, res) => {
       });
     });
 
+    logAuditEvent({
+      cooperativeId: coopId,
+      userEmail: user?.email || 'unknown',
+      action: 'UNIT_TRANSFER',
+      details: { fromUnitId: id, fromUnitNumber: unit.number, toUnitId, toUnitNumber: destUnit.number, date }
+    });
+
     res.json({ success: true });
   } catch (e: any) { 
     console.error('Transfer error:', e);
@@ -718,17 +799,25 @@ app.post('/api/maintenance', requireAuth, async (req, res) => {
   
   try {
     const p = getPrisma();
+    const coopId = await getCoopId(req, p);
     const user = (req as any).user;
     let tenantId = null;
     
     if (user?.email) {
-      const t = await p.tenant.findFirst({ where: { email: user.email, cooperativeId: await getCoopId(req, p) } });
+      const t = await p.tenant.findFirst({ where: { email: user.email, cooperativeId: coopId } });
       tenantId = t?.id || null;
+    }
+
+    if (unitId) {
+      const unit = await p.unit.findFirst({ where: { id: unitId, cooperativeId: coopId } });
+      if (!unit) {
+        return res.status(403).json({ error: 'Cannot link maintenance request to a unit from another cooperative.' });
+      }
     }
 
     const request = await p.maintenanceRequest.create({
       data: {
-        cooperativeId: await getCoopId(req, p),
+        cooperativeId: coopId,
         title,
         description,
         status: status || 'Pending',
@@ -768,6 +857,14 @@ app.put('/api/maintenance/:id', requireAuth, requireRole('ADMIN'), async (req, r
     const coopId = await getCoopId(req, p);
     const existing = await p.maintenanceRequest.findFirst({ where: { id: maintenanceId, cooperativeId: coopId } });
     if (!existing) return res.status(404).json({ error: 'Maintenance request not found' });
+
+    if (body.unitId) {
+      const unit = await p.unit.findFirst({ where: { id: body.unitId, cooperativeId: coopId } });
+      if (!unit) {
+        return res.status(403).json({ error: 'Cannot link maintenance request to a unit from another cooperative.' });
+      }
+    }
+
     const request = await p.maintenanceRequest.update({
       where: { id: maintenanceId },
       data
@@ -1080,20 +1177,36 @@ app.get('/api/events', requireAuth, async (req, res) => {
 
 app.post('/api/events', requireAuth, requireRole('ADMIN'), async (req, res) => {
   const { title, description, date, time, location, category, committeeId } = req.body;
-  const event = await getPrisma().coopEvent.create({
-    data: {
-      cooperativeId: await getCoopId(req, getPrisma()), 
-      title, 
-      description, 
-      date: new Date(date), 
-      time, 
-      location, 
-      category,
-      committeeId: committeeId || null
-    },
-    include: { attendees: true }
-  });
-  res.json(event);
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+
+    if (committeeId) {
+      const committee = await p.committee.findFirst({
+        where: { id: committeeId, cooperativeId: coopId }
+      });
+      if (!committee) {
+        return res.status(403).json({ error: 'Cannot link event to a committee from another cooperative.' });
+      }
+    }
+
+    const event = await p.coopEvent.create({
+      data: {
+        cooperativeId: coopId, 
+        title, 
+        description, 
+        date: new Date(date), 
+        time, 
+        location, 
+        category,
+        committeeId: committeeId || null
+      },
+      include: { attendees: true }
+    });
+    res.json(event);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.put('/api/events/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
@@ -1106,6 +1219,15 @@ app.put('/api/events/:id', requireAuth, requireRole('ADMIN'), async (req, res) =
       where: { id: eventId, cooperativeId: coopId },
     });
     if (!existingEvent) return res.status(404).json({ error: 'Event not found' });
+
+    if (committeeId) {
+      const committee = await p.committee.findFirst({
+        where: { id: committeeId, cooperativeId: coopId }
+      });
+      if (!committee) {
+        return res.status(403).json({ error: 'Cannot link event to a committee from another cooperative.' });
+      }
+    }
 
     const event = await p.coopEvent.update({
       where: { id: eventId },
@@ -1222,7 +1344,7 @@ app.get('/api/minutes/:meetingId', requireAuth, async (req, res) => {
     if (!minutes) return res.status(404).json({ error: 'Minutes not found' });
     
     // Security check: ensure minutes belong to user's coop
-    if (minutes.cooperativeId && minutes.cooperativeId !== coopId) {
+    if (!minutes.cooperativeId || minutes.cooperativeId !== coopId) {
       return res.status(403).json({ error: 'Forbidden' });
     }
     
@@ -1248,8 +1370,19 @@ app.post('/api/minutes/:meetingId', requireAuth, requireRole('ADMIN'), async (re
       return res.status(401).json({ error: 'User session invalid' });
     }
 
-    // UPSERT pattern for minutes
+    // Pre-flight check 1: Ensure the corresponding meeting (CoopEvent) belongs to this cooperative
+    const event = await p.coopEvent.findFirst({
+      where: { id: meetingId, cooperativeId: coopId }
+    });
+    if (!event) {
+      return res.status(403).json({ error: 'Cannot save minutes for a meeting from another cooperative or a non-existent meeting.' });
+    }
+
+    // Pre-flight check 2: Check any existing minutes record by meetingId and reject if it belongs to a different cooperative
     const existing = await p.meetingMinutes.findUnique({ where: { meetingId } });
+    if (existing && (!existing.cooperativeId || existing.cooperativeId !== coopId)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
 
     if (existing) {
       const updated = await p.meetingMinutes.update({
@@ -1262,6 +1395,12 @@ app.post('/api/minutes/:meetingId', requireAuth, requireRole('ADMIN'), async (re
           cooperativeId: coopId,
           updatedAt: new Date(),
         }
+      });
+      logAuditEvent({
+        cooperativeId: coopId,
+        userEmail: user.email,
+        action: 'MINUTES_SAVE',
+        details: { meetingId, meetingType, status: 'updated', id: updated.id }
       });
       return res.json(serializeMinutes(updated));
     }
@@ -1276,6 +1415,13 @@ app.post('/api/minutes/:meetingId', requireAuth, requireRole('ADMIN'), async (re
         cooperativeId: coopId,
         createdBy: user.email,
       }
+    });
+
+    logAuditEvent({
+      cooperativeId: coopId,
+      userEmail: user.email,
+      action: 'MINUTES_SAVE',
+      details: { meetingId, meetingType, status: 'created', id: minutes.id }
     });
 
     res.status(201).json(serializeMinutes(minutes));
