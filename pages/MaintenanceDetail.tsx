@@ -2,12 +2,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { pdf } from '@react-pdf/renderer';
-import { saveAs } from 'file-saver';
 import { RequestStatus, MaintenanceNote, MaintenanceCategory, MaintenanceRequest, Unit, Tenant, MaintenancePriority } from '../types';
 import { formatDateTime } from '../utils/dateUtils';
 import AppAlert from '../components/AppAlert';
-import { MaintenanceRequestPDF } from '../services/export/maintenancePdfGenerator';
 import { canExportMaintenanceRequest, isCurrentTenantForMaintenanceRequest } from '../utils/maintenanceRequestAccess';
 import { isDemoMode } from '../hooks/useCoopData';
 import { demoStorage } from '../utils/demoStorage';
@@ -234,6 +231,11 @@ const MaintenanceDetail: React.FC<MaintenanceDetailProps> = ({
     if (!canExportPdf || isExportingPdf) return;
     setIsExportingPdf(true);
     try {
+      const [{ pdf }, { saveAs }, { MaintenanceRequestPDF }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('file-saver'),
+        import('../services/export/maintenancePdfGenerator'),
+      ]);
       const blob = await pdf(
         <MaintenanceRequestPDF request={request} unit={unit} tenant={tenant} exportedBy={user?.name || user?.email} />
       ).toBlob();

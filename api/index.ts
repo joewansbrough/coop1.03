@@ -39,6 +39,7 @@ import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { parseGeminiJson } from '../utils/geminiJson.js';
+import { buildOnboardingStatus } from '../utils/onboardingStatus.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
 import { isSuperuserEmail, resolveCooperativeIdForRequest, resolveKnownCooperativeIdForEmail } from '../utils/coopResolution.js';
@@ -1242,6 +1243,59 @@ app.post('/api/testing/impersonation/stop', requireAuth, async (req, res) => {
 app.use('/api/drive', requireDriveAccess, driveRoutes);
 
 // --- Database API Routes ---
+
+app.get('/api/onboarding/status', requireAuth, async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const [
+      cooperative,
+      units,
+      activeTenants,
+      assignedActiveTenants,
+      documents,
+      activeDriveRoots,
+      indexedDocumentVersions,
+      committees,
+    ] = await Promise.all([
+      p.cooperative.findUnique({
+        where: { id: coopId },
+        select: { id: true, name: true, slug: true, province: true, adminEmail: true },
+      }),
+      p.unit.count({ where: { cooperativeId: coopId } }),
+      p.tenant.count({ where: { cooperativeId: coopId, status: 'Current' } }),
+      p.tenant.count({ where: { cooperativeId: coopId, status: 'Current', unitId: { not: null } } }),
+      p.document.count({ where: { cooperativeId: coopId } }),
+      p.cooperativeDriveRoot?.count
+        ? p.cooperativeDriveRoot.count({ where: { cooperativeId: coopId, isActive: true } })
+        : Promise.resolve(0),
+      p.document.count({
+        where: {
+          cooperativeId: coopId,
+          currentVersion: { is: { ragStatus: RAG_STATUSES.INDEXED } },
+        },
+      }),
+      p.committee.count({ where: { cooperativeId: coopId } }),
+    ]);
+
+    res.json(buildOnboardingStatus({
+      cooperative,
+      counts: {
+        units,
+        activeTenants,
+        assignedActiveTenants,
+        documents,
+        activeDriveRoots,
+        indexedDocumentVersions,
+        committees,
+      },
+      hasDriveConfiguration: Boolean(process.env.GOOGLE_DRIVE_ROOT_FOLDER_IDS || process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID),
+      hasRagConfiguration: Boolean(process.env.GEMINI_FILE_SEARCH_STORE_NAME || process.env.GEMINI_PROVINCE_FILE_SEARCH_STORE_NAME),
+    }));
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to load onboarding status.', details: e.message });
+  }
+});
 
 app.get('/api/units', requireAuth, async (req, res) => {
   try {

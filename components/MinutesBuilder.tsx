@@ -3,14 +3,11 @@ import DOMPurify from 'dompurify';
 import { isDemoMode, useTenants, useCommittees, useEvents, useUser, useRefreshData } from '../hooks/useCoopData';
 import { Tenant, Committee, CoopEvent, Document as CoopDocument } from '../types';
 import RichTextEditor from './RichTextEditor';
-import { MinutesPDF } from '../services/export/pdfGenerator';
 import { demoStorage } from '../utils/demoStorage';
 import { recordTutorialEvent } from '../utils/demoTutorial';
 import { applyMinutesEventDetails, getMinutesEventDetails, type MinutesEventDetails } from '../utils/minutesEventDetails';
 import { buildMeetingAnalysisFormPatch } from '../utils/meetingAnalysisFormMapping';
 import { geminiService } from '../services/geminiService';
-import { pdf } from '@react-pdf/renderer';
-import { saveAs } from 'file-saver';
 
 interface MinutesBuilderProps {
   meetingId: string;
@@ -219,7 +216,11 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, event, initi
     return committee?.name || '';
   };
 
-  const createMinutesPdfBlob = () => {
+  const createMinutesPdfBlob = async () => {
+    const [{ pdf }, { MinutesPDF }] = await Promise.all([
+      import('@react-pdf/renderer'),
+      import('../services/export/pdfGenerator'),
+    ]);
     const pdfFormData = sanitizeFormData(applyMinutesEventDetails(formData, currentEvent));
     return pdf(
       <MinutesPDF data={{ formData: pdfFormData, attendees, motions, meetingType }} event={currentEvent} />
@@ -633,6 +634,7 @@ const handleSave = async () => {
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
+      const { saveAs } = await import('file-saver');
       const blob = await createMinutesPdfBlob();
       saveAs(blob, getMinutesFileName());
     } catch (err) {

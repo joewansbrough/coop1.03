@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import DashboardTileCatalog from '../components/dashboard/DashboardTileCatalog';
 import DashboardTileGrid from '../components/dashboard/DashboardTileGrid';
 import { useDashboardPreferences } from '../hooks/useDashboardPreferences';
+import { useOnboardingStatus } from '../hooks/useCoopData';
+import OnboardingProgress from '../components/onboarding/OnboardingProgress';
 import {
   DASHBOARD_TILE_REGISTRY,
   createDefaultDashboardLayout,
@@ -162,6 +164,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     isSaving,
     savePreference,
   } = useDashboardPreferences(role);
+  const { data: onboardingStatus } = useOnboardingStatus({ enabled: isAdmin });
 
   const firstName = user?.name ? user.name.split(' ')[0] : '';
   const userTenantId = user?.tenantId ?? null;
@@ -783,6 +786,10 @@ const Dashboard: React.FC<DashboardProps> = ({
           preference={preference}
           onPreferenceChange={updatePreference}
         />
+      )}
+
+      {isAdmin && onboardingStatus && !onboardingStatus.isReadyToLaunch && (
+        <OnboardingProgress status={onboardingStatus} compact />
       )}
 
       <DashboardTileGrid

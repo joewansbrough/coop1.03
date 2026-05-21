@@ -114,6 +114,11 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
     <button onClick={() => onNavigate('/documents')} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
       <i className="fa-solid fa-circle-info text-slate-400"></i> Association Protocols
     </button>
+    {isAdmin && (
+      <button onClick={() => onNavigate('/onboarding')} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
+        <i className="fa-solid fa-list-check text-slate-400"></i> Setup Checklist
+      </button>
+    )}
     <button onClick={onOpenHelp} className="w-full text-left px-4 py-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors">
       <i className="fa-solid fa-circle-question text-slate-400"></i> Help & Support
     </button>
@@ -302,6 +307,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isAdmin, isActualAdmin, onTog
 
   if (effectiveIsAdmin) {
     navItems.push(
+      { label: 'Setup', path: '/onboarding', icon: 'fa-list-check', isAdmin: true },
       { label: 'Units', path: '/admin/units', icon: 'fa-house-chimney', isAdmin: true },
       { label: 'Tenants', path: '/admin/tenants', icon: 'fa-users', isAdmin: true },
       { label: 'Directory', path: '/directory', icon: 'fa-address-book', isAdmin: true },

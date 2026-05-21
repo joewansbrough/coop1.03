@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstac
 import { Unit, Tenant, MaintenanceRequest, Announcement, Document, Committee, CoopEvent, ScheduledMaintenance, MinutesTemplate, Building, Notification } from '../types';
 import * as demoData from '../utils/demoData';
 import { demoStorage } from '../utils/demoStorage';
+import type { OnboardingStatus } from '../utils/onboardingStatus';
 
 type DataQueryOptions<T> = Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, 'queryKey' | 'queryFn'>;
 
@@ -362,6 +363,13 @@ export const useBuildings = (options?: DataQueryOptions<Building[]>) => useQuery
 export const useNotifications = (options?: DataQueryOptions<Notification[]>) => useQuery<Notification[]>({
   queryKey: ['notifications'],
   queryFn: () => isDemoMode() ? Promise.resolve(demoStorage.getNotifications()) : fetchJson('/api/notifications'),
+  ...dataQueryConfig,
+  ...options,
+});
+
+export const useOnboardingStatus = (options?: DataQueryOptions<OnboardingStatus>) => useQuery<OnboardingStatus>({
+  queryKey: ['onboarding-status'],
+  queryFn: () => fetchJson('/api/onboarding/status'),
   ...dataQueryConfig,
   ...options,
 });

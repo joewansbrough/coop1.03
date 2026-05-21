@@ -20,6 +20,7 @@ import TenantDetail from './pages/TenantDetail';
 import Waitlist from './pages/Waitlist';
 import PolicyAssistant from './pages/PolicyAssistant';
 import Notifications from './pages/Notifications';
+import OnboardingSetup from './pages/OnboardingSetup';
 import Login from './pages/Login';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useUser, useUnits, useTenants, useMaintenance, useAnnouncements, useDocuments, useCommittees, useEvents, useScheduledMaintenance, useNotifications, useBuildings } from './hooks/useCoopData';
@@ -268,6 +269,7 @@ const AppContent: React.FC = () => {
               <Route path="/admin/tenants" element={<Tenants isAdmin={effectiveIsAdmin} isLoading={isUnitsLoading || isTenantsLoading} tenants={tenants} setTenants={setTenants} units={units} />} />
               <Route path="/admin/tenants/:tenantId" element={<TenantDetail tenants={tenants} units={units} requests={requests} committees={committees} />} />
               <Route path="/admin/waitlist" element={<Waitlist tenants={tenants} setTenants={setTenants} />} />
+              <Route path="/onboarding" element={<OnboardingSetup />} />
               <Route
                 path="/admin/reports"
                 element={

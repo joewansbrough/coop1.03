@@ -1,7 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { pdf } from '@react-pdf/renderer';
 import { geminiService } from '../services/geminiService';
 import { Document, Committee, RagCitation } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -16,7 +15,6 @@ import { getDocumentFileUrl, getDocumentLibraryDestination, getDocumentLibraryOr
 import { demoStorage } from '../utils/demoStorage';
 import { sortNewestFirst } from '../utils/contentOrdering';
 import { readApiResponse } from '../utils/apiResponse';
-import { MinutesPDF } from '../services/export/pdfGenerator';
 import {
   createErroredRagAskSession,
   createPendingRagAskSession,
@@ -222,6 +220,10 @@ const ResourceLibrary: React.FC<{
     const context = getMinutesPdfContext(doc);
     if (!context) return null;
 
+    const [{ pdf }, { MinutesPDF }] = await Promise.all([
+      import('@react-pdf/renderer'),
+      import('../services/export/pdfGenerator'),
+    ]);
     const blob = await pdf(<MinutesPDF data={context.minutesData} event={context.event} />).toBlob();
     return URL.createObjectURL(blob);
   };

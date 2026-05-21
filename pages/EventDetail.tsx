@@ -2,13 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { pdf } from '@react-pdf/renderer';
-import { saveAs } from 'file-saver';
 import { Committee, CoopEvent, Document as CoopDocument, Tenant } from '../types';
 import AppAlert from '../components/AppAlert';
 import MinutesBuilder from '../components/MinutesBuilder';
 import { isDemoMode, useMinutes } from '../hooks/useCoopData';
-import { MinutesPDF } from '../services/export/pdfGenerator';
 import { addUserAttendance, createAttendanceRequestInit } from '../utils/eventAttendance';
 import { applyEventEdit, createEventUpdateRequestInit, type EventEditPayload } from '../utils/eventEditing';
 import { demoStorage } from '../utils/demoStorage';
@@ -94,6 +91,11 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent; action?: React.Re
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {
+      const [{ pdf }, { saveAs }, { MinutesPDF }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('file-saver'),
+        import('../services/export/pdfGenerator'),
+      ]);
       const minutesData = {
         ...data,
         formData,

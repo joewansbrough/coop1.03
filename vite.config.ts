@@ -24,6 +24,50 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        chunkSizeWarningLimit: 1500,
+        rollupOptions: {
+          output: {
+            manualChunks(id) {
+              if (!id.includes('node_modules')) return undefined;
+              if (id.includes('@react-pdf') || id.includes('pdf-parse') || id.includes('pdfjs-dist') || id.includes('fontkit') || id.includes('linebreak') || id.includes('yoga-layout') || id.includes('unicode-properties') || id.includes('unicode-trie') || id.includes('png-js') || id.includes('brotli')) {
+                return 'vendor-pdf';
+              }
+              if (id.includes('react-dom') || id.includes('scheduler')) {
+                return 'vendor-react-dom';
+              }
+              if (id.includes('react-router-dom') || id.includes('@remix-run')) {
+                return 'vendor-router';
+              }
+              if (id.includes('@tanstack')) {
+                return 'vendor-query';
+              }
+              if (id.includes('node_modules/react/')) {
+                return 'vendor-react';
+              }
+              if (id.includes('recharts')) {
+                return 'vendor-charts';
+              }
+              if (id.includes('@google') || id.includes('googleapis')) {
+                return 'vendor-ai';
+              }
+              if (id.includes('framer-motion') || id.includes('motion') || id.includes('@dnd-kit')) {
+                return 'vendor-motion';
+              }
+              if (id.includes('react-quill-new') || id.includes('quill')) {
+                return 'vendor-editor';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
+              if (id.includes('axios') || id.includes('dompurify') || id.includes('file-saver')) {
+                return 'vendor-utils';
+              }
+              return undefined;
+            },
+          },
+        },
       }
     };
 });
