@@ -45,15 +45,28 @@ export const canUsePrivilegedOracleTools = (context: Pick<ToolContext, 'isAdmin'
 const deny = (message = 'Access denied. This Oracle tool is limited to board or admin users.') => ({ error: message });
 
 const documentVisibilityWhere = (context: ToolContext) => {
-  return getVisibleDocumentWhere({
+  const permissionKeys = context.permissionKeys ||
+    (context.isAdmin ? ['documents.view.admin', 'documents.view.board', 'documents.view.members'] : ['documents.view.members']);
+  const isPrivileged = canUsePrivilegedOracleTools(context);
+
+  const where = getVisibleDocumentWhere({
     userId: context.userId,
     email: context.userEmail,
     cooperativeId: context.cooperativeId,
-    groupIds: context.groupIds || [],
-    permissionKeys: context.permissionKeys || (context.isAdmin ? ['documents.view.admin', 'documents.view.board', 'documents.view.members'] : ['documents.view.members']),
-    committeeIds: context.committeeIds || [],
+    groupIds: isPrivileged ? context.groupIds || [] : [],
+    permissionKeys,
+    committeeIds: isPrivileged ? context.committeeIds || [] : [],
     isAdmin: context.isAdmin,
   });
+
+  if (!isPrivileged) {
+    return {
+      ...where,
+      OR: where.OR.filter((clause: any) => !['CUSTOM', 'PRIVATE'].includes(clause.visibility)),
+    };
+  }
+
+  return where;
 };
 
 const memberScopedUnitIds = async (context: ToolContext) => {
@@ -591,6 +604,7 @@ export const oracleTools = {
     return committees.map((c: any) => ({
       id: c.id,
       name: c.name,
+      chair: c.chair,
       chairName: c.chair,
       description: c.description,
       memberCount: c.members.length,

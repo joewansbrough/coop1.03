@@ -2786,6 +2786,24 @@ const createOracleAnswerFromToolResults = (question: string, toolResponses: any[
     return sentence ? `${title}: ${sentence}` : `${title} appears to be the most relevant co-op record.`;
   }
 
+  if (documents.length > 0) {
+    const doc = documents[0];
+    const title = doc.title || doc.documentTitle || 'A matching co-op document';
+    const text = String(doc.content || doc.text || '').trim();
+    const snippet = text.split(/(?<=[.!?])\s+/).find(sentence => sentence.trim().length > 0) || text.slice(0, 220);
+    return snippet
+      ? `${title}: ${snippet}`
+      : `${title} was found in the co-op document records, but it does not have extracted text available to summarize.`;
+  }
+
+  if (announcements.length > 0) {
+    const announcement = announcements[0];
+    const title = announcement.title || 'A matching co-op announcement';
+    const content = String(announcement.content || '').trim();
+    const sentence = content.split(/(?<=[.!?])\s+/)[0] || content.slice(0, 180);
+    return sentence ? `${title}: ${sentence}` : `${title} appears to be the most relevant co-op announcement.`;
+  }
+
   return fallbackAnswer;
 };
 
@@ -3084,7 +3102,7 @@ Member Question: ${question}`;
       let response = result.response;
       
       let callCount = 0;
-      const MAX_CALLS = 2; // Strict limit for speed
+      const MAX_CALLS = 3; // Bounded for speed while allowing final synthesis after tool chaining
       const allToolResponses: any[] = [];
 
       while (response.functionCalls()?.length && callCount < MAX_CALLS) {
@@ -3294,7 +3312,7 @@ Member Question: ${question}`;
       
       // Loop to handle tool calls - optimized for parallel execution
       let callCount = 0;
-      const MAX_CALLS = 2; // Strict limit for speed
+      const MAX_CALLS = 3; // Bounded for speed while allowing final synthesis after tool chaining
       const allToolResponses: any[] = [];
 
       while (response.functionCalls()?.length && callCount < MAX_CALLS) {
