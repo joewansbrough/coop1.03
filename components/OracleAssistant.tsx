@@ -271,7 +271,10 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     } catch (err) {
       console.error("Failed to start live mode", err);
       setIsLiveMode(false);
-      setMessages(prev => [...prev, { role: 'assistant', content: "Microphone access is required for Live Mode." }]);
+      const message = err instanceof Error && err.message.includes('Oracle voice is not configured')
+        ? err.message
+        : "Microphone access is required for Live Mode.";
+      setMessages(prev => [...prev, { role: 'assistant', content: message }]);
     }
   };
 

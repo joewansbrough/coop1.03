@@ -19,6 +19,11 @@ import { readApiResponse } from '../utils/apiResponse.js';
 
 const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
 
+export const getBrowserGeminiApiKey = () => {
+  const viteEnv = (import.meta as any).env || {};
+  return viteEnv.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+};
+
 const getDemoOracleUser = () => {
   if (!isDemoMode() || typeof window === 'undefined') return undefined;
   const isResidentView = localStorage.getItem(DEMO_TUTORIAL_ROLE_VIEW_KEY) === 'true';
@@ -445,7 +450,10 @@ export const geminiService = {
     onInterrupted: () => void;
     onToolCall?: (name: string, args: any) => void;
   }, systemInstruction: string) {
-    const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || '';
+    const apiKey = getBrowserGeminiApiKey();
+    if (!apiKey) {
+      throw new Error('Oracle voice is not configured. Add GEMINI_API_KEY or VITE_GEMINI_API_KEY before using voice mode.');
+    }
     const genAI = new GoogleGenAI({ apiKey });
     
     console.log("Initiating Live connection with model: gemini-3.1-flash-live-preview");

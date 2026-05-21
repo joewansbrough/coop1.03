@@ -60,6 +60,7 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 - [x] Keep RAG/File Search admin indexing controls.
 - [x] Improve user-facing errors for missing Drive or Gemini configuration.
 - [x] Update Oracle/Policy Assistant copy so missing indexed documents are explained clearly.
+- [x] Fix Oracle voice mode Gemini key fallback and missing-configuration messaging.
 
 ## Phase 6: Empty Real-Data States
 
