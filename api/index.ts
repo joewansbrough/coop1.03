@@ -2807,6 +2807,31 @@ const createOracleAnswerFromToolResults = (question: string, toolResponses: any[
   return fallbackAnswer;
 };
 
+const ORACLE_TOOL_SYNTHESIS_FALLBACK = 'I gathered some data but was unable to formulate a complete answer in time. Please try a more specific question.';
+
+const tryOracleDocsRescue = async (
+  p: PrismaClient,
+  cooperativeId: string,
+  question: string,
+  normalizedLanguage: ReturnType<typeof normalizeOracleLanguage>,
+  intent: ReturnType<typeof detectOracleIntent>,
+) => {
+  try {
+    const docsResponse = await askGeminiFileSearch(p, { cooperativeId, question });
+    return {
+      answer: docsResponse.answer,
+      citations: docsResponse.citations,
+      language: normalizedLanguage,
+      confidence: docsResponse.citations.length ? 0.82 : 0.6,
+      intent: intent.intent === 'general' ? 'policy' : intent.intent,
+      suggestedAction: mergeOracleSuggestedAction(question, intent.suggestedAction),
+    };
+  } catch (error: any) {
+    console.warn('[Oracle Docs Rescue] File Search fallback unavailable:', error?.message || error);
+    return null;
+  }
+};
+
 app.post('/api/ai/triage', requireAuth, async (req, res) => {
   try {
     const { description, visualDescription } = req.body;
@@ -3368,11 +3393,15 @@ Member Question: ${question}`;
       const citations = extractCitationsFromToolResults(allToolResponses);
 
       if (!responseText) {
-        const fallbackAnswer = createOracleAnswerFromToolResults(
+          const fallbackAnswer = createOracleAnswerFromToolResults(
           question,
           allToolResponses,
-          'I gathered some data but was unable to formulate a complete answer in time. Please try a more specific question.',
+          ORACLE_TOOL_SYNTHESIS_FALLBACK,
         );
+        if (fallbackAnswer === ORACLE_TOOL_SYNTHESIS_FALLBACK) {
+          const docsRescue = await tryOracleDocsRescue(p, coopId, question, normalizedLanguage, intent);
+          if (docsRescue) return docsRescue;
+        }
         return {
           answer: fallbackAnswer,
           citations,

@@ -141,8 +141,11 @@ test('oracle privileged tools are limited to board and admin roles', () => {
 test('oracle routes document-grounded questions to indexed docs', () => {
   assert.equal(shouldAnswerOracleWithDocs('What does the pet policy say?'), true);
   assert.equal(shouldAnswerOracleWithDocs('Summarize the occupancy agreement'), true);
+  assert.equal(shouldAnswerOracleWithDocs('Can I barbecue on my balcony?'), true);
+  assert.equal(shouldAnswerOracleWithDocs('Am I allowed to install a heat pump?'), true);
   assert.equal(shouldAnswerOracleWithDocs('Who lives in unit 4?'), false);
   assert.equal(shouldAnswerOracleWithDocs('Show open maintenance requests'), false);
+  assert.equal(shouldAnswerOracleWithDocs('Who is chair of the maintenance committee?'), false);
 });
 
 test('oracle record searches preserve member scope while applying text filters', async () => {
@@ -292,6 +295,7 @@ test('oracle routes have bounded tool loops and local fallback answers', () => {
   assert.match(apiSource, /const MAX_CALLS = 3/);
   assert.match(apiSource, /createOracleAnswerFromToolResults/);
   assert.match(apiSource, /responseText \|\| fallbackAnswer/);
+  assert.match(apiSource, /tryOracleDocsRescue/);
 });
 
 test('oracle database search can use committees and announcements as context', async () => {

@@ -59,8 +59,8 @@ export const detectOracleIntent = (question: string): Pick<OracleResponse, 'inte
   return { intent: 'general' };
 };
 
-const docsQuestionTerms = /\b(policy|policies|rule|rules|bylaw|bylaws|agreement|handbook|manual|document|documents|docs|minutes|motion|motions|parking|pet|pets|guest|guests|occupancy|clutter|summarize|summary|what does|what do the)\b/i;
-const liveRecordTerms = /\b(who lives|unit\s+\w+|open maintenance|maintenance requests?|work orders?|tenant|tenants|resident|residents|waitlist|notifications?)\b/i;
+const docsQuestionTerms = /\b(policy|policies|rule|rules|bylaw|bylaws|agreement|handbook|manual|document|documents|docs|minutes|motion|motions|parking|pet|pets|guest|guests|occupancy|clutter|barbecue|bbq|balcony|heat pump|alteration|renovation|summarize|summary|what does|what do the|can i|may i|am i allowed|are we allowed|do i need|where can|how do)\b/i;
+const liveRecordTerms = /\b(who lives|who is|chair|committee|unit\s+\w+|open maintenance|maintenance requests?|work orders?|tenant|tenants|resident|residents|waitlist|notifications?)\b/i;
 
 export const shouldAnswerOracleWithDocs = (question: string) => {
   const normalized = String(question || '').trim();
