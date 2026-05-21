@@ -40,6 +40,7 @@ import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracl
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { parseGeminiJson } from '../utils/geminiJson.js';
 import { buildOnboardingStatus } from '../utils/onboardingStatus.js';
+import { buildTenantTemplateCsv, parseTenantImportCsv, validateTenantImportRows, type TenantImportPreviewRow } from '../utils/tenantImport.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
 import { isSuperuserEmail, resolveCooperativeIdForRequest, resolveKnownCooperativeIdForEmail } from '../utils/coopResolution.js';
@@ -428,6 +429,97 @@ const requireAdmin = (req: express.Request, res: express.Response, next: express
   const user = (req as any).user || (req as any).session?.user;
   if (!user?.isAdmin) return res.status(403).json({ error: 'Admin access required' });
   next();
+};
+
+const getTenantImportPreview = async (
+  p: PrismaClient | Prisma.TransactionClient,
+  coopId: string,
+  csv: string,
+) => {
+  const rows = parseTenantImportCsv(csv);
+  const [existingUnits, existingTenants] = await Promise.all([
+    p.unit.findMany({
+      where: { cooperativeId: coopId },
+      select: { id: true, number: true, currentTenantId: true },
+    }),
+    p.tenant.findMany({
+      where: { cooperativeId: coopId },
+      select: { id: true, email: true, unitId: true },
+    }),
+  ]);
+
+  return validateTenantImportRows(rows, { existingUnits, existingTenants });
+};
+
+const toTenantStartDate = (moveInDate: string) => new Date(moveInDate || new Date().toISOString().slice(0, 10));
+
+const importTenantPreviewRow = async (
+  tx: Prisma.TransactionClient,
+  coopId: string,
+  row: TenantImportPreviewRow,
+) => {
+  const assignmentBlocked = row.status === 'Current' && row.warnings.some(warning => warning.includes('already has an active occupant'));
+  const unitId = row.status === 'Current' && !assignmentBlocked ? row.unitId : null;
+  const startDate = toTenantStartDate(row.moveInDate);
+  const tenantData = {
+    firstName: sanitizeUtf8(row.firstName),
+    lastName: sanitizeUtf8(row.lastName),
+    email: sanitizeUtf8(row.email),
+    phone: sanitizeUtf8(row.phone || ''),
+    role: sanitizeUtf8(row.role),
+    status: sanitizeUtf8(row.status),
+    startDate,
+    unitId,
+  };
+
+  const existingTenant = row.existingTenantId
+    ? await tx.tenant.findFirst({ where: { id: row.existingTenantId, cooperativeId: coopId } })
+    : null;
+
+  const tenant = existingTenant
+    ? await tx.tenant.update({ where: { id: existingTenant.id }, data: tenantData })
+    : await tx.tenant.create({ data: { ...tenantData, cooperativeId: coopId } });
+
+  if (unitId) {
+    if (existingTenant?.unitId && existingTenant.unitId !== unitId) {
+      await tx.tenantHistory.updateMany({
+        where: { cooperativeId: coopId, tenantId: tenant.id, unitId: existingTenant.unitId, endDate: null },
+        data: { endDate: startDate, moveReason: 'Onboarding import reassignment' },
+      });
+      await tx.unit.updateMany({
+        where: { cooperativeId: coopId, id: existingTenant.unitId, currentTenantId: tenant.id },
+        data: { status: 'Vacant', currentTenantId: null },
+      });
+    }
+
+    await tx.unit.update({
+      where: { id: unitId },
+      data: { status: 'Occupied', currentTenantId: tenant.id },
+    });
+
+    const openHistory = await tx.tenantHistory.findFirst({
+      where: { cooperativeId: coopId, tenantId: tenant.id, unitId, endDate: null },
+    });
+    if (!openHistory) {
+      await tx.tenantHistory.create({
+        data: {
+          cooperativeId: coopId,
+          tenantId: tenant.id,
+          unitId,
+          startDate,
+          moveReason: row.existingTenantId ? 'Onboarding import update' : 'Onboarding import',
+        },
+      });
+    }
+  }
+
+  return {
+    tenantId: tenant.id,
+    created: !existingTenant,
+    updated: Boolean(existingTenant),
+    assignedUnit: Boolean(unitId),
+    assignmentSkipped: assignmentBlocked,
+  };
 };
 
 const normalizeNotification = (notification: any, readReceipt?: { readAt?: Date | string | null }) => ({
@@ -1425,6 +1517,68 @@ app.get('/api/scheduled-maintenance', requireAuth, async (req, res) => {
     res.json(tasks);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/tenants/import-template', requireAuth, requireAdmin, async (req, res) => {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="coophub-tenant-template.csv"');
+  res.send(buildTenantTemplateCsv());
+});
+
+app.post('/api/tenants/import/preview', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const csv = String(req.body?.csv || '');
+    if (!csv.trim()) return res.status(400).json({ error: 'CSV content is required.' });
+
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const preview = await getTenantImportPreview(p, coopId, csv);
+    res.json(preview);
+  } catch (error: any) {
+    console.error('Failed to preview tenant import:', error);
+    res.status(500).json({ error: 'Failed to preview tenant import.', details: error.message });
+  }
+});
+
+app.post('/api/tenants/import/confirm', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const csv = String(req.body?.csv || '');
+    if (!csv.trim()) return res.status(400).json({ error: 'CSV content is required.' });
+
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const result = await p.$transaction(async (tx) => {
+      const preview = await getTenantImportPreview(tx, coopId, csv);
+      const summary = {
+        totalRows: preview.rows.length,
+        validRows: preview.validRows,
+        errorRows: preview.errorRows,
+        importedRows: 0,
+        created: 0,
+        updated: 0,
+        assignedUnits: 0,
+        skippedRows: preview.errorRows,
+        assignmentSkipped: 0,
+      };
+
+      for (const row of preview.rows.filter(previewRow => previewRow.valid)) {
+        const imported = await importTenantPreviewRow(tx, coopId, row);
+        summary.importedRows += 1;
+        if (imported.created) summary.created += 1;
+        if (imported.updated) summary.updated += 1;
+        if (imported.assignedUnit) summary.assignedUnits += 1;
+        if (imported.assignmentSkipped) summary.assignmentSkipped += 1;
+      }
+
+      return { summary, preview };
+    });
+
+    await logAudit(p, req, 'tenant.import.confirm', 'Tenant', null, null, result.summary);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Failed to confirm tenant import:', error);
+    res.status(500).json({ error: 'Failed to confirm tenant import.', details: error.message });
   }
 });
 

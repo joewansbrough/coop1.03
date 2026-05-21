@@ -30,24 +30,26 @@ This tracker replaces the old multi-tenancy-first task direction. Work from the 
 
 ## Phase 3: Units Before Tenants
 
-- [ ] Improve empty state on Units page.
-- [ ] Confirm unit creation flow works before tenants exist.
-- [ ] Add unit template download if needed.
-- [ ] Decide whether tenant import can create missing units during confirmed import.
-- [ ] Add tests for unit readiness and missing-unit warnings.
+- [x] Improve empty state on Units page.
+- [x] Confirm unit creation flow works before tenants exist.
+- [x] Add unit template download if needed.
+- [x] Decide whether tenant import can create missing units during confirmed import.
+- [x] Add tests for unit readiness and missing-unit warnings.
+
+Decision: tenant import should warn on missing unit numbers by default. The confirm step can offer an explicit "create missing units" option later, but it should never silently create units from tenant rows.
 
 ## Phase 4: Tenant Spreadsheet Import
 
-- [ ] Create `utils/tenantImport.ts`.
-- [ ] Create `tests/tenantImport.test.ts`.
-- [ ] Define tenant template columns.
-- [ ] Add downloadable tenant CSV template.
-- [ ] Implement upload parsing and row normalization.
-- [ ] Validate required fields: first name, last name, email, unit number.
-- [ ] Validate duplicate emails, existing tenant conflicts, missing units, invalid dates, unknown roles, and unknown statuses.
-- [ ] Add preview endpoint that does not mutate the database.
-- [ ] Add confirm endpoint that creates/updates tenants, links units, updates occupancy, and records tenant history.
-- [ ] Add frontend upload, preview, fix guidance, and confirm flow.
+- [x] Create `utils/tenantImport.ts`.
+- [x] Create `tests/tenantImport.test.ts`.
+- [x] Define tenant template columns.
+- [x] Add downloadable tenant CSV template.
+- [x] Implement upload parsing and row normalization.
+- [x] Validate required fields: first name, last name, email, unit number.
+- [x] Validate duplicate emails, existing tenant conflicts, missing units, invalid dates, unknown roles, and unknown statuses.
+- [x] Add preview endpoint that does not mutate the database.
+- [x] Add confirm endpoint that creates/updates tenants, links units, updates occupancy, and records tenant history.
+- [x] Add frontend upload, preview, fix guidance, and confirm flow.
 
 ## Phase 5: Documents, Drive, And File Search
 
@@ -61,8 +63,8 @@ This tracker replaces the old multi-tenancy-first task direction. Work from the 
 ## Phase 6: Empty Real-Data States
 
 - [ ] Dashboard shows setup progress when records are empty.
-- [ ] Tenants page offers spreadsheet import when empty.
-- [ ] Units page explains unit setup as the foundation.
+- [x] Tenants page offers spreadsheet import when empty.
+- [x] Units page explains unit setup as the foundation.
 - [ ] Documents page offers Drive connect/upload/index actions.
 - [ ] Policy Assistant explains data-dependent answers.
 - [ ] Maintenance page supports request creation while explaining missing unit/member context.
@@ -72,9 +74,11 @@ This tracker replaces the old multi-tenancy-first task direction. Work from the 
 ## Phase 7: Verification
 
 - [x] Run `npx tsx tests/onboardingStatus.test.ts`.
-- [ ] Run `npx tsx tests/tenantImport.test.ts`.
-- [ ] Run existing File Search/RAG tests.
-- [ ] Run existing data-loading/dashboard tests.
+- [x] Run `npx tsx tests/unitOnboarding.test.ts`.
+- [x] Run `npx tsx tests/tenantImport.test.ts`.
+- [x] Run `npm run lint`.
+- [x] Run existing File Search/RAG tests.
+- [x] Run existing data-loading/dashboard tests.
 - [x] Run `npm run build`.
 - [ ] Manually verify empty co-op admin onboarding.
 - [ ] Manually verify partially populated OBHC onboarding.

@@ -5,6 +5,7 @@ import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
 import { useBuildings, useCreateUnit } from '../hooks/useCoopData';
 import { groupUnitsByBuildingAndFloor } from '../utils/buildingHierarchy';
+import { buildUnitTemplateCsv, getUnitSetupState } from '../utils/unitOnboarding';
 
 const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetStateAction<Unit[]>>, tenants: Tenant[] }> = ({ units, setUnits, tenants }) => {
   const navigate = useNavigate();
@@ -58,6 +59,19 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
 
   const unitsByBuilding = groupUnitsByBuildingAndFloor(sortedUnits, buildings);
   const sortedBuildingNames = Object.keys(unitsByBuilding);
+  const setupState = getUnitSetupState(units);
+
+  const handleDownloadTemplate = () => {
+    const blob = new Blob([buildUnitTemplateCsv()], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'coophub-unit-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-12 transition-all" data-demo-target="admin-units-page">
@@ -71,13 +85,48 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
             Managing building envelope and unit assignments.
           </p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="w-full sm:w-auto bg-brand-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 active:scale-95 transition-all flex items-center justify-center gap-2"
-        >
-          <i className="fa-solid fa-plus"></i> Add New Unit
-        </button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <button
+            type="button"
+            onClick={handleDownloadTemplate}
+            className="w-full sm:w-auto bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <i className="fa-solid fa-file-csv"></i> Unit Template
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="w-full sm:w-auto bg-brand-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+          >
+            <i className="fa-solid fa-plus"></i> Add New Unit
+          </button>
+        </div>
       </div>
+
+      <section className="rounded-[2rem] border border-teal-100 bg-teal-50/80 p-5 dark:border-teal-900/40 dark:bg-teal-950/20 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-teal-700 dark:text-teal-300">Onboarding foundation</p>
+            <h3 className="mt-2 text-xl font-black tracking-tight text-slate-900 dark:text-white">{setupState.title}</h3>
+            <p className="mt-2 text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">{setupState.description}</p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="rounded-xl bg-slate-900 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-teal-700"
+            >
+              {setupState.primaryActionLabel}
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              className="rounded-xl bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-slate-800"
+            >
+              {setupState.secondaryActionLabel}
+            </button>
+          </div>
+        </div>
+      </section>
 
       <FilterBar 
         search={search}
@@ -188,9 +237,34 @@ const AdminUnits: React.FC<{ units: Unit[], setUnits: React.Dispatch<React.SetSt
             ))}
           </div>
         )) : (
-          <div className="py-20 text-center border-2 border-dashed border-slate-100 dark:border-white/5 rounded-[2.5rem]">
+          <div className="py-20 text-center border-2 border-dashed border-slate-100 dark:border-white/5 rounded-[2.5rem] px-6">
             <i className="fa-solid fa-building-circle-exclamation text-4xl text-slate-200 dark:text-slate-800 mb-4"></i>
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No units found matching criteria</p>
+            <p className="text-slate-900 dark:text-white font-black uppercase tracking-tight text-xl">
+              {units.length === 0 ? setupState.title : 'No units found matching criteria'}
+            </p>
+            <p className="mx-auto mt-2 max-w-xl text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+              {units.length === 0
+                ? 'Add units manually now, or download the CSV template so the unit list is ready before member import.'
+                : 'Adjust the search or status filter to see more units.'}
+            </p>
+            {units.length === 0 && (
+              <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(true)}
+                  className="rounded-xl bg-brand-600 px-6 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-brand-700"
+                >
+                  <i className="fa-solid fa-plus mr-2"></i>{setupState.primaryActionLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  className="rounded-xl bg-white px-6 py-3 text-xs font-black uppercase tracking-widest text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:ring-white/10"
+                >
+                  <i className="fa-solid fa-file-csv mr-2"></i>{setupState.secondaryActionLabel}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
