@@ -53,20 +53,21 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 
 ## Phase 5: Documents, Drive, And File Search
 
-- [ ] Show Drive root readiness in onboarding.
-- [ ] Link onboarding step to existing document/Drive setup.
-- [ ] Show document indexing readiness.
-- [ ] Keep RAG/File Search admin indexing controls.
-- [ ] Improve user-facing errors for missing Drive or Gemini configuration.
-- [ ] Update Oracle/Policy Assistant copy so missing indexed documents are explained clearly.
+- [x] Create document onboarding readiness helper and tests.
+- [x] Show Drive root readiness in onboarding.
+- [x] Link onboarding step to existing document/Drive setup.
+- [x] Show document indexing readiness.
+- [x] Keep RAG/File Search admin indexing controls.
+- [x] Improve user-facing errors for missing Drive or Gemini configuration.
+- [x] Update Oracle/Policy Assistant copy so missing indexed documents are explained clearly.
 
 ## Phase 6: Empty Real-Data States
 
 - [ ] Dashboard shows setup progress when records are empty.
 - [x] Tenants page offers spreadsheet import when empty.
 - [x] Units page explains unit setup as the foundation.
-- [ ] Documents page offers Drive connect/upload/index actions.
-- [ ] Policy Assistant explains data-dependent answers.
+- [x] Documents page offers Drive connect/upload/index actions.
+- [x] Policy Assistant explains data-dependent answers.
 - [ ] Maintenance page supports request creation while explaining missing unit/member context.
 - [ ] Calendar page supports first meeting creation.
 - [ ] Committees page offers common presets and member assignment after tenant import.
@@ -76,6 +77,7 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 - [x] Run `npx tsx tests/onboardingStatus.test.ts`.
 - [x] Run `npx tsx tests/unitOnboarding.test.ts`.
 - [x] Run `npx tsx tests/tenantImport.test.ts`.
+- [x] Run `npx tsx tests/documentOnboarding.test.ts`.
 - [x] Run `npm run lint`.
 - [x] Run existing File Search/RAG tests.
 - [x] Run existing data-loading/dashboard tests.

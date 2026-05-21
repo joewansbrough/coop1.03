@@ -25,7 +25,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const [isLoading, setIsLoading] = useState(false);
   const [maintenanceDraftIssue, setMaintenanceDraftIssue] = useState<string | null>(null);
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; response?: OracleResponse }>>([
-    { role: 'assistant', content: 'Ask me about co-op policies, meetings, documents, or maintenance steps.' },
+    { role: 'assistant', content: 'Ask me about co-op policies, meetings, documents, or maintenance steps. Document-grounded answers need indexed source material; if nothing has been indexed yet, I will say what is missing.' },
   ]);
   
   const audioContextRef = useRef<AudioContext | null>(null);

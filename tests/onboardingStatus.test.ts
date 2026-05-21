@@ -41,7 +41,9 @@ assert.deepEqual(getIncompleteOnboardingSteps(emptyStatus).map(step => step.key)
 ]);
 assert.equal(emptyStatus.steps.profile.ready, true);
 assert.equal(emptyStatus.steps.units.ready, false);
-assert.equal(emptyStatus.steps.documents.actionHref, '/documents');
+assert.equal(emptyStatus.steps.documents.actionHref, '/documents?action=upload');
+assert.equal(emptyStatus.steps.drive.actionHref, '/documents?action=drive');
+assert.equal(emptyStatus.steps.rag.actionHref, '/documents?action=index');
 
 const partialStatus = buildOnboardingStatus({
   cooperative: profile,

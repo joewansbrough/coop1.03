@@ -16,6 +16,11 @@ import { demoStorage } from '../utils/demoStorage';
 import { sortNewestFirst } from '../utils/contentOrdering';
 import { readApiResponse } from '../utils/apiResponse';
 import {
+  getDocumentOnboardingState,
+  getDriveConfigurationMessage,
+  getRagFailureMessage,
+} from '../utils/documentOnboarding';
+import {
   createErroredRagAskSession,
   createPendingRagAskSession,
   createResolvedRagAskSession,
@@ -72,6 +77,7 @@ const ResourceLibrary: React.FC<{
   // Google Drive states
   const [isScriptsReady, setIsScriptsReady] = useState(false);
   const [config, setConfig] = useState<{ googleClientId: string; googleApiKey: string } | null>(null);
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
 
   // Review state
   const [reviewingDoc, setReviewingDoc] = useState<Document | null>(null);
@@ -200,6 +206,10 @@ const ResourceLibrary: React.FC<{
     Boolean(doc.sourceExternalId) ||
     Boolean((doc.currentVersion as any)?.sourceExternalId);
 
+  const isDocumentIndexedForAi = (doc: Document) => doc.currentVersion?.ragStatus === 'indexed';
+
+  const isDocumentIndexingForAi = (doc: Document) => doc.currentVersion?.ragStatus === 'indexing';
+
   const getMinutesPdfContext = (doc: Document) => {
     const eventId = getMinutesEventId(doc);
     const event = calendarEvents.find(item => item.id === eventId);
@@ -264,7 +274,8 @@ const ResourceLibrary: React.FC<{
     fetch('/api/config')
       .then(res => res.ok ? res.json() : null)
       .then(data => setConfig(data))
-      .catch(err => console.error('Failed to load Google config:', err));
+      .catch(err => console.error('Failed to load Google config:', err))
+      .finally(() => setIsConfigLoaded(true));
 
     // Load pdf.js if not already present
     if (!(window as any).pdfjsLib) {
@@ -286,9 +297,17 @@ const ResourceLibrary: React.FC<{
   }, []);
 
   useEffect(() => {
-    if (searchParams.get('action') === 'upload' && isAdmin && !isGuest) {
+    const action = searchParams.get('action');
+    if (action === 'upload' && isAdmin && !isGuest) {
       setShowUpload(true);
       setUploadMode('file');
+    }
+    if (action === 'drive' && isAdmin && !isGuest) {
+      setShowUpload(true);
+      setUploadMode('drive');
+    }
+    if (action === 'index' && isAdmin && !isGuest) {
+      setFilter('All');
     }
     
     const id = searchParams.get('id');
@@ -328,8 +347,13 @@ const ResourceLibrary: React.FC<{
   }, [reviewingDoc?.id, isAdmin, isGuest]);
 
   const handleOpenPicker = () => {
-    if (!config?.googleClientId || !config?.googleApiKey) {
-      showAlert('Missing Google configuration. Please check your environment variables.', 'error');
+    if (!isConfigLoaded) {
+      showAlert('Google Drive configuration is still loading. Try again in a moment.', 'info');
+      return;
+    }
+    const configMessage = getDriveConfigurationMessage(config);
+    if (configMessage) {
+      showAlert(configMessage, 'error');
       return;
     }
 
@@ -495,6 +519,10 @@ const ResourceLibrary: React.FC<{
       d.tags?.some(t => t.toLowerCase().includes(search.toLowerCase()));
     return matchesFilter && matchesSearch;
   }));
+  const documentSetup = getDocumentOnboardingState(Array.isArray(documents) ? documents : []);
+  const driveConfigurationMessage = isConfigLoaded ? getDriveConfigurationMessage(config) : null;
+  const indexableDriveDocuments = (Array.isArray(documents) ? documents : [])
+    .filter(doc => hasDriveFileIdForIndexing(doc) && !isDocumentIndexedForAi(doc) && !isDocumentIndexingForAi(doc));
 
   const handleTagClick = (tag: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -584,6 +612,10 @@ const ResourceLibrary: React.FC<{
     event.preventDefault();
     if (!ragQuestion.trim()) return;
 
+    if (!documentSetup.ragReady && documentSetup.indexedDocuments === 0) {
+      showAlert('Oracle needs at least one indexed document before it can answer from co-op source material.', 'info');
+    }
+
     const pendingSession = createPendingRagAskSession(ragQuestion);
     setRagSession(pendingSession);
     saveStoredRagAskSession(pendingSession);
@@ -632,10 +664,21 @@ const ResourceLibrary: React.FC<{
       if (!res.ok) throw new Error(data.details || data.error || 'Failed to index document');
       showAlert('Document indexing started for AI.', 'success');
     } catch (error: any) {
-      showAlert(error.message || 'Failed to index document for AI.', 'error');
+      showAlert(getRagFailureMessage(error.message), 'error');
     } finally {
       refreshData();
       setIndexingDocumentId(null);
+    }
+  };
+
+  const handleIndexReadyDocuments = async () => {
+    if (indexableDriveDocuments.length === 0) {
+      showAlert('Link a Google Drive document before starting File Search indexing.', 'info');
+      return;
+    }
+
+    for (const doc of indexableDriveDocuments) {
+      await handleIndexForAi(doc);
     }
   };
 
@@ -873,6 +916,68 @@ const ResourceLibrary: React.FC<{
             </p>
           </div>
         </div>
+        {isAdmin && !isGuest && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/5 dark:bg-slate-900">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-3xl">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-blue-600 dark:text-blue-300">Document setup</p>
+                <h3 className="mt-2 text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">{documentSetup.primaryTitle}</h3>
+                <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">{documentSetup.primaryDescription}</p>
+                {driveConfigurationMessage && (
+                  <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800 dark:border-amber-500/20 dark:bg-amber-950/30 dark:text-amber-200">
+                    {driveConfigurationMessage}
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2 lg:min-w-[280px]">
+                <div className="rounded-xl bg-slate-50 px-3 py-3 text-center dark:bg-slate-950/50">
+                  <p className="text-xl font-black text-slate-900 dark:text-white">{documentSetup.totalDocuments}</p>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Docs</p>
+                </div>
+                <div className="rounded-xl bg-blue-50 px-3 py-3 text-center dark:bg-blue-950/30">
+                  <p className="text-xl font-black text-blue-900 dark:text-blue-100">{documentSetup.driveLinkedDocuments}</p>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-blue-500">Drive</p>
+                </div>
+                <div className="rounded-xl bg-emerald-50 px-3 py-3 text-center dark:bg-emerald-950/30">
+                  <p className="text-xl font-black text-emerald-900 dark:text-emerald-100">{documentSetup.indexedDocuments}</p>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-emerald-500">Indexed</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => {
+                  if (documentSetup.primaryActionLabel === 'Ask Oracle') {
+                    navigate('/policy-assistant');
+                    return;
+                  }
+                  if (documentSetup.primaryActionLabel === 'Index Drive documents') {
+                    handleIndexReadyDocuments();
+                    return;
+                  }
+                  setShowUpload(true);
+                  setUploadMode('drive');
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-blue-700 active:scale-95"
+              >
+                <i className={`fa-solid ${documentSetup.primaryActionLabel === 'Ask Oracle' ? 'fa-robot' : documentSetup.primaryActionLabel === 'Index Drive documents' ? 'fa-magnifying-glass-chart' : 'fa-brands fa-google-drive'}`}></i>
+                {documentSetup.primaryActionLabel}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUpload(true);
+                  setUploadMode(documentSetup.secondaryActionLabel.includes('Drive') ? 'drive' : 'file');
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 transition-all hover:border-brand-400 hover:text-brand-600 dark:border-white/10 dark:text-slate-300"
+              >
+                <i className="fa-solid fa-file-arrow-up"></i>
+                {documentSetup.secondaryActionLabel}
+              </button>
+            </div>
+          </section>
+        )}
         <DriveExplorer />
       </div>
 
@@ -1118,8 +1223,12 @@ const ResourceLibrary: React.FC<{
             >
               <div className="p-8 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Upload Document</h3>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Add a file to the searchable archive</p>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    {uploadMode === 'drive' ? 'Link Google Drive Document' : 'Upload Document'}
+                  </h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                    {uploadMode === 'drive' ? 'Choose a shared Drive file for the archive' : 'Add a file to the searchable archive'}
+                  </p>
                 </div>
                 <button
                   onClick={() => {
@@ -1132,65 +1241,84 @@ const ResourceLibrary: React.FC<{
                 </button>
               </div>
 
-              <div className="p-8 space-y-5">
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="cursor-pointer rounded-3xl border-2 border-dashed border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-950/40 p-8 text-center hover:border-brand-400 transition-colors"
-                >
-                  <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white dark:bg-slate-900 text-brand-600 shadow-sm">
-                    <i className="fa-solid fa-file-arrow-up text-xl"></i>
-                  </div>
-                  <p className="text-sm font-black text-slate-800 dark:text-white">{selectedFile ? selectedFile.name : 'Drop a file here or click to choose'}</p>
-                  <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">PDF, Word, spreadsheet, or image files</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Document Title</label>
-                    <input
-                      type="text"
-                      value={newDocTitle}
-                      onChange={(e) => setNewDocTitle(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
-                      placeholder="Enter document title"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Category</label>
-                    <select
-                      value={newDocCategory}
-                      onChange={(e) => setNewDocCategory(e.target.value as Document['category'])}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
-                    >
-                      {categories.filter(category => category !== 'All').map(category => (
-                        <option key={category} value={category}>{category}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Committee</label>
-                    <select
-                      value={newDocCommittee}
-                      onChange={(e) => setNewDocCommittee(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
-                    >
-                      <option value="">None</option>
-                      {committees.map(committee => (
-                        <option key={committee.id} value={committee.name}>{committee.name}</option>
-                      ))}
-                    </select>
+              {uploadMode === 'drive' ? (
+                <div className="p-8 space-y-5">
+                  <div className="rounded-3xl border border-blue-100 bg-blue-50 p-6 text-center dark:border-blue-500/20 dark:bg-blue-950/20">
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm dark:bg-slate-900">
+                      <i className="fa-brands fa-google-drive text-xl"></i>
+                    </div>
+                    <p className="text-sm font-black text-slate-800 dark:text-white">Link a Drive file already shared with the co-op.</p>
+                    <p className="mt-2 text-xs font-medium leading-5 text-slate-500 dark:text-slate-400">
+                      Drive-backed records are preferred for onboarding because they preserve the co-op's existing document library and can be indexed for Oracle.
+                    </p>
+                    {driveConfigurationMessage && (
+                      <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-800 dark:border-amber-500/20 dark:bg-amber-950/30 dark:text-amber-200">
+                        {driveConfigurationMessage}
+                      </p>
+                    )}
                   </div>
                 </div>
-
-                {isUploading && (
-                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                    <div className="h-full bg-brand-600 transition-all" style={{ width: `${uploadProgress}%` }}></div>
+              ) : (
+                <div className="p-8 space-y-5">
+                  <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="cursor-pointer rounded-3xl border-2 border-dashed border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-950/40 p-8 text-center hover:border-brand-400 transition-colors"
+                  >
+                    <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
+                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white dark:bg-slate-900 text-brand-600 shadow-sm">
+                      <i className="fa-solid fa-file-arrow-up text-xl"></i>
+                    </div>
+                    <p className="text-sm font-black text-slate-800 dark:text-white">{selectedFile ? selectedFile.name : 'Drop a file here or click to choose'}</p>
+                    <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">PDF, Word, spreadsheet, or image files</p>
                   </div>
-                )}
-              </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Document Title</label>
+                      <input
+                        type="text"
+                        value={newDocTitle}
+                        onChange={(e) => setNewDocTitle(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
+                        placeholder="Enter document title"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Category</label>
+                      <select
+                        value={newDocCategory}
+                        onChange={(e) => setNewDocCategory(e.target.value as Document['category'])}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
+                      >
+                        {categories.filter(category => category !== 'All').map(category => (
+                          <option key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Committee</label>
+                      <select
+                        value={newDocCommittee}
+                        onChange={(e) => setNewDocCommittee(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
+                      >
+                        <option value="">None</option>
+                        {committees.map(committee => (
+                          <option key={committee.id} value={committee.name}>{committee.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {isUploading && (
+                    <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div className="h-full bg-brand-600 transition-all" style={{ width: `${uploadProgress}%` }}></div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="p-8 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-white/5 flex justify-end gap-3">
                 <button
@@ -1203,11 +1331,11 @@ const ResourceLibrary: React.FC<{
                   Cancel
                 </button>
                 <button
-                  onClick={handleSimulatedUpload}
-                  disabled={!selectedFile || isUploading}
-                  className="px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-95"
+                  onClick={uploadMode === 'drive' ? handleOpenPicker : handleSimulatedUpload}
+                  disabled={uploadMode === 'drive' ? Boolean(driveConfigurationMessage) : (!selectedFile || isUploading)}
+                  className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-95 ${uploadMode === 'drive' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-brand-600 hover:bg-brand-700'}`}
                 >
-                  {isUploading ? 'Uploading...' : 'Upload'}
+                  {uploadMode === 'drive' ? 'Choose Drive File' : isUploading ? 'Uploading...' : 'Upload'}
                 </button>
               </div>
             </motion.div>

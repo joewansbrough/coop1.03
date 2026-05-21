@@ -128,7 +128,7 @@ export const buildOnboardingStatus = ({
       documentsReady,
       'Connect Drive or add initial co-op documents.',
       'Add documents',
-      '/documents',
+      '/documents?action=upload',
     ),
     drive: step(
       'drive',
@@ -136,7 +136,7 @@ export const buildOnboardingStatus = ({
       driveReady,
       'Connect a shared Drive root for co-op records.',
       'Connect Drive',
-      '/documents',
+      '/documents?action=drive',
     ),
     rag: step(
       'rag',
@@ -144,7 +144,7 @@ export const buildOnboardingStatus = ({
       ragReady,
       'Index documents so Oracle can answer from source material.',
       'Index documents',
-      '/documents',
+      '/documents?action=index',
     ),
     committees: step(
       'committees',
