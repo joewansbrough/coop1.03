@@ -3,11 +3,13 @@ import type { PrismaClient } from '@prisma/client';
 let documentRagSchemaPromise: Promise<void> | null = null;
 let dashboardPreferenceSchemaPromise: Promise<void> | null = null;
 let policyAssistantQuerySchemaPromise: Promise<void> | null = null;
+let userPreferenceSchemaPromise: Promise<void> | null = null;
 
 export const resetSchemaRepairCacheForTests = () => {
   documentRagSchemaPromise = null;
   dashboardPreferenceSchemaPromise = null;
   policyAssistantQuerySchemaPromise = null;
+  userPreferenceSchemaPromise = null;
 };
 
 export const ensureDashboardPreferenceSchema = async (prisma: PrismaClient) => {
@@ -28,6 +30,28 @@ export const ensureDashboardPreferenceSchema = async (prisma: PrismaClient) => {
   })();
 
   return dashboardPreferenceSchemaPromise;
+};
+
+export const ensureUserPreferenceSchema = async (prisma: PrismaClient) => {
+  userPreferenceSchemaPromise ||= (async () => {
+    await (prisma as any).$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "UserPreference" (
+        "id" TEXT NOT NULL,
+        "cooperativeId" TEXT NOT NULL,
+        "userEmail" TEXT NOT NULL,
+        "key" TEXT NOT NULL,
+        "value" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "UserPreference_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await (prisma as any).$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "UserPreference_cooperativeId_userEmail_key_key" ON "UserPreference"("cooperativeId", "userEmail", "key");`);
+    await (prisma as any).$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "UserPreference_cooperativeId_idx" ON "UserPreference"("cooperativeId");`);
+    await (prisma as any).$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "UserPreference_userEmail_idx" ON "UserPreference"("userEmail");`);
+  })();
+
+  return userPreferenceSchemaPromise;
 };
 
 export const ensureDocumentRagSchema = async (prisma: PrismaClient) => {

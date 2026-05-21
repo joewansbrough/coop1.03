@@ -1,4 +1,5 @@
 import { geminiService } from '../services/geminiService';
+import { getAudioPreferenceFromStorage } from './audioPreferences';
 import { AUTO_DEMO_STOPS, type AutoDemoStop } from './autoDemo';
 
 export type AutoDemoSpeechStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -18,6 +19,8 @@ const CONCURRENT_PRELOADS = 4;
 const TTS_CACHE_STORAGE_KEY = 'auto_demo_tts_cache';
 const listeners = new Set<Listener>();
 
+const getStopSpeechCacheKey = (stopId: string, voiceName = getAudioPreferenceFromStorage().voiceName) => `${voiceName}:${stopId}`;
+
 // Initialize from LocalStorage if available
 const loadPersistedCache = (): Map<string, string> => {
   if (typeof window === 'undefined') return new Map();
@@ -34,6 +37,7 @@ const loadPersistedCache = (): Map<string, string> => {
 };
 
 const audioUrlByStopId = loadPersistedCache();
+const getCachedStopCount = () => AUTO_DEMO_STOPS.filter(stop => audioUrlByStopId.has(getStopSpeechCacheKey(stop.id))).length;
 
 const savePersistedCache = () => {
   if (typeof window === 'undefined') return;
@@ -46,12 +50,14 @@ const savePersistedCache = () => {
 };
 
 let preloadPromise: Promise<AutoDemoSpeechSnapshot> | null = null;
+let preloadVoiceName = getAudioPreferenceFromStorage().voiceName;
+const initialCompleted = getCachedStopCount();
 let snapshot: AutoDemoSpeechSnapshot = {
-  status: audioUrlByStopId.size >= AUTO_DEMO_STOPS.length ? 'ready' : 'idle',
+  status: initialCompleted >= AUTO_DEMO_STOPS.length ? 'ready' : 'idle',
   total: AUTO_DEMO_STOPS.length,
-  completed: audioUrlByStopId.size,
+  completed: initialCompleted,
   failed: 0,
-  currentTitle: audioUrlByStopId.size >= AUTO_DEMO_STOPS.length ? 'Narration ready' : '',
+  currentTitle: initialCompleted >= AUTO_DEMO_STOPS.length ? 'Narration ready' : '',
 };
 
 export const getAutoDemoSpeechText = (stop: AutoDemoStop) =>
@@ -72,15 +78,17 @@ export const subscribeAutoDemoSpeech = (listener: Listener) => {
   };
 };
 
-export const getAutoDemoSpeechUrl = (stopId: string) => audioUrlByStopId.get(stopId) || null;
+export const getAutoDemoSpeechUrl = (stopId: string) => audioUrlByStopId.get(getStopSpeechCacheKey(stopId)) || null;
 
 export const setAutoDemoSpeechUrlForTest = (stopId: string, url: string) => {
-  audioUrlByStopId.set(stopId, url);
+  audioUrlByStopId.set(getStopSpeechCacheKey(stopId), url);
   savePersistedCache();
 };
 
 const loadStopSpeech = async (stop: AutoDemoStop, options: { onDone: () => void; onError: () => void }, retries = 2) => {
-  if (audioUrlByStopId.has(stop.id)) {
+  const voiceName = getAudioPreferenceFromStorage().voiceName;
+  const cacheKey = getStopSpeechCacheKey(stop.id, voiceName);
+  if (audioUrlByStopId.has(cacheKey)) {
     options.onDone();
     return;
   }
@@ -93,7 +101,7 @@ const loadStopSpeech = async (stop: AutoDemoStop, options: { onDone: () => void;
       const res = await fetch('/api/ai/demo-tour-tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: getAutoDemoSpeechText(stop) }),
+        body: JSON.stringify({ text: getAutoDemoSpeechText(stop), voiceName }),
       });
 
       if (!res.ok) {
@@ -103,7 +111,7 @@ const loadStopSpeech = async (stop: AutoDemoStop, options: { onDone: () => void;
 
       // We use the direct URL if redirected (CDN), otherwise create a blob
       const url = res.redirected ? res.url : URL.createObjectURL(await res.blob());
-      audioUrlByStopId.set(stop.id, url);
+      audioUrlByStopId.set(cacheKey, url);
       savePersistedCache();
       options.onDone();
       return;
@@ -120,12 +128,17 @@ const loadStopSpeech = async (stop: AutoDemoStop, options: { onDone: () => void;
 };
 
 export const preloadAutoDemoSpeech = () => {
+  const currentVoiceName = getAudioPreferenceFromStorage().voiceName;
+  if (currentVoiceName !== preloadVoiceName) {
+    preloadPromise = null;
+    preloadVoiceName = currentVoiceName;
+  }
   if (preloadPromise) return preloadPromise;
 
   const stops = AUTO_DEMO_STOPS;
   // Initialize counts based on what's already in cache
   let completed = 0;
-  stops.forEach(s => { if (audioUrlByStopId.has(s.id)) completed++; });
+  stops.forEach(s => { if (audioUrlByStopId.has(getStopSpeechCacheKey(s.id))) completed++; });
   
   if (completed === stops.length) {
     publish({ status: 'ready', completed, failed: 0, currentTitle: 'Narration ready' });
@@ -165,7 +178,7 @@ export const preloadAutoDemoSpeech = () => {
         const stop = stops[nextIndex];
         nextIndex += 1;
         
-        if (audioUrlByStopId.has(stop.id)) {
+        if (audioUrlByStopId.has(getStopSpeechCacheKey(stop.id))) {
           pump(); // Skip already cached
           continue;
         }
@@ -204,6 +217,7 @@ export const resetAutoDemoSpeechCache = () => {
     localStorage.removeItem(TTS_CACHE_STORAGE_KEY);
   }
   preloadPromise = null;
+  preloadVoiceName = getAudioPreferenceFromStorage().voiceName;
   publish({
     status: 'idle',
     total: AUTO_DEMO_STOPS.length,

@@ -16,8 +16,11 @@ import {
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
 import { DEMO_TUTORIAL_ROLE_VIEW_KEY } from '../utils/demoTutorial.js';
 import { readApiResponse } from '../utils/apiResponse.js';
+import { DEFAULT_AUDIO_VOICE, normalizeAudioVoiceName } from '../utils/audioPreferences.js';
 
 const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
+
+export const ORACLE_LIVE_MODEL = 'gemini-live-2.5-flash-preview';
 
 export const getBrowserGeminiApiKey = () => {
   const viteEnv = (import.meta as any).env || {};
@@ -410,12 +413,12 @@ export const geminiService = {
     return data;
   },
 
-  async synthesizeDemoTourSpeech(text: string) {
+  async synthesizeDemoTourSpeech(text: string, voiceName = DEFAULT_AUDIO_VOICE) {
     const res = await fetch('/api/ai/demo-tour-tts', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, voiceName: normalizeAudioVoiceName(voiceName) }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -424,12 +427,12 @@ export const geminiService = {
     return res.blob();
   },
 
-  async synthesizeVisualDescriptionSpeech(text: string) {
+  async synthesizeVisualDescriptionSpeech(text: string, voiceName = DEFAULT_AUDIO_VOICE) {
     const res = await fetch('/api/ai/demo-tour-tts', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, style: 'visual-description' }),
+      body: JSON.stringify({ text, style: 'visual-description', voiceName: normalizeAudioVoiceName(voiceName) }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -449,16 +452,17 @@ export const geminiService = {
     onError: (err: any) => void;
     onInterrupted: () => void;
     onToolCall?: (name: string, args: any) => void;
-  }, systemInstruction: string) {
+  }, systemInstruction: string, voiceName = DEFAULT_AUDIO_VOICE) {
     const apiKey = getBrowserGeminiApiKey();
     if (!apiKey) {
       throw new Error('Oracle voice is not configured. Add GEMINI_API_KEY or VITE_GEMINI_API_KEY before using voice mode.');
     }
     const genAI = new GoogleGenAI({ apiKey });
+    const normalizedVoiceName = normalizeAudioVoiceName(voiceName);
     
-    console.log("Initiating Live connection with model: gemini-3.1-flash-live-preview");
+    console.log(`Initiating Live connection with model: ${ORACLE_LIVE_MODEL}`);
     const session = await genAI.live.connect({
-      model: "gemini-3.1-flash-live-preview",
+      model: ORACLE_LIVE_MODEL,
       callbacks: {
         onopen: () => {
           console.log("WebSocket Connection Opened Successfully");
@@ -522,7 +526,7 @@ export const geminiService = {
         tools: tools as any,
         responseModalities: [Modality.AUDIO],
         speechConfig: {
-          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } }
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: normalizedVoiceName } }
         }
       }
     });

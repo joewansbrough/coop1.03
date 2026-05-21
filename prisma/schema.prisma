@@ -103,6 +103,7 @@ model Cooperative {
   maintenanceRequests  MaintenanceRequest[]
   scheduledMaintenance ScheduledMaintenance[]
   dashboardPreferences  DashboardPreference[]
+  userPreferences       UserPreference[]
   notifications        Notification[]
   meetingAnalyses      MeetingAnalysis[]
   tenants              Tenant[]
@@ -258,6 +259,21 @@ model DashboardPreference {
 
   @@unique([cooperativeId, userEmail])
   @@index([cooperativeId])
+}
+
+model UserPreference {
+  id            String   @id @default(uuid())
+  cooperativeId String
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  userEmail     String
+  key           String
+  value         Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([cooperativeId, userEmail, key])
+  @@index([cooperativeId])
+  @@index([userEmail])
 }
 
 model Unit {

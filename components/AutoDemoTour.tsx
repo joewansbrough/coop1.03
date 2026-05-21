@@ -14,6 +14,7 @@ import {
   getPreviousAutoDemoIndex,
 } from '../utils/autoDemo';
 import { getAutoDemoSpeechText, getAutoDemoSpeechUrl } from '../utils/autoDemoSpeech';
+import { getAudioPreferenceFromStorage } from '../utils/audioPreferences';
 
 interface AutoDemoTourProps {
   isOpen: boolean;
@@ -323,7 +324,7 @@ const AutoDemoTour: React.FC<AutoDemoTourProps> = ({ isOpen, onClose, onRoleSwit
     setSpeechError('');
     try {
       const cachedUrl = getAutoDemoSpeechUrl(stop.id);
-      const url = cachedUrl || URL.createObjectURL(await geminiService.synthesizeDemoTourSpeech(getAutoDemoSpeechText(stop)));
+      const url = cachedUrl || URL.createObjectURL(await geminiService.synthesizeDemoTourSpeech(getAutoDemoSpeechText(stop), getAudioPreferenceFromStorage().voiceName));
       const audio = new Audio(url);
       audioRef.current = audio;
       audioUrlRef.current = cachedUrl ? null : url;

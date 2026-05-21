@@ -3,6 +3,8 @@ import { Bot, Sparkles, X, Mic, Volume2, Send } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { geminiService } from '../services/geminiService';
+import { useAudioPreferences } from '../hooks/useAudioPreferences';
+import { AUDIO_VOICES, normalizeAudioPreference } from '../utils/audioPreferences';
 import { createMaintenanceRequestHref, ORACLE_LANGUAGES } from '../utils/oracle';
 import type { OracleLanguage, OracleResponse } from '../types';
 
@@ -24,6 +26,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const greetingSentRef = useRef(false);
   const [volume, setVolume] = useState(0);
   const [language, setLanguage] = useState<OracleLanguage>('English');
+  const { preference: audioPreference, savePreference: saveAudioPreference, isSaving: isSavingAudioPreference } = useAudioPreferences();
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [maintenanceDraftIssue, setMaintenanceDraftIssue] = useState<string | null>(null);
@@ -141,6 +144,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
 
       const source = ctx.createMediaStreamSource(stream);
       source.connect(workletNode);
+      workletNode.connect(ctx.destination);
 
       const hasAlreadyBeenGreeted = typeof window !== 'undefined' && sessionStorage.getItem('oracle_greeted') === 'true';
 
@@ -174,8 +178,9 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           // Only send the automatic text trigger if we haven't greeted them this session
           if (!hasAlreadyBeenGreeted && !greetingSentRef.current) {
             const session = await sessionPromise;
-            (session as any).sendRealtimeInput({
-              text: "Hello! I am ready to help. Please let me know how I can assist with your co-op questions."
+            (session as any).sendClientContent({
+              turns: "Hello! I am ready to help. Please let me know how I can assist with your co-op questions.",
+              turnComplete: true
             });
             greetingSentRef.current = true;
             if (typeof window !== 'undefined') {
@@ -184,8 +189,9 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           } else {
              // Subtle acknowledgement for return users
              const session = await sessionPromise;
-             (session as any).sendRealtimeInput({
-               text: "I'm back and ready to help."
+             (session as any).sendClientContent({
+               turns: "I'm back and ready to help.",
+               turnComplete: true
              });
           }
         },
@@ -241,7 +247,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
             navigate(url);
           }
         }
-      }, systemInstruction);
+      }, systemInstruction, audioPreference.voiceName);
 
 
       liveSessionRef.current = sessionPromise;
@@ -472,10 +478,24 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           </div>
         </div>
       </div>
-      <div className="border-b border-slate-100 p-3 dark:border-white/5">
-        <select value={language} onChange={event => setLanguage(event.target.value as OracleLanguage)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
-          {ORACLE_LANGUAGES.map(item => <option key={item}>{item}</option>)}
-        </select>
+      <div className="grid gap-2 border-b border-slate-100 p-3 sm:grid-cols-2 dark:border-white/5">
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Language</span>
+          <select value={language} onChange={event => setLanguage(event.target.value as OracleLanguage)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-slate-200">
+            {ORACLE_LANGUAGES.map(item => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">Audio Voice</span>
+          <select
+            value={audioPreference.voiceName}
+            onChange={event => saveAudioPreference(normalizeAudioPreference({ voiceName: event.target.value })).catch(error => console.error('Failed to save audio preference:', error))}
+            disabled={isSavingAudioPreference}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none dark:border-white/10 dark:bg-slate-950 dark:text-slate-200"
+          >
+            {AUDIO_VOICES.map(voice => <option key={voice.name} value={voice.name}>{voice.name} - {voice.style}</option>)}
+          </select>
+        </label>
       </div>
 
       {isLiveMode && (

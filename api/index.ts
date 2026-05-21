@@ -27,12 +27,22 @@ import {
   ensureDashboardPreferenceSchema,
   ensureDocumentRagSchema,
   ensurePolicyAssistantQuerySchema,
+  ensureUserPreferenceSchema,
 } from '../services/schemaRepair.js';
 import {
   getStoredDashboardPreference,
   saveStoredDashboardPreference,
 } from '../services/dashboardPreferenceStore.js';
+import {
+  getStoredUserPreference,
+  saveStoredUserPreference,
+} from '../services/userPreferenceStore.js';
 import { type DashboardRole } from '../utils/dashboardPreferences.js';
+import {
+  AUDIO_PREFERENCE_KEY,
+  normalizeAudioPreference,
+  normalizeAudioVoiceName,
+} from '../utils/audioPreferences.js';
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
 import { detectOracleIntent, mergeOracleSuggestedAction, normalizeOracleLanguage, shouldAnswerOracleWithDocs } from '../utils/oracle.js';
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
@@ -843,6 +853,47 @@ app.put('/api/dashboard/preferences', requireAuth, async (req, res, next) => {
       userEmail: user.email,
       role: getDashboardRole(req),
       preference: req.body,
+    });
+
+    res.json(preference);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/user/preferences/audio', requireAuth, async (req, res, next) => {
+  try {
+    const user = (req as any).user || (req as any).session?.user;
+    if (!user?.email) return res.status(401).json({ error: 'User session invalid' });
+
+    const p = getPrisma();
+    await ensureUserPreferenceSchema(p);
+    const preference = await getStoredUserPreference(p, {
+      cooperativeId: await getCoopId(req, p),
+      userEmail: user.email,
+      key: AUDIO_PREFERENCE_KEY,
+      defaultValue: normalizeAudioPreference(null),
+    });
+
+    res.json(normalizeAudioPreference(preference));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/user/preferences/audio', requireAuth, async (req, res, next) => {
+  try {
+    const user = (req as any).user || (req as any).session?.user;
+    if (!user?.email) return res.status(401).json({ error: 'User session invalid' });
+
+    const preference = normalizeAudioPreference(req.body);
+    const p = getPrisma();
+    await ensureUserPreferenceSchema(p);
+    await saveStoredUserPreference(p, {
+      cooperativeId: await getCoopId(req, p),
+      userEmail: user.email,
+      key: AUDIO_PREFERENCE_KEY,
+      value: preference,
     });
 
     res.json(preference);
@@ -3648,11 +3699,12 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
 
     const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
     const style = req.body?.style === 'visual-description' ? 'visual-description' : 'tour';
+    const voiceName = normalizeAudioVoiceName(req.body?.voiceName);
     if (text.length < 8) return res.status(400).json({ error: 'Narration text is required.' });
     if (text.length > 1600) return res.status(400).json({ error: 'Narration text is too long.' });
 
     // 1. Check persistent cache (Vercel Blob)
-    const textHash = crypto.createHash('sha256').update(`${style}:${text}`).digest('hex');
+    const textHash = crypto.createHash('sha256').update(`${style}:${voiceName}:${text}`).digest('hex');
     const cachePath = `tts-cache/${textHash}.wav`;
     const token = getBlobToken();
 
@@ -3687,7 +3739,7 @@ app.post('/api/ai/demo-tour-tts', async (req, res) => {
             responseModalities: ['AUDIO'],
             speechConfig: {
               voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: 'Kore' },
+                prebuiltVoiceConfig: { voiceName },
               },
             },
           },
@@ -4052,6 +4104,22 @@ app.get('/api/migrate', async (req, res) => {
     `);
     await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "DashboardPreference_cooperativeId_userEmail_key" ON "DashboardPreference"("cooperativeId", "userEmail");`);
     await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "DashboardPreference_cooperativeId_idx" ON "DashboardPreference"("cooperativeId");`);
+
+    await p.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "UserPreference" (
+        "id" TEXT NOT NULL,
+        "cooperativeId" TEXT NOT NULL,
+        "userEmail" TEXT NOT NULL,
+        "key" TEXT NOT NULL,
+        "value" JSONB NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "UserPreference_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "UserPreference_cooperativeId_userEmail_key_key" ON "UserPreference"("cooperativeId", "userEmail", "key");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "UserPreference_cooperativeId_idx" ON "UserPreference"("cooperativeId");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "UserPreference_userEmail_idx" ON "UserPreference"("userEmail");`);
 
     // 5. Foreign Key Constraints (Ensure they exist or add them)
     // Note: We skip complex FK management here to avoid errors if they already exist, 

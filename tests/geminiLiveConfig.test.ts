@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import test from 'node:test';
 import { getBrowserGeminiApiKey } from '../services/geminiService.ts';
 
@@ -26,4 +27,24 @@ test('browser Gemini key falls back to server-style env names used by Vite confi
       process.env.API_KEY = originalApiKey;
     }
   }
+});
+
+test('Oracle Live mode uses the current Gemini Live model name', () => {
+  const source = fs.readFileSync('services/geminiService.ts', 'utf8');
+
+  assert.match(source, /ORACLE_LIVE_MODEL\s*=\s*['"]gemini-live-2\.5-flash-preview['"]/);
+  assert.doesNotMatch(source, /gemini-3\.1-flash-live-preview/);
+});
+
+test('Oracle Live startup prompt is sent as client content text', () => {
+  const source = fs.readFileSync('components/OracleAssistant.tsx', 'utf8');
+
+  assert.match(source, /sendClientContent\(\{\s*turns:\s*[^,]+,\s*turnComplete:\s*true\s*\}\)/);
+  assert.doesNotMatch(source, /sendRealtimeInput\(\{\s*text:/);
+});
+
+test('Oracle microphone worklet is connected so audio frames are pulled', () => {
+  const source = fs.readFileSync('components/OracleAssistant.tsx', 'utf8');
+
+  assert.match(source, /source\.connect\(workletNode\);[\s\S]*workletNode\.connect\(ctx\.destination\);/);
 });
