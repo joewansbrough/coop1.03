@@ -12,6 +12,9 @@ interface OracleAssistantProps {
 
 export const floatingOraclePanelClassName = 'fixed bottom-24 right-8 z-[120] h-[min(560px,calc(100dvh-7rem))] w-[calc(100vw-4rem)] max-w-md';
 
+export const getOracleVoiceControlLabel = (isLiveMode: boolean) =>
+  isLiveMode ? 'Stop Listening' : 'Start Voice';
+
 const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(embedded);
@@ -543,10 +546,14 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
         <button
           type="button"
           onClick={startLiveMode}
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-sm transition-all ${isLiveMode ? 'animate-pulse bg-red-600 text-white' : 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600'}`}
-          aria-label={isLiveMode ? 'Stop Live Mode' : 'Start Live Mode'}
+          className={`flex h-11 shrink-0 items-center justify-center gap-2 rounded-2xl px-3 shadow-sm transition-all ${isLiveMode ? 'animate-pulse bg-red-600 text-white' : 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600'}`}
+          aria-label={getOracleVoiceControlLabel(isLiveMode)}
+          title={getOracleVoiceControlLabel(isLiveMode)}
         >
           <Mic className={`h-4 w-4 ${isLiveMode ? 'animate-bounce' : ''}`} />
+          <span className="hidden text-[10px] font-black uppercase tracking-widest sm:inline">
+            {getOracleVoiceControlLabel(isLiveMode)}
+          </span>
         </button>
       </form>
     </div>

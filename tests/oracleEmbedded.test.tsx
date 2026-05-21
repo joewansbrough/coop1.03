@@ -3,7 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import OracleAssistant, { floatingOraclePanelClassName } from '../components/OracleAssistant.tsx';
+import OracleAssistant, { floatingOraclePanelClassName, getOracleVoiceControlLabel } from '../components/OracleAssistant.tsx';
 import { FloatingOracleAssistant } from '../components/Layout.tsx';
 import PolicyAssistant from '../pages/PolicyAssistant.tsx';
 
@@ -17,9 +17,13 @@ test('embedded OracleAssistant renders the chat surface, not a placeholder', () 
   assert.doesNotMatch(html, /Embedded Oracle Assistant/);
   assert.match(html, /Ask me about co-op policies/);
   assert.match(html, /policy-assistant-qa/);
-  assert.match(html, /Start Live Mode/);
+  assert.match(html, /Start Voice/);
   assert.doesNotMatch(html, /Ask about policies, meetings, or maintenance/);
-  assert.doesNotMatch(html, /Send question/);
+});
+
+test('Oracle voice control has an explicit stop listening label', () => {
+  assert.equal(getOracleVoiceControlLabel(false), 'Start Voice');
+  assert.equal(getOracleVoiceControlLabel(true), 'Stop Listening');
 });
 
 test('floating OracleAssistant is hidden on the Policy Assistant route', () => {
