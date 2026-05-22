@@ -106,7 +106,8 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 - [ ] Ensure webhook/callback endpoints authenticate independently and look up cooperatives by provider identifiers.
 - [ ] Scope imports, exports, downloads, Drive, RAG, and cooperative-owned CRUD by `cooperativeId`.
 - [x] Add query guard coverage for cooperative-owned routes.
-- [ ] Add production-safe query guard logging/alert mode before enabling hard-fail behavior in production.
+- [x] Add production-safe query guard logging/alert mode before enabling hard-fail behavior in production.
+- [ ] Replace production query guard console warnings with durable audit logging or alert delivery.
 - [ ] Add soft-delete support with `deletedAt` for cooperative-owned records before production hard deletes.
 - [ ] Add support/audit logging for sensitive support and recovery actions.
 - [ ] Add per-user and per-cooperative rate limits for onboarding import, Drive ingestion, document indexing, exports, RAG ask, maintenance image upload, and bulk document operations.

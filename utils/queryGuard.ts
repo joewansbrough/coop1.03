@@ -50,6 +50,16 @@ export type QueryGuardParams = {
   args?: any;
 };
 
+export type QueryGuardFinding = {
+  model?: string;
+  action: string;
+  message: string;
+};
+
+export type QueryGuardOptions = {
+  report?: (finding: QueryGuardFinding) => void;
+};
+
 const hasCooperativeScope = (value: unknown): boolean => {
   if (!value || typeof value !== 'object') return false;
   if (Object.prototype.hasOwnProperty.call(value, 'cooperativeId')) return true;
@@ -81,15 +91,36 @@ export const assertCooperativeScopedQuery = (params: QueryGuardParams) => {
 };
 
 export const shouldInstallQueryGuard = (nodeEnv = process.env.NODE_ENV) =>
-  // Temporary rollout state: hard-fail is limited to non-production until route groups
-  // are migrated and production has structured logging/alerts. See docs/production-guardrails.md.
-  nodeEnv !== 'production';
+  // Production is report-only for now; non-production hard-fails. See docs/production-guardrails.md.
+  nodeEnv !== 'query-guard-disabled';
 
-export const installQueryGuard = <T>(prisma: T, nodeEnv = process.env.NODE_ENV): T => {
+const defaultReport = (finding: QueryGuardFinding) => {
+  console.warn('[QueryGuard]', JSON.stringify(finding));
+};
+
+const toFinding = (params: QueryGuardParams, error: unknown): QueryGuardFinding => ({
+  model: params.model,
+  action: params.action,
+  message: error instanceof Error ? error.message : String(error),
+});
+
+export const installQueryGuard = <T>(
+  prisma: T,
+  nodeEnv = process.env.NODE_ENV,
+  options: QueryGuardOptions = {},
+): T => {
   const client = prisma as any;
   if (!shouldInstallQueryGuard(nodeEnv) || typeof client.$use !== 'function') return prisma;
   client.$use(async (params: QueryGuardParams, next: (params: QueryGuardParams) => Promise<unknown>) => {
-    assertCooperativeScopedQuery(params);
+    try {
+      assertCooperativeScopedQuery(params);
+    } catch (error) {
+      if (nodeEnv === 'production') {
+        (options.report || defaultReport)(toFinding(params, error));
+        return next(params);
+      }
+      throw error;
+    }
     return next(params);
   });
   return prisma;

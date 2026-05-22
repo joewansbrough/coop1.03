@@ -17,27 +17,27 @@ The app now has the first guardrail layer:
 
 ## Query Guard Rollout
 
-The query guard is intentionally installed only outside production right now.
+The query guard is installed in every normal environment, but it uses different enforcement modes.
 
 Reason:
 
-- The current guard is strict by design. It throws when a cooperative-owned query lacks a visible `cooperativeId` scope.
-- That is exactly what we want in development and tests while route groups are being migrated.
+- The current guard is strict by design. It detects when a cooperative-owned query lacks a visible `cooperativeId` scope.
+- Hard-failing is exactly what we want in development and tests while route groups are being migrated.
 - It is not yet safe to hard-fail production traffic because some existing routes may still contain legitimate but not-yet-migrated query shapes.
 
 Temporary behavior:
 
 - Development/test: hard-fail missing cooperative scope.
-- Production: guard is not installed yet.
+- Production: report-only mode. Missing scope is logged as a structured `QueryGuard` warning and the query is allowed to continue.
 
 Target behavior:
 
 - Development/test: hard-fail missing cooperative scope.
 - Staging: hard-fail after two-cooperative seed data and route verification pass.
-- Production phase 1: structured audit log and alert for missing cooperative scope.
+- Production phase 1: structured log and alert for missing cooperative scope.
 - Production phase 2: hard-fail missing cooperative scope after an observation window.
 
-Do not treat the production-disabled guard as final. It is a migration safety tool until route scoping is complete.
+Do not treat production report-only mode as final. It is a migration safety tool until route scoping is complete and the production warning stream has been reviewed.
 
 ## Query Guard Limitations
 
@@ -56,7 +56,7 @@ The guard is a seatbelt, not the steering wheel.
 
 Recommended order:
 
-1. Add production-safe query guard logging mode.
+1. Send production query guard findings to a durable audit/alert destination instead of `console.warn`.
 2. Migrate high-risk route groups to `withTenantContext` / `withCooperativeContext`.
 3. Add cross-coop isolation tests for imports, downloads, Drive roots, RAG, admin routes, and exports.
 4. Add webhook/callback provider-auth documentation and implementation.
@@ -64,8 +64,8 @@ Recommended order:
 
 ## Temporary Items To Resolve
 
-- Promote query guard beyond non-production once route scoping is complete.
-- Add structured audit logging for production query-guard warnings before hard-fail rollout.
+- Replace query guard `console.warn` reporting with structured audit logging or an alert sink.
+- Promote production query guard from report-only to hard-fail once route scoping is complete and staging has passed.
 - Decide where provider identifiers live for webhook/callback cooperative lookup.
 - Define staging seed policy with at least two cooperatives.
 - Verify a second cooperative in staging before production onboarding.
