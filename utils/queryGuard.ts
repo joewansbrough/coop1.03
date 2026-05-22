@@ -81,6 +81,8 @@ export const assertCooperativeScopedQuery = (params: QueryGuardParams) => {
 };
 
 export const shouldInstallQueryGuard = (nodeEnv = process.env.NODE_ENV) =>
+  // Temporary rollout state: hard-fail is limited to non-production until route groups
+  // are migrated and production has structured logging/alerts. See docs/production-guardrails.md.
   nodeEnv !== 'production';
 
 export const installQueryGuard = <T>(prisma: T, nodeEnv = process.env.NODE_ENV): T => {

@@ -102,9 +102,11 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 - [x] Remove first-cooperative fallback behavior.
 - [x] Define `withTenantContext(req, callback)` for session-backed HTTP requests.
 - [x] Define `withCooperativeContext(cooperativeId, callback)` for background jobs, cron tasks, imports, exports, and ingestion.
+- [x] Document production guardrail rollout state and temporary query guard behavior.
 - [ ] Ensure webhook/callback endpoints authenticate independently and look up cooperatives by provider identifiers.
 - [ ] Scope imports, exports, downloads, Drive, RAG, and cooperative-owned CRUD by `cooperativeId`.
 - [x] Add query guard coverage for cooperative-owned routes.
+- [ ] Add production-safe query guard logging/alert mode before enabling hard-fail behavior in production.
 - [ ] Add soft-delete support with `deletedAt` for cooperative-owned records before production hard deletes.
 - [ ] Add support/audit logging for sensitive support and recovery actions.
 - [ ] Add per-user and per-cooperative rate limits for onboarding import, Drive ingestion, document indexing, exports, RAG ask, maintenance image upload, and bulk document operations.
