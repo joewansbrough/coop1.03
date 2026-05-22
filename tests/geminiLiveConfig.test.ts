@@ -32,7 +32,8 @@ test('browser Gemini key falls back to server-style env names used by Vite confi
 test('Oracle Live mode uses the current Gemini Live model name', () => {
   const source = fs.readFileSync('services/geminiService.ts', 'utf8');
 
-  assert.match(source, /ORACLE_LIVE_MODEL\s*=\s*['"]gemini-live-2\.5-flash-preview['"]/);
+  assert.match(source, /ORACLE_LIVE_MODEL\s*=\s*['"]gemini-2\.5-flash-native-audio-preview-12-2025['"]/);
+  assert.doesNotMatch(source, /gemini-live-2\.5-flash-preview/);
   assert.doesNotMatch(source, /gemini-3\.1-flash-live-preview/);
 });
 
@@ -47,4 +48,10 @@ test('Oracle microphone worklet is connected so audio frames are pulled', () => 
   const source = fs.readFileSync('components/OracleAssistant.tsx', 'utf8');
 
   assert.match(source, /source\.connect\(workletNode\);[\s\S]*workletNode\.connect\(ctx\.destination\);/);
+});
+
+test('Oracle does not stream microphone chunks into a closed Live socket', () => {
+  const source = fs.readFileSync('components/OracleAssistant.tsx', 'utf8');
+
+  assert.match(source, /connection\.readyState !== WebSocket\.OPEN/);
 });

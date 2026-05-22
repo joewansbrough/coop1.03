@@ -263,6 +263,8 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           const base64 = window.btoa(String.fromCharCode(...new Uint8Array(pcmBuffer)));
           
           const session = await sessionPromise;
+          const connection = (session as any).conn;
+          if (connection && connection.readyState !== WebSocket.OPEN) return;
           chunkCount++;
           if (chunkCount % 100 === 0) console.log(`DEBUG: Sent ${chunkCount} audio chunks to Google`);
           

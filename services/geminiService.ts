@@ -20,7 +20,7 @@ import { DEFAULT_AUDIO_VOICE, normalizeAudioVoiceName } from '../utils/audioPref
 
 const isDemoMode = () => typeof window !== 'undefined' && localStorage.getItem('demo_mode') === 'true';
 
-export const ORACLE_LIVE_MODEL = 'gemini-live-2.5-flash-preview';
+export const ORACLE_LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
 
 export const getBrowserGeminiApiKey = () => {
   const viteEnv = (import.meta as any).env || {};
