@@ -85,6 +85,7 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 - [x] Run `npx tsx tests/cooperativeProductionSchema.test.ts`.
 - [x] Run `npx tsx tests/coopResolution.test.ts`.
 - [x] Run `npx tsx tests/tenantContext.test.ts`.
+- [x] Run `npx tsx tests/queryGuard.test.ts`.
 - [x] Run `npx prisma validate`.
 - [x] Run `npm run lint`.
 - [x] Run existing File Search/RAG tests.
@@ -103,7 +104,7 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 - [x] Define `withCooperativeContext(cooperativeId, callback)` for background jobs, cron tasks, imports, exports, and ingestion.
 - [ ] Ensure webhook/callback endpoints authenticate independently and look up cooperatives by provider identifiers.
 - [ ] Scope imports, exports, downloads, Drive, RAG, and cooperative-owned CRUD by `cooperativeId`.
-- [ ] Add query guard coverage for cooperative-owned routes.
+- [x] Add query guard coverage for cooperative-owned routes.
 - [ ] Add soft-delete support with `deletedAt` for cooperative-owned records before production hard deletes.
 - [ ] Add support/audit logging for sensitive support and recovery actions.
 - [ ] Add per-user and per-cooperative rate limits for onboarding import, Drive ingestion, document indexing, exports, RAG ask, maintenance image upload, and bulk document operations.

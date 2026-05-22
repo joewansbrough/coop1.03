@@ -57,6 +57,7 @@ import { CooperativeResolutionError, isSuperuserEmail, resolveCooperativeIdForRe
 import { GOOGLE_TOKEN_URL, buildGoogleTokenRequestBody, getOAuthErrorSummary } from '../utils/googleOAuth.js';
 import { hasFreshSessionPermissions } from '../utils/sessionPermissions.js';
 import { buildSafeDebugConfig, canAccessDangerousRoute } from '../utils/productionGuardrails.js';
+import { installQueryGuard } from '../utils/queryGuard.js';
 
 
 
@@ -210,7 +211,7 @@ const getPrisma = () => {
     } else {
       console.error('DATABASE_URL is MISSING');
     }
-    prismaInstance = new PrismaClient();
+    prismaInstance = installQueryGuard(new PrismaClient());
   }
   return prismaInstance;
 };
