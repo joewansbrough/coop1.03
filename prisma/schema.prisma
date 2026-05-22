@@ -84,15 +84,22 @@ enum StorageProvider {
 // --- MODELS ---
 
 model Cooperative {
-  id         String   @id @default(uuid())
-  name       String
-  slug       String   @unique
-  address    String?
-  city       String?
-  province   String   @default("BC")
-  adminEmail String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String    @id @default(uuid())
+  name            String
+  slug            String    @unique
+  subdomain       String?   @unique
+  status          String    @default("ONBOARDING")
+  onboardingState String    @default("SETUP")
+  settings        Json      @default("{}")
+  address         String?
+  city            String?
+  province        String    @default("BC")
+  adminEmail      String?
+  launchedAt      DateTime?
+  suspendedAt     DateTime?
+  archivedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relations
   announcements        Announcement[]

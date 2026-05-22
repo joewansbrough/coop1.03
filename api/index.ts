@@ -56,6 +56,7 @@ import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, ma
 import { isSuperuserEmail, resolveCooperativeIdForRequest, resolveKnownCooperativeIdForEmail } from '../utils/coopResolution.js';
 import { GOOGLE_TOKEN_URL, buildGoogleTokenRequestBody, getOAuthErrorSummary } from '../utils/googleOAuth.js';
 import { hasFreshSessionPermissions } from '../utils/sessionPermissions.js';
+import { buildSafeDebugConfig, canAccessDangerousRoute } from '../utils/productionGuardrails.js';
 
 
 
@@ -439,6 +440,22 @@ const requireAdmin = (req: express.Request, res: express.Response, next: express
   const user = (req as any).user || (req as any).session?.user;
   if (!user?.isAdmin) return res.status(403).json({ error: 'Admin access required' });
   next();
+};
+
+const requireDangerousRouteAccess = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const sessionUser = (req as any).user || (req as any).session?.user;
+  const queryAdminApiKey = req.query.adminApiKey;
+  const providedAdminApiKey = req.get('x-admin-api-key') ||
+    (typeof queryAdminApiKey === 'string' ? queryAdminApiKey : undefined);
+  if (canAccessDangerousRoute({
+    sessionUser,
+    adminApiKey: process.env.ADMIN_API_KEY,
+    providedAdminApiKey,
+  })) {
+    return next();
+  }
+
+  return res.status(403).json({ error: 'Admin access required' });
 };
 
 const getTenantImportPreview = async (
@@ -3825,7 +3842,7 @@ app.post('/api/ai/summarize-demo', async (req, res) => {
 });
 
 
-app.get('/api/migrate', async (req, res) => {
+app.get('/api/migrate', requireDangerousRouteAccess, async (req, res) => {
   try {
     const p = getPrisma();
 
@@ -3837,16 +3854,33 @@ app.get('/api/migrate', async (req, res) => {
         "id" TEXT NOT NULL,
         "name" TEXT NOT NULL,
         "slug" TEXT NOT NULL,
+        "subdomain" TEXT,
+        "status" TEXT NOT NULL DEFAULT 'ONBOARDING',
+        "onboardingState" TEXT NOT NULL DEFAULT 'SETUP',
+        "settings" JSONB NOT NULL DEFAULT '{}',
         "address" TEXT,
         "city" TEXT,
         "province" TEXT NOT NULL DEFAULT 'BC',
         "adminEmail" TEXT,
+        "launchedAt" TIMESTAMP(3),
+        "suspendedAt" TIMESTAMP(3),
+        "archivedAt" TIMESTAMP(3),
         "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP(3) NOT NULL,
         CONSTRAINT "Cooperative_pkey" PRIMARY KEY ("id")
       );
     `);
     await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Cooperative_slug_key" ON "Cooperative"("slug");`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Cooperative" ADD COLUMN IF NOT EXISTS "subdomain" TEXT;`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Cooperative" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'ONBOARDING';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Cooperative" ADD COLUMN IF NOT EXISTS "onboardingState" TEXT NOT NULL DEFAULT 'SETUP';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Cooperative" ADD COLUMN IF NOT EXISTS "settings" JSONB NOT NULL DEFAULT '{}';`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Cooperative" ADD COLUMN IF NOT EXISTS "launchedAt" TIMESTAMP(3);`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Cooperative" ADD COLUMN IF NOT EXISTS "suspendedAt" TIMESTAMP(3);`);
+    await p.$executeRawUnsafe(`ALTER TABLE "Cooperative" ADD COLUMN IF NOT EXISTS "archivedAt" TIMESTAMP(3);`);
+    await p.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Cooperative_subdomain_key" ON "Cooperative"("subdomain") WHERE "subdomain" IS NOT NULL;`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Cooperative_status_idx" ON "Cooperative"("status");`);
+    await p.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Cooperative_onboardingState_idx" ON "Cooperative"("onboardingState");`);
 
     await p.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "Building" (
@@ -4146,7 +4180,7 @@ app.get('/api/migrate', async (req, res) => {
   }
 });
 
-app.get('/api/seed', async (req, res) => {
+app.get('/api/seed', requireDangerousRouteAccess, async (req, res) => {
   try {
     const p = getPrisma();
 
@@ -4529,19 +4563,15 @@ app.get('/api/seed', async (req, res) => {
   }
 });
 
-app.get(['/api/debug/config', '/debug/config'], (req, res) => {
-  res.json({
-    hasClientId: !!process.env.GOOGLE_CLIENT_ID,
-    hasClientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
-    hasPickerApiKey: !!process.env.PICKER_API_KEY,
-    hasSessionSecret: !!process.env.SESSION_SECRET,
+app.get(['/api/debug/config', '/debug/config'], requireDangerousRouteAccess, (req, res) => {
+  res.json(buildSafeDebugConfig({
+    env: process.env,
     baseUrl: getBaseUrl(req),
     isSecure: req.secure,
     protocol: req.protocol,
-    headers: req.headers,
     url: req.url,
     originalUrl: req.originalUrl,
-  });
+  }));
 });
 
 // Global error handler
