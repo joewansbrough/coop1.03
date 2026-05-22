@@ -65,14 +65,14 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 
 ## Phase 6: Empty Real-Data States
 
-- [ ] Dashboard shows setup progress when records are empty.
+- [x] Dashboard shows setup progress when records are empty.
 - [x] Tenants page offers spreadsheet import when empty.
 - [x] Units page explains unit setup as the foundation.
 - [x] Documents page offers Drive connect/upload/index actions.
 - [x] Policy Assistant explains data-dependent answers.
-- [ ] Maintenance page supports request creation while explaining missing unit/member context.
-- [ ] Calendar page supports first meeting creation.
-- [ ] Committees page offers common presets and member assignment after tenant import.
+- [x] Maintenance page supports request creation while explaining missing unit/member context.
+- [x] Calendar page supports first meeting creation.
+- [x] Committees page offers common presets and member assignment after tenant import.
 
 ## Phase 7: Verification
 
@@ -80,6 +80,7 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 - [x] Run `npx tsx tests/unitOnboarding.test.ts`.
 - [x] Run `npx tsx tests/tenantImport.test.ts`.
 - [x] Run `npx tsx tests/documentOnboarding.test.ts`.
+- [x] Run `npx tsx tests/pageEmptyStates.test.ts`.
 - [x] Run `npm run lint`.
 - [x] Run existing File Search/RAG tests.
 - [x] Run existing data-loading/dashboard tests.

@@ -5,6 +5,7 @@ import AppAlert from '../components/AppAlert';
 import { useCreateEvent, useUpdateEvent, useDeleteEvent } from '../hooks/useCoopData';
 import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
 import { formatCalendarDateLabel, getDateOnlyValue, getLocalDateInputValue } from '../utils/dateUtils';
+import { getCalendarEmptyState } from '../utils/pageEmptyStates';
 
 interface CalendarProps {
   isAdmin?: boolean;
@@ -52,6 +53,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
 
   // Combine real events and session-only events
   const allEvents = [...events, ...tempEvents];
+  const calendarEmptyState = getCalendarEmptyState({ eventCount: allEvents.length, isAdmin });
 
   const handleExportICS = () => {
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Co-op Management System//EN\n";
@@ -313,6 +315,34 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
             Clear Temp
           </button>
         </div>
+      )}
+
+      {calendarEmptyState.isEmpty && isAdmin && !isGuest && !isEventsLoading && !isEventsError && (
+        <section className="rounded-3xl border border-dashed border-blue-200 bg-blue-50/50 p-6 dark:border-blue-900/40 dark:bg-blue-950/10">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm dark:bg-slate-900 dark:text-blue-300">
+                <i className="fa-solid fa-calendar-plus"></i>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-blue-600 dark:text-blue-300">Calendar onboarding</p>
+                <h3 className="mt-2 text-xl font-black text-slate-900 dark:text-white">{calendarEmptyState.title}</h3>
+                <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-400">{calendarEmptyState.description}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCategory('Meeting');
+                setShowAddForm(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-brand-500/20 transition-all hover:bg-brand-700 active:scale-95"
+            >
+              <i className="fa-solid fa-calendar-check"></i>
+              {calendarEmptyState.primaryActionLabel}
+            </button>
+          </div>
+        </section>
       )}
 
       {(showAddForm || editEvent) && (

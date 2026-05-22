@@ -7,6 +7,7 @@ import AppAlert from '../components/AppAlert';
 import { isDemoMode, useCreateMaintenance, useUpdateMaintenance, useUser } from '../hooks/useCoopData';
 import { recordTutorialEvent } from '../utils/demoTutorial';
 import { getUserMaintenanceUnitId } from '../utils/maintenanceRequestAccess';
+import { getMaintenanceEmptyState } from '../utils/pageEmptyStates';
 
 interface MaintenanceProps {
   isAdmin?: boolean;
@@ -76,10 +77,17 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
 
   const openRequests = allFilteredRequests.filter(r => r.status === RequestStatus.PENDING || r.status === RequestStatus.IN_PROGRESS);
   const archivedRequests = allFilteredRequests.filter(r => r.status === RequestStatus.COMPLETED || r.status === RequestStatus.CANCELLED);
+  const roleScopedRequestCount = (Array.isArray(requests) ? requests : []).filter(r => isAdmin || r.unitId === userUnitId).length;
+  const maintenanceEmptyState = getMaintenanceEmptyState({
+    requestCount: roleScopedRequestCount,
+    unitCount: units.length,
+    currentMemberCount: units.filter(unit => unit.currentTenantId || unit.currentTenant).length,
+    isAdmin,
+  });
   
   // Form State
   const [description, setDescription] = useState('');
-  const [unitId, setUnitId] = useState(isAdmin ? '' : userUnitId);
+  const [unitId, setUnitId] = useState(isAdmin ? '' : (units.length > 0 ? userUnitId : 'common'));
   const [category, setCategory] = useState<MaintenanceCategory[]>(['Other']);
   const [priority, setPriority] = useState<MaintenancePriority>(MaintenancePriority.LOW);
 
@@ -88,8 +96,8 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
   }, [statusParam]);
 
   useEffect(() => {
-    if (!isAdmin) setUnitId(userUnitId);
-  }, [isAdmin, userUnitId]);
+    if (!isAdmin) setUnitId(units.length > 0 ? userUnitId : 'common');
+  }, [isAdmin, userUnitId, units.length]);
 
   useEffect(() => {
     if (searchParams.get('action') === 'new-request') {
@@ -218,7 +226,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
 
     const payload: Omit<MaintenanceRequest, 'id'> = {
       title: description.substring(0, 30) + (description.length > 30 ? '...' : ''),
-      unitId,
+      unitId: unitId || 'common',
       tenantId: user?.tenantId || user?.id || 't1',
       category: category,
       description,
@@ -331,6 +339,34 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
         </div>
       )}
 
+      {maintenanceEmptyState.isEmpty && !isRequestsLoading && !isRequestsError && (
+        <section className="rounded-3xl border border-dashed border-brand-200 bg-brand-50/40 p-6 dark:border-brand-900/40 dark:bg-brand-950/10">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-600 shadow-sm dark:bg-slate-900 dark:text-brand-300">
+                <i className="fa-solid fa-screwdriver-wrench"></i>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-brand-600 dark:text-brand-300">Maintenance onboarding</p>
+                <h3 className="mt-2 text-xl font-black text-slate-900 dark:text-white">{maintenanceEmptyState.title}</h3>
+                <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-400">{maintenanceEmptyState.description}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (isAdmin && units.length === 0) setUnitId('common');
+                setShowForm(true);
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-brand-500/20 transition-all hover:bg-brand-700 active:scale-95"
+            >
+              <i className="fa-solid fa-plus"></i>
+              {maintenanceEmptyState.primaryActionLabel}
+            </button>
+          </div>
+        </section>
+      )}
+
       {showForm && (
         <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-white/5 animate-in fade-in slide-in-from-top-4">
           <div className="flex justify-between items-center mb-6">
@@ -366,7 +402,7 @@ const Maintenance: React.FC<MaintenanceProps> = ({ isAdmin = false, requests, se
                   </select>
                 ) : (
                   <div className="w-full bg-slate-50 dark:bg-slate-800 border dark:border-white/5 rounded-xl p-3 text-sm font-bold text-slate-800 dark:text-slate-200">
-                    Unit {units.find(u => u.id === userUnitId)?.number || '101'} (Assigned)
+                    {units.length > 0 ? `Unit ${units.find(u => u.id === userUnitId)?.number || 'pending'} (Assigned)` : 'Unit assignment pending'}
                   </div>
                 )}
               </div>

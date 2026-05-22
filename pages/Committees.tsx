@@ -5,6 +5,7 @@ import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
 import { formatDate } from '../utils/dateUtils';
 import { getDocumentFileUrl, getDocumentLibraryOriginalUrl } from '../utils/dashboardDocumentLinks';
+import { getCommitteeOnboardingState } from '../utils/pageEmptyStates';
 
 interface CommitteesProps {
   isAdmin: boolean;
@@ -48,6 +49,19 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
   const [meetingLocation, setMeetingLocation] = useState('Common Room');
   const [meetingDesc, setMeetingDesc] = useState('');
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const currentMembers = tenants.filter(t => t.status === 'Current');
+  const committeeOnboarding = getCommitteeOnboardingState({
+    committeeCount: committees.length,
+    currentMemberCount: currentMembers.length,
+  });
+
+  const committeePresetDescriptions: Record<string, string> = {
+    Board: 'Coordinate governance, board decisions, and member-facing accountability.',
+    Maintenance: 'Track building repairs, inspections, vendors, and long-term asset care.',
+    Finance: 'Review budgets, arrears, reserves, and monthly reporting.',
+    Membership: 'Support orientation, applications, move-ins, and member records.',
+    Communications: 'Prepare notices, newsletters, event updates, and member outreach.',
+  };
 
   const showAlert = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertMessage({ message, type });
@@ -156,12 +170,13 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
   const handleAddCommittee = (e: React.FormEvent) => {
     e.preventDefault();
     if (isGuest) return;
+    const chair = newCommitteeChair || 'Unassigned';
     const newCommittee: Committee = {
       id: `c${Date.now()}`,
       name: newCommitteeName,
       description: newCommitteeDesc,
-      chair: newCommitteeChair,
-      members: [newCommitteeChair],
+      chair,
+      members: chair === 'Unassigned' ? [] : [chair],
       icon: 'fa-users'
     };
     setCommittees([...committees, newCommittee]);
@@ -170,6 +185,13 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
     setNewCommitteeDesc('');
     setNewCommitteeChair('');
     showAlert('New committee successfully created.', 'success');
+  };
+
+  const openPresetCommittee = (presetName: string) => {
+    setNewCommitteeName(presetName);
+    setNewCommitteeDesc(committeePresetDescriptions[presetName] || '');
+    setNewCommitteeChair('');
+    setShowAddCommittee(true);
   };
 
   const handleAssignMember = (committeeId: string) => {
@@ -237,9 +259,9 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Committee Chair</label>
-                <select required value={newCommitteeChair} onChange={e => setNewCommitteeChair(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white">
-                  <option value="">Select a member...</option>
-                  {tenants.filter(t => t.status === 'Current').map(t => (
+                <select value={newCommitteeChair} onChange={e => setNewCommitteeChair(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none text-slate-900 dark:text-white">
+                  <option value="">{currentMembers.length > 0 ? 'Assign later or select a member...' : 'Assign after member import'}</option>
+                  {currentMembers.map(t => (
                     <option key={t.id} value={`${t.firstName} ${t.lastName}`}>{t.firstName} {t.lastName}</option>
                   ))}
                 </select>
@@ -329,7 +351,45 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
       )}
 
       {!selectedId ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
+          {committeeOnboarding.isEmpty && isAdmin && !isGuest && (
+            <section className="rounded-3xl border border-dashed border-brand-200 bg-brand-50/40 p-6 dark:border-brand-900/40 dark:bg-brand-950/10">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-brand-600 shadow-sm dark:bg-slate-900 dark:text-brand-300">
+                    <i className="fa-solid fa-people-group"></i>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-brand-600 dark:text-brand-300">Committee onboarding</p>
+                    <h3 className="mt-2 text-xl font-black text-slate-900 dark:text-white">{committeeOnboarding.title}</h3>
+                    <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-400">{committeeOnboarding.description}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddCommittee(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-brand-500/20 transition-all hover:bg-brand-700 active:scale-95"
+                >
+                  <i className="fa-solid fa-plus"></i>
+                  {committeeOnboarding.primaryActionLabel}
+                </button>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                {committeeOnboarding.presetNames.map(preset => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => openPresetCommittee(preset)}
+                    className="rounded-2xl border border-white bg-white/80 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md dark:border-white/5 dark:bg-slate-900/80 dark:hover:border-brand-600"
+                  >
+                    <p className="text-xs font-black uppercase tracking-tight text-slate-900 dark:text-white">{preset}</p>
+                    <p className="mt-2 text-[11px] font-medium leading-5 text-slate-500 dark:text-slate-400">{committeePresetDescriptions[preset]}</p>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {committees.map((committee, index) => (
             <div
               key={committee.id}
@@ -381,6 +441,7 @@ const Committees: React.FC<CommitteesProps> = ({ isAdmin, isGuest = false, user,
               </div>
             </div>
           ))}
+          </div>
         </div>
       ) : (
         <div className="space-y-6">
