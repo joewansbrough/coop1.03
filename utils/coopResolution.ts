@@ -1,5 +1,6 @@
 export const OBHC_COOPERATIVE_SLUG = 'obhc';
 export const SUPERUSER_EMAILS = ['joewansbrough@gmail.com', 'joewcoupons@gmail.com'];
+export const DEFAULT_COOPERATIVE_HOST_SUFFIXES = ['coophub.test', 'coophub.localhost'];
 
 type PrismaLike = {
   user?: { findFirst: (args: any) => Promise<any> };
@@ -118,11 +119,21 @@ const getRequestHost = (req: any) =>
 const isLocalHost = (host: string) =>
   host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.localhost');
 
+const cooperativeHostSuffixes = () =>
+  String(process.env.COOPERATIVE_HOST_SUFFIXES || DEFAULT_COOPERATIVE_HOST_SUFFIXES.join(','))
+    .split(',')
+    .map(value => value.trim().toLowerCase())
+    .filter(Boolean);
+
 const hostSubdomain = (host: string) => {
   if (!host || isLocalHost(host)) return null;
-  const parts = host.split('.').filter(Boolean);
-  if (parts.length < 3 || parts[0] === 'www') return null;
-  return parts[0];
+  const suffix = cooperativeHostSuffixes().find(item => host.endsWith(`.${item}`));
+  if (!suffix) return null;
+
+  const subdomainPart = host.slice(0, -suffix.length - 1);
+  if (!subdomainPart || subdomainPart.includes('.')) return null;
+  if (subdomainPart === 'www') return null;
+  return subdomainPart;
 };
 
 const assertCooperativeAvailable = (cooperative: any) => {

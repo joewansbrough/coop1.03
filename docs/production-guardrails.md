@@ -15,6 +15,24 @@ The app now has the first guardrail layer:
   - `withCooperativeContext(prisma, cooperativeId, callback)` for background work.
 - A Prisma query guard exists for cooperative-owned models.
 
+## Host Resolution
+
+Strict host/subdomain lookup only applies to configured co-op host suffixes. This prevents preview hosts, Vercel deployment hosts, and other unmanaged app hosts from being mistaken for co-op subdomains.
+
+Configuration:
+
+- `COOPERATIVE_HOST_SUFFIXES` is a comma-separated list of managed co-op host suffixes.
+- Defaults are `coophub.test,coophub.localhost` for local/test behavior.
+- Production must set this to the real managed domain suffixes before onboarding a second co-op.
+
+Example:
+
+```text
+COOPERATIVE_HOST_SUFFIXES=coop.example.com,coophub.ca
+```
+
+With that setting, `oak.coop.example.com` resolves by `Cooperative.subdomain = "oak"`. An unmanaged host such as a preview deployment falls back to authenticated user/session cooperative resolution and still does not fall back to the first cooperative.
+
 ## Query Guard Rollout
 
 The query guard is installed in every normal environment, but it uses different enforcement modes.

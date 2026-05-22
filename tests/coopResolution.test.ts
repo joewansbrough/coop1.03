@@ -102,6 +102,32 @@ test('normal requests resolve cooperative from subdomain host', async () => {
   assert.equal(await resolveCooperativeIdForRequest(prisma as any, req), 'coop-oak');
 });
 
+test('unmanaged preview hosts use authenticated cooperative context instead of subdomain lookup', async () => {
+  let cooperativeLookupCount = 0;
+  const prisma = {
+    user: {
+      findFirst: async ({ where }: any) => {
+        assert.equal(where.email, 'resident@example.com');
+        return { cooperativeId: 'coop-user', isSystemAdmin: false };
+      },
+    },
+    tenant: { findFirst: async () => null },
+    cooperative: {
+      findUnique: async () => {
+        cooperativeLookupCount += 1;
+        return null;
+      },
+      findFirst: async () => ({ id: 'first-coop' }),
+    },
+  };
+
+  assert.equal(await resolveCooperativeIdForRequest(prisma as any, {
+    get: (name: string) => name === 'host' ? 'coop103-preview.vercel.app' : '',
+    session: { user: { email: 'resident@example.com', cooperativeId: 'coop-user' } },
+  }), 'coop-user');
+  assert.equal(cooperativeLookupCount, 0);
+});
+
 test('unknown host does not fall back to first cooperative', async () => {
   const prisma = {
     user: { findFirst: async () => null },
