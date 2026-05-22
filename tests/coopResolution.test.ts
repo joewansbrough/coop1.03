@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   OBHC_COOPERATIVE_SLUG,
+  CooperativeResolutionError,
   isSuperuserEmail,
+  resolveCooperativeIdForRequest,
   resolveCooperativeIdForEmail,
   resolveKnownCooperativeIdForEmail,
 } from '../utils/coopResolution.ts';
@@ -38,7 +40,7 @@ test('regular users resolve by tenant email when no user row exists', async () =
   assert.equal(await resolveCooperativeIdForEmail(prisma as any, 'resident@example.com'), 'coop-tenant');
 });
 
-test('superuser fallback prefers selected coop, then OBHC, then first coop', async () => {
+test('superuser fallback prefers selected coop, then OBHC', async () => {
   const calls: string[] = [];
   const prisma = {
     user: { findFirst: async () => ({ cooperativeId: 'coop-joe-home', isSystemAdmin: true }) },
@@ -73,5 +75,71 @@ test('known auth resolution denies unknown emails instead of falling back to fir
   };
 
   assert.equal(await resolveKnownCooperativeIdForEmail(prisma as any, 'stranger@example.com'), null);
-  assert.equal(await resolveCooperativeIdForEmail(prisma as any, 'stranger@example.com'), 'first-coop');
+  await assert.rejects(
+    () => resolveCooperativeIdForEmail(prisma as any, 'stranger@example.com'),
+    /No cooperative membership found/,
+  );
+});
+
+test('normal requests resolve cooperative from subdomain host', async () => {
+  const prisma = {
+    user: { findFirst: async () => ({ cooperativeId: 'wrong-coop', isSystemAdmin: false }) },
+    tenant: { findFirst: async () => null },
+    cooperative: {
+      findUnique: async ({ where }: any) => {
+        assert.deepEqual(where, { subdomain: 'oak' });
+        return { id: 'coop-oak', status: 'ACTIVE' };
+      },
+      findFirst: async () => null,
+    },
+  };
+
+  const req = {
+    get: (name: string) => name === 'host' ? 'oak.coophub.test' : '',
+    session: { user: { email: 'resident@example.com', cooperativeId: 'wrong-coop' } },
+  };
+
+  assert.equal(await resolveCooperativeIdForRequest(prisma as any, req), 'coop-oak');
+});
+
+test('unknown host does not fall back to first cooperative', async () => {
+  const prisma = {
+    user: { findFirst: async () => null },
+    tenant: { findFirst: async () => null },
+    cooperative: {
+      findUnique: async () => null,
+      findFirst: async () => ({ id: 'first-coop' }),
+    },
+  };
+
+  await assert.rejects(
+    () => resolveCooperativeIdForRequest(prisma as any, {
+      get: (name: string) => name === 'host' ? 'missing.coophub.test' : '',
+      session: { user: { email: 'resident@example.com' } },
+    }),
+    (error: any) => error instanceof CooperativeResolutionError && error.statusCode === 404,
+  );
+});
+
+test('archived and suspended host cooperatives fail closed with explicit statuses', async () => {
+  const makePrisma = (status: string) => ({
+    cooperative: {
+      findUnique: async () => ({ id: 'coop-1', status }),
+      findFirst: async () => null,
+    },
+  });
+
+  await assert.rejects(
+    () => resolveCooperativeIdForRequest(makePrisma('ARCHIVED') as any, {
+      get: (name: string) => name === 'host' ? 'oak.coophub.test' : '',
+    }),
+    (error: any) => error instanceof CooperativeResolutionError && error.statusCode === 410,
+  );
+
+  await assert.rejects(
+    () => resolveCooperativeIdForRequest(makePrisma('SUSPENDED') as any, {
+      get: (name: string) => name === 'host' ? 'oak.coophub.test' : '',
+    }),
+    (error: any) => error instanceof CooperativeResolutionError && error.statusCode === 403,
+  );
 });

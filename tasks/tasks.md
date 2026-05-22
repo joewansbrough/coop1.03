@@ -83,6 +83,8 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 - [x] Run `npx tsx tests/pageEmptyStates.test.ts`.
 - [x] Run `npx tsx tests/productionGuardrails.test.ts`.
 - [x] Run `npx tsx tests/cooperativeProductionSchema.test.ts`.
+- [x] Run `npx tsx tests/coopResolution.test.ts`.
+- [x] Run `npx tsx tests/tenantContext.test.ts`.
 - [x] Run `npx prisma validate`.
 - [x] Run `npm run lint`.
 - [x] Run existing File Search/RAG tests.
@@ -95,10 +97,10 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 
 - [x] Lock or remove `/api/migrate`, `/api/seed`, and `/api/debug/config`.
 - [x] Add or confirm `Cooperative.subdomain`, `status`, `onboardingState`, lifecycle timestamps, and `settings`.
-- [ ] Install strict host/subdomain cooperative resolution for normal requests.
-- [ ] Remove first-cooperative fallback behavior.
-- [ ] Define `withTenantContext(req, callback)` for session-backed HTTP requests.
-- [ ] Define `withCooperativeContext(cooperativeId, callback)` for background jobs, cron tasks, imports, exports, and ingestion.
+- [x] Install strict host/subdomain cooperative resolution for normal requests.
+- [x] Remove first-cooperative fallback behavior.
+- [x] Define `withTenantContext(req, callback)` for session-backed HTTP requests.
+- [x] Define `withCooperativeContext(cooperativeId, callback)` for background jobs, cron tasks, imports, exports, and ingestion.
 - [ ] Ensure webhook/callback endpoints authenticate independently and look up cooperatives by provider identifiers.
 - [ ] Scope imports, exports, downloads, Drive, RAG, and cooperative-owned CRUD by `cooperativeId`.
 - [ ] Add query guard coverage for cooperative-owned routes.

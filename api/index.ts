@@ -53,7 +53,7 @@ import { buildOnboardingStatus } from '../utils/onboardingStatus.js';
 import { buildTenantTemplateCsv, parseTenantImportCsv, validateTenantImportRows, type TenantImportPreviewRow } from '../utils/tenantImport.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
-import { isSuperuserEmail, resolveCooperativeIdForRequest, resolveKnownCooperativeIdForEmail } from '../utils/coopResolution.js';
+import { CooperativeResolutionError, isSuperuserEmail, resolveCooperativeIdForRequest, resolveKnownCooperativeIdForEmail } from '../utils/coopResolution.js';
 import { GOOGLE_TOKEN_URL, buildGoogleTokenRequestBody, getOAuthErrorSummary } from '../utils/googleOAuth.js';
 import { hasFreshSessionPermissions } from '../utils/sessionPermissions.js';
 import { buildSafeDebugConfig, canAccessDangerousRoute } from '../utils/productionGuardrails.js';
@@ -311,7 +311,17 @@ app.get('/api/health', (req, res) => {
 const hydrateSessionPermissions = async (req: express.Request) => {
   const sessionUser = (req as any).session?.user;
   if (!sessionUser?.email) return null;
+  const p = getPrisma();
+  const coopId = await getCoopId(req, p);
   if (hasFreshSessionPermissions(sessionUser)) {
+    if (sessionUser.cooperativeId !== coopId) {
+      (req as any).session.user = {
+        ...sessionUser,
+        cooperativeId: coopId,
+        permissionsHydratedAt: 0,
+      };
+      return hydrateSessionPermissions(req);
+    }
     (req as any).user = sessionUser;
     return {
       effectiveUser: null,
@@ -327,8 +337,6 @@ const hydrateSessionPermissions = async (req: express.Request) => {
       user: sessionUser,
     };
   }
-  const p = getPrisma();
-  const coopId = sessionUser.cooperativeId || await getCoopId(req, p);
   const effectiveUser = await ensureUserForEmail(p, coopId, sessionUser.email, {
     name: sessionUser.name,
     googleSubjectId: sessionUser.googleSubjectId,
@@ -352,6 +360,9 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
       await hydrateSessionPermissions(req);
       return next();
     } catch (error) {
+      if (error instanceof CooperativeResolutionError) {
+        return res.status(error.statusCode).json({ error: error.message });
+      }
       console.error('Failed to hydrate session permissions:', error);
       (req as any).user = (req as any).session.user;
       return next();
