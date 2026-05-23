@@ -119,6 +119,7 @@ model Cooperative {
   users                User[]
   groups               Group[]
   auditLogs            AuditLog[]
+  queryGuardFindings   QueryGuardFinding[]
   documentAccessRules  DocumentAccessRule[]
   ragStores            RagStore[]
   driveRoots           CooperativeDriveRoot[]
@@ -798,6 +799,26 @@ model AuditLog {
   @@index([actorUserId])
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+model QueryGuardFinding {
+  id            String       @id @default(uuid())
+  cooperativeId String?
+  cooperative   Cooperative? @relation(fields: [cooperativeId], references: [id], onDelete: SetNull)
+  model         String?
+  action        String
+  message       String
+  environment   String?
+  argsSummary   Json?
+  createdAt     DateTime     @default(now())
+  resolvedAt    DateTime?
+  resolutionNote String?
+
+  @@index([cooperativeId])
+  @@index([model, action])
+  @@index([environment])
+  @@index([createdAt])
+  @@index([resolvedAt])
 }
 
 model MagicLinkToken {

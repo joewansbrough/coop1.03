@@ -53,7 +53,9 @@ assert.equal(shouldInstallQueryGuard('test'), true);
 const installed: any[] = [];
 const fakePrisma = { $use: (middleware: any) => installed.push(middleware) };
 installQueryGuard(fakePrisma, 'production', {
-  report: finding => installed.push({ finding }),
+  report: finding => {
+    installed.push({ finding });
+  },
 });
 
 assert.equal(installed.length, 1);
@@ -68,6 +70,12 @@ assert.deepEqual(installed[1].finding, {
   model: 'Tenant',
   action: 'findMany',
   message: '[QueryGuard] Tenant.findMany missing cooperativeId scope.',
+  cooperativeId: null,
+  environment: 'production',
+  argsSummary: {
+    whereKeys: ['status'],
+    hasData: false,
+  },
 });
 
 const devMiddleware: any[] = [];
@@ -79,5 +87,70 @@ await assert.rejects(
   ),
   /missing cooperativeId scope/,
 );
+
+const durableMiddleware: any[] = [];
+const durableWrites: any[] = [];
+installQueryGuard({
+  $use: (middleware: any) => durableMiddleware.push(middleware),
+  queryGuardFinding: {
+    create: async (payload: any) => {
+      durableWrites.push(payload);
+      return { id: 'finding-1', ...payload.data };
+    },
+  },
+}, 'production');
+
+const originalWarn = console.warn;
+console.warn = () => {
+  throw new Error('production query guard findings should not be console.warn-only');
+};
+
+try {
+  const durableResult = await durableMiddleware[0](
+    { model: 'Document', action: 'findFirst', args: { where: { id: 'doc-1' } } },
+    async () => 'allowed',
+  );
+
+  assert.equal(durableResult, 'allowed');
+  assert.equal(durableWrites.length, 1);
+  assert.deepEqual(durableWrites[0].data, {
+    model: 'Document',
+    action: 'findFirst',
+    message: '[QueryGuard] Document.findFirst missing cooperativeId scope.',
+    cooperativeId: null,
+    environment: 'production',
+    argsSummary: {
+      whereKeys: ['id'],
+      hasData: false,
+    },
+  });
+} finally {
+  console.warn = originalWarn;
+}
+
+const reporterFailureMiddleware: any[] = [];
+installQueryGuard({ $use: (middleware: any) => reporterFailureMiddleware.push(middleware) }, 'production', {
+  report: async () => {
+    throw new Error('report sink unavailable');
+  },
+});
+
+const originalError = console.error;
+const errorMessages: string[] = [];
+console.error = (...args: any[]) => {
+  errorMessages.push(args.map(String).join(' '));
+};
+
+try {
+  const reporterFailureResult = await reporterFailureMiddleware[0](
+    { model: 'Tenant', action: 'findMany', args: { where: { status: 'Current' } } },
+    async () => 'still allowed',
+  );
+
+  assert.equal(reporterFailureResult, 'still allowed');
+  assert.equal(errorMessages.some(message => message.includes('Failed to report finding')), true);
+} finally {
+  console.error = originalError;
+}
 
 console.log('queryGuard tests passed');

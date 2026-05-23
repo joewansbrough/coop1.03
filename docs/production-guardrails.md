@@ -46,13 +46,13 @@ Reason:
 Temporary behavior:
 
 - Development/test: hard-fail missing cooperative scope.
-- Production: report-only mode. Missing scope is logged as a structured `QueryGuard` warning and the query is allowed to continue.
+- Production: report-only mode. Missing scope is written to the durable `QueryGuardFinding` table and the query is allowed to continue.
 
 Target behavior:
 
 - Development/test: hard-fail missing cooperative scope.
 - Staging: hard-fail after two-cooperative seed data and route verification pass.
-- Production phase 1: structured log and alert for missing cooperative scope.
+- Production phase 1: durable `QueryGuardFinding` records, with alert delivery added if volume or severity warrants it.
 - Production phase 2: hard-fail missing cooperative scope after an observation window.
 
 Do not treat production report-only mode as final. It is a migration safety tool until route scoping is complete and the production warning stream has been reviewed.
@@ -74,15 +74,15 @@ The guard is a seatbelt, not the steering wheel.
 
 Recommended order:
 
-1. Send production query guard findings to a durable audit/alert destination instead of `console.warn`.
+1. Add webhook/callback provider-auth documentation and implementation.
 2. Migrate high-risk route groups to `withTenantContext` / `withCooperativeContext`.
 3. Add cross-coop isolation tests for imports, downloads, Drive roots, RAG, admin routes, and exports.
-4. Add webhook/callback provider-auth documentation and implementation.
+4. Add alert delivery on top of durable `QueryGuardFinding` records if production findings need active notification.
 5. Add rate limits for expensive and bulk endpoints.
 
 ## Temporary Items To Resolve
 
-- Replace query guard `console.warn` reporting with structured audit logging or an alert sink.
+- Add alert delivery on top of durable `QueryGuardFinding` records if active notification is required.
 - Promote production query guard from report-only to hard-fail once route scoping is complete and staging has passed.
 - Decide where provider identifiers live for webhook/callback cooperative lookup.
 - Define staging seed policy with at least two cooperatives.
