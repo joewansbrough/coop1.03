@@ -44,6 +44,7 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 - [x] Create `tests/tenantImport.test.ts`.
 - [x] Define tenant template columns.
 - [x] Add downloadable tenant CSV template.
+- [x] Add downloadable full-site onboarding data template for units, members, committees, committee memberships, roles, documents, events, announcements, and maintenance requests.
 - [x] Implement upload parsing and row normalization.
 - [x] Validate required fields: first name, last name, email, unit number.
 - [x] Validate duplicate emails, existing tenant conflicts, missing units, invalid dates, unknown roles, and unknown statuses.
@@ -79,6 +80,7 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 - [x] Run `npx tsx tests/onboardingStatus.test.ts`.
 - [x] Run `npx tsx tests/unitOnboarding.test.ts`.
 - [x] Run `npx tsx tests/tenantImport.test.ts`.
+- [x] Run `npx tsx tests/onboardingTemplate.test.ts`.
 - [x] Run `npx tsx tests/documentOnboarding.test.ts`.
 - [x] Run `npx tsx tests/pageEmptyStates.test.ts`.
 - [x] Run `npx tsx tests/productionGuardrails.test.ts`.
@@ -119,6 +121,7 @@ Decision: tenant import should warn on missing unit numbers by default. The conf
 ## Parking Lot
 
 - [ ] AI-assisted messy spreadsheet parsing.
+- [ ] Multi-entity onboarding import preview/confirm from the full onboarding template.
 - [ ] Full XLSX import if CSV template is not enough.
 - [ ] Member-facing document question answering.
 - [ ] Batch Drive indexing automation.

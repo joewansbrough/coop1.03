@@ -5,6 +5,10 @@ import { useOnboardingStatus } from '../hooks/useCoopData';
 const OnboardingSetup: React.FC = () => {
   const { data: status, isLoading, isError, error, refetch } = useOnboardingStatus();
 
+  const handleDownloadFullTemplate = () => {
+    window.location.href = '/api/onboarding/import-template';
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -38,9 +42,18 @@ const OnboardingSetup: React.FC = () => {
       <div className="rounded-[20px] bg-slate-900 p-6 text-white shadow-2xl shadow-teal-900/10 sm:p-8">
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-teal-300">Optional setup flow</p>
         <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Prepare this co-op workspace.</h1>
-        <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-slate-300">
-          Use this checklist to load the first real units, members, documents, and committee structure. Normal app navigation stays available while setup is incomplete.
-        </p>
+        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+          <p className="max-w-3xl text-sm font-medium leading-6 text-slate-300">
+            Use this checklist to load the first real units, members, documents, and committee structure. Normal app navigation stays available while setup is incomplete.
+          </p>
+          <button
+            type="button"
+            onClick={handleDownloadFullTemplate}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-white/15 sm:w-auto"
+          >
+            <i className="fa-solid fa-table"></i> Full Template
+          </button>
+        </div>
       </div>
 
       <OnboardingProgress status={status} />

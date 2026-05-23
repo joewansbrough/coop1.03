@@ -62,6 +62,10 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, isLoading = false, t
     window.location.href = '/api/tenants/import-template';
   };
 
+  const handleDownloadFullOnboardingTemplate = () => {
+    window.location.href = '/api/onboarding/import-template';
+  };
+
   const handleTenantCsvSelected = async (file?: File | null) => {
     if (!file) return;
     const text = await file.text();
@@ -223,6 +227,13 @@ const Tenants: React.FC<TenantsProps> = ({ isAdmin = false, isLoading = false, t
                 className="px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-xs font-black uppercase tracking-widest hover:border-brand-500 transition-colors flex items-center justify-center gap-2"
               >
                 <i className="fa-solid fa-download"></i> Download Schema
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadFullOnboardingTemplate}
+                className="px-4 py-3 rounded-xl border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-xs font-black uppercase tracking-widest hover:border-brand-500 transition-colors flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-table"></i> Full Template
               </button>
               <label className="px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-xs font-black uppercase tracking-widest hover:border-brand-500 transition-colors flex items-center justify-center gap-2 cursor-pointer">
                 <i className="fa-solid fa-upload"></i> Choose CSV

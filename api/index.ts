@@ -50,6 +50,7 @@ import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracl
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { parseGeminiJson } from '../utils/geminiJson.js';
 import { buildOnboardingStatus } from '../utils/onboardingStatus.js';
+import { buildOnboardingTemplateCsv } from '../utils/onboardingTemplate.js';
 import { buildTenantTemplateCsv, parseTenantImportCsv, validateTenantImportRows, type TenantImportPreviewRow } from '../utils/tenantImport.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
@@ -1604,6 +1605,12 @@ app.get('/api/tenants/import-template', requireAuth, requireAdmin, async (req, r
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', 'attachment; filename="coophub-tenant-template.csv"');
   res.send(buildTenantTemplateCsv());
+});
+
+app.get('/api/onboarding/import-template', requireAuth, requireAdmin, async (req, res) => {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="coophub-full-onboarding-template.csv"');
+  res.send(buildOnboardingTemplateCsv());
 });
 
 app.post('/api/tenants/import/preview', requireAuth, requireAdmin, async (req, res) => {
