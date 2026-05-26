@@ -2,11 +2,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { geminiService } from '../services/geminiService';
-import { Document, Committee, RagCitation } from '../types';
+import { Document, Committee } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import DriveExplorer from '../components/DriveExplorer';
 import FilterBar from '../components/FilterBar';
 import AppAlert from '../components/AppAlert';
+import OracleAssistant from '../components/OracleAssistant';
 
 import { isDemoMode, useUser, useRefreshData, useEvents, useMinutes } from '../hooks/useCoopData';
 import { formatDate } from '../utils/dateUtils';
@@ -20,27 +21,6 @@ import {
   getDriveConfigurationMessage,
   getRagFailureMessage,
 } from '../utils/documentOnboarding';
-import {
-  createErroredRagAskSession,
-  createPendingRagAskSession,
-  createResolvedRagAskSession,
-  parseRagAskSession,
-  type RagAskSession,
-} from '../utils/ragAskSession';
-
-const RAG_ASK_SESSION_KEY = 'coophub_resource_library_rag_ask';
-const RAG_ASK_SESSION_EVENT = 'coophub:resource-library-rag-ask';
-
-const loadStoredRagAskSession = () => {
-  if (typeof window === 'undefined') return null;
-  return parseRagAskSession(window.sessionStorage.getItem(RAG_ASK_SESSION_KEY));
-};
-
-const saveStoredRagAskSession = (session: RagAskSession) => {
-  if (typeof window === 'undefined') return;
-  window.sessionStorage.setItem(RAG_ASK_SESSION_KEY, JSON.stringify(session));
-  window.dispatchEvent(new CustomEvent(RAG_ASK_SESSION_EVENT, { detail: session }));
-};
 
 const ResourceLibrary: React.FC<{
   isAdmin: boolean,
@@ -59,15 +39,6 @@ const ResourceLibrary: React.FC<{
   const refreshData = useRefreshData();
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
-  const [question, setQuestion] = useState('');
-  const [aiResponse, setAiResponse] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [ragSession, setRagSession] = useState<RagAskSession | null>(() => loadStoredRagAskSession());
-  const [ragQuestion, setRagQuestion] = useState(() => loadStoredRagAskSession()?.question || '');
-  const ragAnswer = ragSession?.answer || '';
-  const ragCitations = ragSession?.citations || [];
-  const ragStoreNames = ragSession?.storeNames || [];
-  const isRagAsking = ragSession?.status === 'pending';
   const [indexingDocumentId, setIndexingDocumentId] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -93,19 +64,6 @@ const ResourceLibrary: React.FC<{
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const categories = ['All', 'Minutes', 'Policy', 'Financial', 'Bylaws', 'Newsletters', 'Cloud'];
-
-  useEffect(() => {
-    const syncRagSession = (event?: Event) => {
-      const nextSession = event instanceof CustomEvent
-        ? event.detail as RagAskSession | null
-        : loadStoredRagAskSession();
-      setRagSession(nextSession);
-      if (nextSession?.question) setRagQuestion(nextSession.question);
-    };
-
-    window.addEventListener(RAG_ASK_SESSION_EVENT, syncRagSession);
-    return () => window.removeEventListener(RAG_ASK_SESSION_EVENT, syncRagSession);
-  }, []);
 
   const getDocumentWithInferredCommittee = (doc: Document) => {
     if (doc.committee) return doc;
@@ -583,73 +541,6 @@ const ResourceLibrary: React.FC<{
     openDocument(doc);
   };
 
-  const handleAskAI = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!question) return;
-    setLoading(true);
-    setAiResponse('');
-
-    const docContext = documents.length > 0
-      ? documents.map(d =>
-        `[Document] Title: ${d.title} | Category: ${d.category}` +
-        (d.tags?.length ? ` | Tags: ${d.tags.join(', ')}` : '') +
-        (d.content?.trim() ? `\nContent: ${d.content.substring(0, 3000)}` : ' | (no extracted text)')
-      ).join('\n\n')
-      : 'No documents in the library.';
-    const context = `DOCUMENT CONTEXT:\n${docContext}`;
-
-    try {
-      const answer = await geminiService.askPolicyQuestion(question, context);
-      setAiResponse(answer || 'Sorry, I could not find an answer.');
-    } catch (err) {
-      setAiResponse('Error communicating with AI Assistant.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAskRag = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!ragQuestion.trim()) return;
-
-    if (!documentSetup.ragReady && documentSetup.indexedDocuments === 0) {
-      showAlert('Oracle needs at least one indexed document before it can answer from co-op source material.', 'info');
-    }
-
-    const pendingSession = createPendingRagAskSession(ragQuestion);
-    setRagSession(pendingSession);
-    saveStoredRagAskSession(pendingSession);
-
-    try {
-      const res = await fetch('/api/rag/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ question: ragQuestion }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.details || data.error || 'Failed to ask indexed documents');
-      const resolvedSession = createResolvedRagAskSession(pendingSession, data);
-      setRagSession(resolvedSession);
-      saveStoredRagAskSession(resolvedSession);
-    } catch (error: any) {
-      const erroredSession = createErroredRagAskSession(pendingSession, error);
-      setRagSession(erroredSession);
-      saveStoredRagAskSession(erroredSession);
-      showAlert(erroredSession.error, 'error');
-    }
-  };
-
-  const openCitation = (citation: RagCitation) => {
-    const href = citation.href || citation.uri || (citation.documentId ? `/documents?id=${citation.documentId}` : null);
-    if (!href) return;
-    if (href.startsWith('/')) {
-      window.open(href, '_blank', 'noopener,noreferrer');
-      return;
-    }
-    window.open(href, '_blank', 'noopener,noreferrer');
-  };
-
   const handleIndexForAi = async (doc: Document, event?: React.MouseEvent) => {
     event?.stopPropagation();
     if (!isAdmin || isGuest || !hasDriveFileIdForIndexing(doc)) return;
@@ -1017,65 +908,14 @@ const ResourceLibrary: React.FC<{
         {isAdmin && !isGuest && (
           <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-2xl p-5 shadow-sm">
             <div className="flex flex-col gap-1 mb-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Ask coopHUB Docs</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Document Oracle</h3>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Admin search across indexed co-op Drive documents and shared reference material.
+                Ask the same Oracle assistant about indexed Drive documents and shared reference material.
               </p>
             </div>
-            <form onSubmit={handleAskRag} className="flex flex-col sm:flex-row gap-3">
-              <input
-                value={ragQuestion}
-                onChange={(event) => setRagQuestion(event.target.value)}
-                placeholder="Ask about indexed documents..."
-                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"
-              />
-              <button
-                type="submit"
-                disabled={isRagAsking || !ragQuestion.trim()}
-                className="px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-900 text-white hover:bg-brand-600 disabled:opacity-50 disabled:pointer-events-none transition-all active:scale-95"
-              >
-                {isRagAsking ? 'Asking...' : 'Ask'}
-              </button>
-            </form>
-            {isRagAsking && (
-              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs font-bold text-amber-700 dark:border-amber-500/20 dark:bg-amber-950/30 dark:text-amber-200">
-                Still working on: {ragSession?.question}
-              </div>
-            )}
-            {ragSession?.status === 'error' && ragSession.error && (
-              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-bold text-red-700 dark:border-red-500/20 dark:bg-red-950/30 dark:text-red-200">
-                {ragSession.error}
-              </div>
-            )}
-            {ragAnswer && (
-              <div className="mt-4 rounded-xl border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-slate-800 p-4">
-                <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-200">{ragAnswer}</p>
-                {ragStoreNames.length > 0 && (
-                  <p className="mt-3 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                    Stores: {ragStoreNames.join(', ')}
-                  </p>
-                )}
-              </div>
-            )}
-            {ragCitations.length > 0 && (
-              <div className="mt-4 grid gap-2">
-                {ragCitations.map((citation, index) => (
-                  <button
-                    type="button"
-                    onClick={() => openCitation(citation)}
-                    key={`${citation.title}-${index}`}
-                    className="rounded-xl border border-slate-200 p-3 text-left text-sm transition-colors hover:border-teal-300 hover:bg-teal-50/50 dark:border-white/5 dark:hover:border-teal-500/40 dark:hover:bg-teal-950/20"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="font-black text-slate-800 dark:text-white">{citation.title}</div>
-                      <i className="fa-solid fa-arrow-up-right-from-square mt-1 text-[10px] text-slate-400"></i>
-                    </div>
-                    {citation.pageNumber != null && <div className="mt-1 text-xs font-bold text-slate-500">Page {citation.pageNumber}</div>}
-                    {citation.text && <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-500 dark:text-slate-400">{citation.text}</p>}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="h-[clamp(420px,60dvh,720px)]">
+              <OracleAssistant embedded variant="documents" />
+            </div>
           </section>
         )}
 

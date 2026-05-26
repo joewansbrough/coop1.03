@@ -363,12 +363,12 @@ export const geminiService = {
     return data.answer;
   },
 
-  async askOracle(question: string, language: string, pageContext?: string) {
+  async askOracle(question: string, language: string, pageContext?: string, assistantContext: 'general' | 'documents' = 'general') {
     const res = await fetch(isDemoMode() ? '/api/oracle/query-demo' : '/api/oracle/query', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question, language, pageContext, demoUser: getDemoOracleUser() }),
+      body: JSON.stringify({ question, language, pageContext, assistantContext, demoUser: getDemoOracleUser() }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to query Oracle with Gemini');

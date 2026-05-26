@@ -3147,7 +3147,7 @@ app.post('/api/ai/policy', requireAuth, async (req, res) => {
 
 app.post('/api/oracle/query-demo', async (req, res) => {
   const startedAt = Date.now();
-  const { question, language, pageContext, demoUser } = req.body;
+  const { question, language, pageContext, assistantContext, demoUser } = req.body;
   if (!question || String(question).trim().length < 2) return res.status(400).json({ error: 'Question is required.' });
   const normalizedLanguage = normalizeOracleLanguage(language);
   const intent = detectOracleIntent(question);
@@ -3209,6 +3209,7 @@ Deep Linking:
 
 Role: ${demoRole} (Demo Mode, isAdmin: ${isDemoAdmin}).
 Page context: ${pageContext || 'none'}.
+${assistantContext === 'documents' ? 'Documents page context: Prioritize indexed documents, Drive files, policies, bylaws, minutes, and shared reference material. Prefer source-grounded answers with citations when available.' : ''}
 
 Answer style:
 ${getOracleToneGuidance(question, intent.intent)}
@@ -3319,7 +3320,7 @@ Member Question: ${question}`;
 
 app.post('/api/oracle/query', requireAuth, async (req, res) => {
   const startedAt = Date.now();
-  const { question, language, pageContext } = req.body;
+  const { question, language, pageContext, assistantContext } = req.body;
   if (!question || String(question).trim().length < 2) return res.status(400).json({ error: 'Question is required.' });
   const normalizedLanguage = normalizeOracleLanguage(language);
   const intent = detectOracleIntent(question);
@@ -3331,7 +3332,7 @@ app.post('/api/oracle/query', requireAuth, async (req, res) => {
     coopId = await getCoopId(req, p);
     await ensurePolicyAssistantQuerySchema(p);
 
-    if (shouldAnswerOracleWithDocs(question)) {
+    if (assistantContext === 'documents' || shouldAnswerOracleWithDocs(question)) {
       try {
         const docsResponse = await askGeminiFileSearch(p, {
           cooperativeId: coopId,
@@ -3436,6 +3437,7 @@ ${getOracleToneGuidance(question, intent.intent)}
 
 Role: ${user?.role || 'MEMBER'} (isAdmin: ${!!user?.isAdmin}).
 Page context: ${pageContext || 'none'}.
+${assistantContext === 'documents' ? 'Documents page context: Prioritize indexed documents, Drive files, policies, bylaws, minutes, and shared reference material. Prefer source-grounded answers with citations when available.' : ''}
 
 Return JSON:
 {

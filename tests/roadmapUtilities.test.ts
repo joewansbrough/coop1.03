@@ -312,6 +312,15 @@ test('oracle tool loop asks gemini for a final answer before falling back locall
   assert.match(apiSource, /Final synthesis/);
 });
 
+test('document Oracle context is sent from the browser and prioritized by the server', () => {
+  const serviceSource = readFileSync(new URL('../services/geminiService.ts', import.meta.url), 'utf8');
+  const apiSource = readFileSync(new URL('../api/index.ts', import.meta.url), 'utf8');
+
+  assert.match(serviceSource, /assistantContext/);
+  assert.match(apiSource, /assistantContext === 'documents'/);
+  assert.match(apiSource, /Documents page context/);
+});
+
 test('oracle database search can use committees and announcements as context', async () => {
   const fakePrisma = {
     building: { findMany: async () => [] },

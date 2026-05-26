@@ -10,6 +10,7 @@ import type { OracleLanguage, OracleResponse } from '../types';
 
 interface OracleAssistantProps {
   embedded?: boolean;
+  variant?: 'general' | 'documents';
 }
 
 export const floatingOraclePanelClassName = 'fixed inset-x-4 bottom-24 z-[120] h-[min(720px,calc(100dvh-7rem))] w-[min(44rem,calc(100vw-2rem))] max-w-none sm:inset-x-auto sm:right-8';
@@ -17,7 +18,7 @@ export const floatingOraclePanelClassName = 'fixed inset-x-4 bottom-24 z-[120] h
 export const getOracleVoiceControlLabel = (isLiveMode: boolean) =>
   isLiveMode ? 'Stop Listening' : 'Start Voice';
 
-const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) => {
+const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false, variant = 'general' }) => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(embedded);
   const [mode, setMode] = useState<'chat' | 'voice'>('chat');
@@ -31,7 +32,12 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const [isLoading, setIsLoading] = useState(false);
   const [maintenanceDraftIssue, setMaintenanceDraftIssue] = useState<string | null>(null);
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; response?: OracleResponse }>>([
-    { role: 'assistant', content: 'Ask me about co-op policies, meetings, documents, or maintenance steps. Document-grounded answers need indexed source material; if nothing has been indexed yet, I will say what is missing.' },
+    {
+      role: 'assistant',
+      content: variant === 'documents'
+        ? 'Ask about indexed documents, Drive files, policies, bylaws, minutes, or shared reference material. I will answer from source material where available and show citations below the response.'
+        : 'Ask me about co-op policies, meetings, documents, or maintenance steps. Document-grounded answers need indexed source material; if nothing has been indexed yet, I will say what is missing.',
+    },
   ]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   
@@ -379,7 +385,12 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
     setMessages(prev => [...prev, { role: 'user', content: question }]);
     setIsLoading(true);
     try {
-      const response = await geminiService.askOracle(question, language, typeof window !== 'undefined' ? window.location.hash : '');
+      const response = await geminiService.askOracle(
+        question,
+        language,
+        typeof window !== 'undefined' ? window.location.hash : '',
+        variant === 'documents' ? 'documents' : 'general',
+      );
       setMessages(prev => [...prev, { role: 'assistant', content: response.answer, response }]);
     } catch (error: any) {
       setMessages(prev => [...prev, {
@@ -481,7 +492,9 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           </div>
           <div>
             <p className="text-sm font-black uppercase text-slate-900 dark:text-white">Co-op Oracle</p>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Policy assistant</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              {variant === 'documents' ? 'Document assistant' : 'Policy assistant'}
+            </p>
           </div>
         </div>
       </div>

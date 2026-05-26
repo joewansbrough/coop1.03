@@ -22,6 +22,19 @@ test('embedded OracleAssistant renders the chat surface, not a placeholder', () 
   assert.doesNotMatch(html, /Ask about policies, meetings, or maintenance/);
 });
 
+test('documents variant keeps the Oracle chat shell with document-focused copy', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <OracleAssistant embedded variant="documents" />
+    </MemoryRouter>,
+  );
+
+  assert.match(html, /Co-op Oracle/);
+  assert.match(html, /Document assistant/);
+  assert.match(html, /Ask about indexed documents/);
+  assert.doesNotMatch(html, /Ask coopHUB Docs/);
+});
+
 test('Oracle voice control has an explicit stop listening label', () => {
   assert.equal(getOracleVoiceControlLabel(false), 'Start Voice');
   assert.equal(getOracleVoiceControlLabel(true), 'Stop Listening');
@@ -78,4 +91,12 @@ test('OracleAssistant scrolls to the newest message after chat changes', () => {
 
   assert.match(source, /messagesEndRef/);
   assert.match(source, /scrollIntoView\(\{ block: 'end'/);
+});
+
+test('Resource Library uses the shared document Oracle instead of the old docs ask panel', () => {
+  const source = readFileSync(new URL('../pages/ResourceLibrary.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /<OracleAssistant embedded variant="documents"/);
+  assert.doesNotMatch(source, /Ask coopHUB Docs/);
+  assert.doesNotMatch(source, /handleAskRag/);
 });
