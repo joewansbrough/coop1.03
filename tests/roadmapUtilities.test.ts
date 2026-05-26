@@ -10,6 +10,7 @@ import {
   createMaintenanceRequestHref,
   createDemoOracleResponse,
   detectOracleIntent,
+  getOracleToneGuidance,
   mergeOracleSuggestedAction,
   normalizeOracleLanguage,
   shouldAnswerOracleWithDocs,
@@ -146,6 +147,12 @@ test('oracle routes document-grounded questions to indexed docs', () => {
   assert.equal(shouldAnswerOracleWithDocs('Who lives in unit 4?'), false);
   assert.equal(shouldAnswerOracleWithDocs('Show open maintenance requests'), false);
   assert.equal(shouldAnswerOracleWithDocs('Who is chair of the maintenance committee?'), false);
+});
+
+test('oracle uses formal tone guidance for source-grounded policy and legislation questions', () => {
+  assert.match(getOracleToneGuidance('What does the pet policy say?', 'policy'), /formal/i);
+  assert.match(getOracleToneGuidance('What does the Cooperative Association Act require?', 'governance'), /formal/i);
+  assert.doesNotMatch(getOracleToneGuidance('How do I submit a maintenance request?', 'maintenance'), /formal repository/i);
 });
 
 test('oracle record searches preserve member scope while applying text filters', async () => {
@@ -296,6 +303,13 @@ test('oracle routes have bounded tool loops and local fallback answers', () => {
   assert.match(apiSource, /createOracleAnswerFromToolResults/);
   assert.match(apiSource, /responseText \|\| fallbackAnswer/);
   assert.match(apiSource, /tryOracleDocsRescue/);
+});
+
+test('oracle tool loop asks gemini for a final answer before falling back locally', () => {
+  const apiSource = readFileSync(new URL('../api/index.ts', import.meta.url), 'utf8');
+
+  assert.match(apiSource, /createOracleFinalSynthesisPrompt/);
+  assert.match(apiSource, /Final synthesis/);
 });
 
 test('oracle database search can use committees and announcements as context', async () => {

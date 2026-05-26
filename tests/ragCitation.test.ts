@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { normalizeGeminiCitations, resolveRagCitationLinks } from '../services/ragCitation.js';
+import { normalizeGeminiCitations, resolveRagCitationLinks, dedupeRagCitationsForDisplay } from '../services/ragCitation.js';
 
 const response = {
   candidates: [{
@@ -57,5 +57,17 @@ const resolved = await resolveRagCitationLinks({
 assert.equal(resolved[0].href, 'https://drive.google.com/file/d/drive-doc/view');
 assert.equal(resolved[1].href, '/api/documents/doc-blob/original');
 assert.equal(resolved[2].href, 'https://example.com/source.pdf');
+
+const displayCitations = dedupeRagCitationsForDisplay([
+  { title: 'Pet Policy', documentId: 'doc-pet', href: '/api/documents/doc-pet/original', text: 'First matching chunk.' },
+  { title: 'Pet Policy', documentId: 'doc-pet', href: '/api/documents/doc-pet/original', text: 'Second matching chunk.' },
+  { title: 'Pet Policy', documentId: 'doc-pet', href: '/api/documents/doc-pet/original?page=4', pageNumber: 4 },
+  { title: 'Pet Policy', documentId: 'doc-pet', href: '/api/documents/doc-pet/original?page=7', pageNumber: 7 },
+]);
+
+assert.equal(displayCitations.length, 3);
+assert.equal(displayCitations[0].text, 'First matching chunk.');
+assert.equal(displayCitations[1].pageNumber, 4);
+assert.equal(displayCitations[2].pageNumber, 7);
 
 console.log('ragCitation tests passed');

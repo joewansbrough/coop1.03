@@ -44,7 +44,7 @@ import {
   normalizeAudioVoiceName,
 } from '../utils/audioPreferences.js';
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
-import { detectOracleIntent, mergeOracleSuggestedAction, normalizeOracleLanguage, shouldAnswerOracleWithDocs } from '../utils/oracle.js';
+import { detectOracleIntent, getOracleToneGuidance, mergeOracleSuggestedAction, normalizeOracleLanguage, shouldAnswerOracleWithDocs } from '../utils/oracle.js';
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
 import { pcm16ToWavBuffer } from '../utils/audioWav.js';
@@ -79,8 +79,8 @@ const STABLE_GEMINI_FALLBACK_MODELS = [
   'gemini-1.5-flash',
 ];
 
-const AI_INITIAL_TIMEOUT_MS = 4000; // First call should be fast
-const AI_TOOL_TIMEOUT_MS = 3500;    // Tool calls give more room but still capped
+const AI_INITIAL_TIMEOUT_MS = 8000; // First call should stay responsive while allowing model warm-up
+const AI_TOOL_TIMEOUT_MS = 12000;   // Tool synthesis often needs extra time after database lookups
 const RAG_ASK_TIMEOUT_MS = 45_000;
 
 /**
@@ -2896,6 +2896,24 @@ const createOracleAnswerFromToolResults = (question: string, toolResponses: any[
 
 const ORACLE_TOOL_SYNTHESIS_FALLBACK = 'I gathered some data but was unable to formulate a complete answer in time. Please try a more specific question.';
 
+const createOracleFinalSynthesisPrompt = (
+  question: string,
+  normalizedLanguage: ReturnType<typeof normalizeOracleLanguage>,
+  intent: ReturnType<typeof detectOracleIntent>,
+  toolResponses: any[],
+) => {
+  const compactToolData = JSON.stringify(toolResponses.map(item => item?.functionResponse || item).slice(-12)).slice(0, 12000);
+  return [
+    'Final synthesis:',
+    `Answer the member question now in ${normalizedLanguage}. Do not call more tools.`,
+    getOracleToneGuidance(question, intent.intent),
+    'Use only the tool results below and say when the records do not contain enough information.',
+    'Return JSON with answer, confidence, intent, and optional suggestedAction.',
+    `Member Question: ${question}`,
+    `Tool Results: ${compactToolData}`,
+  ].join('\n\n');
+};
+
 const tryOracleDocsRescue = async (
   p: PrismaClient,
   cooperativeId: string,
@@ -3193,6 +3211,7 @@ Role: ${demoRole} (Demo Mode, isAdmin: ${isDemoAdmin}).
 Page context: ${pageContext || 'none'}.
 
 Answer style:
+${getOracleToneGuidance(question, intent.intent)}
 - Use plain, resident-friendly language by default.
 - Be concise: usually 2-4 short sentences.
 - Use bullets only when they make the answer easier to scan.
@@ -3258,6 +3277,19 @@ Member Question: ${question}`;
           response = result.response;
         } else {
           break;
+        }
+      }
+
+      if (response.functionCalls()?.length && allToolResponses.length > 0) {
+        try {
+          result = await withTimeout(
+            chat.sendMessage(createOracleFinalSynthesisPrompt(question, normalizedLanguage, intent, allToolResponses)),
+            AI_TOOL_TIMEOUT_MS,
+            'Demo Final synthesis',
+          );
+          response = result.response;
+        } catch (error: any) {
+          console.warn('[Oracle Demo] Final synthesis unavailable, using local tool summary:', error?.message || error);
         }
       }
 
@@ -3396,6 +3428,7 @@ Deep Linking:
 If a user asks about something specific (like "last social committee meeting") but you find multiple options or are unsure, ASK for clarifying details first, then use the tool once you are certain.
 
 Answer style:
+${getOracleToneGuidance(question, intent.intent)}
 - Use plain, resident-friendly language. Be concise (2-4 sentences).
 - Use bullets only for lists. Avoid legal jargon.
 - If urgent (leaks, safety), provide immediate next steps and advise checking with the board/emergency services.
@@ -3475,6 +3508,19 @@ Member Question: ${question}`;
         }
       }
 
+      if (response.functionCalls()?.length && allToolResponses.length > 0) {
+        try {
+          result = await withTimeout(
+            chat.sendMessage(createOracleFinalSynthesisPrompt(question, normalizedLanguage, intent, allToolResponses)),
+            AI_TOOL_TIMEOUT_MS,
+            'Final synthesis',
+          );
+          response = result.response;
+        } catch (error: any) {
+          console.warn('[Oracle] Final synthesis unavailable, using local tool summary:', error?.message || error);
+        }
+      }
+
       // Safety check for empty text (e.g. if loop hit limit and model didn't provide final text)
       const responseText = response.text();
       const citations = extractCitationsFromToolResults(allToolResponses);
@@ -3493,7 +3539,9 @@ Member Question: ${question}`;
           answer: fallbackAnswer,
           citations,
           confidence: 0.5,
-          intent: "general"
+          language: normalizedLanguage,
+          intent: intent.intent,
+          suggestedAction: mergeOracleSuggestedAction(question, intent.suggestedAction),
         };
       }
 

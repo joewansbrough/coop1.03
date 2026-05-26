@@ -69,6 +69,23 @@ export const shouldAnswerOracleWithDocs = (question: string) => {
   return docsQuestionTerms.test(normalized);
 };
 
+export const getOracleToneGuidance = (question: string, intent?: OracleResponse['intent']) => {
+  const normalized = String(question || '');
+  const formalSourceQuestion = shouldAnswerOracleWithDocs(normalized)
+    || /\b(legislation|legislative|act|statute|regulation|policy|bylaw|rule|occupancy agreement|formal repository|source material|citation|cited)\b/i.test(normalized)
+    || intent === 'policy'
+    || intent === 'governance';
+
+  if (formalSourceQuestion) {
+    return [
+      'Use a formal, careful tone because the answer may rely on legislation, policy, bylaws, minutes, or another formal repository.',
+      'State what the retrieved source supports, avoid casual phrasing, and clearly advise verification with the board when the source is incomplete or the matter is legal/urgent.',
+    ].join(' ');
+  }
+
+  return 'Use a plain, resident-friendly tone. Be warm and concise, and match the urgency of the member request.';
+};
+
 export const createOracleFallbackResponse = (question: string, language?: string): OracleResponse => ({
   answer: 'I could not reach the AI service, but your question has been saved for review. Please verify urgent or legal matters with the board.',
   citations: [],

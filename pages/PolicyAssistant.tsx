@@ -7,7 +7,7 @@ const PolicyAssistant: React.FC<{ documents: Document[]; announcements: Announce
   const documentSetup = getDocumentOnboardingState(Array.isArray(documents) ? documents : []);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4 pb-4" data-demo-target="policy-assistant">
+    <div className="mx-auto flex min-h-[calc(100dvh-6rem)] max-w-7xl flex-col space-y-4 pb-4" data-demo-target="policy-assistant">
       <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900 dark:text-white">Co-op Oracle</h2>
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -22,7 +22,7 @@ const PolicyAssistant: React.FC<{ documents: Document[]; announcements: Announce
           </p>
         </div>
       )}
-      <div className="h-[clamp(260px,calc(100dvh-16rem),520px)]">
+      <div className="min-h-[420px] flex-1 h-[calc(100dvh-12rem)]">
         <OracleAssistant embedded />
       </div>
     </div>

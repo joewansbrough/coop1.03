@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import OracleAssistant, { floatingOraclePanelClassName, getOracleVoiceControlLabel } from '../components/OracleAssistant.tsx';
 import { FloatingOracleAssistant } from '../components/Layout.tsx';
 import PolicyAssistant from '../pages/PolicyAssistant.tsx';
+import { readFileSync } from 'node:fs';
 
 test('embedded OracleAssistant renders the chat surface, not a placeholder', () => {
   const html = renderToStaticMarkup(
@@ -44,7 +45,8 @@ test('floating OracleAssistant remains available away from the Policy Assistant 
   );
 
   assert.match(html, /Open Co-op Oracle/);
-  assert.match(floatingOraclePanelClassName, /h-\[min\(560px,calc\(100dvh-7rem\)\)\]/);
+  assert.match(floatingOraclePanelClassName, /h-\[min\(720px,calc\(100dvh-7rem\)\)\]/);
+  assert.match(floatingOraclePanelClassName, /w-\[min\(44rem,calc\(100vw-2rem\)\)\]/);
   assert.doesNotMatch(floatingOraclePanelClassName, /h-80/);
 });
 
@@ -55,7 +57,8 @@ test('Policy Assistant page uses a responsive embedded chat height', () => {
     </MemoryRouter>,
   );
 
-  assert.match(html, /h-\[clamp\(260px,calc\(100dvh-16rem\),520px\)\]/);
+  assert.match(html, /h-\[calc\(100dvh-12rem\)\]/);
+  assert.match(html, /min-h-\[420px\]/);
   assert.doesNotMatch(html, /h-\[720px\]/);
 });
 
@@ -68,4 +71,11 @@ test('Policy Assistant page aligns with the standard page width', () => {
 
   assert.match(html, /max-w-7xl/);
   assert.doesNotMatch(html, /max-w-5xl/);
+});
+
+test('OracleAssistant scrolls to the newest message after chat changes', () => {
+  const source = readFileSync(new URL('../components/OracleAssistant.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /messagesEndRef/);
+  assert.match(source, /scrollIntoView\(\{ block: 'end'/);
 });

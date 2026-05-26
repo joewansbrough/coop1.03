@@ -12,7 +12,7 @@ interface OracleAssistantProps {
   embedded?: boolean;
 }
 
-export const floatingOraclePanelClassName = 'fixed bottom-24 right-8 z-[120] h-[min(560px,calc(100dvh-7rem))] w-[calc(100vw-4rem)] max-w-md';
+export const floatingOraclePanelClassName = 'fixed inset-x-4 bottom-24 z-[120] h-[min(720px,calc(100dvh-7rem))] w-[min(44rem,calc(100vw-2rem))] max-w-none sm:inset-x-auto sm:right-8';
 
 export const getOracleVoiceControlLabel = (isLiveMode: boolean) =>
   isLiveMode ? 'Stop Listening' : 'Start Voice';
@@ -33,6 +33,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; response?: OracleResponse }>>([
     { role: 'assistant', content: 'Ask me about co-op policies, meetings, documents, or maintenance steps. Document-grounded answers need indexed source material; if nothing has been indexed yet, I will say what is missing.' },
   ]);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioWorkletNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -41,6 +42,10 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
   const nextStartTimeRef = useRef<number>(0);
   const activeSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  }, [messages, isLoading, isOpen, mode]);
 
   // Gapless Audio Playback for Live Mode
   const playAudioChunk = async (base64: string) => {
@@ -537,6 +542,7 @@ const OracleAssistant: React.FC<OracleAssistantProps> = ({ embedded = false }) =
           </div>
         ))}
         {isLoading && <p className="text-xs font-black uppercase tracking-widest text-teal-600">Oracle is reading...</p>}
+        <div ref={messagesEndRef} aria-hidden="true" />
       </div>
 
       <form
