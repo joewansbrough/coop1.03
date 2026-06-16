@@ -45,6 +45,7 @@ import {
   normalizeAudioVoiceName,
 } from '../utils/audioPreferences.js';
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
+import { buildGoogleCalendarSyncMetadata } from '../utils/googleCalendar.js';
 import { detectOracleIntent, getOracleToneGuidance, mergeOracleSuggestedAction, normalizeOracleLanguage, shouldAnswerOracleWithDocs } from '../utils/oracle.js';
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
@@ -2694,13 +2695,24 @@ app.post('/api/events/:id/google-calendar/sync', requireAuth, requirePermission(
       dryRun: req.body?.dryRun === true || req.query.dryRun === 'true',
     });
 
+    const updatedEvent = result.mode === 'dry-run'
+      ? event
+      : await p.coopEvent.update({
+        where: { id: event.id },
+        data: buildGoogleCalendarSyncMetadata(result),
+        include: { attendees: true },
+      });
+
     await logAudit(p, req, 'integrations.google_calendar.event.sync', 'CoopEvent', event.id, undefined, {
       mode: result.mode,
       calendarId: result.calendarId,
       googleEventId: 'googleEventId' in result ? result.googleEventId : null,
     });
 
-    res.json(result);
+    res.json({
+      ...result,
+      event: updatedEvent,
+    });
   } catch (e: any) {
     res.status(400).json({ error: 'Failed to sync event to Google Calendar.', details: e.message });
   }

@@ -203,6 +203,11 @@ export interface CoopEvent {
   description: string;
   committeeId?: string;
   cooperativeId?: string;
+  googleCalendarId?: string | null;
+  googleCalendarEventId?: string | null;
+  googleCalendarHtmlLink?: string | null;
+  googleMeetLink?: string | null;
+  googleCalendarSyncedAt?: string | null;
   attendees?: Tenant[];
   createdAt?: string;
   updatedAt?: string;

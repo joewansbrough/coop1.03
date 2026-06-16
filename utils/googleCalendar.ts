@@ -40,6 +40,25 @@ const cleanBaseUrl = (appBaseUrl: string) => appBaseUrl.replace(/\/+$/, '');
 
 export const getGoogleCalendarSyncKey = (eventId: string) => `coopHubEventId=${eventId}`;
 
+export type GoogleCalendarSyncResultLike = {
+  mode?: string;
+  calendarId: string;
+  googleEventId?: string | null;
+  htmlLink?: string | null;
+  hangoutLink?: string | null;
+};
+
+export const buildGoogleCalendarSyncMetadata = (
+  result: GoogleCalendarSyncResultLike,
+  syncedAt: Date = new Date(),
+) => ({
+  googleCalendarId: result.calendarId || null,
+  googleCalendarEventId: result.googleEventId || null,
+  googleCalendarHtmlLink: result.htmlLink || null,
+  googleMeetLink: result.hangoutLink || null,
+  googleCalendarSyncedAt: syncedAt,
+});
+
 export const buildGoogleCalendarEventPayload = ({
   event,
   cooperative,

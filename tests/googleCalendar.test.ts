@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildGoogleCalendarSyncMetadata,
   buildGoogleCalendarEventPayload,
   getGoogleCalendarSyncKey,
 } from '../utils/googleCalendar.ts';
@@ -38,4 +39,22 @@ test('builds a Google Calendar event payload from a coopHUB event', () => {
 
 test('creates a stable sync key for Calendar private extended properties', () => {
   assert.equal(getGoogleCalendarSyncKey('event-123'), 'coopHubEventId=event-123');
+});
+
+test('builds coopHUB event metadata from a Google Calendar sync result', () => {
+  const metadata = buildGoogleCalendarSyncMetadata({
+    mode: 'created',
+    calendarId: 'board@example.com',
+    googleEventId: 'google-event-123',
+    htmlLink: 'https://calendar.google.com/event?eid=abc',
+    hangoutLink: 'https://meet.google.com/abc-defg-hij',
+  }, new Date('2026-06-16T12:00:00.000Z'));
+
+  assert.deepEqual(metadata, {
+    googleCalendarId: 'board@example.com',
+    googleCalendarEventId: 'google-event-123',
+    googleCalendarHtmlLink: 'https://calendar.google.com/event?eid=abc',
+    googleMeetLink: 'https://meet.google.com/abc-defg-hij',
+    googleCalendarSyncedAt: new Date('2026-06-16T12:00:00.000Z'),
+  });
 });

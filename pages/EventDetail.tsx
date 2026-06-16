@@ -550,6 +550,10 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
         showAlert(data.error || data.details || 'Failed to sync Google Calendar event.', 'error');
         return;
       }
+      if (data.event) {
+        setEvents(current => current.map(ev => ev.id === event.id ? data.event : ev));
+        setEvent(data.event);
+      }
       const link = data.hangoutLink || data.htmlLink;
       showAlert(link ? `Google Calendar synced. Link: ${link}` : 'Google Calendar synced.', 'success');
     } catch (err) {
@@ -771,6 +775,40 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                       </div>
                     </div>
                   </div>
+                  {(event.googleMeetLink || event.googleCalendarHtmlLink || event.googleCalendarSyncedAt) && (
+                    <div className="rounded-[1.5rem] border border-teal-100 bg-teal-50/70 p-5 dark:border-teal-500/20 dark:bg-teal-950/20">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Google Workspace</p>
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        {event.googleMeetLink && (
+                          <a
+                            href={event.googleMeetLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-teal-700"
+                          >
+                            <i className="fa-solid fa-video"></i>
+                            Join Meet
+                          </a>
+                        )}
+                        {event.googleCalendarHtmlLink && (
+                          <a
+                            href={event.googleCalendarHtmlLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-teal-700 transition-colors hover:bg-teal-50 dark:bg-slate-900 dark:text-teal-300 dark:hover:bg-slate-800"
+                          >
+                            <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                            Open Calendar
+                          </a>
+                        )}
+                      </div>
+                      {event.googleCalendarSyncedAt && (
+                        <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">
+                          Synced {new Date(event.googleCalendarSyncedAt).toLocaleString('en-CA')}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-6">

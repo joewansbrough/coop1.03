@@ -685,6 +685,11 @@ model CoopEvent {
   time        String
   location    String
   category    String
+  googleCalendarId       String?
+  googleCalendarEventId  String?
+  googleCalendarHtmlLink String?
+  googleMeetLink         String?
+  googleCalendarSyncedAt DateTime?
 
   // Multi-tenancy
   cooperativeId String

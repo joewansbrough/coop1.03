@@ -18,6 +18,8 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - Use the event detail action, **Sync Google Calendar**, to create or update the Google Calendar event.
 - The sync service searches by Google Calendar private extended property `coopHubEventId=<eventId>` so repeated syncs update the same event.
 - The Google payload requests a Google Meet link using `conferenceData.createRequest`.
+- Successful real syncs persist `googleCalendarId`, `googleCalendarEventId`, `googleCalendarHtmlLink`, `googleMeetLink`, and `googleCalendarSyncedAt` on `CoopEvent`.
+- Event detail pages show persisted Google Meet and Calendar links after sync and after reload.
 - Real sync requires `GOOGLE_SERVICE_ACCOUNT_JSON` with Calendar event scope access and the target Google Calendar shared with the service account.
 - `POST /api/events/:id/google-calendar/sync` accepts `{ "dryRun": true }` to return the Google payload without writing to Calendar.
 
@@ -42,6 +44,7 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - 2026-06-16: Created Workspace status foundation, admin page, read-only API, RBAC keys, and focused tests.
 - 2026-06-16: Added settings merge helper, admin save API, audit logging, and editable Workspace configuration UI.
 - 2026-06-16: Added Google Calendar event payload builder, Calendar/Meet sync service, admin event sync endpoint, and event detail sync action.
+- 2026-06-16: Added Calendar sync persistence fields, migration, metadata mapper, and Event Detail Google Workspace link display.
 
 ## Verification
 - `npx tsx tests/googleWorkspace.test.ts`
