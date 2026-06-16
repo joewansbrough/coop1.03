@@ -51,6 +51,7 @@ import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { parseGeminiJson } from '../utils/geminiJson.js';
 import { buildOnboardingStatus } from '../utils/onboardingStatus.js';
 import { buildOnboardingTemplateCsv } from '../utils/onboardingTemplate.js';
+import { buildGoogleWorkspaceStatus } from '../utils/googleWorkspace.js';
 import { buildTenantTemplateCsv, parseTenantImportCsv, validateTenantImportRows, type TenantImportPreviewRow } from '../utils/tenantImport.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
@@ -1467,6 +1468,31 @@ app.get('/api/onboarding/status', requireAuth, async (req, res) => {
     }));
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to load onboarding status.', details: e.message });
+  }
+});
+
+app.get('/api/integrations/google-workspace/status', requireAuth, requirePermission('settings.view'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const [cooperative, activeDriveRoots] = await Promise.all([
+      p.cooperative.findUnique({
+        where: { id: coopId },
+        select: { id: true, settings: true },
+      }),
+      p.cooperativeDriveRoot?.count
+        ? p.cooperativeDriveRoot.count({ where: { cooperativeId: coopId, isActive: true } })
+        : Promise.resolve(0),
+    ]);
+
+    if (!cooperative) return res.status(404).json({ error: 'Cooperative not found' });
+
+    res.json(buildGoogleWorkspaceStatus({
+      cooperativeSettings: cooperative.settings,
+      activeDriveRootCount: activeDriveRoots,
+    }));
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to load Google Workspace status.', details: e.message });
   }
 });
 

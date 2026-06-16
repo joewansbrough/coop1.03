@@ -374,6 +374,88 @@ export const useOnboardingStatus = (options?: DataQueryOptions<OnboardingStatus>
   ...options,
 });
 
+export type GoogleWorkspaceStatus = {
+  connected: boolean;
+  domain: string | null;
+  adminEmail: string | null;
+  lastSyncAt: string | null;
+  driveRootFolderIds: string[];
+  readiness: Record<string, {
+    key: string;
+    label: string;
+    ready: boolean;
+    description: string;
+  }>;
+  capabilities: Array<{
+    id: string;
+    label: string;
+    value: string;
+    description: string;
+    enabled: boolean;
+  }>;
+  enabledCapabilities: Array<{
+    id: string;
+    label: string;
+    value: string;
+    description: string;
+    enabled: boolean;
+  }>;
+};
+
+const getDemoGoogleWorkspaceStatus = (): GoogleWorkspaceStatus => ({
+  connected: true,
+  domain: 'oakbaycoop.bc.ca',
+  adminEmail: 'admin@oakbaycoop.bc.ca',
+  lastSyncAt: '2026-06-15T18:00:00.000Z',
+  driveRootFolderIds: ['demo-drive-root'],
+  readiness: {
+    workspaceConfigured: {
+      key: 'workspaceConfigured',
+      label: 'Workspace Profile',
+      ready: true,
+      description: 'Store the co-op Workspace domain and administrator contact.',
+    },
+    oauthConfigured: {
+      key: 'oauthConfigured',
+      label: 'Google OAuth',
+      ready: true,
+      description: 'Configure client ID and secret for Google sign-in and delegated consent.',
+    },
+    serviceAccountConfigured: {
+      key: 'serviceAccountConfigured',
+      label: 'Service Account',
+      ready: true,
+      description: 'Configure service-account credentials for shared Drive ingestion.',
+    },
+    driveRootsConfigured: {
+      key: 'driveRootsConfigured',
+      label: 'Drive Roots',
+      ready: true,
+      description: 'Choose shared Drive folders coopHUB can browse and index.',
+    },
+  },
+  capabilities: [
+    { id: 'identity', label: 'Google Sign-In', value: 'Use Workspace identities for board, member, and staff access.', description: 'Already supported through Google OAuth and coopHUB user matching.', enabled: true },
+    { id: 'drive', label: 'Drive Knowledge Hub', value: 'Sync shared Drive folders into documents, permissions, and AI search.', description: 'Builds on the existing service-account Drive root and RAG ingestion.', enabled: true },
+    { id: 'directory', label: 'Directory & Groups', value: 'Mirror Workspace users and Google Groups into coopHUB people and roles.', description: 'Best for board, committees, residents, contractors, and volunteers.', enabled: false },
+    { id: 'calendar', label: 'Calendar & Meet', value: 'Keep meetings, AGM dates, maintenance windows, and Meet links synchronized.', description: 'Makes coopHUB events usable in the calendars members already check.', enabled: false },
+    { id: 'communications', label: 'Gmail & Groups Notices', value: 'Send announcements through trusted co-op email and group channels.', description: 'Keeps delivery in Workspace while preserving coopHUB audit history.', enabled: false },
+    { id: 'forms', label: 'Forms & Sheets Intake', value: 'Turn Google Forms responses into reviewed coopHUB records.', description: 'Useful for applications, maintenance intake, RSVPs, proxy forms, and surveys.', enabled: false },
+    { id: 'sites', label: 'Google Sites Portal', value: 'Publish selected public/member information through a companion Site.', description: 'Useful for co-ops that want a low-maintenance public-facing presence.', enabled: false },
+  ],
+  enabledCapabilities: [
+    { id: 'identity', label: 'Google Sign-In', value: 'Use Workspace identities for board, member, and staff access.', description: 'Already supported through Google OAuth and coopHUB user matching.', enabled: true },
+    { id: 'drive', label: 'Drive Knowledge Hub', value: 'Sync shared Drive folders into documents, permissions, and AI search.', description: 'Builds on the existing service-account Drive root and RAG ingestion.', enabled: true },
+  ],
+});
+
+export const useGoogleWorkspaceStatus = (options?: DataQueryOptions<GoogleWorkspaceStatus>) => useQuery<GoogleWorkspaceStatus>({
+  queryKey: ['google-workspace-status'],
+  queryFn: () => isDemoMode() ? Promise.resolve(getDemoGoogleWorkspaceStatus()) : fetchJson('/api/integrations/google-workspace/status'),
+  ...dataQueryConfig,
+  ...options,
+});
+
 export const useCreateNotification = () => {
   const queryClient = useQueryClient();
   return useMutation({

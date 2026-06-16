@@ -72,7 +72,9 @@ export const DEFAULT_PERMISSION_KEYS = [
   'users.manage_groups',
   'settings.view',
   'settings.update',
+  'integrations.google.view_status',
   'integrations.google.configure',
+  'integrations.google.sync',
   'audit.view',
 ] as const;
 
