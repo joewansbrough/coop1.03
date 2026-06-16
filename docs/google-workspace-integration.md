@@ -15,6 +15,7 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 ## Calendar And Meet Integration
 - Configure `calendarId` and `timeZone` in `Cooperative.settings.googleWorkspace` from `/admin/google-workspace`.
 - Enable the Calendar sync lane before syncing events.
+- On `/calendar`, admins can create a new event and check **Create Google Meet link**. coopHUB saves the event first, then syncs it to Google Calendar and persists the returned Meet link.
 - Use the event detail action, **Sync Google Calendar**, to create or update the Google Calendar event.
 - The sync service searches by Google Calendar private extended property `coopHubEventId=<eventId>` so repeated syncs update the same event.
 - The Google payload requests a Google Meet link using `conferenceData.createRequest`.
@@ -45,6 +46,7 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - 2026-06-16: Added settings merge helper, admin save API, audit logging, and editable Workspace configuration UI.
 - 2026-06-16: Added Google Calendar event payload builder, Calendar/Meet sync service, admin event sync endpoint, and event detail sync action.
 - 2026-06-16: Added Calendar sync persistence fields, migration, metadata mapper, and Event Detail Google Workspace link display.
+- 2026-06-16: Added visible event creation flow for Google Meet links and Meet badges/links on calendar surfaces.
 
 ## Verification
 - `npx tsx tests/googleWorkspace.test.ts`

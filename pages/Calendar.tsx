@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Committee, CoopEvent } from '../types';
 import AppAlert from '../components/AppAlert';
-import { useCreateEvent, useUpdateEvent, useDeleteEvent } from '../hooks/useCoopData';
+import { isDemoMode, useCreateEvent, useUpdateEvent, useDeleteEvent } from '../hooks/useCoopData';
 import { AUTO_DEMO_STORAGE_KEY } from '../utils/autoDemo';
 import { formatCalendarDateLabel, getDateOnlyValue, getLocalDateInputValue } from '../utils/dateUtils';
 import { getCalendarEmptyState } from '../utils/pageEmptyStates';
+import { syncCreatedEventToGoogleMeet } from '../utils/googleMeetEventCreate';
 
 interface CalendarProps {
   isAdmin?: boolean;
@@ -165,6 +166,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
   const [category, setCategory] = useState<'Meeting' | 'Social' | 'Maintenance' | 'Board'>('Meeting');
   const [committeeId, setCommitteeId] = useState('');
   const [description, setDescription] = useState('');
+  const [createGoogleMeet, setCreateGoogleMeet] = useState(false);
 
   const handleAddEvent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,13 +188,34 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
     } as any;
 
     createEventMutation.mutate(payload, {
-      onSuccess: (data) => {
-        setEvents(current => [...current, data]);
+      onSuccess: async (data) => {
+        const meetResult = await syncCreatedEventToGoogleMeet({
+          event: data,
+          shouldCreateMeet: createGoogleMeet && !isDemoMode(),
+          syncEvent: async (eventId) => {
+            const res = await fetch(`/api/events/${eventId}/google-calendar/sync`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ dryRun: false }),
+            });
+            const syncData = await res.json();
+            if (!res.ok) throw new Error(syncData.error || syncData.details || 'Google Meet sync failed.');
+            return syncData;
+          },
+        });
+        setEvents(current => [...current, meetResult.event]);
         setShowAddForm(false);
         setTitle('');
         setCommitteeId('');
         setDescription('');
-        showAlert('Event added to community calendar.', 'success');
+        setCreateGoogleMeet(false);
+        if (meetResult.synced) {
+          showAlert(meetResult.meetLink ? `Event added with Google Meet: ${meetResult.meetLink}` : 'Event added with Google Meet link.', 'success');
+        } else if (meetResult.error) {
+          showAlert(`Event added, but Google Meet was not created: ${meetResult.error}`, 'error');
+        } else {
+          showAlert('Event added to community calendar.', 'success');
+        }
       },
       onError: () => showAlert('Failed to add event.', 'error'),
       onSettled: () => {
@@ -399,6 +422,22 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</label>
                 <input type="text" required value={editEvent ? editEvent.location : location} onChange={e => editEvent ? setEditEvent({...editEvent, location: e.target.value}) : setLocation(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500" placeholder="Common Room / Courtyard" />
               </div>
+              {!editEvent && (
+                <label className="flex gap-3 rounded-2xl border border-teal-100 bg-teal-50/70 p-4 dark:border-teal-500/20 dark:bg-teal-950/20">
+                  <input
+                    type="checkbox"
+                    checked={createGoogleMeet}
+                    onChange={e => setCreateGoogleMeet(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                  />
+                  <span>
+                    <span className="block text-xs font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Create Google Meet link</span>
+                    <span className="mt-1 block text-xs font-medium leading-5 text-teal-900/70 dark:text-teal-100/70">
+                      Creates a Google Calendar event and Meet link after this event is saved. Requires Calendar sync to be enabled in Google Workspace settings.
+                    </span>
+                  </span>
+                </label>
+              )}
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Details</label>
                 <textarea value={editEvent ? editEvent.description : description} onChange={e => editEvent ? setEditEvent({...editEvent, description: e.target.value}) : setDescription(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 h-24 resize-none" placeholder="Add some context..."></textarea>
@@ -453,6 +492,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                           'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-800'
                         } ${e.id.toString().startsWith('temp-') ? 'opacity-70 border-dashed ring-1 ring-amber-500/30' : ''}`}
                       >
+                        {e.googleMeetLink && <i className="fa-solid fa-video mr-1"></i>}
                         {e.title}
                       </div>
                     ))}
@@ -512,7 +552,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                   {nextEvent.title}
                 </h4>
                 
-                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5 flex flex-col gap-2">
+                  <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/5 flex flex-col gap-2">
                   <div className="flex items-center gap-3 text-slate-500">
                     <div className="w-6 h-6 rounded-lg bg-slate-50 dark:bg-white/5 flex items-center justify-center">
                       <i className="fa-solid fa-clock text-[10px]"></i>
@@ -525,6 +565,14 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                     </div>
                     <span className="text-xs font-bold uppercase tracking-wider line-clamp-1">{nextEvent.location}</span>
                   </div>
+                  {nextEvent.googleMeetLink && (
+                    <div className="flex items-center gap-3 text-teal-600 dark:text-teal-300">
+                      <div className="w-6 h-6 rounded-lg bg-teal-50 dark:bg-teal-950/40 flex items-center justify-center">
+                        <i className="fa-solid fa-video text-[10px]"></i>
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-wider">Google Meet Ready</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </Link>
@@ -597,6 +645,18 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                     <h4 className="font-black text-slate-800 dark:text-white leading-tight mb-2 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">{e.title}</h4>
                     <div className="flex flex-col gap-1.5">
                       <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase"><i className="fa-solid fa-location-dot mr-1.5 text-slate-300 dark:text-slate-600"></i> {e.location}</p>
+                      {e.googleMeetLink && (
+                        <a
+                          href={e.googleMeetLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={event => event.stopPropagation()}
+                          className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-teal-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-teal-700 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-950/60"
+                        >
+                          <i className="fa-solid fa-video"></i>
+                          Join Meet
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))
