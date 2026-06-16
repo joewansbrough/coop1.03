@@ -51,7 +51,7 @@ import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { parseGeminiJson } from '../utils/geminiJson.js';
 import { buildOnboardingStatus } from '../utils/onboardingStatus.js';
 import { buildOnboardingTemplateCsv } from '../utils/onboardingTemplate.js';
-import { buildGoogleWorkspaceStatus } from '../utils/googleWorkspace.js';
+import { buildGoogleWorkspaceSettingsUpdate, buildGoogleWorkspaceStatus } from '../utils/googleWorkspace.js';
 import { buildTenantTemplateCsv, parseTenantImportCsv, validateTenantImportRows, type TenantImportPreviewRow } from '../utils/tenantImport.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
@@ -1493,6 +1493,41 @@ app.get('/api/integrations/google-workspace/status', requireAuth, requirePermiss
     }));
   } catch (e: any) {
     res.status(500).json({ error: 'Failed to load Google Workspace status.', details: e.message });
+  }
+});
+
+app.put('/api/integrations/google-workspace/settings', requireAuth, requirePermission('integrations.google.configure'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const cooperative = await p.cooperative.findUnique({
+      where: { id: coopId },
+      select: { id: true, settings: true },
+    });
+
+    if (!cooperative) return res.status(404).json({ error: 'Cooperative not found' });
+
+    const settings = buildGoogleWorkspaceSettingsUpdate({
+      existingSettings: cooperative.settings,
+      input: req.body || {},
+    });
+    const updated = await p.cooperative.update({
+      where: { id: coopId },
+      data: { settings: settings as Prisma.InputJsonValue },
+      select: { id: true, settings: true },
+    });
+    const activeDriveRoots = p.cooperativeDriveRoot?.count
+      ? await p.cooperativeDriveRoot.count({ where: { cooperativeId: coopId, isActive: true } })
+      : 0;
+
+    await logAudit(p, req, 'integrations.google_workspace.settings.update', 'Cooperative', coopId, cooperative.settings, updated.settings);
+
+    res.json(buildGoogleWorkspaceStatus({
+      cooperativeSettings: updated.settings,
+      activeDriveRootCount: activeDriveRoots,
+    }));
+  } catch (e: any) {
+    res.status(400).json({ error: 'Failed to save Google Workspace settings.', details: e.message });
   }
 });
 

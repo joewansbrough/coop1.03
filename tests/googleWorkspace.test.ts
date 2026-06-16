@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   GOOGLE_WORKSPACE_CAPABILITIES,
+  buildGoogleWorkspaceSettingsUpdate,
   buildGoogleWorkspaceStatus,
   normalizeGoogleWorkspaceSettings,
 } from '../utils/googleWorkspace.ts';
@@ -53,5 +54,53 @@ test('keeps capability metadata ordered by recommended rollout value', () => {
   assert.deepEqual(
     GOOGLE_WORKSPACE_CAPABILITIES.map(capability => capability.id),
     ['identity', 'drive', 'directory', 'calendar', 'communications', 'forms', 'sites'],
+  );
+});
+
+test('builds a settings update without clobbering unrelated cooperative settings', () => {
+  const nextSettings = buildGoogleWorkspaceSettingsUpdate({
+    existingSettings: {
+      theme: 'coastal',
+      googleWorkspace: {
+        enabled: false,
+        domain: 'old.example',
+        lastSyncAt: '2026-06-01T12:00:00.000Z',
+      },
+    },
+    input: {
+      enabled: true,
+      domain: ' OakBayCoop.BC.CA ',
+      adminEmail: ' Admin@OakBayCoop.BC.CA ',
+      driveRootFolderIds: [' drive-a ', 'drive-a', '', 'drive-b'],
+      directorySyncEnabled: true,
+      calendarSyncEnabled: true,
+      communicationsSyncEnabled: false,
+      formsSyncEnabled: true,
+      sitesEnabled: false,
+    },
+  });
+
+  assert.equal((nextSettings as any).theme, 'coastal');
+  assert.deepEqual((nextSettings as any).googleWorkspace, {
+    enabled: true,
+    domain: 'oakbaycoop.bc.ca',
+    adminEmail: 'admin@oakbaycoop.bc.ca',
+    driveRootFolderIds: ['drive-a', 'drive-b'],
+    directorySyncEnabled: true,
+    calendarSyncEnabled: true,
+    communicationsSyncEnabled: false,
+    formsSyncEnabled: true,
+    sitesEnabled: false,
+    lastSyncAt: '2026-06-01T12:00:00.000Z',
+  });
+});
+
+test('requires domain and admin email when enabling Workspace', () => {
+  assert.throws(
+    () => buildGoogleWorkspaceSettingsUpdate({
+      existingSettings: {},
+      input: { enabled: true, domain: '', adminEmail: '' },
+    }),
+    /domain and admin email/i,
   );
 });

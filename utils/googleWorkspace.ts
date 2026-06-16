@@ -46,6 +46,10 @@ export type GoogleWorkspaceStatus = {
   enabledCapabilities: GoogleWorkspaceCapability[];
 };
 
+export type GoogleWorkspaceSettingsInput = Partial<Omit<GoogleWorkspaceSettings, 'lastSyncAt'>> & {
+  lastSyncAt?: string | null;
+};
+
 export const GOOGLE_WORKSPACE_CAPABILITIES: Omit<GoogleWorkspaceCapability, 'enabled'>[] = [
   {
     id: 'identity',
@@ -99,6 +103,8 @@ const cleanString = (value: unknown) => {
   return text || null;
 };
 
+const cleanLowerString = (value: unknown) => cleanString(value)?.toLowerCase() || null;
+
 const cleanStringArray = (value: unknown) =>
   Array.isArray(value)
     ? Array.from(new Set(value.map(item => cleanString(item)).filter((item): item is string => Boolean(item))))
@@ -119,6 +125,40 @@ export const normalizeGoogleWorkspaceSettings = (settings: unknown): GoogleWorks
     formsSyncEnabled: workspace.formsSyncEnabled === true,
     sitesEnabled: workspace.sitesEnabled === true,
     lastSyncAt: cleanString(workspace.lastSyncAt),
+  };
+};
+
+export const buildGoogleWorkspaceSettingsUpdate = ({
+  existingSettings,
+  input,
+}: {
+  existingSettings: unknown;
+  input: GoogleWorkspaceSettingsInput;
+}) => {
+  const root = asObject(existingSettings);
+  const previous = normalizeGoogleWorkspaceSettings(root);
+  const enabled = input.enabled === true;
+  const domain = cleanLowerString(input.domain);
+  const adminEmail = cleanLowerString(input.adminEmail);
+
+  if (enabled && (!domain || !adminEmail)) {
+    throw new Error('Google Workspace domain and admin email are required when enabling Workspace integration.');
+  }
+
+  return {
+    ...root,
+    googleWorkspace: {
+      enabled,
+      domain,
+      adminEmail,
+      driveRootFolderIds: cleanStringArray(input.driveRootFolderIds),
+      directorySyncEnabled: input.directorySyncEnabled === true,
+      calendarSyncEnabled: input.calendarSyncEnabled === true,
+      communicationsSyncEnabled: input.communicationsSyncEnabled === true,
+      formsSyncEnabled: input.formsSyncEnabled === true,
+      sitesEnabled: input.sitesEnabled === true,
+      lastSyncAt: cleanString(input.lastSyncAt) || previous.lastSyncAt,
+    },
   };
 };
 

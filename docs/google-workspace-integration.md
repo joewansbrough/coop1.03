@@ -1,0 +1,39 @@
+# Google Workspace Integration
+
+## Goal
+Make Google Workspace the collaboration layer for BC housing co-ops while coopHUB remains the governance, permissions, audit, and AI-search system of record.
+
+## Current Slice
+- Admin status page: `/admin/google-workspace`
+- Read-only status API: `/api/integrations/google-workspace/status`
+- Shared Workspace capability/readiness model: `utils/googleWorkspace.ts`
+- Focused tests: `tests/googleWorkspace.test.ts`
+
+## Build Plan
+1. Workspace profile and settings
+   - Save domain, admin email, Drive root IDs, and planned sync toggles into `Cooperative.settings.googleWorkspace`.
+   - Preserve unrelated `Cooperative.settings` keys when updating Workspace settings.
+2. Drive knowledge hub
+   - Continue using configured co-op Drive roots for browsing and RAG ingestion.
+   - Add clearer folder-to-visibility mapping before any write-capable Drive operations.
+3. Directory and Groups
+   - Sync Google Workspace users and Google Groups into coopHUB users, groups, and memberships.
+   - Keep manual memberships intact and mark synced memberships with `MembershipSource.GOOGLE_SYNC`.
+4. Calendar and Meet
+   - Add event mapping and sync status before creating or updating Google Calendar events.
+   - Attach Meet links and archive minutes back to Drive once event sync is stable.
+5. Communications and Forms
+   - Route announcements through Gmail or Google Groups only after audit and opt-out rules are explicit.
+   - Import reviewed Forms/Sheets rows into waitlist, maintenance, events, and attendance workflows.
+
+## Implementation Log
+- 2026-06-16: Created Workspace status foundation, admin page, read-only API, RBAC keys, and focused tests.
+- 2026-06-16: Added settings merge helper, admin save API, audit logging, and editable Workspace configuration UI.
+
+## Verification
+- `npx tsx tests/googleWorkspace.test.ts`
+- `npm run lint`
+- `npm run build`
+
+## Notes
+- On Windows, `npm run build` can fail during `prisma generate` if a local `npm run dev` / `tsx server.ts` process is holding `node_modules/.prisma/client/query_engine-windows.dll.node`. Stop the local dev-server process and rerun the build.

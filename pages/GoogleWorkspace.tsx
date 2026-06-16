@@ -1,5 +1,5 @@
-import React from 'react';
-import { useGoogleWorkspaceStatus } from '../hooks/useCoopData';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useGoogleWorkspaceStatus, useSaveGoogleWorkspaceSettings, type GoogleWorkspaceSettingsInput } from '../hooks/useCoopData';
 
 const WORKFLOW_STEPS = [
   'Confirm Google for Nonprofits eligibility and Workspace domain ownership.',
@@ -11,6 +11,40 @@ const WORKFLOW_STEPS = [
 
 const GoogleWorkspace: React.FC = () => {
   const { data: status, isLoading, isError, error, refetch } = useGoogleWorkspaceStatus();
+  const saveSettings = useSaveGoogleWorkspaceSettings();
+  const [form, setForm] = useState<GoogleWorkspaceSettingsInput>({
+    enabled: false,
+    domain: '',
+    adminEmail: '',
+    driveRootFolderIds: [],
+    directorySyncEnabled: false,
+    calendarSyncEnabled: false,
+    communicationsSyncEnabled: false,
+    formsSyncEnabled: false,
+    sitesEnabled: false,
+  });
+  const [driveRootsText, setDriveRootsText] = useState('');
+
+  const enabledCapabilityIds = useMemo(
+    () => new Set(status?.enabledCapabilities.map(capability => capability.id) || []),
+    [status?.enabledCapabilities],
+  );
+
+  useEffect(() => {
+    if (!status) return;
+    setForm({
+      enabled: status.connected,
+      domain: status.domain || '',
+      adminEmail: status.adminEmail || '',
+      driveRootFolderIds: status.driveRootFolderIds,
+      directorySyncEnabled: enabledCapabilityIds.has('directory'),
+      calendarSyncEnabled: enabledCapabilityIds.has('calendar'),
+      communicationsSyncEnabled: enabledCapabilityIds.has('communications'),
+      formsSyncEnabled: enabledCapabilityIds.has('forms'),
+      sitesEnabled: enabledCapabilityIds.has('sites'),
+    });
+    setDriveRootsText(status.driveRootFolderIds.join('\n'));
+  }, [enabledCapabilityIds, status]);
 
   if (isLoading) {
     return (
@@ -41,6 +75,19 @@ const GoogleWorkspace: React.FC = () => {
   }
 
   const readinessSteps = Object.values(status.readiness);
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    saveSettings.mutate({
+      ...form,
+      driveRootFolderIds: driveRootsText
+        .split(/\r?\n|,/)
+        .map(item => item.trim())
+        .filter(Boolean),
+    });
+  };
+  const updateForm = <K extends keyof GoogleWorkspaceSettingsInput>(key: K, value: GoogleWorkspaceSettingsInput[K]) => {
+    setForm(current => ({ ...current, [key]: value }));
+  };
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-12">
@@ -130,6 +177,105 @@ const GoogleWorkspace: React.FC = () => {
             </p>
           </div>
         </aside>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+        <form onSubmit={handleSubmit} className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-slate-900">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 dark:text-teal-300">Configuration</p>
+              <h2 className="mt-2 text-xl font-black text-slate-900 dark:text-white">Workspace profile</h2>
+            </div>
+            <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-300">
+              <input
+                type="checkbox"
+                checked={form.enabled}
+                onChange={event => updateForm('enabled', event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+              />
+              Enabled
+            </label>
+          </div>
+
+          <div className="mt-6 grid gap-4">
+            <label className="grid gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Workspace domain</span>
+              <input
+                value={form.domain}
+                onChange={event => updateForm('domain', event.target.value)}
+                placeholder="examplecoop.ca"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Workspace admin email</span>
+              <input
+                type="email"
+                value={form.adminEmail}
+                onChange={event => updateForm('adminEmail', event.target.value)}
+                placeholder="admin@examplecoop.ca"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Drive root folder IDs</span>
+              <textarea
+                value={driveRootsText}
+                onChange={event => setDriveRootsText(event.target.value)}
+                rows={4}
+                placeholder="One folder ID per line"
+                className="resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+              />
+            </label>
+          </div>
+
+          {saveSettings.isError && (
+            <p className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">
+              {saveSettings.error?.message || 'Could not save Workspace settings.'}
+            </p>
+          )}
+          {saveSettings.isSuccess && (
+            <p className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-200">
+              Workspace settings saved.
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={saveSettings.isPending}
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-teal-600 dark:hover:bg-teal-500"
+          >
+            <i className={`fa-solid ${saveSettings.isPending ? 'fa-spinner animate-spin' : 'fa-floppy-disk'}`}></i>
+            Save Workspace Settings
+          </button>
+        </form>
+
+        <div className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm dark:border-white/5 dark:bg-slate-900">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-600 dark:text-teal-300">Sync lanes</p>
+          <h2 className="mt-2 text-xl font-black text-slate-900 dark:text-white">Enable in stages</h2>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {[
+              ['directorySyncEnabled', 'Directory & Groups', 'Mirror users, board, committee, and resident groups.'],
+              ['calendarSyncEnabled', 'Calendar & Meet', 'Sync meetings, AGM dates, maintenance windows, and Meet links.'],
+              ['communicationsSyncEnabled', 'Gmail & Groups Notices', 'Prepare announcements for trusted Workspace channels.'],
+              ['formsSyncEnabled', 'Forms & Sheets Intake', 'Review form responses before importing records.'],
+              ['sitesEnabled', 'Google Sites Portal', 'Publish selected documents, notices, and forms.'],
+            ].map(([key, label, description]) => (
+              <label key={key} className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/5 dark:bg-slate-950">
+                <input
+                  type="checkbox"
+                  checked={Boolean(form[key as keyof GoogleWorkspaceSettingsInput])}
+                  onChange={event => updateForm(key as keyof GoogleWorkspaceSettingsInput, event.target.checked as never)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                />
+                <span>
+                  <span className="block text-sm font-black text-slate-900 dark:text-white">{label}</span>
+                  <span className="mt-1 block text-xs font-medium leading-5 text-slate-500 dark:text-slate-400">{description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
       </section>
     </div>
   );

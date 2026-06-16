@@ -402,6 +402,18 @@ export type GoogleWorkspaceStatus = {
   }>;
 };
 
+export type GoogleWorkspaceSettingsInput = {
+  enabled: boolean;
+  domain: string;
+  adminEmail: string;
+  driveRootFolderIds: string[];
+  directorySyncEnabled: boolean;
+  calendarSyncEnabled: boolean;
+  communicationsSyncEnabled: boolean;
+  formsSyncEnabled: boolean;
+  sitesEnabled: boolean;
+};
+
 const getDemoGoogleWorkspaceStatus = (): GoogleWorkspaceStatus => ({
   connected: true,
   domain: 'oakbaycoop.bc.ca',
@@ -455,6 +467,46 @@ export const useGoogleWorkspaceStatus = (options?: DataQueryOptions<GoogleWorksp
   ...dataQueryConfig,
   ...options,
 });
+
+export const useSaveGoogleWorkspaceSettings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (settings: GoogleWorkspaceSettingsInput) => {
+      if (isDemoMode()) {
+        const next = getDemoGoogleWorkspaceStatus();
+        next.connected = settings.enabled && Boolean(settings.domain && settings.adminEmail);
+        next.domain = settings.domain || null;
+        next.adminEmail = settings.adminEmail || null;
+        next.driveRootFolderIds = settings.driveRootFolderIds;
+        next.capabilities = next.capabilities.map(capability => ({
+          ...capability,
+          enabled: capability.id === 'identity' || capability.id === 'drive'
+            ? capability.enabled
+            : capability.id === 'directory'
+              ? settings.directorySyncEnabled
+              : capability.id === 'calendar'
+                ? settings.calendarSyncEnabled
+                : capability.id === 'communications'
+                  ? settings.communicationsSyncEnabled
+                  : capability.id === 'forms'
+                    ? settings.formsSyncEnabled
+                    : settings.sitesEnabled,
+        }));
+        next.enabledCapabilities = next.capabilities.filter(capability => capability.enabled);
+        return next;
+      }
+      return fetchJson('/api/integrations/google-workspace/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+    },
+    onSuccess: (status) => {
+      queryClient.setQueryData(['google-workspace-status'], status);
+      queryClient.invalidateQueries({ queryKey: ['onboarding-status'] });
+    },
+  });
+};
 
 export const useCreateNotification = () => {
   const queryClient = useQueryClient();
