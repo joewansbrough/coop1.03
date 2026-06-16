@@ -22,6 +22,8 @@ const GoogleWorkspace: React.FC = () => {
     communicationsSyncEnabled: false,
     formsSyncEnabled: false,
     sitesEnabled: false,
+    calendarId: '',
+    timeZone: 'America/Vancouver',
   });
   const [driveRootsText, setDriveRootsText] = useState('');
 
@@ -42,6 +44,8 @@ const GoogleWorkspace: React.FC = () => {
       communicationsSyncEnabled: enabledCapabilityIds.has('communications'),
       formsSyncEnabled: enabledCapabilityIds.has('forms'),
       sitesEnabled: enabledCapabilityIds.has('sites'),
+      calendarId: status.calendarId || '',
+      timeZone: status.timeZone || 'America/Vancouver',
     });
     setDriveRootsText(status.driveRootFolderIds.join('\n'));
   }, [enabledCapabilityIds, status]);
@@ -227,6 +231,26 @@ const GoogleWorkspace: React.FC = () => {
                 className="resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
               />
             </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Calendar ID</span>
+                <input
+                  value={form.calendarId}
+                  onChange={event => updateForm('calendarId', event.target.value)}
+                  placeholder="primary or board@examplecoop.ca"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                />
+              </label>
+              <label className="grid gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Time zone</span>
+                <input
+                  value={form.timeZone}
+                  onChange={event => updateForm('timeZone', event.target.value)}
+                  placeholder="America/Vancouver"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+                />
+              </label>
+            </div>
           </div>
 
           {saveSettings.isError && (

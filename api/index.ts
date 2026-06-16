@@ -14,6 +14,7 @@ import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
 import { createDocumentMetadataRecord } from '../services/documentMetadataStore.js';
 import { ingestConfiguredDriveRoots } from '../services/driveRootIngestion.js';
+import { syncGoogleCalendarEvent } from '../services/googleCalendar.js';
 import { askGeminiFileSearch } from '../services/ragAsk.js';
 import { indexDocumentVersionIntoGemini } from '../services/ragIndexing.js';
 import { RAG_STATUSES } from '../services/ragTypes.js';
@@ -51,7 +52,7 @@ import { pcm16ToWavBuffer } from '../utils/audioWav.js';
 import { parseGeminiJson } from '../utils/geminiJson.js';
 import { buildOnboardingStatus } from '../utils/onboardingStatus.js';
 import { buildOnboardingTemplateCsv } from '../utils/onboardingTemplate.js';
-import { buildGoogleWorkspaceSettingsUpdate, buildGoogleWorkspaceStatus } from '../utils/googleWorkspace.js';
+import { buildGoogleWorkspaceSettingsUpdate, buildGoogleWorkspaceStatus, normalizeGoogleWorkspaceSettings } from '../utils/googleWorkspace.js';
 import { buildTenantTemplateCsv, parseTenantImportCsv, validateTenantImportRows, type TenantImportPreviewRow } from '../utils/tenantImport.js';
 import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
@@ -2657,6 +2658,51 @@ app.put('/api/events/:id', requireAuth, async (req, res) => {
     res.json(event);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/events/:id/google-calendar/sync', requireAuth, requirePermission('integrations.google.sync'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    const eventId = getParam(req.params.id);
+    const coopId = await getCoopId(req, p);
+    const [event, cooperative] = await Promise.all([
+      p.coopEvent.findFirst({
+        where: { id: eventId, cooperativeId: coopId },
+      }),
+      p.cooperative.findUnique({
+        where: { id: coopId },
+        select: { id: true, name: true, slug: true, settings: true },
+      }),
+    ]);
+
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (!cooperative) return res.status(404).json({ error: 'Cooperative not found' });
+
+    const workspace = normalizeGoogleWorkspaceSettings(cooperative.settings);
+    if (!workspace.calendarSyncEnabled) {
+      return res.status(400).json({ error: 'Google Calendar sync is not enabled for this co-op.' });
+    }
+
+    const calendarId = String(req.body?.calendarId || workspace.calendarId || process.env.GOOGLE_CALENDAR_ID || '').trim();
+    const result = await syncGoogleCalendarEvent({
+      event,
+      cooperative,
+      calendarId,
+      appBaseUrl: getBaseUrl(req),
+      timeZone: workspace.timeZone || 'America/Vancouver',
+      dryRun: req.body?.dryRun === true || req.query.dryRun === 'true',
+    });
+
+    await logAudit(p, req, 'integrations.google_calendar.event.sync', 'CoopEvent', event.id, undefined, {
+      mode: result.mode,
+      calendarId: result.calendarId,
+      googleEventId: 'googleEventId' in result ? result.googleEventId : null,
+    });
+
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: 'Failed to sync event to Google Calendar.', details: e.message });
   }
 });
 

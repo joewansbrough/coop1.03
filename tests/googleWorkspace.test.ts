@@ -28,6 +28,8 @@ test('builds readiness steps from coop settings and environment', () => {
         calendarSyncEnabled: false,
         communicationsSyncEnabled: true,
         formsSyncEnabled: false,
+        calendarId: 'calendar@example.com',
+        timeZone: 'America/Vancouver',
         lastSyncAt: '2026-06-15T18:00:00.000Z',
       },
     },
@@ -77,6 +79,8 @@ test('builds a settings update without clobbering unrelated cooperative settings
       communicationsSyncEnabled: false,
       formsSyncEnabled: true,
       sitesEnabled: false,
+      calendarId: ' board@example.com ',
+      timeZone: 'America/Vancouver',
     },
   });
 
@@ -91,6 +95,8 @@ test('builds a settings update without clobbering unrelated cooperative settings
     communicationsSyncEnabled: false,
     formsSyncEnabled: true,
     sitesEnabled: false,
+    calendarId: 'board@example.com',
+    timeZone: 'America/Vancouver',
     lastSyncAt: '2026-06-01T12:00:00.000Z',
   });
 });

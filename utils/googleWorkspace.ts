@@ -17,6 +17,8 @@ export type GoogleWorkspaceSettings = {
   communicationsSyncEnabled: boolean;
   formsSyncEnabled: boolean;
   sitesEnabled: boolean;
+  calendarId: string | null;
+  timeZone: string | null;
   lastSyncAt: string | null;
 };
 
@@ -41,6 +43,8 @@ export type GoogleWorkspaceStatus = {
   adminEmail: string | null;
   lastSyncAt: string | null;
   driveRootFolderIds: string[];
+  calendarId: string | null;
+  timeZone: string | null;
   readiness: Record<string, GoogleWorkspaceReadinessStep>;
   capabilities: GoogleWorkspaceCapability[];
   enabledCapabilities: GoogleWorkspaceCapability[];
@@ -124,6 +128,8 @@ export const normalizeGoogleWorkspaceSettings = (settings: unknown): GoogleWorks
     communicationsSyncEnabled: workspace.communicationsSyncEnabled === true,
     formsSyncEnabled: workspace.formsSyncEnabled === true,
     sitesEnabled: workspace.sitesEnabled === true,
+    calendarId: cleanString(workspace.calendarId),
+    timeZone: cleanString(workspace.timeZone) || 'America/Vancouver',
     lastSyncAt: cleanString(workspace.lastSyncAt),
   };
 };
@@ -157,6 +163,8 @@ export const buildGoogleWorkspaceSettingsUpdate = ({
       communicationsSyncEnabled: input.communicationsSyncEnabled === true,
       formsSyncEnabled: input.formsSyncEnabled === true,
       sitesEnabled: input.sitesEnabled === true,
+      calendarId: cleanString((input as any).calendarId),
+      timeZone: cleanString((input as any).timeZone) || previous.timeZone,
       lastSyncAt: cleanString(input.lastSyncAt) || previous.lastSyncAt,
     },
   };
@@ -229,6 +237,8 @@ export const buildGoogleWorkspaceStatus = ({
     adminEmail: settings.adminEmail,
     lastSyncAt: settings.lastSyncAt,
     driveRootFolderIds,
+    calendarId: settings.calendarId,
+    timeZone: settings.timeZone,
     readiness,
     capabilities,
     enabledCapabilities: capabilities.filter(capability => capability.enabled),

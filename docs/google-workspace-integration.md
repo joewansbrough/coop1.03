@@ -6,8 +6,20 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 ## Current Slice
 - Admin status page: `/admin/google-workspace`
 - Read-only status API: `/api/integrations/google-workspace/status`
+- Workspace settings API: `/api/integrations/google-workspace/settings`
+- Event Calendar sync API: `/api/events/:id/google-calendar/sync`
 - Shared Workspace capability/readiness model: `utils/googleWorkspace.ts`
-- Focused tests: `tests/googleWorkspace.test.ts`
+- Calendar payload builder and sync service: `utils/googleCalendar.ts`, `services/googleCalendar.ts`
+- Focused tests: `tests/googleWorkspace.test.ts`, `tests/googleCalendar.test.ts`
+
+## Calendar And Meet Integration
+- Configure `calendarId` and `timeZone` in `Cooperative.settings.googleWorkspace` from `/admin/google-workspace`.
+- Enable the Calendar sync lane before syncing events.
+- Use the event detail action, **Sync Google Calendar**, to create or update the Google Calendar event.
+- The sync service searches by Google Calendar private extended property `coopHubEventId=<eventId>` so repeated syncs update the same event.
+- The Google payload requests a Google Meet link using `conferenceData.createRequest`.
+- Real sync requires `GOOGLE_SERVICE_ACCOUNT_JSON` with Calendar event scope access and the target Google Calendar shared with the service account.
+- `POST /api/events/:id/google-calendar/sync` accepts `{ "dryRun": true }` to return the Google payload without writing to Calendar.
 
 ## Build Plan
 1. Workspace profile and settings
@@ -29,9 +41,11 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 ## Implementation Log
 - 2026-06-16: Created Workspace status foundation, admin page, read-only API, RBAC keys, and focused tests.
 - 2026-06-16: Added settings merge helper, admin save API, audit logging, and editable Workspace configuration UI.
+- 2026-06-16: Added Google Calendar event payload builder, Calendar/Meet sync service, admin event sync endpoint, and event detail sync action.
 
 ## Verification
 - `npx tsx tests/googleWorkspace.test.ts`
+- `npx tsx tests/googleCalendar.test.ts`
 - `npm run lint`
 - `npm run build`
 

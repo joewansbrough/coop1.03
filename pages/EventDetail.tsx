@@ -412,6 +412,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingMinutes, setIsEditingMinutes] = useState(false);
   const [isAttending, setIsAttending] = useState(false);
+  const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'minutes'>('overview');
 
@@ -532,6 +533,30 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
     } catch (err) {
       console.error(err);
       showAlert('Failed to confirm attendance.', 'error');
+    }
+  };
+
+  const handleGoogleCalendarSync = async () => {
+    if (isGuest || isTemp) return;
+    setIsSyncingCalendar(true);
+    try {
+      const res = await fetch(`/api/events/${event.id}/google-calendar/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun: false }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert(data.error || data.details || 'Failed to sync Google Calendar event.', 'error');
+        return;
+      }
+      const link = data.hangoutLink || data.htmlLink;
+      showAlert(link ? `Google Calendar synced. Link: ${link}` : 'Google Calendar synced.', 'success');
+    } catch (err) {
+      console.error(err);
+      showAlert('Failed to sync Google Calendar event.', 'error');
+    } finally {
+      setIsSyncingCalendar(false);
     }
   };
 
@@ -750,13 +775,26 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
 
                 <div className="space-y-6">
                   {isAdmin && !isGuest && (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      data-demo-target="event-edit-action"
-                      className="w-full bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95"
-                    >
-                      <i className="fa-solid fa-pen-to-square mr-2"></i> Edit Event
-                    </button>
+                    <div className="grid gap-3">
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        data-demo-target="event-edit-action"
+                        className="w-full bg-slate-900 dark:bg-slate-800 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all active:scale-95"
+                      >
+                        <i className="fa-solid fa-pen-to-square mr-2"></i> Edit Event
+                      </button>
+                      {!isTemp && (
+                        <button
+                          type="button"
+                          onClick={handleGoogleCalendarSync}
+                          disabled={isSyncingCalendar}
+                          className="w-full rounded-2xl border border-teal-200 bg-teal-50 py-4 text-[10px] font-black uppercase tracking-widest text-teal-700 transition-all hover:bg-teal-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 dark:border-teal-500/20 dark:bg-teal-950/30 dark:text-teal-300 dark:hover:bg-teal-950/50"
+                        >
+                          <i className={`fa-solid ${isSyncingCalendar ? 'fa-spinner fa-spin' : 'fa-calendar-check'} mr-2`}></i>
+                          {isSyncingCalendar ? 'Syncing...' : 'Sync Google Calendar'}
+                        </button>
+                      )}
+                    </div>
                   )}
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-white/5" data-demo-target="event-attendance-actions">
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Attendee List</h4>
