@@ -25,6 +25,7 @@ const GoogleWorkspace: React.FC = () => {
     calendarId: '',
     timeZone: 'America/Vancouver',
     minutesArchiveFolderId: '',
+    eventPacketFolderId: '',
   });
   const [driveRootsText, setDriveRootsText] = useState('');
 
@@ -48,6 +49,7 @@ const GoogleWorkspace: React.FC = () => {
       calendarId: status.calendarId || '',
       timeZone: status.timeZone || 'America/Vancouver',
       minutesArchiveFolderId: status.minutesArchiveFolderId || '',
+      eventPacketFolderId: status.eventPacketFolderId || '',
     });
     setDriveRootsText(status.driveRootFolderIds.join('\n'));
   }, [enabledCapabilityIds, status]);
@@ -259,6 +261,15 @@ const GoogleWorkspace: React.FC = () => {
                 value={form.minutesArchiveFolderId}
                 onChange={event => updateForm('minutesArchiveFolderId', event.target.value)}
                 placeholder="Google Drive folder ID for approved minutes"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+              />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Event packet folder ID</span>
+              <input
+                value={form.eventPacketFolderId}
+                onChange={event => updateForm('eventPacketFolderId', event.target.value)}
+                placeholder="Google Drive folder ID for meeting packets"
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
               />
             </label>

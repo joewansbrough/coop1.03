@@ -8,6 +8,7 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - Read-only status API: `/api/integrations/google-workspace/status`
 - Workspace settings API: `/api/integrations/google-workspace/settings`
 - Event Calendar sync API: `/api/events/:id/google-calendar/sync`
+- Event Drive packet API: `/api/events/:id/google-drive-packet`
 - Shared Workspace capability/readiness model: `utils/googleWorkspace.ts`
 - Calendar payload builder and sync service: `utils/googleCalendar.ts`, `services/googleCalendar.ts`
 - Focused tests: `tests/googleWorkspace.test.ts`, `tests/googleCalendar.test.ts`
@@ -31,6 +32,13 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - The archive uses the stable tag `minutes-meeting:<meetingId>` so later archives replace/update the same minutes document in coopHUB.
 - Real upload requires `GOOGLE_SERVICE_ACCOUNT_JSON` with Drive file write access and the target archive folder shared with the service account.
 
+## Drive Event Packet Integration
+- Configure `eventPacketFolderId` in `/admin/google-workspace`.
+- Event detail pages now include an admin **Create Drive Packet** action.
+- The action creates a Google Drive folder for the meeting packet, stores the returned folder ID/link on `CoopEvent`, and shows **Open Drive Packet** anywhere that event is surfaced.
+- Calendar month cells, the next-event card, and the monthly event list show Drive packet indicators/links when a packet folder exists.
+- Real folder creation requires `GOOGLE_SERVICE_ACCOUNT_JSON` with Drive file write access and the packet root folder shared with the service account.
+
 ## Build Plan
 1. Workspace profile and settings
    - Save domain, admin email, Drive root IDs, and planned sync toggles into `Cooperative.settings.googleWorkspace`.
@@ -44,6 +52,7 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 4. Calendar and Meet
    - Add event mapping and sync status before creating or updating Google Calendar events.
    - Attach Meet links and archive minutes back to Drive once event sync is stable.
+   - Create meeting packet folders for agendas, linked documents, and pre-read materials before meetings.
 5. Communications and Forms
    - Route announcements through Gmail or Google Groups only after audit and opt-out rules are explicit.
    - Import reviewed Forms/Sheets rows into waitlist, maintenance, events, and attendance workflows.
@@ -55,11 +64,15 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - 2026-06-16: Added Calendar sync persistence fields, migration, metadata mapper, and Event Detail Google Workspace link display.
 - 2026-06-16: Added visible event creation flow for Google Meet links and Meet badges/links on calendar surfaces.
 - 2026-06-16: Added Google Drive minutes archive helper, write-capable Drive upload service, API endpoint, Workspace archive folder setting, and finalized-minutes archive action.
+- 2026-06-16: Added Google Drive event packet folder helper, service, API endpoint, schema fields, Workspace packet-root setting, event detail action, and calendar packet indicators.
 
 ## Verification
 - `npx tsx tests/googleWorkspace.test.ts`
 - `npx tsx tests/googleCalendar.test.ts`
+- `npx tsx tests/googleDriveEventPacket.test.ts`
+- `npx tsx tests/googleDriveEventPacketService.test.ts`
 - `npx tsx tests/googleDriveMinutesArchive.test.ts`
+- `npx prisma validate`
 - `npm run lint`
 - `npm run build`
 

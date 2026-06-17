@@ -383,6 +383,7 @@ export type GoogleWorkspaceStatus = {
   calendarId: string | null;
   timeZone: string | null;
   minutesArchiveFolderId: string | null;
+  eventPacketFolderId: string | null;
   readiness: Record<string, {
     key: string;
     label: string;
@@ -418,6 +419,7 @@ export type GoogleWorkspaceSettingsInput = {
   calendarId: string;
   timeZone: string;
   minutesArchiveFolderId: string;
+  eventPacketFolderId: string;
 };
 
 const getDemoGoogleWorkspaceStatus = (): GoogleWorkspaceStatus => ({
@@ -429,6 +431,7 @@ const getDemoGoogleWorkspaceStatus = (): GoogleWorkspaceStatus => ({
   calendarId: 'board@oakbaycoop.bc.ca',
   timeZone: 'America/Vancouver',
   minutesArchiveFolderId: 'demo-minutes-folder',
+  eventPacketFolderId: 'demo-event-packets-folder',
   readiness: {
     workspaceConfigured: {
       key: 'workspaceConfigured',
@@ -490,6 +493,7 @@ export const useSaveGoogleWorkspaceSettings = () => {
         next.calendarId = settings.calendarId || null;
         next.timeZone = settings.timeZone || 'America/Vancouver';
         next.minutesArchiveFolderId = settings.minutesArchiveFolderId || null;
+        next.eventPacketFolderId = settings.eventPacketFolderId || null;
         next.capabilities = next.capabilities.map(capability => ({
           ...capability,
           enabled: capability.id === 'identity' || capability.id === 'drive'

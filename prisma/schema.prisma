@@ -690,6 +690,9 @@ model CoopEvent {
   googleCalendarHtmlLink String?
   googleMeetLink         String?
   googleCalendarSyncedAt DateTime?
+  googleDrivePacketFolderId  String?
+  googleDrivePacketFolderUrl String?
+  googleDrivePacketSyncedAt  DateTime?
 
   // Multi-tenancy
   cooperativeId String

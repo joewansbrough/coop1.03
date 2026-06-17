@@ -435,6 +435,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   const [isEditingMinutes, setIsEditingMinutes] = useState(false);
   const [isAttending, setIsAttending] = useState(false);
   const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
+  const [isCreatingDrivePacket, setIsCreatingDrivePacket] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'minutes'>('overview');
 
@@ -618,6 +619,33 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       showAlert('Failed to sync Google Calendar event.', 'error');
     } finally {
       setIsSyncingCalendar(false);
+    }
+  };
+
+  const handleCreateDrivePacket = async () => {
+    if (isGuest || isTemp) return;
+    setIsCreatingDrivePacket(true);
+    try {
+      const res = await fetch(`/api/events/${event.id}/google-drive-packet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert(data.error || data.details || 'Failed to create Google Drive meeting packet.', 'error');
+        return;
+      }
+      if (data.event) {
+        setEvents(current => current.map(ev => ev.id === event.id ? data.event : ev));
+        setEvent(data.event);
+      }
+      showAlert('Google Drive meeting packet created.', 'success');
+    } catch (err) {
+      console.error(err);
+      showAlert('Failed to create Google Drive meeting packet.', 'error');
+    } finally {
+      setIsCreatingDrivePacket(false);
     }
   };
 
@@ -833,7 +861,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                       </div>
                     </div>
                   </div>
-                  {(event.googleMeetLink || event.googleCalendarHtmlLink || event.googleCalendarSyncedAt) && (
+                  {(event.googleMeetLink || event.googleCalendarHtmlLink || event.googleCalendarSyncedAt || event.googleDrivePacketFolderUrl || event.googleDrivePacketSyncedAt) && (
                     <div className="rounded-[1.5rem] border border-teal-100 bg-teal-50/70 p-5 dark:border-teal-500/20 dark:bg-teal-950/20">
                       <p className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Google Workspace</p>
                       <div className="mt-4 flex flex-wrap gap-3">
@@ -859,10 +887,23 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                             Open Calendar
                           </a>
                         )}
+                        {event.googleDrivePacketFolderUrl && (
+                          <a
+                            href={event.googleDrivePacketFolderUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-teal-700 transition-colors hover:bg-teal-50 dark:bg-slate-900 dark:text-teal-300 dark:hover:bg-slate-800"
+                          >
+                            <i className="fa-solid fa-folder-open"></i>
+                            Open Drive Packet
+                          </a>
+                        )}
                       </div>
-                      {event.googleCalendarSyncedAt && (
+                      {(event.googleCalendarSyncedAt || event.googleDrivePacketSyncedAt) && (
                         <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">
-                          Synced {new Date(event.googleCalendarSyncedAt).toLocaleString('en-CA')}
+                          {event.googleCalendarSyncedAt && `Calendar synced ${new Date(event.googleCalendarSyncedAt).toLocaleString('en-CA')}`}
+                          {event.googleCalendarSyncedAt && event.googleDrivePacketSyncedAt ? ' | ' : ''}
+                          {event.googleDrivePacketSyncedAt && `Drive packet created ${new Date(event.googleDrivePacketSyncedAt).toLocaleString('en-CA')}`}
                         </p>
                       )}
                     </div>
@@ -889,6 +930,28 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                           <i className={`fa-solid ${isSyncingCalendar ? 'fa-spinner fa-spin' : 'fa-calendar-check'} mr-2`}></i>
                           {isSyncingCalendar ? 'Syncing...' : 'Sync Google Calendar'}
                         </button>
+                      )}
+                      {!isTemp && !event.googleDrivePacketFolderUrl && (
+                        <button
+                          type="button"
+                          onClick={handleCreateDrivePacket}
+                          disabled={isCreatingDrivePacket}
+                          className="w-full rounded-2xl border border-teal-200 bg-white py-4 text-[10px] font-black uppercase tracking-widest text-teal-700 transition-all hover:bg-teal-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 dark:border-teal-500/20 dark:bg-slate-900 dark:text-teal-300 dark:hover:bg-slate-800"
+                        >
+                          <i className={`fa-solid ${isCreatingDrivePacket ? 'fa-spinner fa-spin' : 'fa-folder-plus'} mr-2`}></i>
+                          {isCreatingDrivePacket ? 'Creating...' : 'Create Drive Packet'}
+                        </button>
+                      )}
+                      {!isTemp && event.googleDrivePacketFolderUrl && (
+                        <a
+                          href={event.googleDrivePacketFolderUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full rounded-2xl border border-teal-200 bg-white py-4 text-center text-[10px] font-black uppercase tracking-widest text-teal-700 transition-all hover:bg-teal-50 active:scale-95 dark:border-teal-500/20 dark:bg-slate-900 dark:text-teal-300 dark:hover:bg-slate-800"
+                        >
+                          <i className="fa-solid fa-folder-open mr-2"></i>
+                          Open Drive Packet
+                        </a>
                       )}
                     </div>
                   )}

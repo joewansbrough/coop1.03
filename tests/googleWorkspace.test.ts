@@ -81,6 +81,7 @@ test('builds a settings update without clobbering unrelated cooperative settings
       sitesEnabled: false,
       calendarId: ' board@example.com ',
       minutesArchiveFolderId: ' minutes-archive-folder ',
+      eventPacketFolderId: ' event-packets-folder ',
       timeZone: 'America/Vancouver',
     },
   });
@@ -98,6 +99,7 @@ test('builds a settings update without clobbering unrelated cooperative settings
     sitesEnabled: false,
     calendarId: 'board@example.com',
     minutesArchiveFolderId: 'minutes-archive-folder',
+    eventPacketFolderId: 'event-packets-folder',
     timeZone: 'America/Vancouver',
     lastSyncAt: '2026-06-01T12:00:00.000Z',
   });

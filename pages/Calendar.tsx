@@ -493,6 +493,7 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                         } ${e.id.toString().startsWith('temp-') ? 'opacity-70 border-dashed ring-1 ring-amber-500/30' : ''}`}
                       >
                         {e.googleMeetLink && <i className="fa-solid fa-video mr-1"></i>}
+                        {e.googleDrivePacketFolderUrl && <i className="fa-solid fa-folder-open mr-1"></i>}
                         {e.title}
                       </div>
                     ))}
@@ -571,6 +572,14 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                         <i className="fa-solid fa-video text-[10px]"></i>
                       </div>
                       <span className="text-xs font-bold uppercase tracking-wider">Google Meet Ready</span>
+                    </div>
+                  )}
+                  {nextEvent.googleDrivePacketFolderUrl && (
+                    <div className="flex items-center gap-3 text-teal-600 dark:text-teal-300">
+                      <div className="w-6 h-6 rounded-lg bg-teal-50 dark:bg-teal-950/40 flex items-center justify-center">
+                        <i className="fa-solid fa-folder-open text-[10px]"></i>
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-wider">Drive Packet Ready</span>
                     </div>
                   )}
                 </div>
@@ -655,6 +664,18 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
                         >
                           <i className="fa-solid fa-video"></i>
                           Join Meet
+                        </a>
+                      )}
+                      {e.googleDrivePacketFolderUrl && (
+                        <a
+                          href={e.googleDrivePacketFolderUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={event => event.stopPropagation()}
+                          className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-white px-2 py-1 text-[9px] font-black uppercase tracking-widest text-teal-700 hover:bg-teal-50 dark:bg-slate-900 dark:text-teal-300 dark:hover:bg-slate-800"
+                        >
+                          <i className="fa-solid fa-folder-open"></i>
+                          Drive Packet
                         </a>
                       )}
                     </div>

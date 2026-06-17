@@ -208,6 +208,9 @@ export interface CoopEvent {
   googleCalendarHtmlLink?: string | null;
   googleMeetLink?: string | null;
   googleCalendarSyncedAt?: string | null;
+  googleDrivePacketFolderId?: string | null;
+  googleDrivePacketFolderUrl?: string | null;
+  googleDrivePacketSyncedAt?: string | null;
   attendees?: Tenant[];
   createdAt?: string;
   updatedAt?: string;

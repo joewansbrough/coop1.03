@@ -14,6 +14,7 @@ import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
 import { createDocumentMetadataRecord } from '../services/documentMetadataStore.js';
 import { ingestConfiguredDriveRoots } from '../services/driveRootIngestion.js';
+import { createGoogleDriveEventPacketFolder } from '../services/googleDriveEventPacket.js';
 import { archiveMinutesPdfToGoogleDrive } from '../services/googleDriveMinutesArchive.js';
 import { syncGoogleCalendarEvent } from '../services/googleCalendar.js';
 import { askGeminiFileSearch } from '../services/ragAsk.js';
@@ -2716,6 +2717,37 @@ app.post('/api/events/:id/google-calendar/sync', requireAuth, requirePermission(
     });
   } catch (e: any) {
     res.status(400).json({ error: 'Failed to sync event to Google Calendar.', details: e.message });
+  }
+});
+
+app.post('/api/events/:id/google-drive-packet', requireAuth, requirePermission('integrations.google.sync'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    const eventId = getParam(req.params.id);
+    const coopId = await getCoopId(req, p);
+    const cooperative = await p.cooperative.findUnique({
+      where: { id: coopId },
+      select: { id: true, settings: true },
+    });
+    if (!cooperative) return res.status(404).json({ error: 'Cooperative not found' });
+
+    const workspace = normalizeGoogleWorkspaceSettings(cooperative.settings);
+    const parentFolderId = String(req.body?.parentFolderId || workspace.eventPacketFolderId || process.env.GOOGLE_DRIVE_EVENT_PACKET_FOLDER_ID || '').trim();
+    const event = await createGoogleDriveEventPacketFolder({
+      prisma: p,
+      eventId,
+      cooperativeId: coopId,
+      parentFolderId,
+    });
+
+    await logAudit(p, req, 'integrations.google_drive.event_packet.create', 'CoopEvent', eventId, undefined, {
+      parentFolderId,
+      googleDrivePacketFolderId: event.googleDrivePacketFolderId,
+    });
+
+    res.json({ event });
+  } catch (e: any) {
+    res.status(400).json({ error: 'Failed to create Google Drive meeting packet.', details: e.message });
   }
 });
 
