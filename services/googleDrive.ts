@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 
-const getAuthClient = () => {
+const getAuthClient = (scopes = ['https://www.googleapis.com/auth/drive.readonly']) => {
     const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 
     if (!raw) {
@@ -45,11 +45,11 @@ const getAuthClient = () => {
 
     return new google.auth.GoogleAuth({
         credentials,
-        scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+        scopes,
     });
 };
 
-export const driveClient = () => {
-    const auth = getAuthClient();
+export const driveClient = (scopes?: string[]) => {
+    const auth = getAuthClient(scopes);
     return google.drive({ version: 'v3', auth });
 };

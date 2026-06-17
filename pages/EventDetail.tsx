@@ -14,9 +14,10 @@ import { getMinutesPanelMode } from '../utils/minutesPanelState';
 const readableTextClass = 'min-w-0 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]';
 const readableRichTextClass = `${readableTextClass} prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed [&_*]:max-w-full [&_*]:whitespace-normal [&_*]:break-words [&_*]:[overflow-wrap:anywhere]`;
 
-const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent; action?: React.ReactNode }> = ({ data, event, action }) => {
+const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent; action?: React.ReactNode; onArchiveToDrive?: (data: any, event: CoopEvent) => Promise<void> }> = ({ data, event, action, onArchiveToDrive }) => {
   const formData = data?.formData || data?.data;
   const [isExporting, setIsExporting] = useState(false);
+  const [isArchivingToDrive, setIsArchivingToDrive] = useState(false);
 
   if (!data || !formData) {
     return (
@@ -112,6 +113,16 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent; action?: React.Re
     }
   };
 
+  const handleArchiveToDrive = async () => {
+    if (!onArchiveToDrive) return;
+    setIsArchivingToDrive(true);
+    try {
+      await onArchiveToDrive(data, event);
+    } finally {
+      setIsArchivingToDrive(false);
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 overflow-hidden shadow-sm animate-in fade-in slide-in-from-top-4">
       <div className="bg-slate-900 p-8 flex flex-col md:flex-row gap-6 md:items-center md:justify-between">
@@ -135,6 +146,17 @@ const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent; action?: React.Re
               <i className={`fa-solid ${isExporting ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i>
               {isExporting ? 'Exporting...' : 'Export to PDF'}
             </button>
+            {onArchiveToDrive && (
+              <button
+                type="button"
+                onClick={handleArchiveToDrive}
+                disabled={isArchivingToDrive}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-teal-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <i className={`fa-solid ${isArchivingToDrive ? 'fa-spinner fa-spin' : 'fa-folder-open'}`}></i>
+                {isArchivingToDrive ? 'Archiving...' : 'Archive to Drive'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -536,6 +558,41 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
     }
   };
 
+  const handleArchiveMinutesToDrive = async (minutesData: any, targetEvent: CoopEvent) => {
+    const formData = minutesData?.formData || minutesData?.data || {};
+    const [{ pdf }, { MinutesPDF }] = await Promise.all([
+      import('@react-pdf/renderer'),
+      import('../services/export/pdfGenerator'),
+    ]);
+    const blob = await pdf(<MinutesPDF data={{ ...minutesData, formData }} event={targetEvent} />).toBlob();
+    const pdfDataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Failed to read generated PDF.'));
+      reader.readAsDataURL(blob);
+    });
+    const response = await fetch(`/api/minutes/${targetEvent.id}/google-drive-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pdfDataUrl,
+        title: `${targetEvent.title} Minutes`,
+        date: formData.meetingDate || targetEvent.date,
+      }),
+    });
+    const archivedDocument = await response.json();
+    if (!response.ok) {
+      throw new Error(archivedDocument.error || archivedDocument.details || 'Failed to archive minutes to Google Drive.');
+    }
+    setDocuments(current => {
+      const stableTag = `minutes-meeting:${targetEvent.id}`;
+      const existingIndex = current.findIndex((doc) => doc.id === archivedDocument.id || doc.tags?.includes(stableTag));
+      if (existingIndex === -1) return [archivedDocument, ...current];
+      return current.map((doc, index) => index === existingIndex ? archivedDocument : doc);
+    });
+    showAlert('Meeting minutes archived to Google Drive.', 'success');
+  };
+
   const handleGoogleCalendarSync = async () => {
     if (isGuest || isTemp) return;
     setIsSyncingCalendar(true);
@@ -639,6 +696,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                   </Link>
                 </div>
               ) : undefined}
+              onArchiveToDrive={isAdmin ? handleArchiveMinutesToDrive : undefined}
             />
           ) : (
             <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-white/5 p-12 text-center">

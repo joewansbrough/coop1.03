@@ -14,6 +14,7 @@ import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
 import { createDocumentMetadataRecord } from '../services/documentMetadataStore.js';
 import { ingestConfiguredDriveRoots } from '../services/driveRootIngestion.js';
+import { archiveMinutesPdfToGoogleDrive } from '../services/googleDriveMinutesArchive.js';
 import { syncGoogleCalendarEvent } from '../services/googleCalendar.js';
 import { askGeminiFileSearch } from '../services/ragAsk.js';
 import { indexDocumentVersionIntoGemini } from '../services/ragIndexing.js';
@@ -2896,6 +2897,45 @@ app.post('/api/minutes/:meetingId/library-pdf', requireAuth, async (req, res) =>
     res.json(document);
   } catch (error: any) {
     console.error('Error archiving minutes PDF:', error);
+    const status = error.message === 'A PDF data URL is required.' ? 400
+      : error.message === 'Meeting not found for this cooperative.' ? 404
+        : 500;
+    res.status(status).json({ error: error.message });
+  }
+});
+
+app.post('/api/minutes/:meetingId/google-drive-pdf', requireAuth, requirePermission('integrations.google.sync'), async (req, res) => {
+  try {
+    const meetingId = getParam(req.params.meetingId);
+    const { pdfDataUrl, title, date, folderId } = req.body;
+    const p = getPrisma();
+    const coopId = await getCoopId(req, p);
+    const user = (req as any).user || (req as any).session?.user;
+    const cooperative = await p.cooperative.findUnique({
+      where: { id: coopId },
+      select: { settings: true },
+    });
+    const workspace = normalizeGoogleWorkspaceSettings(cooperative?.settings);
+    const resolvedFolderId = String(folderId || workspace.minutesArchiveFolderId || process.env.GOOGLE_DRIVE_MINUTES_FOLDER_ID || '').trim();
+
+    const document = await archiveMinutesPdfToGoogleDrive({
+      prisma: p,
+      meetingId,
+      cooperativeId: coopId,
+      user,
+      pdfDataUrl,
+      title,
+      date,
+      folderId: resolvedFolderId,
+    });
+    await logAudit(p, req, 'integrations.google_drive.minutes.archive', 'MeetingMinutes', meetingId, undefined, {
+      documentId: document.id,
+      sourceExternalId: document.sourceExternalId,
+      folderId: resolvedFolderId,
+    });
+    res.json(document);
+  } catch (error: any) {
+    console.error('Error archiving minutes PDF to Google Drive:', error);
     const status = error.message === 'A PDF data URL is required.' ? 400
       : error.message === 'Meeting not found for this cooperative.' ? 404
         : 500;

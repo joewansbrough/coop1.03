@@ -382,6 +382,7 @@ export type GoogleWorkspaceStatus = {
   driveRootFolderIds: string[];
   calendarId: string | null;
   timeZone: string | null;
+  minutesArchiveFolderId: string | null;
   readiness: Record<string, {
     key: string;
     label: string;
@@ -416,6 +417,7 @@ export type GoogleWorkspaceSettingsInput = {
   sitesEnabled: boolean;
   calendarId: string;
   timeZone: string;
+  minutesArchiveFolderId: string;
 };
 
 const getDemoGoogleWorkspaceStatus = (): GoogleWorkspaceStatus => ({
@@ -426,6 +428,7 @@ const getDemoGoogleWorkspaceStatus = (): GoogleWorkspaceStatus => ({
   driveRootFolderIds: ['demo-drive-root'],
   calendarId: 'board@oakbaycoop.bc.ca',
   timeZone: 'America/Vancouver',
+  minutesArchiveFolderId: 'demo-minutes-folder',
   readiness: {
     workspaceConfigured: {
       key: 'workspaceConfigured',
@@ -486,6 +489,7 @@ export const useSaveGoogleWorkspaceSettings = () => {
         next.driveRootFolderIds = settings.driveRootFolderIds;
         next.calendarId = settings.calendarId || null;
         next.timeZone = settings.timeZone || 'America/Vancouver';
+        next.minutesArchiveFolderId = settings.minutesArchiveFolderId || null;
         next.capabilities = next.capabilities.map(capability => ({
           ...capability,
           enabled: capability.id === 'identity' || capability.id === 'drive'

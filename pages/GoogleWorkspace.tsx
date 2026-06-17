@@ -24,6 +24,7 @@ const GoogleWorkspace: React.FC = () => {
     sitesEnabled: false,
     calendarId: '',
     timeZone: 'America/Vancouver',
+    minutesArchiveFolderId: '',
   });
   const [driveRootsText, setDriveRootsText] = useState('');
 
@@ -46,6 +47,7 @@ const GoogleWorkspace: React.FC = () => {
       sitesEnabled: enabledCapabilityIds.has('sites'),
       calendarId: status.calendarId || '',
       timeZone: status.timeZone || 'America/Vancouver',
+      minutesArchiveFolderId: status.minutesArchiveFolderId || '',
     });
     setDriveRootsText(status.driveRootFolderIds.join('\n'));
   }, [enabledCapabilityIds, status]);
@@ -251,6 +253,15 @@ const GoogleWorkspace: React.FC = () => {
                 />
               </label>
             </div>
+            <label className="grid gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Minutes archive folder ID</span>
+              <input
+                value={form.minutesArchiveFolderId}
+                onChange={event => updateForm('minutesArchiveFolderId', event.target.value)}
+                placeholder="Google Drive folder ID for approved minutes"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900 outline-none transition-colors focus:border-teal-500 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+              />
+            </label>
           </div>
 
           {saveSettings.isError && (

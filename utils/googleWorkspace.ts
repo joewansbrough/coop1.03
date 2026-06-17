@@ -19,6 +19,7 @@ export type GoogleWorkspaceSettings = {
   sitesEnabled: boolean;
   calendarId: string | null;
   timeZone: string | null;
+  minutesArchiveFolderId: string | null;
   lastSyncAt: string | null;
 };
 
@@ -45,6 +46,7 @@ export type GoogleWorkspaceStatus = {
   driveRootFolderIds: string[];
   calendarId: string | null;
   timeZone: string | null;
+  minutesArchiveFolderId: string | null;
   readiness: Record<string, GoogleWorkspaceReadinessStep>;
   capabilities: GoogleWorkspaceCapability[];
   enabledCapabilities: GoogleWorkspaceCapability[];
@@ -130,6 +132,7 @@ export const normalizeGoogleWorkspaceSettings = (settings: unknown): GoogleWorks
     sitesEnabled: workspace.sitesEnabled === true,
     calendarId: cleanString(workspace.calendarId),
     timeZone: cleanString(workspace.timeZone) || 'America/Vancouver',
+    minutesArchiveFolderId: cleanString(workspace.minutesArchiveFolderId),
     lastSyncAt: cleanString(workspace.lastSyncAt),
   };
 };
@@ -165,6 +168,7 @@ export const buildGoogleWorkspaceSettingsUpdate = ({
       sitesEnabled: input.sitesEnabled === true,
       calendarId: cleanString((input as any).calendarId),
       timeZone: cleanString((input as any).timeZone) || previous.timeZone,
+      minutesArchiveFolderId: cleanString((input as any).minutesArchiveFolderId),
       lastSyncAt: cleanString(input.lastSyncAt) || previous.lastSyncAt,
     },
   };
@@ -239,6 +243,7 @@ export const buildGoogleWorkspaceStatus = ({
     driveRootFolderIds,
     calendarId: settings.calendarId,
     timeZone: settings.timeZone,
+    minutesArchiveFolderId: settings.minutesArchiveFolderId,
     readiness,
     capabilities,
     enabledCapabilities: capabilities.filter(capability => capability.enabled),

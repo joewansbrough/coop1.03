@@ -80,6 +80,7 @@ test('builds a settings update without clobbering unrelated cooperative settings
       formsSyncEnabled: true,
       sitesEnabled: false,
       calendarId: ' board@example.com ',
+      minutesArchiveFolderId: ' minutes-archive-folder ',
       timeZone: 'America/Vancouver',
     },
   });
@@ -96,6 +97,7 @@ test('builds a settings update without clobbering unrelated cooperative settings
     formsSyncEnabled: true,
     sitesEnabled: false,
     calendarId: 'board@example.com',
+    minutesArchiveFolderId: 'minutes-archive-folder',
     timeZone: 'America/Vancouver',
     lastSyncAt: '2026-06-01T12:00:00.000Z',
   });

@@ -24,6 +24,13 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - Real sync requires `GOOGLE_SERVICE_ACCOUNT_JSON` with Calendar event scope access and the target Google Calendar shared with the service account.
 - `POST /api/events/:id/google-calendar/sync` accepts `{ "dryRun": true }` to return the Google payload without writing to Calendar.
 
+## Drive Minutes Archive Integration
+- Configure `minutesArchiveFolderId` in `/admin/google-workspace`.
+- Finalized meeting minutes now include an admin **Archive to Drive** action.
+- The action generates the minutes PDF, uploads it into the configured Google Drive folder, and records the file as a Google Drive-backed coopHUB document.
+- The archive uses the stable tag `minutes-meeting:<meetingId>` so later archives replace/update the same minutes document in coopHUB.
+- Real upload requires `GOOGLE_SERVICE_ACCOUNT_JSON` with Drive file write access and the target archive folder shared with the service account.
+
 ## Build Plan
 1. Workspace profile and settings
    - Save domain, admin email, Drive root IDs, and planned sync toggles into `Cooperative.settings.googleWorkspace`.
@@ -47,10 +54,12 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - 2026-06-16: Added Google Calendar event payload builder, Calendar/Meet sync service, admin event sync endpoint, and event detail sync action.
 - 2026-06-16: Added Calendar sync persistence fields, migration, metadata mapper, and Event Detail Google Workspace link display.
 - 2026-06-16: Added visible event creation flow for Google Meet links and Meet badges/links on calendar surfaces.
+- 2026-06-16: Added Google Drive minutes archive helper, write-capable Drive upload service, API endpoint, Workspace archive folder setting, and finalized-minutes archive action.
 
 ## Verification
 - `npx tsx tests/googleWorkspace.test.ts`
 - `npx tsx tests/googleCalendar.test.ts`
+- `npx tsx tests/googleDriveMinutesArchive.test.ts`
 - `npm run lint`
 - `npm run build`
 
