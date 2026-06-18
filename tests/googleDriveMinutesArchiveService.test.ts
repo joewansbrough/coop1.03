@@ -53,3 +53,68 @@ test('indexes the Drive-backed minutes document after archiving', async () => {
 
   assert.deepEqual(indexCalls, [{ cooperativeId: 'coop-1', documentId: 'doc-1' }]);
 });
+
+test('updates the existing Drive minutes PDF instead of creating a new Drive file on re-save', async () => {
+  const driveCalls: any[] = [];
+  const prisma = {
+    coopEvent: {
+      findFirst: async () => ({
+        id: 'meeting-1',
+        title: 'April Board Meeting',
+        committee: { name: 'Board' },
+      }),
+    },
+    document: {
+      findFirst: async () => ({
+        id: 'doc-existing',
+        sourceExternalId: 'existing-drive-file',
+        tags: ['minutes-meeting:meeting-1'],
+      }),
+      update: async ({ where, data, include }: any) => ({
+        id: where.id,
+        sourceExternalId: data.sourceExternalId || 'existing-drive-file',
+        ...data,
+        currentVersion: include?.currentVersion ? { id: data.currentVersionId } : undefined,
+      }),
+    },
+    documentVersion: {
+      findFirst: async () => ({ id: 'version-old', version: 2 }),
+      create: async ({ data }: any) => ({ id: 'version-new', ...data }),
+    },
+    documentIngestionJob: {
+      create: async ({ data }: any) => ({ id: 'job-new', ...data }),
+    },
+  };
+  const drive = {
+    files: {
+      create: async (input: any) => {
+        driveCalls.push({ method: 'create', input });
+        return { data: { id: 'new-drive-file' } };
+      },
+      update: async (input: any) => {
+        driveCalls.push({ method: 'update', input });
+        return {
+          data: {
+            id: input.fileId,
+            webViewLink: `https://drive.google.com/file/d/${input.fileId}/view`,
+          },
+        };
+      },
+    },
+  };
+
+  const document = await archiveMinutesPdfToGoogleDrive({
+    prisma,
+    drive: drive as any,
+    meetingId: 'meeting-1',
+    cooperativeId: 'coop-1',
+    folderId: 'packet-folder-1',
+    pdfDataUrl,
+  });
+
+  assert.deepEqual(driveCalls.map(call => call.method), ['update']);
+  assert.equal(driveCalls[0].input.fileId, 'existing-drive-file');
+  assert.equal(driveCalls[0].input.supportsAllDrives, true);
+  assert.equal(document.sourceExternalId, 'existing-drive-file');
+});
+

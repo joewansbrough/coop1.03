@@ -209,12 +209,15 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
         setCommitteeId('');
         setDescription('');
         setCreateGoogleMeet(false);
-        if (meetResult.synced) {
-          showAlert(meetResult.meetLink ? `Event added with Google Meet: ${meetResult.meetLink}` : 'Event added with Google Meet link.', 'success');
+        const packetWarning = (data as any).googleDrivePacketWarning;
+        if (packetWarning) {
+          showAlert(`Event added, but Drive packet creation needs attention: ${packetWarning}`, 'error');
+        } else if (meetResult.synced) {
+          showAlert(meetResult.meetLink ? `Event added with Google Meet and Drive packet: ${meetResult.meetLink}` : 'Event added with Google Meet link and Drive packet.', 'success');
         } else if (meetResult.error) {
-          showAlert(`Event added, but Google Meet was not created: ${meetResult.error}`, 'error');
+          showAlert(`Event added with Drive packet, but Google Meet was not created: ${meetResult.error}`, 'error');
         } else {
-          showAlert('Event added to community calendar.', 'success');
+          showAlert('Event added with Drive packet.', 'success');
         }
       },
       onError: () => showAlert('Failed to add event.', 'error'),
@@ -696,3 +699,4 @@ const Calendar: React.FC<CalendarProps> = ({ isAdmin = false, isGuest = false, e
 };
 
 export default Calendar;
+

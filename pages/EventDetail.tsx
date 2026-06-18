@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Committee, CoopEvent, Document as CoopDocument, Tenant } from '../types';
@@ -22,6 +22,11 @@ type GoogleDrivePacketFile = {
   webViewLink: string | null;
   iconLink: string | null;
   modifiedTime: string | null;
+  folderPath?: string;
+  documentId?: string | null;
+  ragStatus?: string | null;
+  ragIndexedAt?: string | null;
+  ragIndexError?: string | null;
 };
 
 const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent; action?: React.ReactNode; onArchiveToDrive?: (data: any, event: CoopEvent) => Promise<void> }> = ({ data, event, action, onArchiveToDrive }) => {
@@ -448,6 +453,10 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   const [isCreatingDrivePacket, setIsCreatingDrivePacket] = useState(false);
   const [packetFiles, setPacketFiles] = useState<GoogleDrivePacketFile[]>([]);
   const [isLoadingPacketFiles, setIsLoadingPacketFiles] = useState(false);
+  const [isSyncingPacketFiles, setIsSyncingPacketFiles] = useState(false);
+  const [isUploadingPacketFile, setIsUploadingPacketFile] = useState(false);
+  const [packetSyncSummary, setPacketSyncSummary] = useState<string | null>(null);
+  const packetSyncStartedForEvent = useRef<string | null>(null);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'minutes'>('overview');
 
@@ -520,12 +529,76 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
     }
   };
 
+  const syncPacketFiles = async (targetEvent = event, { silent = false } = {}) => {
+    if (!targetEvent?.googleDrivePacketFolderId || isGuest || isTemp || isDemoMode()) return;
+    setIsSyncingPacketFiles(true);
+    try {
+      const res = await fetch(`/api/events/${targetEvent.id}/google-drive-packet/sync`, buildGoogleDrivePacketFetchInit({ method: 'POST', demoMode: isDemoMode(), jsonBody: {} }));
+      const data = await res.json();
+      if (!res.ok) {
+        if (!silent) showAlert(data.error || data.details || 'Failed to sync Drive packet files.', 'error');
+        return;
+      }
+      const summary = `${data.indexedDocuments || 0} indexed, ${data.skippedUnchanged || 0} unchanged`;
+      setPacketSyncSummary(summary);
+      await loadPacketFiles(targetEvent);
+      if (!silent) showAlert(`Drive packet synced: ${summary}.`, 'success');
+    } catch (err) {
+      console.error(err);
+      if (!silent) showAlert('Failed to sync Drive packet files.', 'error');
+    } finally {
+      setIsSyncingPacketFiles(false);
+    }
+  };
+
+  const handlePacketFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !event?.googleDrivePacketFolderId || isGuest || isTemp) return;
+    if (isDemoMode()) {
+      showAlert('Packet uploads require a signed-in admin session because they write to Google Drive.', 'error');
+      return;
+    }
+    setIsUploadingPacketFile(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/events/${event.id}/google-drive-packet/upload`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert(data.error || data.details || 'Failed to upload file to Drive packet.', 'error');
+        return;
+      }
+      if (data.document) {
+        setDocuments?.((current) => current.some(doc => doc.id === data.document.id)
+          ? current.map(doc => doc.id === data.document.id ? data.document : doc)
+          : [data.document, ...current]);
+      }
+      await loadPacketFiles(event);
+      showAlert('File uploaded to Drive packet and queued for Oracle indexing.', 'success');
+    } catch (err) {
+      console.error(err);
+      showAlert('Failed to upload file to Drive packet.', 'error');
+    } finally {
+      setIsUploadingPacketFile(false);
+    }
+  };
+
   useEffect(() => {
     if (!event?.googleDrivePacketFolderId) {
       setPacketFiles([]);
+      packetSyncStartedForEvent.current = null;
       return;
     }
     loadPacketFiles(event);
+    if (packetSyncStartedForEvent.current !== event.id && !isGuest && !isTemp && !isDemoMode()) {
+      packetSyncStartedForEvent.current = event.id;
+      syncPacketFiles(event, { silent: true });
+    }
   }, [event?.id, event?.googleDrivePacketFolderId]);
     
   if (!event) return <div className="p-8 text-center text-slate-500">Event not found.</div>;
@@ -948,18 +1021,37 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                             <div>
                               <p className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Packet Files</p>
                               <p className="mt-1 text-xs font-bold text-teal-900/70 dark:text-teal-100/70">
-                                Files listed only from this event's Drive packet folder.
+                                Files listed only from this event's Drive packet folder. Auto-sync runs when this page opens.
                               </p>
+                              {packetSyncSummary && (
+                                <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">Last sync: {packetSyncSummary}</p>
+                              )}
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => loadPacketFiles()}
-                              disabled={isLoadingPacketFiles}
-                              className="inline-flex items-center justify-center gap-2 rounded-xl border border-teal-200 bg-white px-3 py-2 text-[9px] font-black uppercase tracking-widest text-teal-700 transition-colors hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-teal-500/20 dark:bg-slate-950 dark:text-teal-300 dark:hover:bg-slate-800"
-                            >
-                              <i className={`fa-solid ${isLoadingPacketFiles ? 'fa-spinner fa-spin' : 'fa-rotate'}`}></i>
-                              Refresh
-                            </button>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => syncPacketFiles()}
+                                disabled={isSyncingPacketFiles || isLoadingPacketFiles}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-teal-200 bg-teal-600 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60 dark:border-teal-500/20"
+                              >
+                                <i className={`fa-solid ${isSyncingPacketFiles ? 'fa-spinner fa-spin' : 'fa-cloud-arrow-up'}`}></i>
+                                {isSyncingPacketFiles ? 'Syncing' : 'Sync & Index'}
+                              </button>
+                              <label className={`inline-flex items-center justify-center gap-2 rounded-xl border border-teal-200 bg-white px-3 py-2 text-[9px] font-black uppercase tracking-widest text-teal-700 transition-colors hover:bg-teal-50 dark:border-teal-500/20 dark:bg-slate-950 dark:text-teal-300 dark:hover:bg-slate-800 ${isUploadingPacketFile ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+                                <i className={`fa-solid ${isUploadingPacketFile ? 'fa-spinner fa-spin' : 'fa-file-arrow-up'}`}></i>
+                                {isUploadingPacketFile ? 'Uploading' : 'Upload'}
+                                <input type="file" className="hidden" disabled={isUploadingPacketFile} onChange={handlePacketFileUpload} />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => loadPacketFiles()}
+                                disabled={isLoadingPacketFiles}
+                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-teal-200 bg-white px-3 py-2 text-[9px] font-black uppercase tracking-widest text-teal-700 transition-colors hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-teal-500/20 dark:bg-slate-950 dark:text-teal-300 dark:hover:bg-slate-800"
+                              >
+                                <i className={`fa-solid ${isLoadingPacketFiles ? 'fa-spinner fa-spin' : 'fa-rotate'}`}></i>
+                                Refresh
+                              </button>
+                            </div>
                           </div>
                           <div className="mt-4 space-y-2">
                             {isLoadingPacketFiles ? (
@@ -979,7 +1071,19 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                                     ) : (
                                       <i className="fa-solid fa-file-lines shrink-0 text-teal-600 dark:text-teal-300"></i>
                                     )}
-                                    <span className={readableTextClass}>{file.name}</span>
+                                    <span className="min-w-0">
+                                      <span className={readableTextClass}>{file.name}</span>
+                                      {(file.folderPath || file.ragStatus) && (
+                                        <span className="mt-1 flex flex-wrap gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                          {file.folderPath && <span>{file.folderPath}</span>}
+                                          {file.ragStatus && (
+                                            <span className={file.ragStatus === 'indexed' ? 'text-emerald-600 dark:text-emerald-400' : file.ragStatus === 'failed' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}>
+                                              Oracle: {file.ragStatus.replace('_', ' ')}
+                                            </span>
+                                          )}
+                                        </span>
+                                      )}
+                                    </span>
                                   </span>
                                   {file.modifiedTime && (
                                     <span className="hidden shrink-0 text-[9px] font-black uppercase tracking-widest text-slate-400 sm:inline">
@@ -1036,7 +1140,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                           className="w-full rounded-2xl border border-teal-200 bg-white py-4 text-[10px] font-black uppercase tracking-widest text-teal-700 transition-all hover:bg-teal-50 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 dark:border-teal-500/20 dark:bg-slate-900 dark:text-teal-300 dark:hover:bg-slate-800"
                         >
                           <i className={`fa-solid ${isCreatingDrivePacket ? 'fa-spinner fa-spin' : 'fa-folder-plus'} mr-2`}></i>
-                          {isCreatingDrivePacket ? 'Creating...' : 'Create Drive Packet'}
+                          {isCreatingDrivePacket ? 'Creating...' : 'Repair Drive Packet'}
                         </button>
                       )}
                       {!isTemp && event.googleDrivePacketFolderUrl && (
@@ -1103,3 +1207,10 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
 };
 
 export default EventDetail;
+
+
+
+
+
+
+

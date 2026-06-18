@@ -313,7 +313,31 @@ export const useCreateUnit = unitsHooks.useCreate;
 export const useUpdateUnit = unitsHooks.useUpdate;
 
 export const useEvents = eventsHooks.useAll;
-export const useCreateEvent = eventsHooks.useCreate;
+export const useCreateEvent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (newItem: Omit<CoopEvent, 'id'>) => {
+      if (isDemoMode()) {
+        const item = { ...newItem, id: `events-${Date.now()}` } as CoopEvent;
+        demoStorage.addEvent(item);
+        return item;
+      }
+      const response = await fetchJson('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newItem),
+      });
+      if (response?.event) {
+        return {
+          ...response.event,
+          googleDrivePacketWarning: response.googleDrivePacketWarning || null,
+        } as CoopEvent & { googleDrivePacketWarning?: string | null };
+      }
+      return response as CoopEvent;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
+  });
+};
 export const useUpdateEvent = eventsHooks.useUpdate;
 export const useDeleteEvent = eventsHooks.useDelete;
 
@@ -640,3 +664,4 @@ export const useTransfer = () => {
     }
   });
 };
+

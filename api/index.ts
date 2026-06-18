@@ -14,7 +14,7 @@ import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
 import { createDocumentMetadataRecord } from '../services/documentMetadataStore.js';
 import { ingestConfiguredDriveRoots } from '../services/driveRootIngestion.js';
-import { createGoogleDriveEventPacketFolder, listGoogleDriveEventPacketFiles } from '../services/googleDriveEventPacket.js';
+import { createCoopEventWithGoogleDrivePacket, createGoogleDriveEventPacketFolder, listGoogleDriveEventPacketFiles, syncGoogleDriveEventPacketFiles, uploadGoogleDriveEventPacketFile } from '../services/googleDriveEventPacket.js';
 import { archiveMinutesPdfToGoogleDrive } from '../services/googleDriveMinutesArchive.js';
 import { syncGoogleCalendarEvent } from '../services/googleCalendar.js';
 import { askGeminiFileSearch } from '../services/ragAsk.js';
@@ -2618,23 +2618,38 @@ app.get('/api/events', requireAuth, async (req, res) => {
 });
 
 app.post('/api/events', requireAuth, async (req, res) => {
-  const { title, description, date, time, location, category, committeeId } = req.body;
-  const event = await getPrisma().coopEvent.create({
-    data: {
-      cooperativeId: await getCoopId(req, getPrisma()), 
-      title, 
-      description, 
-      date: new Date(date), 
-      time, 
-      location, 
-      category,
-      committeeId: committeeId || null
-    },
-    include: { attendees: true }
-  });
-  res.json(event);
+  try {
+    const p = getPrisma();
+    const { title, description, date, time, location, category, committeeId } = req.body;
+    const coopId = await getCoopId(req, p);
+    const cooperative = await p.cooperative.findUnique({
+      where: { id: coopId },
+      select: { settings: true },
+    });
+    const workspace = normalizeGoogleWorkspaceSettings(cooperative?.settings);
+    const parentFolderId = resolveGoogleDriveEventPacketParentFolderId({
+      workspaceEventPacketFolderId: workspace.eventPacketFolderId,
+      env: process.env,
+    });
+    const result = await createCoopEventWithGoogleDrivePacket({
+      prisma: p,
+      cooperativeId: coopId,
+      parentFolderId,
+      eventData: {
+        title,
+        description,
+        date: new Date(date),
+        time,
+        location,
+        category,
+        committeeId: committeeId || null,
+      },
+    });
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
-
 app.put('/api/events/:id', requireAuth, async (req, res) => {
   try {
     const p = getPrisma();
@@ -2770,6 +2785,49 @@ app.get('/api/events/:id/google-drive-packet/files', requireAuth, requirePermiss
     res.json({ files });
   } catch (e: any) {
     res.status(400).json({ error: 'Failed to list Google Drive meeting packet files.', details: e.message });
+  }
+});
+app.post('/api/events/:id/google-drive-packet/sync', requireAuth, requirePermission('integrations.google.sync'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    await ensureDocumentRagSchema(p);
+    const eventId = getParam(req.params.id);
+    const coopId = await getCoopId(req, p);
+    const result = await syncGoogleDriveEventPacketFiles({
+      prisma: p,
+      eventId,
+      cooperativeId: coopId,
+      indexDocument: indexDocumentVersionIntoGemini,
+    });
+    await logAudit(p, req, 'integrations.google_drive.event_packet.sync', 'CoopEvent', eventId, undefined, result);
+    res.json({ success: true, ...result });
+  } catch (e: any) {
+    res.status(400).json({ error: 'Failed to sync Google Drive meeting packet files.', details: e.message });
+  }
+});
+
+app.post('/api/events/:id/google-drive-packet/upload', requireAuth, requirePermission('documents.create'), handleSingleDocumentUpload, async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ error: 'No file was uploaded.' });
+    const p = getPrisma();
+    await ensureDocumentRagSchema(p);
+    const eventId = getParam(req.params.id);
+    const coopId = await getCoopId(req, p);
+    const result = await uploadGoogleDriveEventPacketFile({
+      prisma: p,
+      eventId,
+      cooperativeId: coopId,
+      file,
+      indexDocument: indexDocumentVersionIntoGemini,
+    });
+    await logAudit(p, req, 'integrations.google_drive.event_packet.upload', 'CoopEvent', eventId, undefined, {
+      documentId: result.document.id,
+      sourceExternalId: result.document.sourceExternalId,
+    });
+    res.json(result);
+  } catch (e: any) {
+    res.status(400).json({ error: 'Failed to upload file to Google Drive meeting packet.', details: e.message });
   }
 });
 
@@ -4871,5 +4929,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 export { requireAuth, getCoopId };
 
 export default app;
+
+
 
 

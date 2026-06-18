@@ -63,19 +63,34 @@ export const archiveMinutesPdfToGoogleDrive = async ({
     : null;
   const version = (latestVersion?.version || 0) + 1;
   const author = user?.name || user?.email || 'Secretary';
-  const uploaded = await drive.files.create({
-    requestBody: {
-      name: archive.fileName,
-      parents: [folderId],
-      mimeType: 'application/pdf',
-    },
-    media: {
-      mimeType: 'application/pdf',
-      body: bufferToStream(archive.pdfBytes),
-    },
-    fields: 'id, webViewLink, webContentLink',
-    supportsAllDrives: true,
-  });
+  const existingDriveFileId = existingDocument?.sourceExternalId || null;
+  const uploaded = existingDriveFileId
+    ? await drive.files.update({
+      fileId: existingDriveFileId,
+      requestBody: {
+        name: archive.fileName,
+        mimeType: 'application/pdf',
+      },
+      media: {
+        mimeType: 'application/pdf',
+        body: bufferToStream(archive.pdfBytes),
+      },
+      fields: 'id, webViewLink, webContentLink',
+      supportsAllDrives: true,
+    })
+    : await drive.files.create({
+      requestBody: {
+        name: archive.fileName,
+        parents: [folderId],
+        mimeType: 'application/pdf',
+      },
+      media: {
+        mimeType: 'application/pdf',
+        body: bufferToStream(archive.pdfBytes),
+      },
+      fields: 'id, webViewLink, webContentLink',
+      supportsAllDrives: true,
+    });
   const fileId = uploaded.data.id;
   if (!fileId) throw new Error('Google Drive did not return a file ID.');
   const sourceWebUrl = uploaded.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
@@ -172,5 +187,6 @@ export const archiveMinutesPdfToGoogleDrive = async ({
 
   return updatedDocument;
 };
+
 
 

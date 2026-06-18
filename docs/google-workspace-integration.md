@@ -10,6 +10,8 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - Event Calendar sync API: `/api/events/:id/google-calendar/sync`
 - Event Drive packet API: `/api/events/:id/google-drive-packet`
 - Event Drive packet files API: `/api/events/:id/google-drive-packet/files`
+- Event Drive packet sync API: `/api/events/:id/google-drive-packet/sync`
+- Event Drive packet upload API: `/api/events/:id/google-drive-packet/upload`
 - Shared Workspace capability/readiness model: `utils/googleWorkspace.ts`
 - Calendar payload builder and sync service: `utils/googleCalendar.ts`, `services/googleCalendar.ts`
 - Focused tests: `tests/googleWorkspace.test.ts`, `tests/googleCalendar.test.ts`
@@ -30,17 +32,21 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - Configure `minutesArchiveFolderId` in `/admin/google-workspace`.
 - Finalized meeting minutes now include an admin **Archive to Drive** action.
 - The action generates the minutes PDF, uploads it into the configured Google Drive folder, and records the file as a Google Drive-backed coopHUB document.
+- When minutes are re-saved, coopHUB updates the existing Drive PDF by `sourceExternalId` instead of creating a new Drive file, avoiding service-account-owned duplicate files and quota errors.
 - The archive uses the stable tag `minutes-meeting:<meetingId>` so later archives replace/update the same minutes document in coopHUB.
 - Real upload requires `GOOGLE_SERVICE_ACCOUNT_JSON` with Drive file write access and the target archive folder shared with the service account.
 
 ## Drive Event Packet Integration
 - Configure `eventPacketFolderId` in `/admin/google-workspace`.
 - If `eventPacketFolderId` is empty, packet creation falls back to `GOOGLE_DRIVE_EVENT_PACKET_FOLDER_ID`, then the first ID in `GOOGLE_DRIVE_ROOT_FOLDER_IDS`, then `GOOGLE_DRIVE_ROOT_FOLDER_ID`.
-- Event detail pages now include an admin **Create Drive Packet** action.
+- New event creation now saves the coopHUB event first, then automatically attempts Drive packet creation. If Google Drive fails, the event still exists and the UI shows a packet warning/repair path.
+- Event detail pages include an admin **Repair Drive Packet** action when an event is missing its packet folder.
 - The action creates or reuses a hierarchy under the configured root: `Meetings / <Committee or General> / <Year> / <Date Title Meeting Packet>`.
 - The final packet folder ID/link is stored on `CoopEvent`, and **Open Drive Packet** appears anywhere that event is surfaced.
 - Event detail pages list packet files using only that event's stored `googleDrivePacketFolderId`; the file query never reads from the broader packet root.
-- Packet files can be refreshed from the event detail page after users add materials to the Drive folder.
+- Event detail pages auto-sync packet files on open. The sync crawls the packet folder recursively, creates/updates Drive-backed coopHUB documents, and indexes only new or changed files for Oracle.
+- Packet files can be refreshed or manually **Sync & Index**ed from the event detail page after users add materials to the Drive folder.
+- Admins can upload additional event documents from Event Detail; coopHUB writes them into the Drive packet, records Document metadata, and indexes them for Oracle.
 - When minutes are saved and the event has a packet folder, coopHUB also writes the generated minutes PDF into that packet folder as a Drive-backed document.
 - Drive-backed minutes archives are handed to the Gemini File Search indexer so Oracle can answer from finalized minutes as source material.
 - Calendar month cells, the next-event card, and the monthly event list show Drive packet indicators/links when a packet folder exists.
@@ -75,6 +81,8 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - 2026-06-18: Added event-scoped Drive packet file listing API and Event Detail packet files panel that reads only from the newly created event folder.
 - 2026-06-18: Updated Drive packet creation to organize folders under `Meetings / Committee-or-General / Year` before creating the event packet folder.
 - 2026-06-18: Added automatic Drive packet minutes archive on minutes save and automatic indexing handoff for Drive-backed minutes documents.
+- 2026-06-18: Added automatic Drive packet creation during event creation, event-scoped recursive packet sync/indexing, Event Detail packet uploads, and enriched packet file Oracle status.
+- 2026-06-18: Fixed minutes re-save behavior so existing Drive minutes PDFs are updated in place instead of creating duplicate Drive files.
 
 ## Verification
 - `npx tsx tests/googleWorkspace.test.ts`
@@ -88,5 +96,6 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 
 ## Notes
 - On Windows, `npm run build` can fail during `prisma generate` if a local `npm run dev` / `tsx server.ts` process is holding `node_modules/.prisma/client/query_engine-windows.dll.node`. Stop the local dev-server process and rerun the build.
+
 
 
