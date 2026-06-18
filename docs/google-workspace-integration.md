@@ -37,7 +37,8 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - Configure `eventPacketFolderId` in `/admin/google-workspace`.
 - If `eventPacketFolderId` is empty, packet creation falls back to `GOOGLE_DRIVE_EVENT_PACKET_FOLDER_ID`, then the first ID in `GOOGLE_DRIVE_ROOT_FOLDER_IDS`, then `GOOGLE_DRIVE_ROOT_FOLDER_ID`.
 - Event detail pages now include an admin **Create Drive Packet** action.
-- The action creates a Google Drive folder for the meeting packet, stores the returned folder ID/link on `CoopEvent`, and shows **Open Drive Packet** anywhere that event is surfaced.
+- The action creates or reuses a hierarchy under the configured root: `Meetings / <Committee or General> / <Year> / <Date Title Meeting Packet>`.
+- The final packet folder ID/link is stored on `CoopEvent`, and **Open Drive Packet** appears anywhere that event is surfaced.
 - Event detail pages list packet files using only that event's stored `googleDrivePacketFolderId`; the file query never reads from the broader packet root.
 - Packet files can be refreshed from the event detail page after users add materials to the Drive folder.
 - Calendar month cells, the next-event card, and the monthly event list show Drive packet indicators/links when a packet folder exists.
@@ -70,6 +71,7 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - 2026-06-16: Added Google Drive minutes archive helper, write-capable Drive upload service, API endpoint, Workspace archive folder setting, and finalized-minutes archive action.
 - 2026-06-16: Added Google Drive event packet folder helper, service, API endpoint, schema fields, Workspace packet-root setting, event detail action, and calendar packet indicators.
 - 2026-06-18: Added event-scoped Drive packet file listing API and Event Detail packet files panel that reads only from the newly created event folder.
+- 2026-06-18: Updated Drive packet creation to organize folders under `Meetings / Committee-or-General / Year` before creating the event packet folder.
 
 ## Verification
 - `npx tsx tests/googleWorkspace.test.ts`
