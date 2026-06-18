@@ -8,6 +8,7 @@ import MinutesBuilder from '../components/MinutesBuilder';
 import { isDemoMode, useMinutes } from '../hooks/useCoopData';
 import { addUserAttendance, createAttendanceRequestInit } from '../utils/eventAttendance';
 import { applyEventEdit, createEventUpdateRequestInit, type EventEditPayload } from '../utils/eventEditing';
+import { buildGoogleDrivePacketFetchInit } from '../utils/googleDriveEventPacketClient';
 import { demoStorage } from '../utils/demoStorage';
 import { getMinutesPanelMode } from '../utils/minutesPanelState';
 
@@ -504,9 +505,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
     }
     setIsLoadingPacketFiles(true);
     try {
-      const res = await fetch(`/api/events/${targetEvent.id}/google-drive-packet/files`, {
-        credentials: 'include',
-      });
+      const res = await fetch(`/api/events/${targetEvent.id}/google-drive-packet/files`, buildGoogleDrivePacketFetchInit({ demoMode: isDemoMode() }));
       const data = await res.json();
       if (!res.ok) {
         showAlert(data.error || data.details || 'Failed to load Drive packet files.', 'error');
@@ -667,14 +666,13 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
 
   const handleCreateDrivePacket = async () => {
     if (isGuest || isTemp) return;
+    if (isDemoMode()) {
+      showAlert('Drive packet creation requires a signed-in admin session. The Documents page can browse Drive in demo mode, but creating folders writes to Google Drive and updates the event record.', 'error');
+      return;
+    }
     setIsCreatingDrivePacket(true);
     try {
-      const res = await fetch(`/api/events/${event.id}/google-drive-packet`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
+      const res = await fetch(`/api/events/${event.id}/google-drive-packet`, buildGoogleDrivePacketFetchInit({ method: 'POST', jsonBody: {} }));
       const data = await res.json();
       if (!res.ok) {
         showAlert(data.error || data.details || 'Failed to create Google Drive meeting packet.', 'error');
