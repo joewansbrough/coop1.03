@@ -504,7 +504,9 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
     }
     setIsLoadingPacketFiles(true);
     try {
-      const res = await fetch(`/api/events/${targetEvent.id}/google-drive-packet/files`);
+      const res = await fetch(`/api/events/${targetEvent.id}/google-drive-packet/files`, {
+        credentials: 'include',
+      });
       const data = await res.json();
       if (!res.ok) {
         showAlert(data.error || data.details || 'Failed to load Drive packet files.', 'error');
@@ -669,6 +671,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
     try {
       const res = await fetch(`/api/events/${event.id}/google-drive-packet`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });

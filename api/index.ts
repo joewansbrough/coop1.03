@@ -48,6 +48,7 @@ import {
 } from '../utils/audioPreferences.js';
 import { createMaintenanceTriage } from '../utils/maintenanceAI.js';
 import { buildGoogleCalendarSyncMetadata } from '../utils/googleCalendar.js';
+import { resolveGoogleDriveEventPacketParentFolderId } from '../utils/googleDriveEventPacket.js';
 import { detectOracleIntent, getOracleToneGuidance, mergeOracleSuggestedAction, normalizeOracleLanguage, shouldAnswerOracleWithDocs } from '../utils/oracle.js';
 import { mapMeetingActionsToNotifications } from '../utils/meetingAnalysis.js';
 import { oracleTools, oracleToolDeclarations, ToolContext } from '../utils/oracleTools.js';
@@ -57,7 +58,7 @@ import { buildOnboardingStatus } from '../utils/onboardingStatus.js';
 import { buildOnboardingTemplateCsv } from '../utils/onboardingTemplate.js';
 import { buildGoogleWorkspaceSettingsUpdate, buildGoogleWorkspaceStatus, normalizeGoogleWorkspaceSettings } from '../utils/googleWorkspace.js';
 import { buildTenantTemplateCsv, parseTenantImportCsv, validateTenantImportRows, type TenantImportPreviewRow } from '../utils/tenantImport.js';
-import { canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
+import { DEFAULT_PERMISSION_KEYS, canAccessDocument, explainDocumentAccess, getVisibleDocumentWhere, hasPermission } from '../utils/rbac.js';
 import { buildAccessSubject, ensureUserForEmail, makeImpersonatedSessionUser, makeSessionUser, resolveTestingTargetUser, restoreImpersonatedSessionUser, seedRbacDefaults } from '../utils/rbacDb.js';
 import { CooperativeResolutionError, isSuperuserEmail, resolveCooperativeIdForRequest, resolveKnownCooperativeIdForEmail } from '../utils/coopResolution.js';
 import { GOOGLE_TOKEN_URL, buildGoogleTokenRequestBody, getOAuthErrorSummary } from '../utils/googleOAuth.js';
@@ -389,7 +390,7 @@ const getRequestSubject = async (req: express.Request) => {
     email: user?.email || null,
     cooperativeId: coopId,
     groupIds: user?.groupIds || [],
-    permissionKeys: user?.permissionKeys || (user?.isAdmin ? ['settings.update', 'users.manage_groups', 'documents.view.admin', 'documents.view.board', 'documents.view.members'] : ['documents.view.members']),
+    permissionKeys: user?.permissionKeys || (user?.isAdmin ? [...DEFAULT_PERMISSION_KEYS] : ['documents.view.members']),
     committeeIds: user?.committeeIds || [],
     isAdmin: Boolean(user?.isAdmin),
   };
@@ -2732,7 +2733,11 @@ app.post('/api/events/:id/google-drive-packet', requireAuth, requirePermission('
     if (!cooperative) return res.status(404).json({ error: 'Cooperative not found' });
 
     const workspace = normalizeGoogleWorkspaceSettings(cooperative.settings);
-    const parentFolderId = String(req.body?.parentFolderId || workspace.eventPacketFolderId || process.env.GOOGLE_DRIVE_EVENT_PACKET_FOLDER_ID || '').trim();
+    const parentFolderId = resolveGoogleDriveEventPacketParentFolderId({
+      explicitParentFolderId: req.body?.parentFolderId,
+      workspaceEventPacketFolderId: workspace.eventPacketFolderId,
+      env: process.env,
+    });
     const event = await createGoogleDriveEventPacketFolder({
       prisma: p,
       eventId,

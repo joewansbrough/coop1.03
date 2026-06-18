@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   buildGoogleDriveEventPacketMetadata,
   buildGoogleDrivePacketFilesQuery,
+  resolveGoogleDriveEventPacketParentFolderId,
   normalizeGoogleDriveFolderId,
 } from '../utils/googleDriveEventPacket.ts';
 
@@ -37,5 +38,35 @@ test('builds a file listing query scoped to one packet folder', () => {
   assert.equal(
     buildGoogleDrivePacketFilesQuery(' packet-folder-123 '),
     "'packet-folder-123' in parents and trashed = false",
+  );
+});
+
+test('resolves packet parent folder from explicit, workspace, and legacy Drive root settings', () => {
+  assert.equal(
+    resolveGoogleDriveEventPacketParentFolderId({
+      explicitParentFolderId: ' explicit-folder ',
+      workspaceEventPacketFolderId: 'workspace-folder',
+      env: { GOOGLE_DRIVE_ROOT_FOLDER_IDS: 'root-a,root-b' } as any,
+    }),
+    'explicit-folder',
+  );
+  assert.equal(
+    resolveGoogleDriveEventPacketParentFolderId({
+      workspaceEventPacketFolderId: ' workspace-folder ',
+      env: { GOOGLE_DRIVE_ROOT_FOLDER_IDS: 'root-a,root-b' } as any,
+    }),
+    'workspace-folder',
+  );
+  assert.equal(
+    resolveGoogleDriveEventPacketParentFolderId({
+      env: { GOOGLE_DRIVE_ROOT_FOLDER_IDS: ' root-a, root-b ' } as any,
+    }),
+    'root-a',
+  );
+  assert.equal(
+    resolveGoogleDriveEventPacketParentFolderId({
+      env: { GOOGLE_DRIVE_ROOT_FOLDER_ID: ' legacy-single-root ' } as any,
+    }),
+    'legacy-single-root',
   );
 });

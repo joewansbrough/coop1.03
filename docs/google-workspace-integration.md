@@ -35,6 +35,7 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 
 ## Drive Event Packet Integration
 - Configure `eventPacketFolderId` in `/admin/google-workspace`.
+- If `eventPacketFolderId` is empty, packet creation falls back to `GOOGLE_DRIVE_EVENT_PACKET_FOLDER_ID`, then the first ID in `GOOGLE_DRIVE_ROOT_FOLDER_IDS`, then `GOOGLE_DRIVE_ROOT_FOLDER_ID`.
 - Event detail pages now include an admin **Create Drive Packet** action.
 - The action creates a Google Drive folder for the meeting packet, stores the returned folder ID/link on `CoopEvent`, and shows **Open Drive Packet** anywhere that event is surfaced.
 - Event detail pages list packet files using only that event's stored `googleDrivePacketFolderId`; the file query never reads from the broader packet root.

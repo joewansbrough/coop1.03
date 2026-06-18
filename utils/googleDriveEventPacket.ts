@@ -18,6 +18,27 @@ export const normalizeGoogleDriveFolderId = (folderId?: string | null) => {
 export const buildGoogleDrivePacketFilesQuery = (folderId: string) =>
   `'${normalizeGoogleDriveFolderId(folderId).replace(/'/g, "\\'")}' in parents and trashed = false`;
 
+const firstCleanFolderId = (value?: string | null) =>
+  String(value || '')
+    .split(',')
+    .map(item => item.trim())
+    .find(Boolean) || '';
+
+export const resolveGoogleDriveEventPacketParentFolderId = ({
+  explicitParentFolderId,
+  workspaceEventPacketFolderId,
+  env = process.env,
+}: {
+  explicitParentFolderId?: string | null;
+  workspaceEventPacketFolderId?: string | null;
+  env?: NodeJS.ProcessEnv;
+}) =>
+  firstCleanFolderId(explicitParentFolderId)
+  || firstCleanFolderId(workspaceEventPacketFolderId)
+  || firstCleanFolderId(env.GOOGLE_DRIVE_EVENT_PACKET_FOLDER_ID)
+  || firstCleanFolderId(env.GOOGLE_DRIVE_ROOT_FOLDER_IDS)
+  || firstCleanFolderId(env.GOOGLE_DRIVE_ROOT_FOLDER_ID);
+
 export const buildGoogleDriveEventPacketMetadata = ({
   eventId,
   title,
