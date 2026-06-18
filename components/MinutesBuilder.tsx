@@ -303,27 +303,32 @@ const MinutesBuilder: React.FC<MinutesBuilderProps> = ({ meetingId, event, initi
     });
 
     if (currentEvent.googleDrivePacketFolderId) {
-      const driveResponse = await fetch(`/api/minutes/${meetingId}/google-drive-pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: getMinutesDocumentTitle(),
-          date: eventDetails.meetingDate || currentEvent.date,
-          folderId: currentEvent.googleDrivePacketFolderId,
-          pdfDataUrl,
-        }),
-      });
-      const driveDocument = await driveResponse.json();
-      if (!driveResponse.ok) {
-        throw new Error(driveDocument.details || driveDocument.error || 'Failed to archive minutes PDF to the Drive packet.');
+      try {
+        const driveResponse = await fetch(`/api/minutes/${meetingId}/google-drive-pdf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            title: getMinutesDocumentTitle(),
+            date: eventDetails.meetingDate || currentEvent.date,
+            folderId: currentEvent.googleDrivePacketFolderId,
+            pdfDataUrl,
+          }),
+        });
+        const driveDocument = await driveResponse.json();
+        if (!driveResponse.ok) {
+          throw new Error(driveDocument.details || driveDocument.error || 'Failed to archive minutes PDF to the Drive packet.');
+        }
+        setDocuments?.((current) => {
+          const stableTag = `minutes-meeting:${meetingId}`;
+          const existingIndex = current.findIndex((doc) => doc.id === driveDocument.id || doc.tags?.includes(stableTag));
+          if (existingIndex === -1) return [driveDocument, ...current];
+          return current.map((doc, index) => index === existingIndex ? driveDocument : doc);
+        });
+      } catch (driveError: any) {
+        console.error('Drive packet minutes archive error:', driveError);
+        alert(`Minutes saved and the Document Library PDF was updated, but the Drive packet copy could not be updated: ${driveError.message}`);
       }
-      setDocuments?.((current) => {
-        const stableTag = `minutes-meeting:${meetingId}`;
-        const existingIndex = current.findIndex((doc) => doc.id === driveDocument.id || doc.tags?.includes(stableTag));
-        if (existingIndex === -1) return [driveDocument, ...current];
-        return current.map((doc, index) => index === existingIndex ? driveDocument : doc);
-      });
     }
 
     refreshData();
@@ -1846,6 +1851,7 @@ const FormField: React.FC<{ label: string; required?: boolean; children: React.R
 );
 
 export default MinutesBuilder;
+
 
 
 

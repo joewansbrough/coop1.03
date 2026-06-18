@@ -52,6 +52,7 @@ export const archiveMinutesPdfToGoogleDrive = async ({
   const existingDocument = await prisma.document.findFirst({
     where: {
       cooperativeId,
+      storageProvider: 'GOOGLE_DRIVE',
       tags: { has: archive.stableTag },
     },
   });
@@ -187,6 +188,7 @@ export const archiveMinutesPdfToGoogleDrive = async ({
 
   return updatedDocument;
 };
+
 
 
 

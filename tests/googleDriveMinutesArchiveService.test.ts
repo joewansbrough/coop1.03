@@ -118,3 +118,79 @@ test('updates the existing Drive minutes PDF instead of creating a new Drive fil
   assert.equal(document.sourceExternalId, 'existing-drive-file');
 });
 
+
+test('ignores the blob minutes document and updates the existing Drive-backed minutes PDF', async () => {
+  const findCalls: any[] = [];
+  const driveCalls: any[] = [];
+  const prisma = {
+    coopEvent: {
+      findFirst: async () => ({
+        id: 'meeting-1',
+        title: 'April Board Meeting',
+        committee: { name: 'Board' },
+      }),
+    },
+    document: {
+      findFirst: async ({ where }: any) => {
+        findCalls.push(where);
+        if (where.storageProvider === 'GOOGLE_DRIVE') {
+          return {
+            id: 'doc-drive',
+            storageProvider: 'GOOGLE_DRIVE',
+            sourceExternalId: 'existing-drive-file',
+            tags: ['minutes-meeting:meeting-1'],
+          };
+        }
+        return {
+          id: 'doc-blob',
+          storageProvider: 'VERCEL_BLOB',
+          sourceExternalId: null,
+          tags: ['minutes-meeting:meeting-1'],
+        };
+      },
+      update: async ({ where, data, include }: any) => ({
+        id: where.id,
+        sourceExternalId: data.sourceExternalId || 'existing-drive-file',
+        ...data,
+        currentVersion: include?.currentVersion ? { id: data.currentVersionId } : undefined,
+      }),
+    },
+    documentVersion: {
+      findFirst: async () => ({ id: 'version-old', version: 4 }),
+      create: async ({ data }: any) => ({ id: 'version-new', ...data }),
+    },
+    documentIngestionJob: {
+      create: async ({ data }: any) => ({ id: 'job-new', ...data }),
+    },
+  };
+  const drive = {
+    files: {
+      create: async (input: any) => {
+        driveCalls.push({ method: 'create', input });
+        return { data: { id: 'unexpected-new-file' } };
+      },
+      update: async (input: any) => {
+        driveCalls.push({ method: 'update', input });
+        return {
+          data: {
+            id: input.fileId,
+            webViewLink: `https://drive.google.com/file/d/${input.fileId}/view`,
+          },
+        };
+      },
+    },
+  };
+
+  const document = await archiveMinutesPdfToGoogleDrive({
+    prisma,
+    drive: drive as any,
+    meetingId: 'meeting-1',
+    cooperativeId: 'coop-1',
+    folderId: 'packet-folder-1',
+    pdfDataUrl,
+  });
+
+  assert.equal(findCalls[0].storageProvider, 'GOOGLE_DRIVE');
+  assert.deepEqual(driveCalls.map(call => call.method), ['update']);
+  assert.equal(document.id, 'doc-drive');
+});
