@@ -14,6 +14,7 @@ type ArchiveMinutesPdfToGoogleDriveInput = {
   title?: string;
   date?: string;
   drive?: ReturnType<typeof driveClient>;
+  indexDocument?: (prisma: any, input: { cooperativeId: string; documentId: string }) => Promise<any>;
 };
 
 const bufferToStream = (buffer: Buffer) => Readable.from(buffer);
@@ -28,6 +29,7 @@ export const archiveMinutesPdfToGoogleDrive = async ({
   title,
   date,
   drive = driveClient(DRIVE_FILE_SCOPE),
+  indexDocument,
 }: ArchiveMinutesPdfToGoogleDriveInput) => {
   if (!folderId?.trim()) throw new Error('A Google Drive archive folder is required.');
 
@@ -160,5 +162,15 @@ export const archiveMinutesPdfToGoogleDrive = async ({
     },
   });
 
+  if (indexDocument) {
+    try {
+      await indexDocument(prisma, { cooperativeId, documentId: document.id });
+    } catch (error: any) {
+      console.error('Failed to index Google Drive minutes archive:', error?.message || error);
+    }
+  }
+
   return updatedDocument;
 };
+
+

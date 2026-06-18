@@ -2970,7 +2970,11 @@ app.post('/api/minutes/:meetingId/google-drive-pdf', requireAuth, requirePermiss
       select: { settings: true },
     });
     const workspace = normalizeGoogleWorkspaceSettings(cooperative?.settings);
-    const resolvedFolderId = String(folderId || workspace.minutesArchiveFolderId || process.env.GOOGLE_DRIVE_MINUTES_FOLDER_ID || '').trim();
+    const event = await p.coopEvent.findFirst({
+      where: { id: meetingId, cooperativeId: coopId },
+      select: { googleDrivePacketFolderId: true },
+    });
+    const resolvedFolderId = String(folderId || event?.googleDrivePacketFolderId || workspace.minutesArchiveFolderId || process.env.GOOGLE_DRIVE_MINUTES_FOLDER_ID || '').trim();
 
     const document = await archiveMinutesPdfToGoogleDrive({
       prisma: p,
@@ -2981,6 +2985,7 @@ app.post('/api/minutes/:meetingId/google-drive-pdf', requireAuth, requirePermiss
       title,
       date,
       folderId: resolvedFolderId,
+      indexDocument: indexDocumentVersionIntoGemini,
     });
     await logAudit(p, req, 'integrations.google_drive.minutes.archive', 'MeetingMinutes', meetingId, undefined, {
       documentId: document.id,
@@ -4866,3 +4871,5 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 export { requireAuth, getCoopId };
 
 export default app;
+
+

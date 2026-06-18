@@ -41,6 +41,8 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - The final packet folder ID/link is stored on `CoopEvent`, and **Open Drive Packet** appears anywhere that event is surfaced.
 - Event detail pages list packet files using only that event's stored `googleDrivePacketFolderId`; the file query never reads from the broader packet root.
 - Packet files can be refreshed from the event detail page after users add materials to the Drive folder.
+- When minutes are saved and the event has a packet folder, coopHUB also writes the generated minutes PDF into that packet folder as a Drive-backed document.
+- Drive-backed minutes archives are handed to the Gemini File Search indexer so Oracle can answer from finalized minutes as source material.
 - Calendar month cells, the next-event card, and the monthly event list show Drive packet indicators/links when a packet folder exists.
 - Real folder creation requires `GOOGLE_SERVICE_ACCOUNT_JSON` with Drive file write access and the packet root folder shared with the service account. File listing requires Drive metadata visibility for the created packet folder.
 
@@ -72,6 +74,7 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - 2026-06-16: Added Google Drive event packet folder helper, service, API endpoint, schema fields, Workspace packet-root setting, event detail action, and calendar packet indicators.
 - 2026-06-18: Added event-scoped Drive packet file listing API and Event Detail packet files panel that reads only from the newly created event folder.
 - 2026-06-18: Updated Drive packet creation to organize folders under `Meetings / Committee-or-General / Year` before creating the event packet folder.
+- 2026-06-18: Added automatic Drive packet minutes archive on minutes save and automatic indexing handoff for Drive-backed minutes documents.
 
 ## Verification
 - `npx tsx tests/googleWorkspace.test.ts`
@@ -85,3 +88,5 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 
 ## Notes
 - On Windows, `npm run build` can fail during `prisma generate` if a local `npm run dev` / `tsx server.ts` process is holding `node_modules/.prisma/client/query_engine-windows.dll.node`. Stop the local dev-server process and rerun the build.
+
+
