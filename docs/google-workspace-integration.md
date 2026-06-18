@@ -9,6 +9,7 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - Workspace settings API: `/api/integrations/google-workspace/settings`
 - Event Calendar sync API: `/api/events/:id/google-calendar/sync`
 - Event Drive packet API: `/api/events/:id/google-drive-packet`
+- Event Drive packet files API: `/api/events/:id/google-drive-packet/files`
 - Shared Workspace capability/readiness model: `utils/googleWorkspace.ts`
 - Calendar payload builder and sync service: `utils/googleCalendar.ts`, `services/googleCalendar.ts`
 - Focused tests: `tests/googleWorkspace.test.ts`, `tests/googleCalendar.test.ts`
@@ -36,8 +37,10 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - Configure `eventPacketFolderId` in `/admin/google-workspace`.
 - Event detail pages now include an admin **Create Drive Packet** action.
 - The action creates a Google Drive folder for the meeting packet, stores the returned folder ID/link on `CoopEvent`, and shows **Open Drive Packet** anywhere that event is surfaced.
+- Event detail pages list packet files using only that event's stored `googleDrivePacketFolderId`; the file query never reads from the broader packet root.
+- Packet files can be refreshed from the event detail page after users add materials to the Drive folder.
 - Calendar month cells, the next-event card, and the monthly event list show Drive packet indicators/links when a packet folder exists.
-- Real folder creation requires `GOOGLE_SERVICE_ACCOUNT_JSON` with Drive file write access and the packet root folder shared with the service account.
+- Real folder creation requires `GOOGLE_SERVICE_ACCOUNT_JSON` with Drive file write access and the packet root folder shared with the service account. File listing requires Drive metadata visibility for the created packet folder.
 
 ## Build Plan
 1. Workspace profile and settings
@@ -65,6 +68,7 @@ Make Google Workspace the collaboration layer for BC housing co-ops while coopHU
 - 2026-06-16: Added visible event creation flow for Google Meet links and Meet badges/links on calendar surfaces.
 - 2026-06-16: Added Google Drive minutes archive helper, write-capable Drive upload service, API endpoint, Workspace archive folder setting, and finalized-minutes archive action.
 - 2026-06-16: Added Google Drive event packet folder helper, service, API endpoint, schema fields, Workspace packet-root setting, event detail action, and calendar packet indicators.
+- 2026-06-18: Added event-scoped Drive packet file listing API and Event Detail packet files panel that reads only from the newly created event folder.
 
 ## Verification
 - `npx tsx tests/googleWorkspace.test.ts`

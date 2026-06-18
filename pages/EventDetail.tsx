@@ -14,6 +14,15 @@ import { getMinutesPanelMode } from '../utils/minutesPanelState';
 const readableTextClass = 'min-w-0 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]';
 const readableRichTextClass = `${readableTextClass} prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed [&_*]:max-w-full [&_*]:whitespace-normal [&_*]:break-words [&_*]:[overflow-wrap:anywhere]`;
 
+type GoogleDrivePacketFile = {
+  id: string;
+  name: string;
+  mimeType: string;
+  webViewLink: string | null;
+  iconLink: string | null;
+  modifiedTime: string | null;
+};
+
 const MinutesReadOnly: React.FC<{ data: any; event: CoopEvent; action?: React.ReactNode; onArchiveToDrive?: (data: any, event: CoopEvent) => Promise<void> }> = ({ data, event, action, onArchiveToDrive }) => {
   const formData = data?.formData || data?.data;
   const [isExporting, setIsExporting] = useState(false);
@@ -436,6 +445,8 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
   const [isAttending, setIsAttending] = useState(false);
   const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
   const [isCreatingDrivePacket, setIsCreatingDrivePacket] = useState(false);
+  const [packetFiles, setPacketFiles] = useState<GoogleDrivePacketFile[]>([]);
+  const [isLoadingPacketFiles, setIsLoadingPacketFiles] = useState(false);
   const [alertMessage, setAlertMessage] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'minutes'>('overview');
 
@@ -485,6 +496,36 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
     // ... existing effect code ...
     console.log('EventDetail Mount Check:', { isAdmin, meetingMinutes: !!meetingMinutes, eventId: event?.id, meetingMinutesId: meetingMinutes?.id });
   }, [isAdmin, meetingMinutes, event]);
+
+  const loadPacketFiles = async (targetEvent = event) => {
+    if (!targetEvent?.googleDrivePacketFolderId || isGuest || isTemp) {
+      setPacketFiles([]);
+      return;
+    }
+    setIsLoadingPacketFiles(true);
+    try {
+      const res = await fetch(`/api/events/${targetEvent.id}/google-drive-packet/files`);
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert(data.error || data.details || 'Failed to load Drive packet files.', 'error');
+        return;
+      }
+      setPacketFiles(Array.isArray(data.files) ? data.files : []);
+    } catch (err) {
+      console.error(err);
+      showAlert('Failed to load Drive packet files.', 'error');
+    } finally {
+      setIsLoadingPacketFiles(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!event?.googleDrivePacketFolderId) {
+      setPacketFiles([]);
+      return;
+    }
+    loadPacketFiles(event);
+  }, [event?.id, event?.googleDrivePacketFolderId]);
     
   if (!event) return <div className="p-8 text-center text-slate-500">Event not found.</div>;
 
@@ -639,6 +680,7 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
       if (data.event) {
         setEvents(current => current.map(ev => ev.id === event.id ? data.event : ev));
         setEvent(data.event);
+        await loadPacketFiles(data.event);
       }
       showAlert('Google Drive meeting packet created.', 'success');
     } catch (err) {
@@ -899,6 +941,60 @@ const EventDetail: React.FC<EventDetailProps> = ({ isAdmin, isGuest = false, use
                           </a>
                         )}
                       </div>
+                      {event.googleDrivePacketFolderUrl && (
+                        <div className="mt-5 rounded-2xl border border-teal-100 bg-white/70 p-4 dark:border-teal-500/20 dark:bg-slate-900/60">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-teal-700 dark:text-teal-300">Packet Files</p>
+                              <p className="mt-1 text-xs font-bold text-teal-900/70 dark:text-teal-100/70">
+                                Files listed only from this event's Drive packet folder.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => loadPacketFiles()}
+                              disabled={isLoadingPacketFiles}
+                              className="inline-flex items-center justify-center gap-2 rounded-xl border border-teal-200 bg-white px-3 py-2 text-[9px] font-black uppercase tracking-widest text-teal-700 transition-colors hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-teal-500/20 dark:bg-slate-950 dark:text-teal-300 dark:hover:bg-slate-800"
+                            >
+                              <i className={`fa-solid ${isLoadingPacketFiles ? 'fa-spinner fa-spin' : 'fa-rotate'}`}></i>
+                              Refresh
+                            </button>
+                          </div>
+                          <div className="mt-4 space-y-2">
+                            {isLoadingPacketFiles ? (
+                              <p className="text-xs font-bold text-teal-800/70 dark:text-teal-100/70">Loading Drive files...</p>
+                            ) : packetFiles.length > 0 ? (
+                              packetFiles.map(file => (
+                                <a
+                                  key={file.id}
+                                  href={file.webViewLink || event.googleDrivePacketFolderUrl || '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:border-teal-200 hover:text-teal-700 dark:border-white/5 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-teal-500/30 dark:hover:text-teal-300"
+                                >
+                                  <span className="flex min-w-0 items-center gap-3">
+                                    {file.iconLink ? (
+                                      <img src={file.iconLink} alt="" className="h-5 w-5 shrink-0" />
+                                    ) : (
+                                      <i className="fa-solid fa-file-lines shrink-0 text-teal-600 dark:text-teal-300"></i>
+                                    )}
+                                    <span className={readableTextClass}>{file.name}</span>
+                                  </span>
+                                  {file.modifiedTime && (
+                                    <span className="hidden shrink-0 text-[9px] font-black uppercase tracking-widest text-slate-400 sm:inline">
+                                      {new Date(file.modifiedTime).toLocaleDateString('en-CA')}
+                                    </span>
+                                  )}
+                                </a>
+                              ))
+                            ) : (
+                              <p className="rounded-xl border border-dashed border-teal-200 bg-teal-50/70 px-4 py-3 text-xs font-bold text-teal-800/80 dark:border-teal-500/20 dark:bg-teal-950/20 dark:text-teal-100/80">
+                                No files are in this event packet folder yet.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       {(event.googleCalendarSyncedAt || event.googleDrivePacketSyncedAt) && (
                         <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-teal-700/70 dark:text-teal-300/70">
                           {event.googleCalendarSyncedAt && `Calendar synced ${new Date(event.googleCalendarSyncedAt).toLocaleString('en-CA')}`}

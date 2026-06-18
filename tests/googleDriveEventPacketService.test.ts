@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createGoogleDriveEventPacketFolder } from '../services/googleDriveEventPacket.js';
+import {
+  createGoogleDriveEventPacketFolder,
+  listGoogleDriveEventPacketFiles,
+} from '../services/googleDriveEventPacket.js';
 
 test('creates a Google Drive packet folder and stores it on the event', async () => {
   const calls: any[] = [];
@@ -51,4 +54,78 @@ test('creates a Google Drive packet folder and stores it on the event', async ()
   assert.equal(event.googleDrivePacketFolderId, 'drive-folder-123');
   assert.equal(event.googleDrivePacketFolderUrl, 'https://drive.google.com/drive/folders/drive-folder-123');
   assert.ok(event.googleDrivePacketSyncedAt instanceof Date);
+});
+
+test('lists only files from the event packet folder', async () => {
+  const calls: any[] = [];
+  const prisma = {
+    coopEvent: {
+      findFirst: async () => ({
+        id: 'event-123',
+        cooperativeId: 'coop-1',
+        googleDrivePacketFolderId: 'packet-folder-123',
+      }),
+    },
+  };
+  const drive = {
+    files: {
+      list: async (input: any) => {
+        calls.push(input);
+        return {
+          data: {
+            files: [
+              {
+                id: 'file-1',
+                name: 'Agenda',
+                mimeType: 'application/vnd.google-apps.document',
+                webViewLink: 'https://docs.google.com/document/d/file-1/edit',
+                iconLink: 'https://drive-thirdparty.googleusercontent.com/icon',
+                modifiedTime: '2026-06-18T19:00:00.000Z',
+              },
+            ],
+          },
+        };
+      },
+    },
+  };
+
+  const files = await listGoogleDriveEventPacketFiles({
+    prisma,
+    drive: drive as any,
+    eventId: 'event-123',
+    cooperativeId: 'coop-1',
+  });
+
+  assert.equal(calls[0].q, "'packet-folder-123' in parents and trashed = false");
+  assert.equal(files.length, 1);
+  assert.deepEqual(files[0], {
+    id: 'file-1',
+    name: 'Agenda',
+    mimeType: 'application/vnd.google-apps.document',
+    webViewLink: 'https://docs.google.com/document/d/file-1/edit',
+    iconLink: 'https://drive-thirdparty.googleusercontent.com/icon',
+    modifiedTime: '2026-06-18T19:00:00.000Z',
+  });
+});
+
+test('refuses to list packet files before the event has a packet folder', async () => {
+  const prisma = {
+    coopEvent: {
+      findFirst: async () => ({
+        id: 'event-123',
+        cooperativeId: 'coop-1',
+        googleDrivePacketFolderId: null,
+      }),
+    },
+  };
+
+  await assert.rejects(
+    () => listGoogleDriveEventPacketFiles({
+      prisma,
+      drive: { files: { list: async () => ({ data: { files: [] } }) } } as any,
+      eventId: 'event-123',
+      cooperativeId: 'coop-1',
+    }),
+    /does not have a Google Drive packet folder/i,
+  );
 });

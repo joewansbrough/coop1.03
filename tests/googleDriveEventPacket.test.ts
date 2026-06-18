@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildGoogleDriveEventPacketMetadata,
+  buildGoogleDrivePacketFilesQuery,
   normalizeGoogleDriveFolderId,
 } from '../utils/googleDriveEventPacket.ts';
 
@@ -29,5 +30,12 @@ test('rejects blank Google Drive parent folders', () => {
   assert.throws(
     () => normalizeGoogleDriveFolderId('   '),
     /folder id is required/i,
+  );
+});
+
+test('builds a file listing query scoped to one packet folder', () => {
+  assert.equal(
+    buildGoogleDrivePacketFilesQuery(' packet-folder-123 '),
+    "'packet-folder-123' in parents and trashed = false",
   );
 });

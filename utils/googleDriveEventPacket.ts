@@ -15,6 +15,9 @@ export const normalizeGoogleDriveFolderId = (folderId?: string | null) => {
   return normalized;
 };
 
+export const buildGoogleDrivePacketFilesQuery = (folderId: string) =>
+  `'${normalizeGoogleDriveFolderId(folderId).replace(/'/g, "\\'")}' in parents and trashed = false`;
+
 export const buildGoogleDriveEventPacketMetadata = ({
   eventId,
   title,

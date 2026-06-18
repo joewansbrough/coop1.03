@@ -14,7 +14,7 @@ import { canAccessDriveRoutes } from './driveAccess.js';
 import { archiveMinutesPdf } from '../services/archiveMinutesPdf.js';
 import { createDocumentMetadataRecord } from '../services/documentMetadataStore.js';
 import { ingestConfiguredDriveRoots } from '../services/driveRootIngestion.js';
-import { createGoogleDriveEventPacketFolder } from '../services/googleDriveEventPacket.js';
+import { createGoogleDriveEventPacketFolder, listGoogleDriveEventPacketFiles } from '../services/googleDriveEventPacket.js';
 import { archiveMinutesPdfToGoogleDrive } from '../services/googleDriveMinutesArchive.js';
 import { syncGoogleCalendarEvent } from '../services/googleCalendar.js';
 import { askGeminiFileSearch } from '../services/ragAsk.js';
@@ -2748,6 +2748,23 @@ app.post('/api/events/:id/google-drive-packet', requireAuth, requirePermission('
     res.json({ event });
   } catch (e: any) {
     res.status(400).json({ error: 'Failed to create Google Drive meeting packet.', details: e.message });
+  }
+});
+
+app.get('/api/events/:id/google-drive-packet/files', requireAuth, requirePermission('integrations.google.sync'), async (req, res) => {
+  try {
+    const p = getPrisma();
+    const eventId = getParam(req.params.id);
+    const coopId = await getCoopId(req, p);
+    const files = await listGoogleDriveEventPacketFiles({
+      prisma: p,
+      eventId,
+      cooperativeId: coopId,
+    });
+
+    res.json({ files });
+  } catch (e: any) {
+    res.status(400).json({ error: 'Failed to list Google Drive meeting packet files.', details: e.message });
   }
 });
 
